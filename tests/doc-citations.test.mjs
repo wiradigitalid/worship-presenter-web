@@ -59,20 +59,6 @@ const ALLOWED = new Map(Object.entries({
   'epics.md|weHaveThisHopeFixed': 'dated record of a helper Story 20.1 removed with skipTitle',
   'deferred-work.md|isKjvCorpusEmpty': 'dated smoke-check findings that name the pre-rename symbol',
   'ARCHITECTURE-SPINE.md|songset1': 'AD-19 names it as the REJECTED spelling — "songset1 re-imports the positional reading this decision exists to remove"',
-
-  // --- ROT. Not exceptions: live, present-tense claims that the code contradicts.
-  // Pinned here only so this guard can be committed green while the repair is
-  // routed correctly. Every one is a spine or epics edit, and AGENTS.md reserves
-  // spine edits for a `bmad-architecture` Update run rather than a drive-by fix.
-  // Delete each entry as its repair lands — the second test below enforces that.
-  'ARCHITECTURE-SPINE.md|READ_ONLY_BASE_TYPES': 'ROT — AD-18 Binds names it; Story 20.2 deleted it. Code has ARTIFACT_BASE_TYPES (3 kinds). Owner: bmad-architecture Update',
-  'ARCHITECTURE-SPINE.md|EDITABLE_BASE_TYPES': 'ROT — same clause, same cause. Owner: bmad-architecture Update',
-  'ARCHITECTURE-SPINE.md|seedBibleCorpus': 'ROT — AD-25 gap and Deferred describe it in the present tense; the function is reconcileBibleCorpus (src/lib/db/index.ts). The gap statement itself may also be stale. Owner: bmad-architecture Update',
-  'ARCHITECTURE-SPINE.md|componentImports': 'ROT — AD-24 closure gate names it; the helper is moduleImports (tests/theme-chrome.test.mjs:990) since Story 17.8. Owner: bmad-architecture Update',
-  'epics.md|READ_ONLY_BASE_TYPES': 'ROT — Story 20.2 block still describes the collapse as pending; it shipped. Owner: Correct Course or the Epic 20 owner',
-  'epics.md|EDITABLE_BASE_TYPES': 'ROT — same block, same cause',
-  'deferred-work.md|seedBibleCorpus': 'ROT — the resolved-entry text describes it in the present tense; it is reconcileBibleCorpus now',
-  'deferred-work.md|resolveIntercessoryStandingHymns': 'ROT — the Resolved table cites it as the evidence for a closed item; Story 20.1 deleted it with skipTitle',
 }));
 
 // Citations this guard must not chase: commit SHAs, PPTX media names, and the
