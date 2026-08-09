@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [step-01-validate-prerequisites, step-02-design-epics, step-03-create-stories, step-04-post-merge-realign, step-05-audit-hygiene-2026-07-19, step-06-correct-course-2026-07-29, step-07-correct-course-2026-08-01, step-08-correct-course-2026-08-01-locale, step-09-correct-course-2026-08-01-input-model]
+stepsCompleted: [step-01-validate-prerequisites, step-02-design-epics, step-03-create-stories, step-04-post-merge-realign, step-05-audit-hygiene-2026-07-19, step-06-correct-course-2026-07-29, step-07-correct-course-2026-08-01, step-08-correct-course-2026-08-01-locale, step-09-correct-course-2026-08-01-input-model, step-10-correct-course-2026-08-09-ad6-ad10]
 inputDocuments: ['_bmad-output/planning-artifacts/prds/prd-bic-pptx-workflow-2026-07-10/prd.md', '_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md', '_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10/DESIGN.md', '_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10/EXPERIENCE.md']
 last_realigned: '2026-08-01'
 note: 'SECOND Correct Course of 2026-08-01 (sprint-change-proposal-2026-08-01-locale.md), run hours after the first: language becomes two explicit axes. FR-24 (Data Locale as a browsable axis; the default filters the view, never the query) and FR-25 (UI Locale) added to the PRD as new section 4.12; a third projection_locale was proposed and REJECTED. FR-22 and FR-23 amended for the locale axis rather than rewritten. The corpus paths move to data/<locale>/bible-translation/<code>.json and data/<locale>/song-book/<code>.json, superseding IN WRITING the paths done Stories 21.1 and 22.1 assert. FR-24 is delivered by AMENDING Epics 21 and 22 rather than by a new epic -- each corpus family already owns its own table and code, and a separate locale epic would touch both, which is exactly what the per-family cut below exists to prevent. Only Epic 24 (UI Locale) is new. Target schema routed to bmad-architecture, not decided here. PRIOR, first pass of the same day: Epics 21-23 opened for the shipped-corpus gap, cut per data family so each epic owns its feature AND its data and no table is touched twice -- 21 scripture, 22 song book, 23 fresh clone. FR-21 backfilled into the inventory and coverage map (committed to the PRD 2026-07-30, absent here since); FR-22 and FR-23 added for several Bible translations and several song books, each with one configurable default whose shipped corpus is committed seed data. FR-2 moved Done to Partial on measurement, not regression. Two obligations route out of this pass: a bmad-architecture Update (no AD governs a shipped reference corpus; blocks Story 22.2) and a bmad-ux Update (EXPERIENCE.md:143). PRIOR, 2026-07-29 (sprint-change-proposal-2026-07-29.md): FR-11b and FR-20 added to the inventory and coverage map; NFRs given the stable ids PRD S10 now carries; coverage map refreshed past Epics 14-16 (FR-11 Partial to Done); Epic 14 closed; Epic 16 story-file reality stated. See ../implementation-artifacts/deferred-work.md.'
@@ -91,10 +91,10 @@ UX-DR1: High-contrast UI on Tailwind / Shadcn defaults (as-built hub/run-sheet).
 | FR-11b | Epic 14 (14-1, 14-4) | Done (`/services/new`; date-collision warning with explicit override asserted in `tests/services-lib.test.mjs:161`) |
 | FR-12 | Epic 9 | Done (webhook `action: correct`) |
 | FR-13 | Epic 5 | Done (re-parse / re-download) |
-| FR-13b | Epic 9 | Done (`updated_at` / 409) |
+| FR-13b | Epic 9 **+ Epic 25** | Done on the web edit path (`updated_at` / 409). **Partial as of 2026-08-09:** four shipped write paths carry no precondition at all — both webhook writes, `DELETE /api/services/[id]`, and both `announcements/[id]` verbs. `AD-6` records it; Epic 25 owns it |
 | FR-14 | Epic 3 + Epic 7 | Done (download + Arial deploy note) |
 | FR-15 | Epic 8 | Done (full-screen web slideshow) |
-| FR-16 | Epic 11 | Done (presenter + projector BroadcastChannel) |
+| FR-16 | Epic 11 **+ Epic 26** | Done (presenter + projector BroadcastChannel). **Partial as of 2026-08-09:** `AD-10` requires every message to carry a plan identity and `PresentMessage` carries none, so the two surfaces can follow one index into two different decks. Epic 26 owns it |
 | FR-17 | Epic 4 + Epic 7 | Done (timings on Run-Sheet) |
 | FR-18 | Epic 1 + Epic 6 | Done (per-person admin/operator) |
 | FR-19 | Epic 12 + Epic 21 | Done (Story 21.1, 2026-08-01: `data/bible/kjv.json` ships and seeds an empty database on first boot — 66 books, 1,189 chapters, 31,102 verses, asserted structurally in `tests/corpus.test.mjs`. A fresh clone resolves a reference with no file handed to it. FR-22's several-translations work remains open in Stories 21.2/21.3) |
@@ -744,3 +744,78 @@ I want every user-facing literal resolved from the catalogue rather than typed i
 So that adding a language is a data change and not another sweep of 39 files.
 
 The 100–150 strings, including the `slide-plan.ts` operator-facing labels above. Mechanical by construction, which is why it is separate from 24.1: the infrastructure decision is small and worth reviewing on its own, and the sweep is large and worth reviewing as a sweep. **The two boundaries in this epic's preamble are the acceptance surface** — nothing this story touches may reach the PPTX or the projector, and the church name at `slide-plan.ts:261` stays where it is.
+
+### Epic 25: No edit is erased by a writer that did not look first *(backlog)*
+
+**FRs addressed:** **FR-13b** (First-save-wins concurrency) — the half the coverage map records as `Done`. **Architecture:** `AD-6`.
+
+Created 2026-08-09 by Correct Course, to give `AD-6`'s unclosed half an owner. It had none: `deferred-work.md` carried it as *"unassigned — needs a story"* while the decision itself is `[ADOPTED]` and its Rule reads *"No write path may bypass the precondition."*
+
+**Four shipped write paths bypass it**, verified against the tree on 2026-08-09:
+
+| Path | Site | What it does |
+| --- | --- | --- |
+| Webhook correction | `src/app/api/webhook/route.ts:122-127` | `UPDATE services … updated_at = CURRENT_TIMESTAMP WHERE id = ?`, no precondition read |
+| Webhook intake (date upsert) | `src/app/api/webhook/route.ts:227-232` (update) and `:236-241` (insert) | same, inside the intake transaction |
+| `DELETE /api/services/[id]` | `src/app/api/services/[id]/route.ts:9-33` | `deleteService` on a bare id |
+| `PATCH` / `DELETE /api/announcements/[id]` | `src/app/api/announcements/[id]/route.ts:22-56`, `:58-82` | `updateAnnouncementItem` / `deleteAnnouncementItem` on a bare id — and `announcement_items` has **no `updated_at` column at all** (`src/lib/db/index.ts:421-428`) |
+
+The guarded shape exists and is the reference: `src/lib/services/update-service.ts:77-78` returns `{ ok: false, kind: 'conflict' }`, and `src/lib/registry/store.ts:237` throws on the same condition. `AD-6` records deliberately that these are **two** signalling shapes for **two** layers and that a third must not appear, so this epic adopts the shape of whichever layer each path lives in rather than inventing one.
+
+**Why this is not Epic 18.** Epic 18 is authorization — *what a visitor must never see*. This is data integrity — *what an operator typed and then lost*. Bundling them produces exactly the mixed technical epic C5-1 flags, and Epic 18's own preamble already draws that line against Epic 17.
+
+**The unguarded path is the agent path, and that is the point rather than an accident.** `AD-6`'s *Prevents* is *"an operator's edit silently erased by a late correction"*, which is a description of the webhook. The decision refuses to narrow itself to cookie-authenticated mutations for that reason.
+
+**The one question above this epic was answered by the owner on 2026-08-09** (`sprint-status.yaml`, action item now `done`): **the Telegram side never wins, and an overwrite must be confirmed.** The trusted-single-writer carve-out is rejected outright, so no new `AD-n` is required and `AD-6` is not edited.
+
+**The principle binds, not the option label — because the two webhook writes need two mechanisms to serve it.** The **correction** path takes a client-supplied precondition token: the caller already sends `serviceId`, so it can read first and send back the version it saw. The **intake** path cannot, and this is structural rather than expensive — it resolves the service by date (`src/app/api/webhook/route.ts:223`, `SELECT id FROM services WHERE date = ?`) and the caller holds no id and no version, so there is nothing for a token to carry. That path refuses on the server's own state instead of comparing a token.
+
+**The refusal carries the hub's current content**, also owner-decided. A bare *"overwrite?"* prompt was rejected: the person who loses work is the operator editing in the hub, while the person the bot asks is the sender in Telegram, so a confirmation the sender cannot see through is Telegram winning with one extra keystroke. A 409 returning the current parsed content lets the bot show what would be overwritten, and the sender confirms with the stakes visible.
+
+**One thing for Story 25.1 to confirm rather than assume.** If the intake refusal directs the caller to resend through the correction verb, then every path that actually mutates does carry a client precondition and `AD-6` holds exactly as written. That appears to be the case and is why no spine change is booked here — but the story checks it against `AD-6`'s Rule before closing, and books a `bmad-architecture` Update if it turns out a path mutates without one.
+
+#### Story 25.1: Every Service Write States What It Expected *(backlog)*
+
+As an operator who typed this week's rundown into the hub,
+I want any later write to say which version of the service it was written against,
+So that a correction arriving after my edit is refused rather than applied on top of it.
+
+The four paths above adopt the precondition, each in the shape of the layer it lives in. `announcement_items` needs the column it does not have, which is startup DDL under `AD-9` — schema, not value.
+
+**No longer blocked.** The owner answered the webhook question on 2026-08-09 — see the epic preamble — so all four paths are decidable. The correction path carries a token, the intake path refuses on server state, and each refusal returns the hub's current content so the Telegram sender confirms an overwrite while able to see it.
+
+**The external half is coordination, not a decision.** Changing what the caller sends moves `.claude/skills/picoclaw-webhook/SKILL.md:15` and `docs/picoclaw-webhook.md`, and the bot posting those rundowns lives outside this repository. The story ships the server side and the docs together; a caller that has not adopted the token yet meets the refusal, which is the correct outcome under the owner's direction rather than a regression.
+
+#### Story 25.2: Two Edits in One Second Are Two Edits *(backlog)*
+
+As an operator saving a correction seconds after someone else saved theirs,
+I want the guard to be able to tell the two apart,
+So that first-save-wins is not defeated by the clock the guard reads.
+
+`updated_at` is `CURRENT_TIMESTAMP` at **second** granularity, so two edits landing in the same second both pass the guard and the first editor's changes are lost. This weakens even the paths `AD-6` already guards, which is why it is in this epic and not filed as unrelated debt — Story 25.1's precondition is only as sharp as this stamp. A sub-second stamp (`strftime('%Y-%m-%d %H:%M:%f','now')`) or a monotonic per-row version closes it.
+
+**Whichever is chosen, existing rows are already stamped**, so this is a **value** change on the `AD-21` counter (`data_version` in `settings`), declared while it is coded as *n* → *n+1*, not inferred at deploy. That is a different mechanism from Story 25.1's column add and licenses no framework — `AD-9` owns shape, `AD-18`/`AD-21` own contents.
+
+### Epic 26: The projector never follows an index it cannot vouch for *(backlog)*
+
+**FRs addressed:** **FR-16** (Dual-screen Presenter Mode) — the half the coverage map records as `Done`. **Architecture:** `AD-10`, extended by `AD-29`.
+
+Created 2026-08-09 by Correct Course, to give `AD-10`'s unclosed half an owner. Like `AD-6` it had none, and unlike most of the register **the hazard is live now**: an admin saving a template while a projector window is open is enough.
+
+**What is missing, measured 2026-08-09.** `AD-10`'s Rule says *"Every message carries a plan identity … and a receiver whose own identity differs refuses to follow the index and says so on the room-facing screen."* `PresentMessage` (`src/lib/present-channel.ts:19-53`) carries seven variants and no identity field of any kind. Presenter and projector are two independent `force-dynamic` renders that each call `buildSlidePlan` at their own moment — `src/app/services/[id]/present/page.tsx:72` and `src/app/services/[id]/present/projector/page.tsx:62` — so a bare `index` means whatever each render happened to build. Any structural change underneath them offsets every slide after it, silently, on the screen the congregation is watching.
+
+**Independently startable, and deliberately not sequenced behind anything.** The *full* identity `AD-10` describes is defined partly over `AD-16`'s per-service snapshot, which does not exist yet — but fingerprinting the **resolved plan** closes the live case today with no dependency on Epic 20, on `AD-16`, or on Epic 25. Reading the `AD-16` clause as a precondition is what left this unowned while the hazard was live.
+
+**Why this is not Epic 17.** Epic 17's preamble scopes it to the operator chrome's visual identity, governed by `DESIGN.md`, and states that *nothing here alters a Deck, a Slide Type, or any payload contract*. This work alters `PresentMessage` — a payload contract — and adds a **room-facing** render state, the refusal notice. Story 17.5 sits in Epic 17 because what it added was a presenter-header line; what the congregation sees is a different epic's business.
+
+**`AD-29` is a constraint on this epic, not a competitor.** It fixes the reverse-direction message to *the sender's own condition and nothing else*, and it states that the plan-identity clause may not be left half-implemented while a new `PresentMessage` variant is added. Adding another variant is therefore not progress against this epic.
+
+#### Story 26.1: Every Present Message Names the Plan It Came From *(backlog)*
+
+As a congregation watching the screen at the front of the room,
+I want the projector to stop rather than show a slide it cannot vouch for,
+So that a template saved mid-service does not move every slide after it without anyone noticing.
+
+A fingerprint of the resolved plan travels on every `PresentMessage`; a receiver whose own fingerprint differs refuses to follow the index and says so on the room-facing screen. `AD-10` names both halves — carrying the identity is not the deliverable on its own, because a projector that receives an identity and follows the index anyway leaves the hazard exactly where it was.
+
+**Two boundaries.** The fingerprint is over the **resolved plan**, so it needs no `AD-16` snapshot and this story does not build one. And the refusal is a room-facing surface, so it is bound by `AD-24`'s closure — literal colours, no operator chrome, and whatever `tests/theme-chrome.test.mjs` lists that applies to a new room-facing render, in the same change set.

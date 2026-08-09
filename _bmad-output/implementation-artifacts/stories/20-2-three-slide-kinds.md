@@ -4,7 +4,7 @@ baseline_commit: 553a4c5
 
 # Story 20.2: Three Slide Kinds
 
-Status: review
+Status: done
 
 ## Story
 
@@ -569,6 +569,10 @@ already decided. Prohibiting the edit here is only half of it: the run must be s
 recorded as a follow-up on this story's close, the same way Story 20.1's gate was discharged. A
 close that ships the code and never books the run leaves the spine permanently stale on a decision
 it asked for.
+
+**Discharged 2026-08-09.** The owed `bmad-architecture` Update run has been made: item 1 was repaired
+by giving AD-19 the persisted-home clause and retiring the *Deferred* row that delegated the call,
+and items 2–8 were each re-verified against the spine and `src/` as already repaired.
 
 **Eight statements go stale or become newly answerable:**
 
