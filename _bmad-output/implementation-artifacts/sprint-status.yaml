@@ -1,5 +1,5 @@
 # generated: 2026-07-10
-# last_updated: 2026-08-08
+# last_updated: 2026-08-09
 # project: BIC Worship Presentation Automation
 # project_key: NOKEY
 # tracking_system: file-system
@@ -39,7 +39,7 @@
 #   - waived / dropped / not-reproducible: Closed without the work (see history)
 
 generated: 2026-07-10
-last_updated: 2026-08-08
+last_updated: 2026-08-09
 project: BIC Worship Presentation Automation
 project_key: NOKEY
 tracking_system: file-system
@@ -166,7 +166,7 @@ development_status:
   # --- Epic 20: The registry becomes where the deck is authored ---
   epic-20: in-progress
   20-1-ordered-registry: done
-  20-2-three-slide-kinds: in-progress
+  20-2-three-slide-kinds: done
   20-3-add-delete-rename-reorder: backlog
   20-4-general-canvas-authoring: backlog
   20-5-placeholder-catalog: backlog
@@ -204,6 +204,17 @@ development_status:
   24-1-string-catalogue-switcher-and-lang: done
   24-2-the-strings-move: backlog
   epic-24-retrospective: optional
+
+  # --- Epic 25: No edit is erased by a writer that did not look first ---
+  epic-25: backlog
+  25-1-every-service-write-states-what-it-expected: backlog
+  25-2-two-edits-in-one-second: backlog
+  epic-25-retrospective: optional
+
+  # --- Epic 26: The projector never follows an index it cannot vouch for ---
+  epic-26: backlog
+  26-1-present-message-names-its-plan: backlog
+  epic-26-retrospective: optional
 
 
 action_items:
@@ -375,5 +386,10 @@ action_items:
     status: done
   - epic: 20
     action: "The Open Question the ratification above opened — what a SECOND Announcement row is for, given each row expands the whole live list. Routed to Story 20.6"
+    owner: "kodesh87"
+    status: done
+  # --- Added 2026-08-09 with Epics 25-26 (Correct Course) ---
+  - epic: 25
+    action: "OWNER DECISION, above Story 25.1 and blocking only its webhook AC: does the webhook carry an updated_at precondition token, or does it get an explicit trusted-single-writer carve-out with its cost written down? The two are NOT symmetric. (a) TOKEN — the precondition travels in the webhook payload; this changes an EXTERNAL contract an outside Telegram bot sends, so it also moves .claude/skills/picoclaw-webhook/ and the intake shape that carries resolvedHymns / failedHymnNumbers; no spine change. (b) CARVE-OUT — AD-6 as written FORBIDS it ('No write path may bypass the precondition') and deliberately refuses to narrow away from the agent path, which is precisely the late correction its Prevents describes; so it needs a NEW AD-n through a bmad-architecture Update run — never a renumber, never an in-place edit to AD-6. Story 25.1 may not settle this itself, and the services DELETE plus both announcements verbs do not wait on it. ANSWERED 2026-08-09 by the owner: the TELEGRAM SIDE NEVER WINS AND MUST BE CONFIRMED. (b) is rejected outright. The principle, not the option label, is what binds — because the two webhook writes need two mechanisms to serve it: the CORRECTION path takes (a), a client-supplied token, since the caller already sends serviceId; the INTAKE path structurally cannot, because it looks the service up by date (src/app/api/webhook/route.ts:223) and the caller holds no id and no version, so it refuses on the server's own state instead of comparing a token. Refusal shape, also owner-decided: 409 CARRYING THE HUB'S CURRENT CONTENT, so the bot can show in Telegram what would be overwritten and the sender confirms with the stakes visible — a bare 'overwrite?' prompt was rejected as Telegram winning with one extra keystroke."
     owner: "kodesh87"
     status: done
