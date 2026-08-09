@@ -27,6 +27,36 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 ---
 
+## Reading order — load these, not the rest
+
+`_bmad-output/` is large. Loading it wholesale is how a run spends its context
+before it reaches `src/`. Before writing code, read four things:
+
+| Read | For |
+|---|---|
+| the story in `implementation-artifacts/stories/` | what to build, and its AC |
+| `planning-artifacts/architecture/**/ARCHITECTURE-SPINE.md` | the invariants that bind the code |
+| the SPEC under `specs/` that the story cites | the contract |
+| `implementation-artifacts/deferred-work.md` | what is already known to be owed |
+
+Reach for `epics.md`, `EXPERIENCE.md`, `DESIGN.md` or `prd.md` only when the work
+touches what they own — see the authority map in `AGENTS.md`.
+
+**Never load a `.archive/` directory.** Those hold dated run records: Correct
+Course proposals, readiness reports, Reviewer Gate reports, the sprint narrative.
+They keep their contemporaneous wording and citations deliberately, so a path or
+line number inside one describes the tree **on its date**, not today's. Reading
+one as current guidance is how a stale citation gets believed.
+
+**Never write process narrative into a contract file.** What a run did, who
+reviewed it in how many rounds, what a close did not cover, or a correction to an
+earlier version of the document — all of that belongs in git and the archive,
+never in the spine, a SPEC, `epics.md`, or `sprint-status.yaml`. This is not a
+style preference: those files load on every run, and the narrative that had
+accumulated inside them measured roughly 470 KB before it was taken out.
+
+---
+
 ## Technology Stack & Versions
 
 - **Node.js 22.x (`>=22.12`)** — Dockerfile and CI both run 22; Node 20 reached EOL 2026-04-30. There is no `engines` field to enforce it, and `@types/node` is still pinned `^20` — the one Node-20 commitment that is machine-enforced
