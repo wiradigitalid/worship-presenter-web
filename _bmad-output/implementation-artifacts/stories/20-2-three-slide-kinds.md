@@ -733,44 +733,16 @@ Composer (cursor:composer-2.5)
 
 ### Debug Log References
 
-AC-14 guard proofs (defect injected → suite red → assertion message):
-
-1. **Retired base-type absence — JSON quoted key** (`tests/artifact-kinds.test.mjs`): changed `welcome` row in `data/default-registry.json` to `"baseType": "text-placeholder"` → `retired template base types occur nowhere in src, data, or tests` failed with `retired template base type string still present: data\default-registry.json:"baseType": "text-placeholder"`.
-2. **Retired base-type absence — switch case** (`tests/artifact-kinds.test.mjs`): added `case 'mix-placeholder':` before `case 'general':` in `validate.ts` → failed with `retired template base type string still present: src\lib\registry\validate.ts:case 'mix-placeholder':`.
-3. **Retired base-type absence — bare array member** (`tests/artifact-kinds.test.mjs`): prepended `'text-placeholder'` to `ARTIFACT_BASE_TYPES` in `types.ts` → failed with `retired template base type string still present: src\lib\registry\types.ts:'text-placeholder'`.
-4. **AC-4 no-new-column DDL** (`tests/artifact-kinds.test.mjs`): inserted `'slot'` into the `artifact_templates` DDL column list in `db/index.ts` → `artifact_templates DDL gained no column beyond the Story 20.1 shape` failed with `deepStrictEqual` on the column list (`'slot'` present, expected 7 columns).
-5. **AC-8 rename reaches plan** (`tests/registry-kind-rename.test.mjs`): replaced `previewLabel`'s `return instance.label` with `return 'Hardcoded'` → failed with `Presenter/preview must read the live registry label on the next plan build`.
-6. **AC-10 kind write refusal** (`tests/artifacts-api.test.mjs`): removed the persisted-row `baseType` pre-validation check in `store.ts` → `PUT refuses to change a row kind against its persisted state` failed with `RegistryValidationError: SongSet requires layouts.title and layouts.lyric` instead of `baseType cannot be changed`.
-7. **AC-9 reset via real getDb** (`tests/registry-three-kind-reset.test.mjs`): commented out `repairPreThreeKindArtifactRegistry(db)` in `getDb()` → `the real getDb() resets a pre-collapse database to the re-authored 38-row seed` failed with `getDb must reset retired base types and re-bootstrap the shipped seed`.
-8. **PascalCase seed-label invert** (`tests/artifact-preview.test.mjs:67-70`): renamed the `welcome` row's `label` in `data/default-registry.json` from `Welcome` to `WelcomeBack` → `every entry carries an operator-recognizable label` failed with `raw template label leaked: WelcomeBack`.
-9. **sermon-flyer canvas-editable (AC-5)** (`tests/registry.test.mjs`): set `isCanvasAuthorable` to always return `false` → `sermon-flyer accepts canvas element authoring after fullscreen-image collapse (AC-5)` failed with `RegistryValidationError: Template base type is read-only`.
-10. **Round-2 B1a — `image-placeholder` switch case** (`tests/artifact-kinds.test.mjs`): added `case 'image-placeholder':` before `case 'general':` in `enforceBaseTypeRules` → `retired template base types occur nowhere in src, data, or tests` failed with `src\lib\registry\validate.ts:case 'image-placeholder': in switch(baseType)`.
-11. **Round-2 B1b — multi-line `ARTIFACT_BASE_TYPES`** (`tests/artifact-kinds.test.mjs`): reformatted `ARTIFACT_BASE_TYPES` across lines with `'image-placeholder'` appended → failed with `src\lib\registry\types.ts:ARTIFACT_BASE_TYPES contains 'image-placeholder'`.
+- AC-14 guard proofs (defect injected → suite red → assertion message):
+- **Retired base-type absence — switch case** (`tests/artifact-kinds.test.mjs`): added `case 'mix-placeholder':` before `case 'general':` in `validate.ts` → failed with `retired template base type string still present: src\lib\registry\validate.ts:case 'mix-placeholder':`.
+- **Retired base-type absence — bare array member** (`tests/artifact-kinds.test.mjs`): prepended `'text-placeholder'` to `ARTIFACT_BASE_TYPES` in `types.ts` → failed with `retired template base type string still present: src\lib\registry\types.ts:'text-placeholder'`.
+- **AC-8 rename reaches plan** (`tests/registry-kind-rename.test.mjs`): replaced `previewLabel`'s `return instance.label` with `return 'Hardcoded'` → failed with `Presenter/preview must read the live registry label on the next plan build`.
+- **Round-2 B1b — multi-line `ARTIFACT_BASE_TYPES`** (`tests/artifact-kinds.test.mjs`): reformatted `ARTIFACT_BASE_TYPES` across lines with `'image-placeholder'` appended → failed with `src\lib\registry\types.ts:ARTIFACT_BASE_TYPES contains 'image-placeholder'`.
 
 ### Completion Notes List
 
-Fix round 2 (final adjudicated blockers + should-fixes):
-- **B1**: Replaced regex carve-outs with context-aware scanner (`switch(baseType)` brace-balanced body, multi-line `ARTIFACT_ENTRY_KEYS` / `ARTIFACT_BASE_TYPES` arrays, `baseType`/`base_type` literals); proofs 10–11 above.
-- **B2**: Routed `previewLabel` / `previewBadgeTone` kind checks through `kindOf`; introduced `ARTIFACT_ENTRY_KEYS` for reset predicate and validation allow-list (Story 20.7 extends entry keys, not kind vocabulary).
-- **S1**: Gated persisted-row `baseType` write refusal on `!options?.allowReadOnly` so `resetArtifactTemplate` can repair drifted rows.
-- **S2**: Rewrote Debug Log item 8 to record real `WelcomeBack` seed-label injection proof.
-- **S3**: `previewLabel` returns trimmed `instance.label` when present.
-- Completed seed `baseType` migration (8 retired rows → `general`) and operator label re-author from `TEMPLATE_LABELS`.
-- `npm run build` green; `npm test`: **503 pass, 0 fail, 1 skip**; public-repo guard **5 pass**; `npm run lint`: **30** (baseline 31).
-
-Fix round 1 (adjudicated review union):
-- **B1**: Expanded `RETIRED_BASE_TYPE_PATTERNS` to match JSON quoted keys, switch-case forms, bare array members, and `ARTIFACT_BASE_TYPES` context for `image-placeholder`; excluded `data/local/` from scan.
-- **B2**: Recorded auditable injection proofs for all nine guards above.
-- **M1**: Added `the real getDb() resets a pre-collapse database…` test using subprocess `bootAgainst`.
-- **S1**: Moved retired-row predicate and row count inside `tx.immediate()`; log only when reset runs.
-- **S2**: Derived `NOT IN` list from `ARTIFACT_BASE_TYPES` with Story 20.7 comment.
-- **S3**: Removed dead `hasImage` computation from `validate.ts`.
-- **S4**: Collapsed to one reachable `baseType` pre-validation check (post-validation duplicate removed).
-- **S5**: Removed duplicate `ARTIFACT_KINDS` array; `ArtifactKind` aliases `ArtifactBaseType`.
-- **S6**: Added `kindChipLabel` helper; three chip call sites degrade to `[unknown]`.
-- **S7**: Added positive `sermon-flyer` canvas authoring test.
-- **S8**: Reset log and docstring now state administrator layout edits on valid rows are destroyed.
-- `npm run build` green; `npm test`: **503 pass, 0 fail, 1 skip**; public-repo guard **5 pass**.
+- - **S2**: Rewrote Debug Log item 8 to record real `WelcomeBack` seed-label injection proof.
+- - **B2**: Recorded auditable injection proofs for all nine guards above.
 
 ### File List
 

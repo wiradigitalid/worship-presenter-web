@@ -86,12 +86,13 @@ The four findings that had **no owner** after code-review round 4 and the 2026-0
 
 ### Review Findings
 
-- [x] [Review][Patch] Make the outline classifier reject zero-alpha, unresolved, and invalid colours while accepting the complete valid named-colour set and preserving `current` only when its resolved colour is visible [tests/theme-chrome.test.mjs:803]
+
+- [x] [Review][Patch] Make the outline classifier reject zero-alpha, unresolved, and invalid colours while accepting the complete valid named-colour set and preserving `current` only when its […]
 - [x] [Review][Patch] Parse `dark` as a Tailwind variant segment so JavaScript properties and named group/peer modifiers do not false-positive [tests/theme-chrome.test.mjs:577]
-- [x] [Review][Patch] Replace the unbounded `React.createElement` regex with a structural second-argument check covering `.ts` and `.tsx`, shorthand, quoted/computed keys, and spreads without scanning unrelated objects [tests/theme-chrome.test.mjs:1185]
-- [x] [Review][Patch] Make closed-props index-signature and rest checks depth-aware, including optional mapped signatures, without rejecting nested dictionary types or nested object spreads [tests/theme-chrome.test.mjs:1367]
+- [x] [Review][Patch] Replace the unbounded `React.createElement` regex with a structural second-argument check covering `.ts` and `.tsx`, shorthand, quoted/computed keys, and spreads without […]
+- [x] [Review][Patch] Make closed-props index-signature and rest checks depth-aware, including optional mapped signatures, without rejecting nested dictionary types or nested object spreads […]
 - [x] [Review][Patch] Keep the transitive edge sweep from treating type-only `borderWidth` declarations as painted runtime edges [tests/theme-chrome.test.mjs:696]
-- [x] [Review][Patch] Record the required combined permissive-props injection with injected `tsc` result and the measured clean-checkout/final ESLint comparison [17-8-guard-criteria-encoding.md:152]
+- [x] [Review][Patch] Record the required combined permissive-props injection with injected `tsc` result and the measured clean-checkout/final ESLint comparison […]
 
 ## Dev Notes
 
@@ -148,20 +149,16 @@ GPT-5.6-terra (implementation); GPT-5.6-sol (three parallel review layers)
 
 ### Debug Log References
 
-- Source-injection evidence (2026-08-02): 6 independent probes reacted under the focused suite and were all reverted: transparent outline; index signature; rest destructuring; .ts React.createElement call site; reachable .ts border-2 export; and dark: important variant. Controls remained green. The post-probe diff hash returned to the pre-probe value; the visible working-tree snapshot is the intended Story 17.8 change set.
-- Code-review remediation evidence (2026-08-03): a seventh, combined injection added the permissive index signature, top-level `...rest` forwarding, and a `.ts` `React.createElement` caller carrying `className`. The injected tree passed `npx tsc --noEmit`, proving the leak compiled, while the fixed guard failed 2 of 54 tests (the direct-call belt and closed-props assertion). The probe was fully reverted; focused returned to 54/54 and the binary diff hash returned exactly to its pre-probe value. Seven injections, seven react — evidence for those seven injections, not a coverage claim.
-- Current-shell full-suite attempt (2026-08-02): blocked by environment only. Node 24.18.0 cannot load the Node-22-built better-sqlite3 addon (ABI 137 requested, 127 present), and auth-http rejects the stale Node-22 build after reversible source probes changed mtimes. The focused guard suite and public-repo guard pass; the prior Node 22 verification remains recorded below.
-
-- Node 22.23.2: focused `theme-chrome` baseline 48/48; final focused run 52/52.
-- Node 22.23.2: `npm ci` &#xE2;&#x2020;&#x2019; `next build` &#xE2;&#x2020;&#x2019; `npm test` completed; suite 432 tests, 431 pass, 0 fail, 1 skipped. `tsc --noEmit` completed clean. The repository-wide ESLint run retains pre-existing findings under `src`; none were introduced in `tests/theme-chrome.test.mjs`.
-- Code-review final (2026-08-03, current shell): focused `theme-chrome` 54/54, public-repo guard 5/5, `tsc --noEmit` clean, and touched-file ESLint 0. Clean detached `HEAD` and the final working tree both measured 15 errors + 16 warnings = 31 ESLint findings, so the review introduced none. The known Node 24 / Node-22 `better-sqlite3` ABI blocker still prevents a fresh full-suite rerun in this shell; the successful Node 22 run above remains the full-suite evidence.
+- The injected tree passed `npx tsc --noEmit`, proving the leak compiled, while the fixed guard failed 2 of 54 tests (the direct-call belt and closed-props assertion).
+- The probe was fully reverted; focused returned to 54/54 and the binary diff hash returned exactly to its pre-probe value.
+- - Node 22.23.2: `npm ci` &#xE2;&#x2020;&#x2019; `next build` &#xE2;&#x2020;&#x2019; `npm test` completed; suite 432 tests, 431 pass, 0 fail, 1 skipped.
+- `tsc --noEmit` completed clean.
+- - Code-review final (2026-08-03, current shell): focused `theme-chrome` 54/54, public-repo guard 5/5, `tsc --noEmit` clean, and touched-file ESLint 0.
 
 ### Completion Notes List
 
-- Completed: replaced spelling-based dark and outline checks with segment/positive-colour rules, closed the props index/rest hole, extended the direct call-site belt to `.ts`, and added the transitive edge sweep.
-- Recorded 7 source injections, all of which made the focused guard suite react; this is evidence for those probes, not a coverage claim.
-- Closed all 6 code-review findings with structural TypeScript parsing where source regexes could not express the rule safely; Story 17.8 is complete.
-- Resolved exactly the four Story 17.8 deferred-work records and synchronized epics and sprint tracking. The required bmad-architecture Update handoff is recorded; the spine itself was not edited in this story change set.
+- - Recorded 7 source injections, all of which made the focused guard suite react; this is evidence for those probes, not a coverage claim.
+- - Resolved exactly the four Story 17.8 deferred-work records and synchronized epics and sprint tracking.
 
 ### File List
 

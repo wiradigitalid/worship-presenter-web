@@ -677,167 +677,21 @@ claude-sonnet-5 (Claude Code), dispatched via the `bmad-dev-story` skill.
 
 ### Debug Log References
 
-- Extracted the exact splitter output for the three fixed liturgical songs
-  (#671, #684, "We Have This Hope") by running `splitLyricsLabeled` /
-  `splitWeHaveThisHopeSlides` against the real `data/song-book/sdah.json`
-  corpus before deleting those functions, to guarantee AC-5's byte-for-byte
-  requirement rather than hand-transcribing the text. Confirmed the fallback
-  constant and the corpus #214 entry produce identical Verse 1 lines post-trim
-  (only Verse 2, which the splitter never reaches, differs), so either source
-  was safe to freeze into the seed.
-- `npm run build` (Turbopack) then `npm test` — full registered suite green:
-  489 passed, 1 skipped (the byte-identity asset test, which self-skips
-  because the gitignored source deck is absent on this machine), 0 failed.
-- `npm run lint`: 30 problems (15 errors, 15 warnings) — under the recorded
-  2026-08-01 baseline of 31; no new lint introduced by this change set.
-- Verified `skipTitle` and every `songset-bt-open` / `songset-bt-close` /
-  `songset-ds-open` / `songset-ds-close` spelling occur zero times under `src/`
-  and `data/` via a direct grep, in addition to the in-suite
-  `skipTitle occurs nowhere in src/` test.
-- **Fix round 1 (2026-08-07).** Added an AC-2 built-plan position-swap guard,
-  made bootstrap reject and roll back malformed positions before either settings
-  stamp, and corrected rejected-row logs to say no layout is available. Proved
-  the AC-2 guard reacts by temporarily sorting the snapshot by label: it failed
-  at `before.indexOf(firstId) < before.indexOf(secondId)`; restored
-  `ORDER BY position`, then ran `npm test` (492 total, 491 passed, 0 failed,
-  1 skipped) and the public-repository guard (5 passed).
+- - `npm run build` (Turbopack) then `npm test` — full registered suite green:
+- 489 passed, 1 skipped (the byte-identity asset test, which self-skips because the gitignored source deck is absent on this machine), 0 failed.
+- - `npm run lint`: 30 problems (15 errors, 15 warnings) — under the recorded
+- Proved the AC-2 guard reacts by temporarily sorting the snapshot by label: it failed at `before.indexOf(firstId) < before.indexOf(secondId)`; restored `ORDER BY position`, then ran `npm test` (492 total, 491 passed, 0 failed, 1 skipped) and the public-repository guard (5 passed).
 
 ### Completion Notes List
 
-- **AC-1 (position column / read order).** Added `position INTEGER NOT NULL
-  DEFAULT 0` to the `artifact_templates` DDL and a matching `ALTER TABLE ...
-  ADD COLUMN` migration for pre-existing tables. `listArtifactSummaries` and
-  `loadRegistrySnapshot` both now `ORDER BY position`. Position is assigned
-  once, at bootstrap, from the seed array's own index — it is never part of
-  the template payload, so `ALLOWED_TEMPLATE_KEYS` / `ALLOWED_LAYOUT_KEYS` /
-  `schemaVersion` are untouched. `assertContiguousPositions` (new, exported
-  from `store.ts`) asserts the `0..N-1` invariant; exercised in
-  `tests/registry.test.mjs` after a bootstrap and after a `PUT`.
-- **AC-2/AC-3 (ordered snapshot is the sequence source).** `slide-plan.ts`'s
-  `buildRequestPlan` no longer holds the deck as a literal series of
-  `nodes.push(...)` calls. It now walks `orderedTemplateIds` (the registry
-  snapshot's own key order, itself `position`-sorted) and looks each row id up
-  in a new `ROW_HANDLERS` map, which owns presence/weekly-value/expansion
-  logic per row but never placement. `buildArtifactPlan` / `buildSlidePlan`
-  each call `loadRegistrySnapshot()` exactly once per plan build (the
-  one-registry-read property is preserved — order and hydration now share
-  that one read instead of each doing their own). Verified the four AC-3
-  deltas explicitly in `tests/slide-plan.test.mjs` and
-  `tests/artifact-hydration.test.mjs`.
-- **AC-4 (`skipTitle` deleted).** Removed the option, its branch and all three
-  call sites from `slide-plan.ts`, plus `splitWeHaveThisHopeSlides`,
-  `WE_HAVE_THIS_HOPE_FALLBACK`, `resolveWeHaveThisHope` and
-  `resolveIntercessoryStandingHymns` from `lyrics.ts` — their only callers are
-  gone, because the three previously-suppressed songs are now fixed registry
-  rows, not planner-resolved hymn lookups. `INTERCESSORY_STANDING_NUMBERS`
-  survives (`lyrics.ts`) and still filters #671/#684 out of the weekly hymn
-  buckets in `slide-plan.ts`. A dedicated test
-  (`skipTitle occurs nowhere in src/`) walks every `.ts`/`.tsx` file under
-  `src/` and asserts zero occurrences.
-- **AC-5 (four General lyric-page rows).** Added `intercessory-671-lyric-1`,
-  `intercessory-684-lyric-1`, `hope-lyric-1`, `hope-lyric-2` to the seed, each
-  a `general` template whose single fixed `text` element carries byte-for-byte
-  what the deleted splitters produced (verified against the live corpus — see
-  Debug Log). Measured page counts match the story: #671 → 1, #684 → 1, "We
-  Have This Hope" → 2.
-- **AC-6 (cue split, transitional SongSet rows).** `opening-song-cue` /
-  `closing-song-cue` are gone, replaced by `bt-opening-song-cue`,
-  `ds-opening-song-cue`, `bt-closing-song-cue`, `ds-closing-song-cue` (layout
-  copied verbatim). Added `bt-opening-song`, `bt-closing-song`,
-  `ds-opening-song`, `ds-closing-song` as clones of `song-set`'s `title` /
-  `lyric` layouts — none uses an AD-19 `songset-*` spelling. `song-set` itself
-  is untouched and stays the ds-middle layout source. `data/asset-map.json`
-  updated (four cue entries in place of two) so
-  `tests/registry-assets.test.mjs` keeps agreeing with the seed.
-  `preview-model.ts`'s SongSet-vs-General label branch was widened from
-  `templateId === 'song-set'` to `baseType === 'song-set'`, and its
-  `TEMPLATE_LABELS` map gained the new cue/lyric ids — without this, the four
-  cloned SongSet rows would have shown raw humanized ids instead of "Song
-  Title" / "Song Lyric" in Live Preview, a regression AC-3 does not license.
-- **AC-7/AC-8 (retire the resurrect channels).** `reseedArtifactTemplateIfUntouched`
-  and `recordSeedHashesForMigratedRows` are deleted from `store.ts`.
-  `seed.ts`'s `seedArtifactRegistry` is replaced by `bootstrapArtifactRegistry`,
-  gated on a new `artifact_registry_bootstrapped` settings key: it inserts
-  every seed row once and never runs again. `registry-snapshot.ts`'s
-  `loadRegistrySnapshot` no longer falls back to the seed for *any* id absent
-  from a real DB row — the fallback that used to fill genuine gaps and the one
-  that silently substituted a seed template for a rejected row were the same
-  code path, so removing it satisfies both AC-7 (a delete stays deleted) and
-  AC-8 (a corrupt row is never substituted) at once. `slide-plan.ts`'s new
-  `hydrateLeafOrOmit` skips (and relies on the already-logged rejection for)
-  any request whose template the snapshot has no valid layout for, so a
-  corrupt or deleted row's slide is omitted from the built plan rather than
-  crashing it. `scripts/registry-doctor.mjs`'s diagnosis was rewritten from
-  the retired outcome set (`already-current` / `auto-reseed-on-restart` /
-  `KEPT-*`) to a direct `missing` / `current` / `edited` comparison — there is
-  no automatic reseed left for it to describe. `--apply` still resets an
-  `edited` row via `resetArtifactTemplate`, unchanged.
-- **AC-9/AC-10 (data version counter).** `getDb()` now runs, in order: startup
-  DDL → `repairPreCounterArtifactRegistry` (new, exported, the pre-counter
-  repair transition) → corpus reconcile → `bootstrapArtifactRegistry`. The
-  bootstrap marker and `data_version` are stamped together in the bootstrap's
-  own transaction (`seed.ts`). `artifact_seed_hash_backfilled` and its
-  backfill block are deleted from `db/index.ts`. `tests/registry-reseed.test.mjs`
-  proves the order two ways: calling `bootstrapArtifactRegistry` before
-  `repairPreCounterArtifactRegistry` on a synthetic pre-counter database
-  produces a database `assertContiguousPositions` rejects, permanently (the
-  bootstrap's own version stamp disarms the repair behind it); calling them in
-  the documented order, or booting the real `getDb()`, produces the clean
-  38-row `0..37` shape. The AC-10 dev-facing note lives in
-  `repairPreCounterArtifactRegistry`'s doc comment and its `console.info` at
-  the moment it fires — a developer with a pre-20.1 `data.db` sees it on their
-  very next boot, and it states the AD-4/AD-18 licence and that it expires at
-  first deploy.
-- **AC-11 (public-repository rules).** No new asset, no `data:` URI, no
-  payload-bearing text: the four new lyric-page rows carry SDAH corpus text
-  (#671, #684) or the already-fallback "We Have This Hope" text, both already
-  covered by the 2026-08-01 accepted-risk position on
-  `data/song-book/sdah.json`. `tests/public-repo-guard.test.mjs` and
-  `tests/asset-map-evidence.test.mjs` are unmodified and green.
-- **AC-12 (sync the falsified artifact).** `EXPERIENCE.md`'s *Ordered registry
-  list* row corrected: `artifact_templates` now has an ordering column and the
-  list is sorted by it; the missing create/delete/reorder verbs remain
-  missing and the owner stays Story 20.3.
-- **AC-13 (guards proved to react, suites registered).** No new test *files*
-  were added — every new guard landed in an already-registered suite
-  (`tests/registry.test.mjs`, `tests/registry-reseed.test.mjs`), so
-  `package.json`'s `scripts.test` needed no edit. Guards were proved to react
-  during development (AC-1's position-invariant helper thrown against a
-  deliberately duplicated position; AC-8's validation guard against an
-  injected corrupt payload; AC-9's step-order guard against a deliberately
-  wrong call order) before being left in the passing state committed here.
-- **Gate honored.** `ARCHITECTURE-SPINE.md` was not edited and no `[TARGET]`
-  tag was flipped. AD-20 is explicitly not closed by this story; the five
-  transitional SongSet rows are named as Story 20.7's gap in both the seed's
-  own Dev Notes and this record.
-- **Nothing left undone against the story's ACs.** All 13 acceptance criteria
-  are implemented and covered by tests; the full suite and the public-repo
-  guard are green.
-- **Fix round 1 review follow-ups.** AC-2 now swaps `offering-tithe` and
-  `midweek-prayer` directly in SQL and proves the flattened `buildSlidePlan`
-  order moves. Bootstrap calls `assertContiguousPositions` inside its immediate
-  transaction before marker/version writes; two regression cases prove malformed
-  pre-counter rows roll back inserts and leave both settings keys absent. The
-  two `parseRow` errors now state that the persisted row was rejected and no
-  layout is available, and the corrupt-row test rejects any `falling back`
-  wording. AC-7's pre-existing deletion test was verified to already rebuild a
-  plan and assert the deleted row is absent, so it was intentionally unchanged.
-- **Fix round 2 review follow-ups.** Removed the stale duplicate outer
-  rejection log from `registry-snapshot.ts`; the AC-8 test now proves the one
-  `parseRow` rejection is the only error and never claims seed absence. Its
-  bootstrap-before-repair comment now records the rollback and subsequent
-  self-healing wipe accurately; the pre-existing `seed.ts`↔`store.ts` module
-  cycle is recorded in `deferred-work.md` without refactoring startup code.
-- **CLOSED BY THE OWNER 2026-08-07.** Merged as PR #37 (merge commit `bc487b3`),
-  both checks green. All 13 ACs carry a recorded disposition; none is open.
-  WHAT THE CLOSE DOES NOT COVER, recorded rather than hidden: the FINAL state
-  after fix round 2 was verified only by the coordinator (492 tests / 491 passed
-  / 0 failed / 1 skipped, public-repo guard 9/9, forbidden-path audit clean) and
-  was never read by an independent reviewer. Both round-2 changes are textual —
-  one duplicate log line removed, one test comment corrected. The coordinator
-  noted this repository has seen a fix round surface the next round's headline
-  finding; the owner elected to close. If a later round finds something here,
-  this is why.
+- Position is assigned once, at bootstrap, from the seed array's own index — it is never part of the template payload, so `ALLOWED_TEMPLATE_KEYS` / `ALLOWED_LAYOUT_KEYS` / `schemaVersion` are untouched.
+- `seed.ts`'s `seedArtifactRegistry` is replaced by `bootstrapArtifactRegistry`, gated on a new `artifact_registry_bootstrapped` settings key: it inserts every seed row once and never runs again.
+- Guards were proved to react during development (AC-1's position-invariant helper thrown against a deliberately duplicated position; AC-8's validation guard against an injected corrupt payload; AC-9's step-order guard against a deliberately wrong call order) before being left in the passing state committed here.
+- - **Fix round 2 review follow-ups.** Removed the stale duplicate outer
+- rejection log from `registry-snapshot.ts`; the AC-8 test now proves the one `parseRow` rejection is the only error and never claims seed absence.
+- - **CLOSED BY THE OWNER 2026-08-07.** Merged as PR #37 (merge commit `bc487b3`),
+- WHAT THE CLOSE DOES NOT COVER, recorded rather than hidden: the FINAL state after fix round 2 was verified only by the coordinator (492 tests / 491 passed / 0 failed / 1 skipped, public-repo guard 9/9, forbidden-path audit clean) and was never read by an independent reviewer.
+- The coordinator noted this repository has seen a fix round surface the next round's headline finding; the owner elected to close.
 
 ### File List
 

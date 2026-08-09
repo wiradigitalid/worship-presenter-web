@@ -1,356 +1,168 @@
-# Deferred Work
-
-Last hygiene pass: **2026-07-19** (see [`audit-code-doc-epic-bmad-flow-2026-07-19.md`](./audit-code-doc-epic-bmad-flow-2026-07-19.md)).
-
-## Resolved (shipped — do not treat as open blockers)
-
-Items below were open after the Jules / post-merge reviews; Epic 6+ closed them in code.
-
-| Former open item | Closed by | Evidence |
-|------------------|-----------|----------|
-| Zero automated tests | Story **6.6** | `package.json` `test`; `tests/*.test.mjs` |
-| PPTX image SSRF (scheme-only check) | Story **6.7** (+ Epic **13.3**) | `src/lib/images.ts` host allowlist for remote URLs; hub-local `/api/uploads/...` exception |
-| `better-sqlite3` / cwd DB / production harden | Story **6.8** | `DB_PATH`, WAL/busy timeout, deploy notes |
-| Hymn-to-Part A/B positional-only mapping | Story **6.4** | Section-aware hymn mapping |
-| Standing liturgy "We Have This Hope" title-only | Story **6.3** | `resolveWeHaveThisHope()` + lyric slides in `slide-plan` |
-| FR-6 theme/verse/family graphic slots + much of FR-4 standing structure | Stories **6.3** / **6.4** + Epic **7** | Slide-plan Part A/B/C |
-| Shared Basic Auth as sole FR-18 path | Story **6.2** | Per-person admin/operator accounts |
-| picoclaw skill package missing | Story **6.5** | `.claude/skills/picoclaw-webhook/SKILL.md` |
-| Intercessory standing hymns `#671` / `#684` | Spec **close-audit-product-partials** | `resolveIntercessoryStandingHymns()` + divider→671→divider→684 in `slide-plan` |
-| Empty Part C Announcements title when flyers empty | Spec **close-audit-product-partials** | `announcements` id gated on non-empty `isAnnouncementImageUrl` flyers |
-| Extensionless / video announcement URLs accepted | Spec **close-audit-product-partials** | `assertAnnouncementImageUrl` + flyer filter require image pathname extension |
-| Login has no rate limiting / lockout | Spec **auth-hardening-rate-limit-and-revocation** | `src/lib/auth/rate-limit.ts` + `login_attempts`; 5/username and 20/IP per 15 min → `429` + `Retry-After`; `tests/auth-rate-limit.test.mjs` |
-| Logout / password change do not revoke issued cookies | Spec **auth-hardening-rate-limit-and-revocation** | `sid` + `tv` in the session payload, `revoked_sessions` + `accounts.token_version`, enforced at the gate in `src/proxy.ts` (Node.js runtime); `tests/auth-revocation.test.mjs` |
-
-Historical source reviews: code review `jules main...2d87307` (2026-07-18); specs `spec-phase1-hymnal-fr4-parser.md`, `spec-6-1-*`, `spec-6-2-*`.
-
-## Still open
-
-### Product / FR gaps
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-6-1-persistent-announcement-list.md`  
-  summary: Service EditForm still edits legacy `images_payload` while PPTX prefers Announcement List when non-empty.  
-  evidence: Dual-path intentional for migration; richer FR-11 edit surface still open.
-
-- source_spec: FR-19 / Story **12.1**
-  owner: **Epic 21 / Story 21.1** (`21-1-verse-database-ships`) — assigned 2026-08-01 by `bmad-correct-course`
-  summary: The KJV corpus reaches no fresh clone at all.
-  evidence: Restated 2026-08-01 after measuring, because the previous wording — *"import remains an operator/ops path"* — reads as an inconvenience when it is a feature that cannot run. `bible_books` and `bible_verses` are created by the startup DDL (`src/lib/db/index.ts:156-171`) and have **no writer** outside `scripts/import-kjv.mjs`, which reads the git-ignored `.work/tp_bible_*.json`. A fresh clone therefore ships FR-19's UI, its API route and its empty-corpus message, and no corpus. The export holds 31,102 verses across 66 books — the canonical count — and normalises to ≈4.3 MB against 14.5 MB raw. Owner decision the same day: commit it at `data/bible/kjv.json` as the default seeder corpus, and delete the export only once the completeness assertion is green.
-  resolved: **2026-08-01, Story 21.1.** `data/bible/kjv.json` (4.36 MB) is committed and `seedBibleCorpus()` fills an empty database on first boot in ~258 ms. Completeness is asserted structurally in `tests/corpus.test.mjs` and `npm run corpus:verify` — 66 books / 1,189 chapters / 31,102 verses, every chapter dense from verse 1 — rather than sampled, which is what let this sit unnoticed from 2026-07-19. The ordering held: assertion green, then a full round-trip comparison of all 31,102 verses and 66 book name pairs against the export, then deletion. `scripts/import-kjv.mjs` is retired. **Open behind it:** the `'KJV'` literal in `lookupScripture()` (Story 21.2) and the default-translation setting (Story 21.3).
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-close-audit-product-partials.md`
-  summary: **Blocked on a product decision, not on code.** Part C Announcements title is gated correctly but flyer image slides still appear after standing Part C slides (not a contiguous Announcements block).
-  evidence: Two canonical sources contradict each other about the same worship deck. `_bmad-output/specs/spec-slide-artifact-model/artifact-catalog.md` — a SPEC companion, and the authority for product behaviour — documents Part C as `announcements` (1), `welcome-repeat` (2), `offering-tithe` (3), `midweek-prayer` (4), `fellowship-etiquette` (5), `contact` (6), `family-youth` (7), `flyer-*` (8–N), `thank-you` (N+1), which is exactly what `slide-plan.ts` emits. Reordering silently would change what the congregation sees on a Sabbath, so it needs the project lead to pick a source, not an unattended code change. Explicitly out of scope for spec `auth-hardening-rate-limit-and-revocation` (2026-07-26).
-
-### Ops / security leftovers
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-phase1-hymnal-fr4-parser.md`
-  owner: **Epic 22** — licence and corpus move to `22-1-song-book-ships-with-book-code`, titles to `22-2-hymn-title-is-a-title`; assigned 2026-08-01 by `bmad-correct-course`
-  summary: The SDAH corpus is unattributed, unreproducible, and its titles are lyric lines.
-  evidence: **Licence closed by owner decision 2026-08-01** — the lyrics ship with attribution to the copyright holder and a stated willingness to take them down on request, an accepted risk rather than a review outcome. Two things were found while verifying this entry that it did not record. (1) `.work/lirik-lagu.json`, the only source `scripts/import-hymnal.mjs` can read, **does not exist anywhere under the project root**, so the committed output is the last surviving copy and `npm run import:hymnal` cannot run at all. (2) `deriveTitle()` (`import-hymnal.mjs:23`) stores the first lyric line after a `Verse` header — by design, per `:115` of this same spec, because the dump carried no title column. SDAH #522 is stored as *"My hope is built on nothing less"* rather than *"The Solid Rock"*; 40 of 695 titles exceed 45 characters. That matters beyond tidiness: PRD `:120` makes the resolved-title readback the only defence against a valid-but-wrong SDAH number, and a readback echoing a lyric line is not a check a human can fail. The owner will supply the number→title list (tracked in `sprint-status.yaml` action items). **For the title half, the fuller record is the 2026-08-01 section at the end of this file** — it enumerates the four consumer boundaries and the test impact, and is owned by the same Story 22.2; this entry keeps the licence and the missing-source halves, which that section does not cover.
-  resolved: **2026-08-01, Stories 22.1 + 22.2.** All three halves are closed. *Attribution:* the corpus at `data/song-book/sdah.json` carries `book.attribution` and `book.licence` with the takedown offer, inside the file, so the statement travels with the data and not only with `ATTRIBUTIONS.md`. *Reproducibility:* accepted rather than repaired — the source is gone, so `import:hymnal` is **retired** and the committed corpus is the source of record; `npm run corpus:verify` asserts it is whole instead of pretending it can be rebuilt. *Titles:* the owner supplied the 695-entry index the same day; every title now comes from it, none exceeds 45 characters (40 did), and `tests/corpus.test.mjs` pins the four hardest cases. Four index entries the lyrics contradict were left **verbatim** and raised as an owner decision — see `sprint-status.yaml` action items.
-
-- source_spec: code review jules main...2d87307  
-  summary: Concurrent first-boot hymn seed UNIQUE race.  
-  evidence: Rare under single-process Next.js; harden if multi-instance deploy.
-
-## Deferred from: spec-auth-hardening-rate-limit-and-revocation (2026-07-26)
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-auth-hardening-rate-limit-and-revocation.md`
-  summary: `scripts/smoke-auth.mjs` carries two stale checks that predate this change and already failed at baseline `c0c3ecb` — `no bible/kjv imports in src/` (the guard's own regex matches `src/app/api/scripture/route.ts`, which legitimately imports `isKjvCorpusEmpty`) and `operator can access hub` (asserts the literal `Worship Hub`, a string that no longer appears anywhere under `src/`).
-  evidence: `git grep -l "Worship Hub" HEAD -- src/` returns nothing at the pre-change commit. Left untouched rather than masked; the four session-gate checks in the same script pass.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-auth-hardening-rate-limit-and-revocation.md`
-  summary: The client address used for IP rate limiting is taken from request headers (`cf-connecting-ip`, then leftmost `x-forwarded-for`, then `x-real-ip`), all of which a direct caller can forge, so the 20-per-IP threshold is evadable by header rotation.
-  evidence: Documented as best-effort in `src/lib/auth/client-ip.ts`. Review replaced the global per-username lockout with `(username, address)` pair scoping, so the address is now part of the primary key rather than a secondary check; a header the caller controls therefore buys extra attempts against one account. Only values that parse as a real IPv4/IPv6 address are used as keys, and the shared unknown bucket is never counted, so the failure mode is extra attempts rather than a lockout of third parties. Closing it properly needs the real socket address, which Next does not expose to a Proxy.
-
-## Deferred from: code review of 14-1-worship-web-input-boundary (2026-07-19)
-
-- Duplicate-date race without UNIQUE(`services.date`) on concurrent POSTs — deferred; CAP-4 decision **2a** allows multiple service rows for the same date by design.
-- PUT edit can move a service onto another service’s date without collision check — deferred; create-path CAP-4 is primary; optional warn-on-edit follow-up.
-- Fat `src/app/api/services*` route handlers / `any` typing — style debt from Antigravity bypass; extract to `src/lib/*` in a follow-up refactor.
-
-## Deferred from: code review re-run of 14-1-worship-web-input-boundary (2026-07-19)
-
-- Concurrent POST same-date TOCTOU without UNIQUE — acceptable under CAP-4 multi-row design.
-- Full `hymnIndex` (~695) embedded in create/edit page HTML — follows decision 5a; lazy/chunk later if payload size matters.
-
-## Deferred from: code review of 14-2-worship-web-input-ux-refinements.md (2026-07-19)
-
-- failedHymnNumbers wiped on preview error � deferred, pre-existing [src/app/services/new/CreateForm.tsx]
-
-
-## Deferred from: spec-16-2-artifact-pipeline-completion (2026-07-26)
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-16-2-artifact-pipeline-completion.md`
-  summary: Existing production databases keep the OLD rows for `welcome`, `verse-reading`, `special-song`, `family-youth` and `bible-verse-contemplation`; the seed content fixes reach them only via a fresh DB or an admin reset of those five templates.
-  evidence: Startup seeding is missing-only by design (Story 16.1 AC-16.1-001), so a corrected seed never overwrites a persisted row. `welcome` additionally changed `baseType` `general` → `text-placeholder` to carry the optional `date` placeholder.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-16-2-artifact-pipeline-completion.md`
-  summary: Live Preview still shows `title`/`subtitle` from hardcoded strings in `slide-plan.ts`, so an admin editing a template's text changes the deck and projector but not the operator's preview.
-  evidence: The legacy `SlidePlanItem` fields were deliberately preserved for consumer compatibility; only the badge labels and grouping were moved onto the registry projection.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-16-2-artifact-pipeline-completion.md`
-  summary: `preview-model.TEMPLATE_LABELS` is a hand-maintained second list of template ids alongside the request map in `slide-plan.ts`; nothing asserts either stays in sync with `data/default-registry.json`.
-  evidence: Adding a seed template silently falls back to a humanized label and is silently absent from the plan; a conformance test over the seed id set would close it.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-16-2-artifact-pipeline-completion.md`
-  summary: The `verse-reading` template draws a full-bleed opaque black shape over its own `bible-bg.jpg` background, so the background asset is embedded but never visible.
-  evidence: Inherited from the v0 source-deck extraction; harmless after media dedup, but the layout carries a contradiction an admin cannot see.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-16-2-artifact-pipeline-completion.md`
-  summary: A 409 conflict in the artifact editor discards unsaved authored elements; the message is now explicit but there is no merge or recovery path.
-  evidence: Reloading the server version remounts the canvas and clears the added-element tracking. A full merge was out of scope.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-16-2-artifact-pipeline-completion.md`
-  summary: The generated deck is ~10 MB with no automated ceiling on bytes, generation time or peak memory.
-  evidence: Registry backgrounds are already-compressed JPEGs; dedup + DEFLATE cut 39 MB to ~10 MB, but only structural properties are asserted, so a future seed asset change could regress size unnoticed.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-16-2-artifact-pipeline-completion.md`
-  summary: `scripts/smoke-deck-fidelity.mjs` carries two pre-existing stale checks that predate this change — `EditForm has structured fields + raw payload` (expects `themeReference` / `familyYouth` / `Raw Telegram text`, none of which exist since the Epic 14 renames) and `structured family update in PPTX` (expects `Youth: Aldi` although split family/youth fields take precedence over the legacy combined `familyYouth`).
-  evidence: `themeReference` matches nowhere in `src/`, and `EditForm.tsx` at baseline `338c1a2` already contained zero occurrences of `familyYouth` and `Raw Telegram text`. Left untouched rather than masked.
-
-## Deferred from: spec-epic-14-debt-service-routes-and-hymn-index (2026-07-26)
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-epic-14-debt-service-routes-and-hymn-index.md`
-  summary: The date-collision check in `createService` still reads outside the transaction it guards, so two concurrent POSTs for one date can both insert.
-  evidence: No `UNIQUE(services.date)` backs the `SELECT id FROM services WHERE date = ?`. CAP-4 decision 2a deliberately allows multiple rows per date, so the 409 is a convenience guard, not an invariant — but the refactor documents the sequence as load-bearing while leaving it non-atomic.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-epic-14-debt-service-routes-and-hymn-index.md`
-  summary: `updated_at` uses `CURRENT_TIMESTAMP` at second granularity, so two edits landing in the same second both pass the optimistic guard and the first editor's changes are lost.
-  evidence: Pre-existing. A sub-second timestamp (`strftime('%Y-%m-%d %H:%M:%f','now')`) or a monotonic version counter would close it.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-epic-14-debt-service-routes-and-hymn-index.md`
-  summary: `readUpdatedAt` returns `''` when both `updated_at` and `created_at` are NULL, and its `||` fallback diverges from the SQL `COALESCE` when `updated_at` is the empty string — a row in that state can never be updated.
-  evidence: Reachable only through direct DB manipulation today; `tests/services-lib.test.mjs` exploits the same seam deliberately to reach the in-transaction conflict branch.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-epic-14-debt-service-routes-and-hymn-index.md`
-  summary: A successful `PUT` does not invalidate the cached generated PPTX for that service, so a stale deck can stay on disk after an edit.
-  evidence: `src/lib/pptx-cache.ts` exposes no invalidation function; only the pptx download route and admin settings touch the cache. Explicit non-goal of this refactor.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-epic-14-debt-service-routes-and-hymn-index.md`
-  summary: `deleteService` removes the row (and cascades `announcement_items`) but never reclaims upload files referenced only by that service's `images_payload`.
-  evidence: FR-10 asks for one-off asset cleanup on delete. Explicit non-goal of this refactor.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-epic-14-debt-service-routes-and-hymn-index.md`
-  summary: There is still no `GET /api/services/[id]`; clients must list and filter to read one service.
-  evidence: Only `DELETE` and `PUT` exist on that route. Explicit non-goal of this refactor.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-epic-14-debt-service-routes-and-hymn-index.md`
-  summary: `GET /api/hymns?all=1` is now dead code and still returns the unbounded ~40 KB hymn dump this change removed from the page payload.
-  evidence: Nothing in `src/` calls it after the seed refactor. Kept because removing it is an explicit spec non-goal; revisit once a legacy caller is confirmed absent.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-epic-14-debt-service-routes-and-hymn-index.md`
-  summary: In the hymn autocomplete, a `?numbers=` lookup that returns no row (typo hymn 9999) and one that fails are both rendered as a bare number, and neither is retried.
-  evidence: Cosmetic today because the seed covers every stored value on the edit page; only the create-page Parse-hydrate path can hit it.
-
-## Deferred from: spec-auth-hardening-rate-limit-and-revocation (2026-07-26)
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-auth-hardening-rate-limit-and-revocation.md`
-  summary: A distributed attacker now gets 5 attempts per source address against one username instead of 5 in total, because the lockout is scoped to the (username, address) pair.
-  evidence: Deliberate trade-off made during review. The global per-username counter it replaces let any single host deny the admin account permanently at one request per 2.5 minutes, which is the worse outcome for a hub that must work at a fixed hour on Sabbath morning. Cloudflare is the volumetric layer in front.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-auth-hardening-rate-limit-and-revocation.md`
-  summary: Reaching a 429 remains a weak activity oracle: an attacker who parks a (username, address) pair at the threshold can infer from an early 401 that the real owner just signed in successfully and cleared the ledger.
-  evidence: Inherent to any lockout that clears on success. Much narrower after pair scoping than with the global username counter, since the attacker can only observe pairs on their own address.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-auth-hardening-rate-limit-and-revocation.md`
-  summary: `/api/webhook`, the other internet-exposed unauthenticated endpoint, still has no throttling and compares its secret with `!==` rather than a constant-time comparison.
-  evidence: `src/lib/webhook-auth.ts`; the route is exempt from the gate by design (`src/proxy.ts` matcher). Out of scope here because the spec forbids changing the webhook auth mechanism, but it is the same class of gap this spec closed on login.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-auth-hardening-rate-limit-and-revocation.md`
-  summary: Nine API routes and the gated pages carry no in-route authorization and rely entirely on the proxy gate.
-  evidence: `/api/services*`, `/api/hymns`, `/api/scripture`, `/api/announcements`, `/api/upload`, `/api/uploads/[filename]` contain no `requireSession` call. The Next docs (`proxy.md:219`) recommend verifying inside each route as well. `tests/proxy-matcher.test.mjs` now pins the matcher, and the six gated pages were moved onto the DB-checked path, but the APIs still have a single enforcement layer.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-auth-hardening-rate-limit-and-revocation.md`
-  summary: A rotating-key flood (fresh username and fresh forwarded address per request) never trips either threshold, so each request still runs a synchronous scrypt plus several SQLite statements on the single Node thread.
-  evidence: The login route was entirely unthrottled before this change, so this is not a regression in reachability, but the added DB work makes each unthrottled request more expensive. `login_attempts` is capped at 5000 rows so the table cannot grow without bound.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-auth-hardening-rate-limit-and-revocation.md`
-  summary: `scripts/smoke-auth.mjs` has two pre-existing failing checks unrelated to this change - a KJV-import regex that matches the legitimate `isKjvCorpusEmpty` import in `src/app/api/scripture/route.ts`, and an assertion on the literal string `Worship Hub`, which is absent from `src/` at HEAD too.
-  evidence: Confirmed against the baseline with `git grep -l "Worship Hub" HEAD -- src/`. Left unmasked rather than edited to pass.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-auth-hardening-rate-limit-and-revocation.md`
-  summary: `docs/architecture.md:79` and `docs/development-guide-monolith.md:86` still describe the request gate as "middleware" in prose.
-  evidence: Neither links the deleted `src/middleware.ts`, so nothing is broken; `docs/index.md` and `docs/source-tree-analysis.md` were corrected to point at `src/proxy.ts`.
-
-## Deferred from: spec-presenter-powerpoint-and-deck-fidelity (2026-07-26)
-
-Deck-parity gaps this change deliberately leaves. All were found by the paint-order audit of `260704 - BIC Worship Presentation.pptx` and `July 18 - BIC PPT 2026.pptx (Presentation).pptx`. The three divergences the registry vocabulary *can* express were fixed in `data/default-registry.json` and are not listed here: the `fellowship-etiquette` sentence the deck hides behind its own full-bleed picture, the `song-set` title cover geometry (`[0, 60.39, 100, 39.61]`, matching `asset-map.json` `coverFraction: 0.3961`), and `welcome-repeat.e2.h` (`6.19`).
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-presenter-powerpoint-and-deck-fidelity.md`
-  summary: `offering-tithe` shows the plate’s empty gold frame, because the deck’s QR code has no registry element and the asset it would reference was never extracted.
-  evidence: Both decks paint `ppt/media/image11.jpeg` at `[82.92, 63.33, 14.13, 25.93]` over `offering-bg.png`. The template’s `layouts.default.elements` are `e1`/`e2`/`e3`, all `text` (title, bank name, account number) — there is no `image` element. `data/asset-map.json` has no entry for `image11` and `public/assets/` holds no QR file, so `isRegistryImageRef` (which admits only `/assets/...` refs) has nothing to point at. Closing this needs an asset-extraction step first, then an `image` element — not a seed edit alone.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-presenter-powerpoint-and-deck-fidelity.md`
-  summary: `family-youth` diverges from the deck three ways — two translucent scrim panels are missing, the family and youth *name* lines have no element at all, and the rotated “Prayer Request” label renders horizontally.
-  evidence: (a) The deck draws two `solidFill 2F3B2D` panels at 35.7% and 80.4% behind the text columns; the template has no `shape` element at all. This part *is* expressible today (`shape` + `style.fillColor` + `style.opacity`, honoured by `ShapeElement` in `src/components/artifacts/ArtifactSlide.tsx` and by `toPptxTransparency` in `src/lib/pptx.ts`), so it is scope, not vocabulary. (b) Element ids run `e1, e3, e4, e5, e7, e8, e9, e10, e11` — `e2` and `e6` are absent, and they are exactly the family-name and youth-name lines (`asset-map.json` slide 56 evidence records “TheExampleFamily(…)’s Family”). The `familyText`/`youthText` placeholders bind to `e7`/`e9`, the prayer-request bodies, so the name lines are unreachable from any placeholder. (c) `e4` is stored at `[-14.44, 49.56, 42.01, 8.54]` — the *unrotated* box of a label the deck rotates −90°. `ALLOWED_ELEMENT_KEYS` and `ALLOWED_STYLE_KEYS` in `src/lib/registry/validate.ts` carry no rotation property, so this is a genuine Block If under the spec’s “do not invent a property” rule: it renders horizontally and its negative `x` pushes it off the left edge.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-presenter-powerpoint-and-deck-fidelity.md`
-  summary: `verse-reading` renders roughly twice as bright as the deck, because the deck’s 50% picture alpha cannot be expressed where the picture actually lives.
-  evidence: Both decks draw `verse-reading-bg.jpeg` with `alphaModFix 50%` over the full-bleed black `e1` shape. Our template carries the picture as `layouts.default.backgroundImage`, a bare string — `ALLOWED_LAYOUT_KEYS` admits no style slot, so there is nowhere to put an opacity. Restructuring it into an `image` element would not help either: `resolveOpacity` is applied only by `ShapeElement`, and `ImageElement` ignores `style.opacity` entirely. Closing this needs a vocabulary addition (layout background opacity, or image-element opacity honoured in both renderers), which the spec’s Block If forbids inventing here.
-
-- source_spec: `_bmad-output/implementation-artifacts/spec-presenter-powerpoint-and-deck-fidelity.md`
-  summary: `thank-you` and `midweek-prayer` carry hand-authored text matching neither deck, and it was left untouched on purpose.
-  evidence: `thank-you` reads “Thank You” / “Bandung International Community”; `midweek-prayer` reads “Midweek Prayer Meeting” plus a body still containing a literal `[placeholder]` where the day and time belong. Neither string appears in either deck’s text runs, and their round geometry (`[15, 35, 70, 18]`, `[10, 40, 80, 35]`) shows they were authored here rather than extracted. The spec’s Never list forbids changing worship-facing wording the deck does not settle, so this needs a product decision — note that the `midweek-prayer` `[placeholder]` will be projected verbatim until someone supplies the real day and time.
-
-## Deferred from: code review of 17-1-reachable-dark-mode (2026-07-31)
-
-- source_spec: `_bmad-output/implementation-artifacts/stories/17-1-reachable-dark-mode.md`
-  summary: `DESIGN.md` describes slide chrome as a `slide-surface` class that exists nowhere in the codebase.
-  evidence: `DESIGN.md:164` (Component Patterns) reads "Slide chrome is `slide-surface`; the preview list is a scrollable strip of scaled `slide-surface` instances." `grep -rn slide-surface` over `src/` and over all `.ts`/`.tsx`/`.css`/`.mjs` returns nothing outside `_bmad-output/`. Pre-existing and not caused by Story 17.1 — recorded because it sits in the table row directly above the one 17.1 edited to add `ThemeToggle`, so the next reader of that table is one line away from a dead reference. Whoever next touches `DESIGN.md` → *Component Patterns* should either name the real class (`ArtifactSlide` resolves its own geometry from the registry) or drop the claim. **Note added by round 2 of the same review:** the *second* half of that sentence is a separate falsehood and was NOT covered by this defer — it is now a patch item, because round 1 dismissed AC-4's word *previewed* on precisely the ground that the preview list renders no slide.
-
-### Round 2 of the same review (2026-07-31)
-
-- source_spec: `_bmad-output/implementation-artifacts/stories/17-1-reachable-dark-mode.md`
-  summary: The contrast audit ran in one direction only; the light half of the two service forms is worse than anything Story 17.1 fixed.
-  evidence: `CreateForm.tsx:444,447,473,481,483` and `EditForm.tsx:463,471,473` paint `text-amber-200`, `text-amber-300` and `text-red-200` on `bg-amber-500/10` / `bg-red-500/10` over `bg-background`, with no `dark:` half and no `.dark` ancestor (`services/new/page.tsx:39` is `bg-background text-foreground`). In the **light** theme the amber banners land near 1.15:1 — effectively invisible. These are the date-collision warning, the save-error banner and the missing-hymn warning, in the same two forms Story 17.1 names as `SlidePreviewList`'s host. Pre-existing and unchanged by 17.1: these shades never had a dark ancestor to key against, so they always rendered light and always failed there. Recorded because 17.1's new AC-6 test asserts only the **presence** of a `dark:` half, so it is structurally incapable of catching a dark shade stranded on a light surface — the direction 17.1 did not audit has no regression net either. Belongs with `DESIGN.md` Open Item 4 (product-decision-first; no story owner yet).
-
-- source_spec: `_bmad-output/implementation-artifacts/stories/17-1-reachable-dark-mode.md`
-  summary: `PresenterOperator` pins `dark` on its own wrapper but never on the shell behind it, so a light-theme operator gets a white canvas framing the dark Presenter.
-  evidence: AC-3's opt-out is a wrapper class, so `html`/`body` keep `bg-background` plus the `scrollbar-gutter: stable` reservation from `globals.css:127-129`. With the operator on light, a white canvas and a white gutter strip frame the dark Presenter — in the dim sanctuary the AC's own rationale invokes. Pre-existing in that nothing outside the presenter carried `.dark` before 17.1 either, so the mismatch already shipped; recorded because the mechanism is identical to the one `useProjectedShell` was extracted for. If the open AC-4 decision adopts a route-group shell owning every full-screen surface, this is the obvious third consumer.
-
-- source_spec: `_bmad-output/implementation-artifacts/stories/17-1-reachable-dark-mode.md`
-  summary: `LogoutButton` hand-rolls what `ui/button.tsx`'s `destructive` variant already provides, and drops the focus treatment doing it.
-  evidence: `ui/button.tsx:18-19` ships `destructive` as `bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20` plus the `dark:` and `aria-invalid` handling. `LOGOUT_CLASS` (`LogoutButton.tsx:16`) reproduces a subset by hand — `hover:bg-red-500/10 text-red-600 dark:text-red-400` — with no focus-visible treatment at all, and the file imports `Button` without using it (`LogoutButton.tsx:5`, the only lint problem in any of Story 17.1's 13 changed files). Distinct from the `text-destructive` patch filed against 17.1, which is the one-class colour fix inside the current shape; this is the larger refactor to the variant, and it is pre-existing.
-
-### Round 3 of the same review (2026-07-31)
-
-- source_spec: `_bmad-output/implementation-artifacts/stories/17-1-reachable-dark-mode.md`
-  owner: Story 17.7 (`17-7-projected-shell-route-group`)
-  summary: `claimProjectedShell` silently ignores its `doc` argument after the first claim, so a second document gets neither the reset nor a working restore.
-  evidence: `src/lib/projected-shell.ts:75-87` — a claim raised while `claims !== 0` takes the short path, so the snapshot and all five style writes are skipped for that document, and the release closure it returns restores nothing on it. No throw and no warning. Driven against the real module, `docB.body.style.backgroundColor` stays `white`. Not reachable today: both callers pass the same `document`, and the projector runs in a separate window with its own module instance, so the counter is per-realm. The file's own header at `:29` names Story 17.7's route-group layout as the third caller over the same URLs — the same document again — so 17.7 is where this is either fixed with per-document state or closed by stating the single-document contract in the file. Deferred rather than patched because the choice between those two is part of what that layout's design decides.
-
-### `bmad-architecture` Update run, 2026-07-31 (AD-24 ratification)
-
-- source_spec: `_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md`
-  owner: Story 17.7 (`17-7-projected-shell-route-group`)
-  summary: `projected-shell.ts`'s own header comment tells the next implementer that a Server Component can reach the shell reset without a hook. It cannot, and that is the exact misreading Story 17.7 has to avoid.
-  evidence: `src/lib/projected-shell.ts:34-36` reads *"it is testable with a document stub in the `node:test` harness, and a Server-Component layout can reach it without a hook."* The first clause is true and is the reason the module was split out; the second is false — a Server Component never executes in the browser and has no `document` at all, so `claimProjectedShell(document)` cannot be called from one. It reaches this module only through a client child, which reintroduces the very timing problem the split appears to solve: the paint that leaks on a projected load is the **server's first paint**, and no browser-side mechanism runs before it. Story 17.1's own implementer note says as much (*"`useLayoutEffect` is not a shortcut, because the paint that leaks is the server's"*), so the module comment and the story record now disagree in the one file a 17.7 implementer opens first — sitting two lines below the correct reasoning, which is what makes it convincing. `ARCHITECTURE-SPINE.md` AD-24's gap clause was corrected by this run to state the constraint explicitly and to name this comment as wrong; the code comment itself is untouched, because an architecture Update run does not patch production code. Owned by 17.7 rather than filed loose: that story's whole design call is *where* the reset mounts, and this sentence mis-states what the candidate mounts can do.
-
-### Round 4 of the same review (2026-08-01)
-
-- source_spec: `_bmad-output/implementation-artifacts/stories/17-1-reachable-dark-mode.md`
-  owner: **Story 17.8** (`17-8-guard-criteria-encoding`) — assigned 2026-08-01 by `bmad-create-story`; that story exists to close these four by stating the rule rather than adding the next spelling
-  summary: `DARK_VARIANT` misses `dark:!…` and `dark:<digit>…`, so a `dark:` variant painting a literal colour in the projected tree escapes the guard that advertises `dark:` as one of exactly three routes in.
-  resolved: **2026-08-02, Story 17.8.** `DARK_VARIANT` now identifies a `dark:` segment anywhere in a variant chain, retaining `/g` for `matchAll()`. The focused suite exercises important, prefix/suffix-stack and child-selector forms; a source injection of `dark:!bg-zinc-900` failed the fixed guard and was reverted.
-  evidence: `tests/theme-chrome.test.mjs:533` — `/(?<![\w:])dark:[a-z[-]/` requires a lowercase letter, `[` or `-` after the colon, so Tailwind's important suffix and a stacked breakpoint both fall outside the character class. Reproduced by injection into `src/components/SlideView.tsx`, each reverted: `className="dark:!bg-zinc-900"` → 47/47 green, `className="dark:2xl:bg-zinc-900"` → 47/47 green, `className="dark:bg-zinc-900"` → fails. A `dark:` class naming a *token* is still caught by `TOKEN_UTILITY` (`dark:!bg-card` does react), so the live hole is narrow: a `dark:` variant painting a **literal** colour on a projected surface, which makes that surface theme-dependent while every token guard stays green. Deferred rather than patched because the constant is unchanged since round 2's remediation and is not in round 4's diff — but recorded with the adjacency, because the `!` terminator this guard lacks is precisely what the same change set added to `EDGE_END` one guard over, which is the fourth consecutive round in which a rule was widened at the spelling a reviewer named and not at its siblings.
-
-### `bmad-architecture` Update run, 2026-08-01 (AD-24 closure-gate ceiling repair)
-
-Five findings from that run's Reviewer Gate, all in `tests/theme-chrome.test.mjs`, none patched here — an architecture Update run does not patch production code, and the guard file is the gate `AD-24` depends on rather than incidental test scaffolding. Each was verified in the shipped file by the parent, and the first two were reproduced at the keyboard. `ARCHITECTURE-SPINE.md`'s ceiling bullet now records all five as live; these entries are the code-side owners.
-
-- source_spec: `_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md`
-  owner: **Story 17.8** (`17-8-guard-criteria-encoding`) — assigned 2026-08-01 by `bmad-create-story`; that story exists to close these four by stating the rule rather than adding the next spelling
-  summary: `LITERAL_OUTLINE_COLOUR` accepts the arbitrary-value spelling of the two keywords round 4 just excluded, so a projected focusable can still ring in the operator's theme with the suite green.
-  resolved: **2026-08-02, Story 17.8.** The guard now has one positive locally-resolved-colour classifier for bare and bracketed spellings. It rejects all seven recorded bypasses while accepting literal hex, functions, type-hinted colours and named colours; an injected `focus-visible:outline-[transparent]` failed and was reverted.
-  evidence: `tests/theme-chrome.test.mjs:697`. Run against the shipped regex: `focus-visible:outline-[transparent]`, `focus-visible:outline-[inherit]` and `focus-visible:outline-[color:inherit]` are **accepted**; the bare `focus-visible:outline-transparent` and `focus-visible:outline-inherit` are rejected. `outline-[inherit]` takes its `outline-color` from the universal `* { @apply outline-ring/50 }`, which is exactly the leak this guard exists to stop, and none of the three carries a token name so `TOKEN_UTILITY` / `TOKEN_SHORTHAND` / `TOKEN_CSS_VAR` do not see them either. Arbitrary values are house idiom on these very surfaces (`ProjectorClient`'s `bg-[#0B1220]`), and `EDGE_WIDTH` at `:597` already models the `[…]` form for widths — so the vocabulary was available and was not applied. **Round 3 had named the fix**: *"exclude the CSS-wide keywords and `transparent`, **or** match a positive colour vocabulary rather than a subtraction list."* Round 4 took the first, widening four excluded spellings to nine. A positive vocabulary is the encoding.
-- source_spec: `_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md`
-  owner: **Story 17.8** (`17-8-guard-criteria-encoding`) — assigned 2026-08-01 by `bmad-create-story`; that story exists to close these four by stating the rule rather than adding the next spelling
-  summary: The `className` props guard is defeated by an inline index signature, and its call-site belt cannot see a `.ts` call site — so the compile-error guarantee AC-4 rests on is still walkable two ways.
-  resolved: **2026-08-02, Story 17.8.** `exportedPropsShape` rejects top-level index signatures and rest destructuring while preserving its loud failure for non-local types; the belt scans direct `React.createElement` calls in `.ts` as well as JSX in `.tsx`. Separate index, rest and `.ts` call-site source injections each failed and were reverted; ordinary local property/array/tuple controls remain readable.
-  evidence: `tests/theme-chrome.test.mjs:1051` — `propsAnnotation` returns a string starting with `{` for `{ slide: SlidePlanItem; [key: string]: unknown }`, so `exportedPropsShape` short-circuits and returns the parameter list, which contains no `className`; the caller's `className="bg-card"` then compiles onto the wrapper the congregation sees. `Record<string, unknown>` fails loudly (not locally declared) but the index-signature spelling does not. The belt that would catch it at the call site iterates `allTsxFiles()` (`:340`), so `React.createElement(SlideView, { slide, className: 'bg-card' })` from a `.ts` module is invisible — and a `.ts` call site is one of the four things the guard's own comment (`:1080-1084`) gives as its reason for existing. Encoding the criterion means asserting the props shape is a **closed** object literal — no index signature, no rest element — rather than asserting the absence of one word.
-- source_spec: `_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md`
-  owner: **Story 17.8** (`17-8-guard-criteria-encoding`) — assigned 2026-08-01 by `bmad-create-story`; that story exists to close these four by stating the rule rather than adding the next spelling
-  summary: The edge-width guard never received the transitive sweep the token and focusable guards did, so a `.tsx` reachable from a projected client is token-scanned, focus-scanned and not edge-scanned.
-  resolved: **2026-08-02, Story 17.8.** `EDGE_UTILITY` now sweeps every non-root module reached by `projectedTree()`, regardless of extension. A temporary reachable `.ts` export of `border-2`, imported and consumed by `SlideshowClient`, failed on its transitive source and was removed. **`bmad-architecture` Update handoff (not performed in this change set):** amend AD-24's current closure-gate block to remove this edge-sweep ceiling, update the `className` paragraph for the closed index/rest shape and `.ts` belt, and replace the `LITERAL_OUTLINE_COLOUR` subtraction-list paragraph with its positive classifier. Re-resolve every `tests/theme-chrome.test.mjs` citation in that block after this file's line movement; preserve the remaining live ceilings and owners (runtime-composed classes, CSS imports, downward-only walk, duplicate-shell assertion, and four-list derivation). `DARK_VARIANT` needs no spine change because it is not named there.
-  evidence: `EDGE_UTILITY` is consumed at `tests/theme-chrome.test.mjs:631` and nowhere else in the file, inside `for (const file of PROJECTED)`. The token guard pairs its roots-only loop (`:644`) with a `projectedTree()` sweep (`:867`) and the focusable guard sweeps the tree directly (`:718`); the edge guard has no companion. A `border-2` in a reached component inherits `border-border` from the universal selector and changes between themes on the room-facing screen with the suite green. Latent only because all 27 walked modules are `.ts` today and carry no JSX — and the `>= 27` floor at `:881` constrains count, not extension, so nothing pins that. Fix: sweep `EDGE_UTILITY` over `projectedTree()` filtered to `.tsx`, exactly as the focusable guard does.
-
-### `bmad-architecture` Update run, 2026-08-03 (Story 17.8 closure-gate sync)
-
-Three findings from this run's Reviewer Gate, none patched here: two add newly discovered ceilings, while the non-TypeScript resolver finding sharpens the already-live CSS-import ceiling. This Update is docs-only, Story 17.8 remains done, and Story 17.2 is unrelated contrast work. They need Correct Course or a new Epic 17 story before implementation ownership is assigned.
-
-- source_spec: `_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md`
-  owner: **Unassigned — route through Correct Course or a new Epic 17 story; do not reopen Story 17.8 silently**
-  summary: Closed props plus a renamed caller can compose into a `className` leak when the component derives rest inside its body.
-  evidence: `assertClosedPropsStructure` rejects a rest binding only in the exported function parameter (`tests/theme-chrome.test.mjs:1378-1385`). A component can instead accept an identifier typed as `{ slide: SlidePlanItem }`, derive `const { slide, ...rest } = props` inside the body, and spread `rest` onto its wrapper. A caller importing it under another name can pass a structurally wider variable carrying `className`; TypeScript accepts the variable, while the JSX belt matches only the exact `SlideView` / `ArtifactSlide` names (`:1235-1239`). Neither shipped component has this shape today.
-- source_spec: `_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md`
-  owner: **Unassigned — route through Correct Course or a new Epic 17 story; do not reopen Story 17.8 silently**
-  summary: The positive outline classifier is a shallow vocabulary classifier, not a complete CSS colour parser.
-  evidence: `localColour` accepts a recognised function name when its body is non-empty, contains no unresolved reference, uses only allowed words, and has no zero alpha (`tests/theme-chrome.test.mjs:856-869`); it does not validate function arity or channel grammar. A malformed value such as `focus-visible:outline-[rgb(255)]` therefore passes the guard and can be ignored by CSS, leaving the inherited themed outline. The focused controls at `:1064-1096` do not include malformed recognised functions. No shipped projected focusable uses one.
-- source_spec: `_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md`
-  owner: **Unassigned — revisit at the first projected-tree import of a non-TypeScript module**
-  summary: The transitive projected-tree guards resolve only TypeScript modules even though the project permits other module extensions.
-  evidence: `moduleImports` tries only `.tsx`, `.ts`, `/index.tsx` and `/index.ts` (`tests/theme-chrome.test.mjs:1003-1011`); `tsconfig.json:5,12` permits JavaScript and JSON modules. CSS is the already-live architectural case because a route-segment stylesheet is a candidate shell-reset mechanism; no `.js`, `.jsx` or `.json` module is currently reachable from the shipped projected roots.
-
-### Story 17.7 carried-forward owners (citations re-resolved 2026-08-03)
-
-- source_spec: `_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md`
-  owner: Story 17.7 (`17-7-projected-shell-route-group`)
-  summary: The gate keeps four hardcoded room-facing lists where one derivation would do, and two of them are hand-duplicates of a third.
-  evidence: `PROJECTED` (`tests/theme-chrome.test.mjs:595-606`, six entries), `ROUTE_SHELLS` (`:946-949`, hand-duplicating two of them and feeding the scroll guard at `:951-978`), `FULL_SCREEN` (`:1559-1562`), and an inline pair at `:1546` feeding the `className` props guard. `AD-24`'s rule clause named only two of the four until this run corrected it, so an implementer obeying it exactly would register a new room-facing failure branch in both named sets and still miss the scroll guard — whose own comment records that the two existing branches diverged immediately after a change set declared them one failure. Owned by 17.7 because its route-group segment is the first real value the roots could be *derived from* rather than listed, which is what would make the spine's *encode the criterion* instruction satisfiable instead of merely correct.
-- source_spec: `_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md`
-  owner: Story 17.7 (`17-7-projected-shell-route-group`)
-  summary: `exportedProps` cannot read an `async` default export, which is the shape of every Server Component the closing change set will add.
-  evidence: `exportedProps` at `tests/theme-chrome.test.mjs:1282-1286` matches the literal string `export default function`; both route shells are `export default async function` (`projector/page.tsx:30`, `slideshow/page.tsx:31`). It fails **loudly** (`assert.ok(at !== -1, 'expected a default-exported function')`) rather than passing, so it is safe where it is applied today — but it is why adding the two shells to `FULL_SCREEN` produces four failures rather than the two the shell gap accounts for, measured on 2026-08-01 (52 tests, 4 failures; probe reverted). Recorded so an implementer does not read two of those reds as noise.
-
-## Hymnal corpus: every title in `data/hymns.json` is a first lyric line (2026-08-01)
-
-Found while answering a routing question, not by a review — so there is no source spec, only the code and the corpus. **Deferred by the owner on the day it was found: not started, and deliberately so.** It cannot start, because the missing piece is an input nobody in the repository can produce. Recorded here rather than as a story for exactly that reason: a story would have to state a testable AC for *"the title is correct"*, and there is nothing yet to compare a title against.
-
-- source_spec: FR-2 / Epic **2** (`2-2-rundown-parser-and-hymnal-db-integration`) — the corpus that epic delivered
-  owner: **Epic 22 / Story 22.2** (`22-2-hymn-title-is-a-title`) — assigned 2026-08-01 by `bmad-correct-course`, which is the route this entry itself named. Still blocked on an owner-supplied input, not on code and not on a decision; what changed is that the block now has a key rather than sitting under *no open epic owns it*
-  summary: All 695 titles in `data/hymns.json` are the hymn's **first lyric line**, not its title. The source dump `.work/lirik-lagu.json` carries no title field at all, so `deriveTitle()` was written to fall back to the lyrics — the corpus is faithful to its source and the source is insufficient. Regeneration is therefore blocked until a replacement source carrying an authoritative number→title index exists. **Fix at the generator and re-run the import; do not hand-patch 695 rows** (AGENTS.md, *prefer not producing the value to blocking it afterwards* — same shape as the `evidenceFor` filter in `extract-pptx-assets.mjs`).
-  evidence: `scripts/import-hymnal.mjs:23` `deriveTitle()` returns the first non-label line after a `Verse` header, final fallback `SDAH {n}` (`:54`), applied at `:105`; source path `.work/lirik-lagu.json` (`:7`), **absent from this machine**. Observed in the shipped corpus: `#83` = `"O worship the King, all-glorious above"` while `epics.md:369` states the intended title slide as `"O Worship the King · SDAH #83"` — the artefact and the data already disagree in writing; `#1` = `"Praise to the Lord, the Almighty, the King of creation!"`; `#100` = `"Great is Thy faithfulness, O God my Father"`. The value is **payload, not internal**: it reaches the song title slide (`src/lib/slide-plan.ts:158`, `songTitle: hymn.title`, FR-5), the group label (`:192`), the number+title autocomplete (Story 14.6) and picoclaw's `resolvedHymns` readback (Story 6.5). `tests/pptx-content.test.mjs` asserts title text, so regeneration moves the suite.
-
-When the source exists, the route is `bmad-correct-course` (to give it an owning epic — Epic 2 is `done`) → `bmad-create-story` → `bmad-dev-story` → `bmad-code-review`. Not `bmad-quick-dev`: three consumer boundaries and a moving test suite put it past *bugfix tightly scoped to existing behavior*.
-
-**First leg done, 2026-08-01 (`sprint-change-proposal-2026-08-01.md`).** The Correct Course ran and the owning epic exists: **Epic 22**, *The song book is a choice, and its titles are real*, with this finding as **Story 22.2**. Two things that entry could not know when it was written, both measured by the same pass: the corpus is not only un-regenerable in principle — `.work/lirik-lagu.json` is **absent**, so `npm run import:hymnal` cannot run at all and the committed output is the last copy; and `hymns.number` is globally `UNIQUE`, so the same file move carries a per-book key (Story 22.1) rather than being a rename. The *fix at the generator* instruction above is carried into Story 22.2 verbatim, with one adjustment forced by the missing source: the generator now reads the committed corpus plus the owner-supplied index. Story 22.2 additionally waits on a `bmad-architecture` Update — correcting 695 already-persisted titles is AD-21's case and its counter does not exist.
-
-**Closed, 2026-08-01, later the same day.** The owner supplied the number→title index — the input this entry was written to say nobody in the repository could produce — and Story 22.2 shipped against it. The *fix at the generator, do not hand-patch 695 rows* instruction was honoured: the join happened once, inside the 22.1 file move, and no row was edited individually.
-
-Two things this entry predicted, checked rather than assumed. **It was right about the consumer boundaries** — the title is payload, reaching the song title slide, the group label, the autocomplete and picoclaw's readback. **It was wrong about the test suite:** it warned that regeneration "moves the suite", and `tests/pptx-content.test.mjs` did not move at all, because the fixtures it asserts contain no hymn whose title changed. That is worth recording as a gap rather than as luck — the suite would not have caught a badly joined index either, which is why `tests/corpus.test.mjs` now pins four titles directly.
-
-The architecture wait resolved differently than expected, and the distinction matters. Story 22.2 shipped **without** the AD, not by bypassing it: it added no channel, because `upsertHymns` already overwrote `title` from the corpus on every boot. The corrected titles rode the path that was already there. The `bmad-architecture` Update is still **open**, re-scoped to the forward question it always really was — should a shipped reference corpus keep an every-boot overwrite? If the answer is AD-21's counter, its target is `upsertHymns`, not this data.
-
-## Deferred from: code review of 21-2-translation-is-a-parameter (2026-08-02)
-
-- Partial verse range returns incomplete passage without error (`src/lib/scripture.ts:141`) — pre-existing scripture behavior; Story 21.4 owns reference/matcher semantics.
-- Removed corpus file leaves stale `bible_translations`/`bible_verses` rows (`src/lib/db/index.ts:125`) — reconcile only processes discovered files; corpus-file deletion cleanup is out of AC scope for Story 21.2.
-- `migrateBibleVersesTranslationCode` assumes `translation` or `translation_code` column exists (`src/lib/db/index.ts:111`) — edge case for exotic legacy DB shapes; no observed failure path on normal upgrade from shipped schema.
-
-## Deferred from: PR #22 review, round 2 (2026-08-02)
-
-Three findings from this round were patched in the same change set (AC-7 fixture
-isolation, the closure-guard regex, AC-13 written down and pinned). These seven
-were not, and each names where it belongs rather than asking for a story of its own.
-
-- **The 503 is unreachable in its own failure mode** (`src/app/api/scripture/route.ts:40-71`). A fresh boot whose corpus file is unreadable writes no `bible_translations` row, so `?translation=KJV` fails the registry check and answers `400 Unknown bible translation "KJV"` — while the carefully written 503 that names the file and points at `corpus:verify` only fires when the registry row exists and the verses are gone. The same broken install answers differently with and without the parameter. `discoverBibleTranslationFiles()` is already imported in that module, so "discovered on disk but absent from the registry" is a two-line distinction. Story 21.3 owns this surface next.
-- **Every boot rewrites all 31,102 verse rows into the WAL** (`src/lib/db/index.ts`). `DO UPDATE SET verse_text = excluded.verse_text` fires unconditionally, so an unchanged boot still dirties every row. SQLite accepts `WHERE verse_text <> excluded.verse_text` on an upsert, which makes the steady state a pure read while keeping the DB-edit correction AC-14 requires. AC-8 chose reconcile-over-fingerprint on CPU cost and did not weigh the write amplification; this is the cheap half of that decision, not a reversal of it.
-- **AC-4's duplicate refusal keys on the filename, not the declared code** (`src/lib/corpus.ts:112,127-139`). Two files named `kjv.json` refuse correctly; a second file declaring `KJV` under another filename degrades to a logged skip from `loadBibleCorpus`. No last-wins corruption results, so the safety property holds — but the behaviour is not what AC-4 describes, and an operator sees a load error rather than the named-both-paths refusal. Either tighten to group by declared code or amend AC-4. Neither branch is tested, and neither is the declared-locale-vs-directory refusal.
-- **`listInstalledBibleTranslations` / `readBibleTranslationMeta` have no callers** (`src/lib/corpus.ts:70-93,313-319`). Added as the "lightweight" answer to a round-1 finding, then superseded when the route went to the DB registry instead. They also parse the whole 4.36 MB file for five metadata fields, so they are not lightweight either. Delete, or stop the read at the `translation` block.
-- **`content_hash` is written and never read** (`src/lib/corpus.ts:197`). The column is fine as a forensic breadcrumb; the comment calling it "for reconcile skip" contradicts `data-models-monolith.md`, which correctly says it is not used to skip.
-- **O(n²) directory scans at boot** (`src/lib/corpus.ts:149-163`). `reconcileBibleCorpus` discovers once, then `loadBibleCorpus(code)` re-runs `discoverBibleTranslationFiles()` per descriptor — twice more when it throws. Inert at one corpus; a `loadBibleCorpusFromPath(descriptor.corpusPath)` overload removes it. Also note `bibleCorpusPath()` is no longer a pure path resolver and now throws, which makes `tests/corpus.test.mjs:31`'s `fs.existsSync(bibleCorpusPath(...))` assertion message unreachable.
-- **The `try` added to `getDb` left ~190 lines at the old indent** (`src/lib/db/index.ts`), and `db.close()` in the catch can throw and mask the original boot error. Cosmetic and near-cosmetic respectively, but the indent makes the boot path harder to read than it was.
-
-## Deferred from: code review of 24-1-string-catalogue-switcher-and-lang (2026-08-02)
-
-- Closure guard does not catch `getSetting('ui_locale')` bypass — guard checks direct `@/lib/i18n` imports and `getUiLocale` calls only; a projected module could read the raw settings key without failing the suite. No projected file does this today.
-- Duplicated hand-maintained `PROJECTED` list in `tests/i18n.test.mjs` — copies the six-entry list from `theme-chrome.test.mjs` instead of sharing one source; story explicitly chose the reuse approach over structural deduplication.
-
-## Deferred from: code review of 23-1-opt-in-demo-seed (2026-08-03)
-
-- Concurrent `seed:demo` race on empty table could create two services (`src/lib/demo-seed.ts:46-48`) — negligible for opt-in demo CLI; same collision semantics as normal `createService` under concurrent writes.
-
-## Deferred from: code review of 17-3-app-metadata (2026-08-05)
-
-- ~~Stale header comment block in `sprint-status.yaml` (lines 2–5) still says Epic 17 remains in-progress alongside ready-for-dev Story 17.3, which contradicts the body rows — pre-existing at HEAD; not introduced or worsened by the Story 17.3 change set. Left for a tracking-hygiene pass rather than mixed into this story's review close.~~ **Resolved 2026-08-05**, during Story 17.5's record repair — which edited that same file and would otherwise have left it dated two days before its own newest entry. The header now states 17.3 and 17.4 as `done` and 17.5 at `review`, and says in its own text that it had gone stale, so the next reader sees the repair rather than trusting a date.
-
-## Deferred from: code review of 17-4-canvas-dirty-state-guard (2026-08-04)
-
-- **Browser Back/Forward bypasses the unsaved-canvas guard** (`src/components/navigation-blocker.tsx`). `<Link onNavigate>` covers link clicks and `beforeunload` covers tab close/reload, but a same-document `popstate` triggers neither, so the browser's Back button leaves the Artifact editor with unsaved work and no prompt. The App Router ships no supported hook for blocking history navigation — Next's own documented answer to this problem is the `onNavigate` pattern Story 17.4 implements — so closing it means either an unsupported `history` interception or accepting the gap. AC-4 scoped Story 17.4 to the three exits it named, and this is a fourth. Not a regression: nothing guarded any exit before that story. Adjacent to `EXPERIENCE.md` Open Item 5, which already owns the general mid-edit-interruption question.
-- **The canvas lock leaves a ~1-frame window open** (`src/components/admin/ArtifactEditor.tsx`, the `[busy]` effect). `handleSave` sets `status` to `saving` and then runs on to `serializeCanvas` and `await fetch` in the same synchronous block, but the effect that drops `selection`/`selectable`/`evented` is a passive effect and only runs after React commits — which is after the `await` yields. A pointer event landing in that gap still reaches the canvas. Practically unreachable: a drag would have to both start and finish inside roughly one frame. It is left open deliberately rather than closed by locking synchronously inside `handleSave` as well, because that would put the same rule at a second enforcement site, and `project-context.md` names duplicated gates as how two copies drift and one ends up weaker. Raised by the PR #31 automated reviewer, which also stated this was already recorded here — it was not, which is why this entry exists.
-- **A failed template load cannot be retried by re-clicking the same row** (`src/components/admin/ArtifactEditor.tsx`, Templates list `onClick`). When `loadTemplate` errors, the row stays selected, so clicking it again changes no state and the `[selectedId]` effect never re-runs; the operator has to pick another template and come back, or reload. Pre-existing and unchanged by Story 17.4 — the `item.id === selectedId` short-circuit that story added is inert here, because setting React state to its current value already bailed out. A retry affordance belongs with whoever next owns this surface.
-
-## `bmad-architecture` Update run, 2026-08-05 (Story 17.6 AC-9 — the toast-channel *Deferred* repair)
-
-One finding from this run's Reviewer Gate, not patched here: the Update is docs-only and an architecture Update run does not patch production code. The spine repair itself needed no `AD` — 29 `AD` headings before and after, nothing renumbered, retagged or reused — and this finding is precisely the assertion the repaired entry now says is missing.
-
-- source_spec: `_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md`
-  owner: **Story 17.9 (`17-9-toast-channel-wiring`)** — on AD-25's precedent that a guard belongs with the thing it guards; 17-9 is the change set that mounts the second client provider, so it is where a mount assertion can be proved to react
-  summary: AD-24's mount rule is only half asserted — nothing fails when a second client provider is added *beneath* the root layout, and the closure gate cannot see the room-facing paint that would follow.
-  evidence: `tests/theme-chrome.test.mjs:1940-1944` asserts only that `src/app/layout.tsx` carries no `'use client'`, which is the *the boundary never moves upward* half of AD-24 `:212`. The other half — *mount at the narrowest layout that covers its consumers, and root only when that enumeration is every route* — has no assertion anywhere: a `<Toaster />`, or any client provider, added as a **child** of the root layout passes the entire suite. The closure gate would not catch the consequence either, because `projectedTree()` walks downward from the projected roots while a root-mounted provider renders *above* them — already recorded as the third live ceiling in the spine's AD-24 closure-gate entry, and owned there by Story 17.7 for the four-list derivation, so this entry adds the missing **mount** assertion rather than restating that ceiling. Verified this run: `Toaster` appears only inside `src/components/ui/sonner.tsx` (`:4`, `:7`, `:12`, `:49`), `toast(` appears nowhere in `src/`, and `src/app` holds exactly one `layout.tsx` and no route group at all — so the operator-scoped mount 17-9 needs does not exist yet and nothing in the suite would stop it landing at the root instead. Shape a guard could take: assert that the root layout's rendered children carry exactly the one provider AD-24 names, or that `<Toaster />` resolves under an operator-scoped segment. Per this repository's standing rule it must be **proved to react** — move the mount to the root and watch the suite go red.
-
-## Deferred from: Story 20.1 review, round 2 (2026-08-07)
-
-- Circular registry module dependency predates Story 20.1: `src/lib/registry/seed.ts:7` imports `assertContiguousPositions` from `./store`, while `src/lib/registry/store.ts:11` imports `getSeedTemplateById` from `./seed`. ES modules tolerate it today because neither binding is called at module top level; a future evaluation-order shift could expose an uninitialized binding.
+# Deferred Work — the project's open debt register
+
+**This file is the single authoritative list of open implementation debt.** `AGENTS.md`'s authority
+map names it. Two neighbours deliberately hold no debt list of their own and point here instead:
+
+- `ARCHITECTURE-SPINE.md` → *Deferred* carries only **deferred decisions** and dimensions that spine
+  does not own yet — never work items.
+- `EXPERIENCE.md` → *Open Items* carries only **behavioural and affordance** questions it owns as the
+  UX authority.
+
+One entry per open debt: what it is, who owns it, why it can wait. An entry with no owner says so —
+that is a real state, not an omission. Closed work is **not** kept here; git holds the prior text.
+
+---
+
+## Architecture decision gaps
+
+The unclosed half of six adopted decisions. Each `AD` states its own gap in one line; this is where
+the owner and the reason it can wait live.
+
+| Debt | Owner | Why it can wait |
+| --- | --- | --- |
+| **AD-6** — four shipped paths write without the `updated_at` precondition: the webhook correction and intake writes (`src/app/api/webhook/route.ts`), `DELETE /api/services/[id]`, and `PATCH`/`DELETE /api/announcements/[id]`, whose table has no `updated_at` column at all. | unassigned — needs a story | The decision is not in question, only which story lands it and whether the webhook gets a token or an explicit trusted-single-writer carve-out with the cost written down. Compounded by the second-granularity weakness below. |
+| **AD-10** — `PresentMessage` (`src/lib/present-channel.ts`) carries no plan identity, so presenter and projector each build their own plan and any structural change while a projector window is open offsets every slide after it, silently. | unassigned — needs a story | Sequencing, not an open question: the *full* identity is defined partly over AD-16's snapshot, which does not exist yet, but fingerprinting the resolved plan closes the live case today. **The hazard is live now** — an admin saving a template mid-service is enough. AD-29 forbids adding a `PresentMessage` variant while leaving this half-implemented; adding the variant is not progress against this item. |
+| **AD-17** — no per-row seed origin. `artifact_templates` has no origin column (`src/lib/db/index.ts:438-446`) and `assertStableAgainstSeed` (`src/lib/registry/store.ts:129-133`) opens with `getSeedTemplateById(incoming.id)`, which throws on an id the seed lacks. | **Story 20.3** | Unreachable today, and that is sequencing rather than safety: no create verb exists, so no row without a seed origin can exist to hit it. It becomes reachable in the *same change set* that adds one — shipping a create verb without it answers a brand-new General with `404 Unknown template`, and **Story 20.4's *"a rejected Save names the property"* then cannot be met at all**, since the failure is not about a property. Reset must also be *absent* on an authored row. The encoding choice is a deferred decision in the spine. |
+| **AD-18** — the derived-index rule has no guard. The Rule requires that *"a migration that writes a column alone is refused by a test asserting column and payload agree for every row"*. Every shipped write does set both in one statement (`src/lib/registry/store.ts:268-291`, `:341-349`), so the rule holds in code — but no such test exists; `tests/artifact-kinds.test.mjs:155-171` pins the `artifact_templates` DDL column list, which is a different assertion. | unassigned — route to whichever story next writes a value migration | Nothing can violate it today: the only writers are the two statements above and both maintain the pair, so the guard protects a future migration rather than present code. It belongs with the first migration that rewrites `base_type`, on the AD-25 precedent that a guard ships with the thing it guards, and per the standing rule it must be proved to react — write a column-only row and watch the suite go red. Until then the rule is honour-system, which is exactly what this entry exists to say out loud. |
+| **AD-20** — five handlers in `src/lib/slide-plan.ts` are keyed on hardcoded row ids and still decide which hymn fills each slot: `bt-opening-song` (`:357`), `bt-closing-song` (`:413`), `ds-opening-song` (`:478`), `song-set` (`:514`) and `ds-closing-song` (`:578`). Adding a fifth song position is a code change and a deploy. | **Story 20.7** | AD-19's ordered-entry model arriving late rather than a defect: the `songset-*` slot identities appear nowhere in `src/` yet, so the slot→rundown-position mapping lives in this handler table instead of the one table AD-19 requires. 20.7 lands the identities, the mapping table and the deletion of `song1Number..song4Number` in one change set. |
+| **AD-24** — the room-facing shell closure has four holes, all one defect at different depths: the server's **first paint** on every projected load; the two Server-Component route shells (`src/app/services/[id]/present/projector/page.tsx`, `src/app/services/[id]/slideshow/page.tsx`), which cannot call `useProjectedShell()` and so leave `html`/`body` on the themed background and reserved scrollbar gutter; `notFound()` at six reachable sites with no `not-found.tsx`, `error.tsx` or `global-error.tsx` anywhere under `src/`; and `PROJECTED` being closed downward but never upward. | **Story 17.7** (`17-7-projected-shell-route-group`) | Owner chose the route-group layout 2026-07-31 — the only candidate that also catches a future shell nobody remembers to annotate. **Not a wait-for-Epic-20 item:** the trigger is a template that will not build, which is a Sabbath-morning event, and the leak is live. |
+| **AD-25** — the reconcile exists for the bible family and not the song book. `upsertHymns` (`src/lib/db/index.ts:63-81`) re-applies title and lyrics every boot and removes nothing; no song-book registry table exists; it loads the default song book rather than what is installed. | **Story 22.3** | Story 21.2 discharged the bible side. **A consequence to decide rather than discover:** rows stamped `SDAH` by Story 22.1's boot migration that are not among the corpus's 695 disappear at the next boot — correct under AD-25, and free only under the pre-first-deploy licence. **For whoever writes the guard: prove it reacts.** A reconcile test that only checks the 695 expected rows are present passes on a table holding 700. |
+
+---
+
+## Security and auth
+
+| Debt | Owner | Why it can wait |
+| --- | --- | --- |
+| Nine API routes carry no in-route authorization and rely entirely on the AD-5 proxy gate: `/api/services*`, `/api/hymns`, `/api/scripture`, `/api/announcements`, `/api/upload`, `/api/uploads/[filename]` — none contains a `requireSession` call. | **Epic 18** | `tests/proxy-matcher.test.mjs` pins the matcher and the six gated pages were moved onto the DB-checked path, so there is one working layer. The spine records it as a standing waiver with its expiry condition. |
+| `/api/webhook` has no throttling and compares its secret with `!==` rather than a constant-time comparison (`src/lib/webhook-auth.ts`). | unassigned | The route is exempt from the gate by design. Same class of gap the login hardening closed, but changing the webhook auth mechanism was forbidden by that spec's scope. |
+| The client address used for IP rate limiting is read from forgeable headers (`cf-connecting-ip`, leftmost `x-forwarded-for`, `x-real-ip`), so the 20-per-IP threshold is evadable by header rotation. | unassigned | Documented best-effort in `src/lib/auth/client-ip.ts`. Only values parsing as a real IPv4/IPv6 address become keys and the shared unknown bucket is never counted, so the failure mode is **extra attempts, not a lockout of third parties**. Closing it properly needs the real socket address, which Next does not expose to a Proxy. |
+| A distributed attacker gets 5 attempts per source address against one username rather than 5 in total, because the lockout is scoped to the `(username, address)` pair. | — accepted trade | Deliberate, made during review. The global per-username counter it replaced let any single host deny the admin account permanently at one request per 2.5 minutes — the worse outcome for a hub that must work at a fixed hour on Sabbath morning. Cloudflare is the volumetric layer in front. |
+| Reaching a 429 is a weak activity oracle: an attacker parked at the threshold infers from an early 401 that the real owner just signed in and cleared the ledger. | — accepted | Inherent to any lockout that clears on success, and much narrower after pair scoping, since an attacker can only observe pairs on their own address. |
+| A rotating-key flood (fresh username *and* fresh forwarded address per request) trips neither threshold, so each request still runs a synchronous scrypt plus several SQLite statements on the single Node thread. | unassigned | Not a regression in reachability — the login route was entirely unthrottled before. `login_attempts` is capped at 5000 rows so the table cannot grow without bound. |
+| Concurrent first-boot hymn seed UNIQUE race. | unassigned | Rare under single-process Next.js; harden if a multi-instance deploy ever happens. |
+
+---
+
+## Concurrency and data integrity
+
+| Debt | Owner | Why it can wait |
+| --- | --- | --- |
+| `updated_at` uses `CURRENT_TIMESTAMP` at second granularity, so two edits landing in the same second both pass the optimistic guard and the first editor's changes are lost. | unassigned | Pre-existing, and it weakens even the paths AD-6 *does* guard. A sub-second timestamp (`strftime('%Y-%m-%d %H:%M:%f','now')`) or a monotonic version counter closes it. |
+| The date-collision check in `createService` reads outside the transaction it guards, so two concurrent POSTs for one date can both insert. | unassigned | CAP-4 decision 2a deliberately allows multiple rows per date, so the 409 is a convenience guard, not an invariant — but the refactor documents the sequence as load-bearing while leaving it non-atomic. |
+| `readUpdatedAt` returns `''` when both `updated_at` and `created_at` are NULL, and its `||` fallback diverges from the SQL `COALESCE` when `updated_at` is the empty string — a row in that state can never be updated. | unassigned | Reachable only through direct DB manipulation today; `tests/services-lib.test.mjs` exploits the same seam deliberately to reach the in-transaction conflict branch. |
+| A `PUT` does not invalidate the cached generated PPTX for that service, so a stale deck can stay on disk after an edit. | unassigned | `src/lib/pptx-cache.ts` exposes no invalidation function; only the pptx download route and admin settings touch the cache. |
+| `deleteService` removes the row and cascades `announcement_items` but never reclaims upload files referenced only by that service's `images_payload`. | unassigned | FR-10 asks for one-off asset cleanup on delete. |
+| A 409 in the artifact editor discards unsaved authored elements; the message is explicit but there is no merge or recovery path. | unassigned | Reloading the server version remounts the canvas and clears added-element tracking. A full merge was always out of scope. |
+
+---
+
+## API surface and client payloads
+
+| Debt | Owner | Why it can wait |
+| --- | --- | --- |
+| There is still no `GET /api/services/[id]`; clients list and filter to read one service. | unassigned | Only `DELETE` and `PUT` exist on that route. |
+| `GET /api/hymns?all=1` is dead code and still returns an unbounded ~40 KB hymn dump. | unassigned | Nothing in `src/` calls it. Revisit once a legacy caller is confirmed absent. |
+| The full hymn index (~695 entries) is embedded in the create/edit page HTML. | unassigned | Follows decision 5a; lazy-load or chunk if payload size starts to matter. |
+| In the hymn autocomplete, a `?numbers=` lookup returning no row (typo hymn 9999) and one that fails are both rendered as a bare number, and neither is retried. | unassigned | Cosmetic today, because the seed covers every stored value on the edit page; only the create-page Parse-hydrate path can reach it. |
+| A PUT edit can move a service onto another service's date with no collision check. | unassigned | Create-path CAP-4 is primary; warn-on-edit is an optional follow-up. |
+| Fat `src/app/api/services*` route handlers and `any` typing. | unassigned | Style debt; extract to `src/lib/*` in a follow-up refactor. |
+
+---
+
+## Registry, seed and deck fidelity
+
+| Debt | Owner | Why it can wait |
+| --- | --- | --- |
+| **Registry vocabulary the validator does not admit**, blocking three deck-parity gaps: element **rotation** (`family-youth`'s "Prayer Request" label is stored at its unrotated box `[-14.44, 49.56, 42.01, 8.54]`, so it renders horizontally and its negative `x` pushes it off the left edge), **layout-background opacity** and **image-element opacity** (`verse-reading` renders roughly twice as bright as the source deck, which draws its background at `alphaModFix 50%`; `resolveOpacity` is applied only by `ShapeElement` and `ImageElement` ignores `style.opacity` entirely). | unassigned | Each needs a registry-contract change honoured by **both** renderers, not a seed edit. Measured against the source decks in the 2026-07-26 paint-order audit; expensive to re-derive. |
+| `family-youth` is missing two translucent scrim panels, and the family/youth **name** lines have no element at all — ids run `e1, e3, e4, e5, e7, e8, e9, e10, e11`, and the absent `e2`/`e6` are exactly those lines, so the `familyText`/`youthText` placeholders bind to the prayer-request bodies instead. | unassigned | The scrim half is expressible today (`shape` + `style.fillColor` + `style.opacity`), so it is scope rather than vocabulary. |
+| `offering-tithe` shows the plate's empty gold frame: the source deck's QR has no registry element and its asset was never extracted. | unassigned | Needs an asset-extraction step first, then an `image` element — not a seed edit. When it lands it is a **second writer** into the registry and is bound by AD-15. |
+| `thank-you` and `midweek-prayer` carry hand-authored text matching neither source deck, including a literal `[placeholder]` where the midweek day and time belong — **it will be projected verbatim** until someone supplies them. | unassigned — needs a product decision | Changing worship-facing wording the deck does not settle needs the owner, not a developer. |
+| `preview-model.TEMPLATE_LABELS` is a hand-maintained second list of template ids alongside the request map in `src/lib/slide-plan.ts`, and nothing asserts either stays in sync with the seed. | unassigned | Adding a seed template silently falls back to a humanized label and is silently absent from the plan. A conformance test over the seed id set closes it. |
+| Live Preview shows `title`/`subtitle` from hardcoded strings in `src/lib/slide-plan.ts`, so an admin editing a template's text changes the deck and projector but not the operator's preview. | unassigned | The legacy `SlidePlanItem` fields were deliberately preserved for consumer compatibility. |
+| The `verse-reading` template draws a full-bleed opaque black shape over its own background, so that asset is embedded but never visible. | unassigned | Inherited from the v0 source-deck extraction; harmless after media dedup, but the layout carries a contradiction an admin cannot see. |
+| The generated deck is ~10 MB with no automated ceiling on bytes, generation time or peak memory. | unassigned | Dedup + DEFLATE cut 39 MB to ~10 MB, but only structural properties are asserted, so a future seed asset change could regress size unnoticed. |
+| Databases created before Epic 16's seed fixes keep the old rows for `welcome`, `verse-reading`, `special-song`, `family-youth` and `bible-verse-contemplation`. | unassigned | Reaches them only through a fresh DB or an admin Reset of those five templates — AD-17 makes that correct behaviour rather than a bug, since the seed is a bootstrap and not a correction channel. |
+
+---
+
+## Corpus and scripture
+
+| Debt | Owner | Why it can wait |
+| --- | --- | --- |
+| **The shipped default corpus misnames book 22.** It says `Song of Songs`; the KJV's own title is `Song of Solomon` — verified against Project Gutenberg's KJV text, where *"the song of songs"* is a phrase inside verse 1, not the book's name. A live AD-27 *output is exact* violation on the default translation. Checked across all 66 books: **exactly one mismatch**. | **Story 21.4** | A one-word data fix, but it must land with the matcher: correcting the name is what makes `Song` prefix the right book. |
+| **The parser cap is the harder half and a corpus fix does not reach it.** `parseScriptureRef` caps a book name at **two words** and ASCII letters. Book 22 is the only KJV book running past two words, which is why it hid this long — its *correct* name is as untypeable as its wrong one. **The cap is two limits, and only a second language shows it:** probed against Indonesian *Terjemahan Baru* names, **four of eight cannot be typed at all** — `Kisah Para Rasul 1:8` fails the word cap, while `Hakim-hakim 2:16`, `1 Raja-raja 3:5` and `2 Raja-raja 2:11` fail on the **hyphen**, because `[A-Za-z]+` does not match `-`. Reduplication is ordinary Indonesian morphology, so this is a standing fraction of every translation in the language FR-24 exists to serve. | **Story 21.4** | AD-28 already settles the fix: longest-prefix match against corpus-supplied names, so the cap and the hyphen stop being concepts rather than limits to raise. A widened regex is the list-widening this project keeps refusing — the next language brings a fourth shape. |
+| **A second *output is exact* violation, independent of the misnaming.** `src/lib/scripture.ts:139-142` composes the returned reference from the operator's typed string, so `ps 23:1` echoes back as `ps 23:1` rather than `Psalms 23:1`. | **Story 21.4** | Small — the matcher already returns an identity, so the fix is composing from that identity instead of the input. It is the one that gets **worse** under AD-28: every tolerance granted is another abbreviation that can reach a reference the congregation sees. |
+| **AD-27's canonical identity carries display text today, which its Rule forbids outright.** `bible_books` is `(id, name, short_name)` (`src/lib/db/index.ts:475-479`) — one global row per book, while `name` and `short_name` are per-translation values, so the table has two owners and the arbitration is last-writer-wins through `reconcileBibleCorpus`'s `ON CONFLICT(id) DO UPDATE SET name = excluded.name` (`:157-161`). Book ids are supplied **by the corpus file** (`src/lib/corpus.ts:106`), so a second file may also renumber the identity `bible_verses.book_id` points at. | **Story 21.4** | It cannot fire while one corpus ships, which `tests/corpus-closure.test.mjs` pins and the reconcile itself warns about (`:129-137`). Story 21.2 has shipped, so the from-zero guard no longer holds it off — **installing an Indonesian translation is what arms it**, and at that moment the translation reconciling last silently owns every book name for every reader. Recorded here as well as in AD-27's own block because AD-27 is untagged, and an untagged `AD` reads as *nothing exists yet* — while this table does exist, in a shape the decision rejects. |
+| **AD-26 has a registry for one corpus family and none for the other.** `bible_translations` ships with code, name, locale, licence and provenance, but `song_books` does not exist anywhere in `src/` and `hymns.book_code` was never renamed to `song_book_code`, so a song book is not a registered entity and its code is not the cross-boundary key the Rule requires. Three further clauses are unbuilt with it: the boot refusal when two corpus files declare one code, the loader check that a declared locale agrees with its directory, and the inert-not-error behaviour of a `default_*` setting naming an uninstalled corpus. | **Story 22.3** | Free while exactly one song book ships and its code is a constant — nothing can currently declare a duplicate or a mismatched locale. It arms the moment a second corpus of either family is installed, which is also what AD-25's song-book reconcile waits on, so the two land together rather than near each other. |
+| **AD-25's closure is asserted by nothing, and the decision rests entirely on it.** *"No administrator or operator write path into a corpus table exists"* is a grep somebody ran once, not a gate; a second writer would arrive silently and the reconcile would erase it every boot with nothing logged. | whichever of **Story 21.2 / 22.3** lands the remaining reconcile | Unlike the theme gate's hand-maintained lists this one **has a structural anchor**: the table names are in the startup DDL, so a guard can enumerate them from there — the `tests/proxy-matcher.test.mjs` shape, where an unlisted case is detectable. **The same scan closes AD-26's never-filter rule**, which is structural but not asserted: a picker endpoint can still be written with `WHERE locale = ?`. One piece of work, not two. Prove it reacts by adding a write and watching the suite go red. |
+| **AD-28's one-matcher clause should ship asserted.** *"No regex survives at `src/lib/scripture.ts:42`, `src/lib/parser.ts:152` or `:162`"* is checkable rather than reviewable, and the scoped-alias half adds two more: no unkeyed alias, and a corpus loader that **refuses an `aliases` field**. | whichever of **Story 21.4 / 21.5** lands the matcher | Belongs with the thing it guards. **What it cannot cover, so a green suite is not over-read:** the scope semantics — an absent scope refused, an ambiguous partial not resolving — are runtime behaviours for the matcher's own tests, not a source scan. |
+
+---
+
+## Theme closure gate (`tests/theme-chrome.test.mjs`)
+
+The gate AD-24 depends on. Live ceilings only; the closures Story 17.8 landed are not repeated here.
+
+| Debt | Owner | Why it can wait |
+| --- | --- | --- |
+| **Four hardcoded room-facing lists where one derivation would do**, two of them hand-duplicating a third: `PROJECTED` (`:595-606`), `ROUTE_SHELLS` (`:946-949`), `FULL_SCREEN` (`:1559-1562`) and an inline pair at `:1546`. A new room-facing surface must join every list that applies, in the same change set, and nothing detects one that does not. | **Story 17.7** | Its route-group segment is the first real value the roots could be *derived from* rather than listed. Widening `FULL_SCREEN` to that layout is the **encoding**; adding another leaf file to any of the four is what must be refused. |
+| `exportedProps` matches the literal string `export default function` and cannot read an `async` default export — the shape of every Server Component the closing change set adds. | **Story 17.7** | It fails **loudly** rather than passing, so it is safe where applied today. Recorded because adding the two shells to `FULL_SCREEN` produces **four** failures rather than the two the shell gap accounts for (measured 2026-08-01: 52 tests, 4 failures; probe reverted) — so an implementer does not read two reds as noise. |
+| `claimProjectedShell` silently ignores its `doc` argument after the first claim, so a second document gets neither the reset nor a working restore (`src/lib/projected-shell.ts:75-87`). | **Story 17.7** | Not reachable today: both callers pass the same `document`, and the projector runs in a separate window with its own module instance, so the counter is per-realm. 17.7 either fixes it with per-document state or closes it by stating the single-document contract — and that choice is part of what the layout's design decides. |
+| **That module's own header comment misleads the next implementer.** `src/lib/projected-shell.ts:34-36` says a Server-Component layout can reach the reset without a hook. It cannot — a Server Component never executes in the browser and has no `document`. | **Story 17.7** | The comment sits two lines below correct reasoning, which is what makes it convincing, and 17.7's whole design call is *where* the reset mounts. AD-24 states the constraint correctly; the code comment is untouched because an architecture Update run does not patch production code. |
+| **Closed props plus a renamed caller can still compose into a `className` leak.** `assertClosedPropsStructure` rejects a rest binding only in the exported function **parameter** (`tests/theme-chrome.test.mjs:1378-1386`). A component can instead accept an identifier typed as `{ slide: SlidePlanItem }`, derive `const { slide, ...rest } = props` **inside its body**, and spread `rest` onto its wrapper; a caller importing it under another name then passes a structurally wider variable carrying `className`. | **unassigned** — route through Correct Course or a new Epic 17 story; do **not** silently reopen Story 17.8 | Neither shipped component has this shape today, which is why it was deferred rather than patched. Both belts miss it by construction: **TypeScript accepts the variable**, the parameter-rest check sees no rest, and the caller belt matches only the literal names — `:1198` for `React.createElement` and `:1237` for JSX. |
+| The positive outline classifier is a shallow vocabulary classifier, not a CSS colour parser: `localColour` does not validate function arity or channel grammar, so `focus-visible:outline-[rgb(255)]` passes the guard and is then ignored by CSS, exposing the inherited themed outline. | **unassigned** — same terms as above | No shipped projected focusable uses one. |
+| The transitive projected-tree guards resolve only TypeScript modules (`moduleImports`, `:1003-1011`) although `tsconfig.json:5,12` permits JavaScript and JSON. **CSS is the live architectural case:** a route-segment stylesheet is one of the three mechanisms that could *close* AD-24's gap, so the gate is structurally blind to a fix it would be asked to guarantee. | **unassigned** — revisit at the first projected-tree import of a non-TypeScript module | No non-TypeScript module is reachable from the shipped projected roots today. |
+| A class name **composed at runtime** (`cn('bg-' + tone)`) is invisible: `themeReferences` is a set of regexes over source text. | unassigned | Latent; no shipped surface composes one. |
+| The walk goes **downward only** — what renders *above* a projected route is unasserted. | **Story 17.7** | Deliberately unasserted until 17.7 owns the segment above them. |
+| *"Never its own copy"* is asserted by nothing: the `FULL_SCREEN` loop asserts `useProjectedShell()` is **present**, never that a second shell implementation is absent. | unassigned | Convention rather than assertion, and AD-24 says so rather than claiming parity with AD-5. |
+| **The shared shell reset has one colour and its queued third consumer needs another.** `claimProjectedShell` pins the literal `#000000`, correct for the room-facing surfaces. `PresenterOperator` is the obvious third consumer of a route-group shell — it pins `.dark` on its own wrapper and leaves `html`/`body` on the operator's theme, so a light-theme operator gets a white canvas and a white gutter framing the dark Presenter — but AD-24 classes it as an **operator** surface, and black is the wrong reset for it. | **Story 17.7** | Deferred rather than decided because it is not yet clear whether the presenter should share this mechanism at all. **What must not happen** is a colour parameter arriving while the guard still checks only the module's default and nothing checks the call sites. |
+| The light half of the two service forms fails contrast worse than anything Story 17.1 fixed: `CreateForm.tsx:444,447,473,481,483` and `EditForm.tsx:463,471,473` paint `text-amber-200`/`text-amber-300`/`text-red-200` on `bg-amber-500/10`/`bg-red-500/10` over `bg-background`, with no `dark:` half and no `.dark` ancestor — the light theme lands near **1.15:1**, effectively invisible. These are the date-collision warning, the save-error banner and the missing-hymn warning. | unassigned — belongs with `DESIGN.md` Open Item 4 (product decision first) | Pre-existing: these shades never had a dark ancestor to key against, so they always rendered light and always failed there. Recorded because the AC-6 test asserts only the **presence** of a `dark:` half, so it is structurally incapable of catching a dark shade stranded on a light surface. |
+| `LogoutButton` hand-rolls what `ui/button.tsx`'s `destructive` variant provides and drops the focus treatment doing it — `LOGOUT_CLASS` reproduces a subset by hand with no `focus-visible` treatment at all. | unassigned | Pre-existing; the refactor to the shared variant is larger than the one-class colour fix already filed. |
+| `DESIGN.md` → *Component Patterns* describes slide chrome as a `slide-surface` class that exists nowhere in the codebase. | unassigned | Whoever next touches that table should name the real class or drop the claim. |
+
+---
+
+## Operator UI wiring
+
+| Debt | Owner | Why it can wait |
+| --- | --- | --- |
+| **The transient-confirmation channel is ratified but not wired.** The owner ratified a combined inline + toast design on 2026-08-05; the rule lives in `EXPERIENCE.md` → *Component Patterns*. `sonner` stays declared and `src/components/ui/sonner.tsx` keeps exporting `Toaster`, but `toast(` has **zero call sites** and nothing is mounted. | **`17-9-toast-channel-wiring`**, dependent on Story 17.7 | **Its precondition does not exist yet, and that is the whole reason it waits.** There is exactly one layout, `src/app/layout.tsx`, and every route inherits it — including both room-facing routes — so mounting `<Toaster />` there today would render toasts on the congregation's screen, themed: `sonner.tsx` calls `useTheme()` and paints from `--normal-bg` / `--normal-text` / `--normal-border` / `--border-radius`, which the projected tree must never carry. AD-24's narrowest-layout rule already decides the mount — the consumers are operator routes only, never every route — so an operator-scoped route segment is the mount and root is not. Story 17.7's registered contract covers only the **room-facing** split, so if it leaves the operator routes directly under `src/app`, 17-9 *creates* that segment and carries the `EXPERIENCE.md` IA-table obligation that follows. A per-page mount across the eight operator-facing pages was considered and rejected as leaf-widening. **One assertion is missing and is part of this work:** `tests/theme-chrome.test.mjs` enforces only that the root layout carries no `'use client'`; nothing fails when a second client provider is added beneath it, and the closure gate would not catch the resulting paint either, because its walk is downward-only from the projected roots while a root-mounted provider renders *above* them. |
+
+---
+
+## Stack currency and platform
+
+| Debt | Owner | Why it can wait |
+| --- | --- | --- |
+| **`next@16.2.10` predates a security release, and this is not housekeeping.** Next's July 2026 security release shipped **16.2.11** on 2026-07-21 patching **nine CVEs — four High**. Two bear directly on this spine: an SSRF through request-controlled rewrite/redirect destinations (CVE-2026-64645, CVSS 8.3), the class AD-8 exists to contain, and a middleware bypass (CVE-2026-64642, CVSS 8.3). | unassigned — **before first deploy** | **The non-applicability argument rests on one leg, and that is worth knowing before leaning on it:** the bypass's stated precondition is Turbopack **plus** single-locale i18n. Turbopack *is* the Next 16 default and `next.config.ts` carries no opt-out, so this project has that half — only the `config.i18n.locales` half is absent. The remaining CVEs are unassessed. AD-1 makes Sabbath reliability the point and AD-4 publishes this hub through a tunnel, so shipping a known-vulnerable minor is not a deferred nicety. `next` and `eslint-config-next` are pinned exact and move as a set; React rides along. |
+| **`package.json` has no `engines` field**, so the Stack table's Node row has no manifest to be authoritative *from* — the one row where *"`package.json` is the version authority"* cannot be true. | unassigned | **The half that is machine-enforced rather than prose:** `@types/node` is pinned `^20` and resolves `20.19.43`, so the type-checker validates against the EOL runtime the Stack row retired, and no amount of doc editing reaches it. The same change set adds `"engines": {"node": ">=22.12.0"}` and corrects the five docs still saying "Node 20" (`README.md` twice, `docs/QUICKSTART.md`, `docs/deploy.md`, `docs/development-guide-monolith.md`). |
+| **Four Stack rows sit at least a major behind current stable and the pins mean none moves on its own:** TypeScript `^5` (resolves `5.9.3`, **two** majors behind — `^5` can never resolve 6 or 7); better-sqlite3 12 (13 current, and it requires `node >=22`, so it is gated behind the Node floor above); fabric 6 (7 current, and `ArtifactEditor.tsx` carries two explicit v6 workarounds, so it is a real migration); ESLint `^9` (resolves the *maintenance* tag). | unassigned | Named so that *"no drift against `package.json`"* is never mistaken for *"current"*. |
+| **The Node row will need this again.** Node 22 is *Maintenance* LTS; 24 is *Active*. | unassigned | The row moved off 20 because EOL made it indefensible and the same argument reaches 22 on a schedule. Revisit with the `engines` change rather than separately. |
+| **`next-themes` — watch the cadence, not the version.** `0.4.6` (2025-03-11) is still the latest, ~16 months without a release, but the repository is not dormant (last push 2026-02-25, not archived, not deprecated), so *unreleased activity* is the accurate reading and "abandoned" would be wrong. | unassigned | Not a defect today; named so nobody re-derives it as one. This is the one row where *undrifted* and *at head* are both true while the newest-commit-to-newest-release gap keeps growing, and AD-24 rests on this package for two contracts. Revisit if a React or Next major breaks it — the AD-24 mechanism survives a replacement, because the decision names the tiers and the closure rather than the library. |
+
+---
+
+## Docs and tooling drift
+
+| Debt | Owner | Why it can wait |
+| --- | --- | --- |
+| `scripts/smoke-auth.mjs` carries two stale checks that already failed at baseline: a KJV-import regex that matches a legitimate import in `src/app/api/scripture/route.ts`, and an assertion on the literal `Worship Hub`, absent from `src/` at HEAD too. | unassigned | Left unmasked rather than edited to pass. The four session-gate checks in the same script pass. |
+| `scripts/smoke-deck-fidelity.mjs` carries two pre-existing stale checks predating the Epic 14 renames — `EditForm has structured fields + raw payload` and `structured family update in PPTX`. | unassigned | Left unmasked rather than edited to pass. |
+| `docs/architecture.md:79` and `docs/development-guide-monolith.md:86` still describe the request gate as "middleware" in prose. | unassigned | Neither links a dead path, so nothing is broken; `docs/index.md` and `docs/source-tree-analysis.md` already point at `src/proxy.ts`. |
+
+---
+
+## Accepted, not open
+
+Recorded so nobody files them as debt. The spine's *Deferred* → *Waivers and accepted risks* carries
+the architecture-level ones; these are the implementation-level counterparts.
+
+- **The song-book corpus is unreproducible, and that is accepted.** Its only source dump does not
+  exist anywhere under the project root, so `import:hymnal` is **retired** rather than repointed and
+  the committed corpus is the source of record. `npm run corpus:verify` asserts it is whole instead
+  of pretending it can be rebuilt.
+- **Multiple service rows may share one date**, by CAP-4 decision 2a. The 409 on create is a
+  convenience, not an invariant — see the non-atomic check above for the part that *is* debt.
+- **`failedHymnNumbers` is wiped on a preview error** (`src/app/services/new/CreateForm.tsx`).
+  Pre-existing and judged acceptable.

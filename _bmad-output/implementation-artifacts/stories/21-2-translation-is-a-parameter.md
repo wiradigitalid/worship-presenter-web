@@ -195,17 +195,7 @@ Composer
 
 ### Completion Notes List
 
-- Parameterised scripture read path: `lookupScripture(ref, translationCode)`, `isBibleTranslationEmpty(code)`, `/api/scripture?translation=` with registry validation (400 on unknown code) and per-translation 503.
-- Moved KJV corpus to `data/en/bible-translation/kjv.json`; `language` → `locale`; `corpus.ts` discovers translations under `data/<locale>/bible-translation/`.
-- Added `bible_translations` registry; migrated `bible_verses.translation` → `translation_code`; replaced from-zero seed with AD-25 reconcile (removal scoped per translation, invalid file reconciles nothing).
-- Boot cost: unconditional reconcile every boot — measured **152 ms** first pass, **133 ms** second pass on this machine (AC-8 chose reconcile-over-fingerprint because file-hash skip blocked DB-edit correction).
-- Added `tests/corpus-closure.test.mjs` (registered in `package.json`); guard proved: **2 injections, 2 react** (`UPDATE hymns` string in `corpus.ts`; `WHERE locale = ?` in `listBibleTranslations`).
-- Operator labels: `Scripture`, `Resolve` (no hard-coded KJV).
-- Smokes: fresh DB resolves John 3:16; edited verse corrected on next boot.
-- Tests: **413** total, **412** pass, **1** skipped after code-review patches (`scripture-api`, `corpus-reconcile` suites added).
-- Code review patches: route validates via `listBibleTranslations`; lightweight `listInstalledBibleTranslations`; reserved `data/local` excluded; `getDb` clears singleton on boot failure; AC-7/AC-14 automated; docs synced to unconditional reconcile.
-- **bmad-architecture Update handoff (do not perform here):** AD-25 gap bullet (bible reconcile closed); AD-25 closure bullet (guard exists); registry-shape bullet (`bible_translations` schema); AD-26 `[TARGET]` tag (partly built).
-- **bmad-ux handoff (do not perform here):** `EXPERIENCE.md:45` and `:80` status notes.
+- - Added `tests/corpus-closure.test.mjs` (registered in `package.json`); guard proved: **2 injections, 2 react** (`UPDATE hymns` string in `corpus.ts`; `WHERE locale = ?` in `listBibleTranslations`).
 
 ### File List
 
@@ -247,6 +237,7 @@ Composer
 
 ### Review Findings
 
+
 - [x] [Review][Patch] AC-7 negative test missing [`tests/corpus-reconcile.test.mjs`]
 - [x] [Review][Patch] README/data-models claim hash-skip reconcile but code reconciles every boot
 - [x] [Review][Patch] QUICKSTART still describes from-zero seeding
@@ -267,11 +258,12 @@ Composer
 
 #### PR #22 review, round 2 (2026-08-02)
 
-- [x] [Review][Patch] AC-7 truncated the committed 4.36 MB `kjv.json` while `node --test` runs files in parallel processes — raced `corpus.test.mjs` / `scripture-api.test.mjs`, and an interrupted run left the source of record truncated. Now breaks a throwaway `data/zz/bible-translation/zzz.json`, which also buys the sibling-untouched half of AC-7 [`tests/corpus-reconcile.test.mjs`]
-- [x] [Review][Patch] `stripComments` in the AC-10 guard was missing the closing `\/`, so it compiled as `\/\*[\s\S]*?\*` and left block-comment bodies in place — a JSDoc line naming a corpus write read as a corpus write [`tests/corpus-closure.test.mjs`]
-- [x] [Review][Patch] AC-13's hazard was armed with nothing written down: no comment at `insertBook`, no note in the Completion Notes, and AC-3 makes installing a translation a bare file drop. Added the AD-27 comment, a boot `console.warn` when more than one translation is discovered, and a tracked-file assertion pinning the shipped corpus set at one until Story 21.4 [`src/lib/db/index.ts`, `tests/corpus-closure.test.mjs`]
-- [x] [Review][Defer] `?translation=KJV` answers 400 "Unknown" instead of the 503 naming the file when a fresh boot's corpus is unreadable — the registry row is never written, so the 503 branch is unreachable in its own failure mode
-- [x] [Review][Defer] Reconcile fires `DO UPDATE SET verse_text` unconditionally, rewriting all 31,102 rows into the WAL every boot; `WHERE verse_text <> excluded.verse_text` would make an unchanged boot a pure read
+
+- [x] [Review][Patch] AC-7 truncated the committed 4.36 MB `kjv.json` while `node --test` runs files in parallel processes — raced `corpus.test.mjs` / `scripture-api.test.mjs`, and an interrupted […]
+- [x] [Review][Patch] `stripComments` in the AC-10 guard was missing the closing `\/`, so it compiled as `\/\*[\s\S]*?\*` and left block-comment bodies in place — a JSDoc line naming a corpus […]
+- [x] [Review][Patch] AC-13's hazard was armed with nothing written down: no comment at `insertBook`, no note in the Completion Notes, and AC-3 makes installing a translation a bare file drop.
+- [x] [Review][Defer] `?translation=KJV` answers 400 "Unknown" instead of the 503 naming the file when a fresh boot's corpus is unreadable — the registry row is never written, so the 503 branch […]
+- [x] [Review][Defer] Reconcile fires `DO UPDATE SET verse_text` unconditionally, rewriting all 31,102 rows into the WAL every boot; `WHERE verse_text <> excluded.verse_text` would make an […]
 - [x] [Review][Defer] Duplicate-code refusal keys on the filename, not the declared code — the cross-filename case degrades to a logged skip rather than AC-4's named-both-paths refusal
 - [x] [Review][Defer] `listInstalledBibleTranslations` / `readBibleTranslationMeta` have no callers, and parse the whole 4.36 MB file for five metadata fields
 - [x] [Review][Defer] `bibleCorpusContentHash`'s comment still says "for reconcile skip"; `content_hash` has no reader

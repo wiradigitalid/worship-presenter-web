@@ -116,22 +116,19 @@ so that I cannot advance a deck for the rest of a service with nothing on the se
 
 ### Review Findings
 
-Two rounds ran. **Round 1** raised the three `[High, blocking]` items below, all fixed in the
-`bmad-dev-story` FIX-mode round recorded in the Dev Agent Record. **Round 2** re-read the fixed tree,
-confirmed all three closed, and raised the fourth item — a citation-accuracy defect the fix round had
-itself created. No round-2 finding touched behaviour.
+- **Round 1** raised the three `[High, blocking]` items below, all fixed in the `bmad-dev-story` FIX-mode round recorded in the Dev Agent Record.
+- **Round 2** re-read the fixed tree, confirmed all three closed, and raised the fourth item — a citation-accuracy defect the fix round had itself created.
+- No round-2 finding touched behaviour.
+- - **Fixed:** added `isProjectorMessage(msg)` to `src/lib/present-channel.ts` (the wire's own owner of "who sends what") and gated the `ack` dispatch in `PresenterOperator.tsx`'s `onMessage` on it, so `sync`/`blank`/`transition`/`scripture`/`clear-scripture` — a second Presenter tab's own broadcasts — never register as evidence of a live projector.
+- `openProjector` dispatches it on every open/reattach attempt; the reducer records `openedAtMs` only while `verdict === 'never-opened'`, and the `tick` branch — only when no ack has ever arrived — now resolves `never-opened` to `lost` once the freshness window has elapsed since that attempt, the same "uncertainty resolves to lost" rule AD-29 already applied to a stale handle.
+- **Proof:** `tests/projector-liveness.test.mjs` new test "an open attempt that never acks resolves to lost, not never-opened forever" — RED before the fix (`actual: 'never-opened', expected: 'lost'`), GREEN after; companion tests confirm an attempt still within the window stays `never-opened` and an ack after an attempt still resolves to `live`.
+- **Proof:** not a test — the guard structurally cannot react to a stale bracket, and weakening it to parse citations was out of scope for this story.
+- Recorded here as an uncovered narrowness rather than as a passing claim; no `deferred-work.md` entry was filed for it, because that file is held at zero `owner: unassigned` entries (Story 17.1's closing condition) and choosing an owner is not this record repair's call.
 
-- [x] [Review][Patch] **[High, blocking] Non-projector channel traffic is accepted as a liveness acknowledgement** [src/app/services/[id]/present/PresenterOperator.tsx:408] — the listener dispatches `ack` for every object received, before it inspects `msg.type`. A second Presenter tab on the same service posts its mount-time `sync` at `:414`; the first tab receives that presenter-authored state message and becomes/remains `live` with no projector. This violates AD-29's projector-only sender rule and its false-`live` prohibition. Record liveness only for the two projector-originated protocol types (`request-sync` and `projector-alive`) and add a regression case with two Presenter endpoints/no projector.
-  - **Fixed:** added `isProjectorMessage(msg)` to `src/lib/present-channel.ts` (the wire's own owner of "who sends what") and gated the `ack` dispatch in `PresenterOperator.tsx`'s `onMessage` on it, so `sync`/`blank`/`transition`/`scripture`/`clear-scripture` — a second Presenter tab's own broadcasts — never register as evidence of a live projector. Corrected the false `AD-29` comment that claimed every inbound object was evidence of life. **Proof:** `tests/present-channel.test.mjs` — `isProjectorMessage` unit test (RED without the export: `TypeError: isProjectorMessage is not a function`; GREEN after) exercises all seven message variants including the exact two-Presenter-tabs case. `tests/projector-liveness.test.mjs` — an AST assertion confirms the `ack` dispatch is reached only through a guard naming `isProjectorMessage` (RED against the unconditional call; GREEN after).
-
-- [x] [Review][Patch] **[High, blocking] A projector that never answers after the operator opens it stays silently `never-opened` forever** [src/app/services/[id]/present/PresenterOperator.tsx:312] — `openProjector` records only a `Window` handle; it supplies no event to the evaluator. The poll therefore emits only `tick`, and `nextLivenessState` returns unchanged whenever `lastAckAtMs` is `null` [src/lib/projector-liveness.ts:127]. A popup/tab that loads an older build, cannot create a channel, or freezes before its mount-time `request-sync` is never surfaced, contrary to AD-29's explicit rule that a receiver that never acknowledges resolves to `lost`. Feed the operator's open/fallback attempt into the one evaluator (without inventing a fourth verdict) and test this no-first-ack path.
-  - **Fixed:** added a fourth reducer event, `{ type: 'opened' }` (verdicts stay exactly three), to `src/lib/projector-liveness.ts`. `openProjector` dispatches it on every open/reattach attempt; the reducer records `openedAtMs` only while `verdict === 'never-opened'`, and the `tick` branch — only when no ack has ever arrived — now resolves `never-opened` to `lost` once the freshness window has elapsed since that attempt, the same "uncertainty resolves to lost" rule AD-29 already applied to a stale handle. **Proof:** `tests/projector-liveness.test.mjs` new test "an open attempt that never acks resolves to lost, not never-opened forever" — RED before the fix (`actual: 'never-opened', expected: 'lost'`), GREEN after; companion tests confirm an attempt still within the window stays `never-opened` and an ack after an attempt still resolves to `live`.
-
-- [x] [Review][Patch] **[High, blocking] The advertised recovery action cannot reconnect a nonresponding window whose handle remains open** [src/app/services/[id]/present/PresenterOperator.tsx:313] — the exact crashed/frozen/navigated-away case AC-4 identifies can keep `existing.closed === false` while acknowledgements stop. Once the evaluator correctly reports `lost`, clicking the header's instructed recovery merely calls `existing.focus()` and returns [src/app/services/[id]/present/PresenterOperator.tsx:314-316]; it neither navigates that named window back to `projectorUrl` nor opens a replacement. Make `Open projector` reattach/navigate when the liveness verdict is `lost`, and cover a stale-ack + `closed === false` handle.
-  - **Fixed:** `openProjector` now checks `livenessRef.current.verdict === 'lost'` in the open-but-not-closed branch and, only then, sets `existing.location.href = projectorUrl` (same-origin navigation of the retained handle) before `.focus()`, reattaching a frozen/crashed/navigated-away window instead of merely bringing it to the front. A healthy (`live`) handle is unaffected — it is still just focused, with no unnecessary reload. **Proof:** `tests/projector-liveness.test.mjs` new AST assertion confirms `openProjector`'s source both tests `verdict === 'lost'` and reads `existing.location` (RED against the original focus-and-return body; GREEN after).
-
-- [x] [Review][Round 2][Patch] **[Low, AC-7 accuracy] The guard's own bracket citations rotted a second time, under the fix round's edits** [tests/theme-chrome.test.mjs:2653-2660] — the implementation pass had repaired the four `UNPAIRED_CHROMATIC_TEXT` citations for `PresenterOperator.tsx` to `:546`/`:590`/`:672`/`:792` and filed the new lost-sync entry at `:567`. The fix round then added the `opened` event dispatch, the `isProjectorMessage` guard and the reattach branch to the same file, pushing every one of those five lines down again. The guard still passed — it matches on the class names, and the bracket text is deliberately stripped before comparison (`:2694`) — so nothing failed, which is exactly why a reviewer had to catch it: AC-7's requirement is that a reader can *check* the claim, and five citations pointing at the wrong lines defeat that silently.
-  - **Fixed:** all five entries repaired to `:583`, `:604` (the lost-sync line), `:627`, `:709`, `:829`. **Proof:** not a test — the guard structurally cannot react to a stale bracket, and weakening it to parse citations was out of scope for this story. Verified by direct measurement instead: `grep -n "text-amber-300" src/app/services/[id]/present/PresenterOperator.tsx` returns exactly those five lines and no sixth, re-run at record-repair time on 2026-08-05. Recorded here as an uncovered narrowness rather than as a passing claim; no `deferred-work.md` entry was filed for it, because that file is held at zero `owner: unassigned` entries (Story 17.1's closing condition) and choosing an owner is not this record repair's call.
+- [x] [Review][Patch] **[High, blocking] Non-projector channel traffic is accepted as a liveness acknowledgement** [src/app/services/[id]/present/PresenterOperator.tsx:408] — the listener […]
+- [x] [Review][Patch] **[High, blocking] A projector that never answers after the operator opens it stays silently `never-opened` forever** […]
+- [x] [Review][Patch] **[High, blocking] The advertised recovery action cannot reconnect a nonresponding window whose handle remains open** […]
+- [x] [Review][Round 2][Patch] **[Low, AC-7 accuracy] The guard's own bracket citations rotted a second time, under the fix round's edits** [tests/theme-chrome.test.mjs:2653-2660] — the […]
 
 ## Dev Notes
 
@@ -285,16 +282,9 @@ claude-sonnet-5 (bmad-dev-story, 2026-08-05)
 
 ### Debug Log References
 
-Fail-first confirmation (AC-6): `tests/projector-liveness.test.mjs` written and run against a
-repo with no `src/lib/projector-liveness.ts` and no wiring in `ProjectorClient.tsx` /
-`PresenterOperator.tsx` — `ERR_MODULE_NOT_FOUND` on the missing module (1 test file failure), then
-after the pure module landed: 13/17 passing, 4 wiring-AST failures (`AC-6: ProjectorClient emits
-the heartbeat...`, `AC-1: ProjectorClient posts the ack...`, `AC-3/AC-4: PresenterOperator reads
-liveness...`, `AC-4: the closed poll never treats a null handle...`) — all four closed by the
-ProjectorClient/PresenterOperator wiring in that order, confirmed green after each.
-
-Ten injected-defect probes (AC-6, "prove every new guard reacts"), each confirmed red then
-reverted:
+- Fail-first confirmation (AC-6): `tests/projector-liveness.test.mjs` written and run against a repo with no `src/lib/projector-liveness.ts` and no wiring in `ProjectorClient.tsx` / `PresenterOperator.tsx` — `ERR_MODULE_NOT_FOUND` on the missing module (1 test file failure), then after the pure module landed: 13/17 passing, 4 wiring-AST failures (`AC-6: ProjectorClient emits the heartbeat...`, […]
+- Ten injected-defect probes (AC-6, "prove every new guard reacts"), each confirmed red then reverted:
+- `grep -rn "INJECTED DEFECT" src/ tests/` returns nothing — all ten fully reverted.
 
 | # | Defect | Where | Test(s) that went red |
 |---|---|---|---|
@@ -309,147 +299,16 @@ reverted:
 | 9 | `blankStateOf` wrongly resolves `projector-alive` to `false` instead of `null` | `present-channel.ts` | "projector-alive says nothing about blank or transition" |
 | 10 | A sixth, unregistered chromatic site (`text-rose-300`) added beside the lost-sync line | `PresenterOperator.tsx` | "every chromatic text shade states both halves, or is a filed exception" |
 
-`grep -rn "INJECTED DEFECT" src/ tests/` returns nothing — all ten fully reverted.
-
 ### Completion Notes List
 
-**AC-1 (wire, state-free ack).** `src/lib/present-channel.ts` gains exactly one new
-`PresentMessage` variant, `{ type: 'projector-alive' }`, documented in the file's own voice and
-citing `AD-29`. No `index`/`blank`/`transition`/other field. `blankStateOf` and `liveTransitionOf`
-already resolve it to `null` through the existing `msg.type === 'sync' || msg.type === 'blank'` /
-`msg.type !== 'sync' && msg.type !== 'transition'` shapes — pinned by two new tests in
-`tests/present-channel.test.mjs` rather than requiring a code change to those two functions.
-`request-sync` is unchanged; no second hello was added. Verified: `tests/present-channel.test.mjs`
-14/14 (12 pre-existing + 2 new).
-
-**AC-2 (architecture gate).** Cleared before this run started — `AD-29` was already in
-`ARCHITECTURE-SPINE.md` (heading at `:262`, census 28 → 29, nothing renumbered) from a prior
-`bmad-architecture` Update run. `ARCHITECTURE-SPINE.md` was **not** touched by this change set
-(`git diff --stat` on it shows nothing from this session) — verified rather than assumed.
-
-**AC-3/AC-4 (one evaluator, precedence).** `src/lib/projector-liveness.ts` (NEW): three states
-(`never-opened`/`live`/`lost`), one reducer `nextLivenessState(state, event, nowMs)` over three
-events (`ack`, `handle-closed`, `tick`), two exported cadence constants
-(`PROJECTOR_HEARTBEAT_INTERVAL_MS = 2000`, `LIVENESS_FRESHNESS_WINDOW_MS = 6000`). No React, no
-`window`, no imports (asserted by AST). The three AC-4 rules are single `if` branches in one
-function, not two mechanisms: an `ack` always sets `live` regardless of any prior `handle-closed`
-(asymmetric precedence — the ack is authoritative for life, the handle for death, neither for the
-other); a `handle-closed` event sets `lost` immediately without consulting the freshness window;
-a `tick` with no fresh ack past the window sets `lost`, and never revives a `lost` verdict on its
-own (only a fresh `ack` does that). Wired in `PresenterOperator.tsx`: every inbound message (the
-new heartbeat and the existing `request-sync`) is recorded as an `ack` inside the listener that
-already existed, without changing how `request-sync` is answered; a 200ms poll
-(`LIVENESS_POLL_INTERVAL_MS`, local to the component — not part of the shared cadence pair, since
-only the heartbeat interval and freshness window need to be agreed by both windows) raises
-`handle-closed` only when `projectorRef.current && projectorRef.current.closed`, else `tick`. No
-second liveness state anywhere in the component (asserted by AST — a defect injection of exactly
-that shape turned the suite red, see Debug Log).
-
-**Cadence sizing / mandatory throttling statement (task requirement, non-negotiable).** Stated
-rather than left silent: the two cadence constants are sized against the browser-throttling facts
-already web-verified and recorded in `ARCHITECTURE-SPINE.md:448` (AD-29's own Deferred entry,
-restated here rather than re-derived) — ordinary background-tab timer throttling groups timers to
-roughly once per second and only escalates to once-per-minute "intensive" throttling after five
-minutes hidden; the projector is a popup window on a second screen (`PROJECTOR_FEATURES`,
-`PresenterOperator.tsx:103`) and is therefore ordinarily visible, so standard throttling does not
-reach it. The narrow, real cases that do — the operator minimises or fully obscures the projector,
-or the presenter's own tab is backgrounded while they read the run sheet — produce a **false
-`lost`**, which AD-29 and this story's AC-4 already name as the direction to fail in (self-clearing
-on the next ack, versus an unrecoverable false `live`). `LIVENESS_FRESHNESS_WINDOW_MS` is 3×
-`PROJECTOR_HEARTBEAT_INTERVAL_MS` (6000ms / 2000ms), which tolerates two consecutively missed
-heartbeats from ordinary jitter without flapping, while still reporting a real death within
-single-digit seconds — "well under a second" for a clean close is met separately by the
-`handle-closed` fast path, which does not wait out this window at all. **No `deferred-work.md`
-entry was filed**, because the gap this task asks to either bound-with-an-assumption or defer is
-already the exact gap AD-29's Deferred entry names and accepts as a known, cited trade-off — filing
-a second entry for the same accepted gap would duplicate rather than newly disclose.
-
-**AC-5 (surface).** The lost-sync line renders in the presenter `<header>`, `role="status"`, only
-while `liveness.verdict === 'lost'`; a separate conditional from `projectorBlocked`'s banner so
-either, both or neither may show; nothing renders in `never-opened`; it clears the render the next
-`ack` arrives (no operator step). It states the recovery ("Use Open projector above to reconnect
-it"), never the cause. No modal, no disabled control. `projectorBlocked`'s own banner block is
-unchanged (verified: the only edit adjacent to it is the new sibling block below it).
-
-**AC-6 (regression coverage, fail-first, registered, proven).** `tests/projector-liveness.test.mjs`
-(NEW, 17 assertions) written before the module existed; confirmed to fail
-(`ERR_MODULE_NOT_FOUND`), then implemented until green. Registered in `package.json`
-`scripts.test`. Covers: all three states, both routes into `lost` (window elapsed; handle closed),
-all three AC-4 precedence rules including the asymmetric ack-beats-a-stale-closed-reading case,
-`never-opened` silence, recovery to `live` on a bare ack (standing in for `request-sync`, which
-this evaluator treats identically to the heartbeat — both are "a projector message arrived"). AST
-assertions cover what this repo's `node:test` cannot reach directly (no DOM harness): the
-heartbeat's interval and cleanup live inside `ProjectorClient`'s effect pinned to `[serviceId]`
-alone; the heartbeat posts no deck state; `PresenterOperator` imports and calls the shared
-`nextLivenessState` rather than holding a second flag; the `handle-closed` dispatch is reached
-only through an `if` whose left-hand side is a bare, non-negated truthy check of `projectorRef.current`
-(this last assertion was tightened mid-session — see Debug Log entry 5 — after a first version
-passed against a real defect it should have caught). Ten defects injected and reverted; see Debug
-Log table.
-
-**AC-7 (theme guard).** No new hue was added — the lost-sync line reuses the exact
-`text-amber-300` treatment already pinned four times in this file (the file is pinned `dark` and
-cannot express a `dark:` half at all, per its own precedent). This is the fifth site sharing one
-already-filed exception, not a new one, but it **is** a new occurrence of the pattern the guard
-counts per-site, so `UNPAIRED_CHROMATIC_TEXT` needed a fifth entry regardless. The four existing
-bracket citations had rotted (this story's edits shifted every line below the header) and were
-repaired — **twice**: first to this pass's lines (`:546`, `:590`, `:672`, `:792`, new entry `:567`),
-and again in review round 2, which found the fix round had shifted every one of them a second time.
-The five entries now read `:583`, `:604` (the new lost-sync line, cited
-`pinned dark, AC-3/Story 17.5 AC-5`), `:627`, `:709` and `:829`, each re-verified against
-`PresenterOperator.tsx` on 2026-08-05 rather than recomputed on paper. Confirmed green for the right
-reason: `tests/theme-chrome.test.mjs` 58/58 (57 pre-existing scope + 1 unchanged assertion count —
-no new site slipped past unpinned; a probe of a sixth, unregistered site turned it red before
-being reverted, see Debug Log #10).
-
-**AC-8 (artifact sync).** `EXPERIENCE.md`: the Lost sync presenter-state row (`:153`) rewritten
-from "designed, not shipped" to a shipped-behaviour statement; Open Item 1 (`:310-312`) closed with
-evidence on Open Item 3's closure shape (struck headline, Before/Now, evidence line); Flow 3 Branch
-3a's first beat (`:240`) rewritten from "designed, not shipped" to shipped; the *Interaction
-Primitives* bullet (`:157`) corrected from "one-way" (already loose — `request-sync` has always
-travelled the other way) to state what the reverse direction now carries, citing `AD-29`, leaving
-the plan-identity half of that same bullet untouched. `epics.md`: the Epic 17 summary line (`:280`)
-and the Story 17.5 label (`:308`) both read `review`, leaving every other story status in that line
-untouched; the *Constraint* paragraph (`:320` originally) gains the resolved mechanism (both
-signals, ack primary) and a pointer to `AD-29`; a one-line implementation summary was added after
-the So-that clause, matching the style Stories 17.1-17.4 already use. `DESIGN.md`: **no new
-component identity** (the line reuses an existing warning treatment, per the story's own test for
-what counts as a visual delta) — but the amber inventory at `:98` and Open Item 4's counted grep at
-`:236-246` were re-measured (`45 → 46` amber uses, `90 → 91` utilities total; file counts unchanged)
-because the reused treatment is still one new **site**, which is what those two figures count, and
-the story is explicit that stale-one-without-the-other is the failure mode to avoid. `:98`'s named
-list gained "lost-sync notice" alongside the three PresenterOperator.tsx affordances already named
-there. `ARCHITECTURE-SPINE.md` carries no edit from this change set (confirmed via `git diff
---stat`, unchanged since session start); no `EXPERIENCE.md` IA-table row moved (this story adds no
-route or surface).
-
-**AC-9 (verification).** All commands run and numbers recorded rather than assumed:
-- `node --import ./tests/register-ts-resolve.mjs --test --experimental-strip-types
-  tests/projector-liveness.test.mjs tests/present-channel.test.mjs tests/theme-chrome.test.mjs` —
-  17 + 14 + 58 = **89/89 pass**.
-- `npx tsc --noEmit` — **clean, 0 errors**.
-- `tests/public-repo-guard.test.mjs` — **5/5 pass**.
-- `npm run build` — succeeded (needed for `tests/auth-http.test.mjs`, which spawns the built
-  server; no stale-ABI issues).
-- `npm test` (full registered suite) — **489 tests / 488 pass / 0 fail / 1 skipped** (the skip is
-  pre-existing, in `tests/registry-assets.test.mjs`, unrelated to this change; confirmed by
-  `grep -rn "\.skip(" tests/*.mjs`). 19 of the 489 tests are new to this story (17 in
-  `tests/projector-liveness.test.mjs`, 2 in `tests/present-channel.test.mjs`); the remaining 470
-  are pre-existing and all still pass.
-- `npm run lint` — **32 problems**, and this was compared against a **freshly re-measured**
-  baseline rather than trusted: this change set's tracked-file edits (and the two new untracked
-  files) were stashed/moved aside, `npm run lint` re-run on the bare pre-change tree (**32
-  problems, identical**), then everything restored and re-verified (`tsc`/tests still green after
-  restore). **Zero new lint problems introduced** — none of the changed or new files
-  (`present-channel.ts`, `projector-liveness.ts`, `ProjectorClient.tsx`, `PresenterOperator.tsx`)
-  appear anywhere in the 32-problem list, on either side of the stash.
-- **Node version:** this machine has only Node 24.18.0 available (no version manager, no Node 22
-  install found). Per Story 17.3's precedent, this is **disclosure, not proof** — the PR's Node 22
-  CI run is this AC's actual evidence, and that should be confirmed once the PR is opened. **It has
-  been — see the round-2 section below: PR #33's run `31011350874` on `node: v22.23.1`, 495/496 pass.
-  This bullet is left as written because it was accurate when written; the closure lives there.** Not run
-  here: a real-browser pass (no DOM harness in this repo per Testing Standards; the wiring gap that
-  would otherwise need one is covered by the AST assertions in `tests/projector-liveness.test.mjs`).
+- Verified: `tests/present-channel.test.mjs` 14/14 (12 pre-existing + 2 new).
+- No second liveness state anywhere in the component (asserted by AST — a defect injection of exactly that shape turned the suite red, see Debug Log).
+- It states the recovery ("Use Open projector above to reconnect it"), never the cause.
+- Covers: all three states, both routes into `lost` (window elapsed; handle closed), all three AC-4 precedence rules including the asymmetric ack-beats-a-stale-closed-reading case, `never-opened` silence, recovery to `live` on a bare ack (standing in for `request-sync`, which this evaluator treats identically to the heartbeat — both are "a projector message arrived").
+- Ten defects injected and reverted; see Debug Log table.
+- - `tests/public-repo-guard.test.mjs` — **5/5 pass**.
+- server; no stale-ABI issues).
+- **It has been — see the round-2 section below: PR #33's run `31011350874` on `node: v22.23.1`, 495/496 pass.
 
 ### Review fix round (2026-08-05, `bmad-dev-story` FIX mode)
 

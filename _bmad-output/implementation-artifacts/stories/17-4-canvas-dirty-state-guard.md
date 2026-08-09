@@ -75,28 +75,13 @@ so that leaving the canvas editor cannot discard layout work without warning.
 
 ### Review Findings
 
-Code review 2026-08-04 — three adversarial layers run on `gemini-3.1-pro-high` via the Antigravity CLI (`agy`), i.e. a different model from the one that implemented this story. 14 raised, 13 unique after dedup: **1 decision-needed, 0 patch, 2 deferred, 10 dismissed.** Every dismissal below was verified against the source, not waved off.
+- 14 raised, 13 unique after dedup: **1 decision-needed, 0 patch, 2 deferred, 10 dismissed.** Every dismissal below was verified against the source, not waved off.
+- *A second prompt can appear while a confirmed switch is still loading* — the outgoing canvas is still mounted and still dirty in that window, so prompting again is correct, not a defect.
+- *The test file matches text despite claiming AST assertions* — already disclosed in its own header; the few `assert.match` calls read `node.getText()` of one resolved node, never the file.
 
-- [x] [Review][Decision → PATCHED] Edits made *during* an in-flight Save are discarded, and the flag then reports clean — The toolbar disables while `busy`, but the Fabric canvas stays interactive, so a drag between `serializeCanvas` and the response fires `object:modified` and sets the flag. On success `setTemplate(data)` remounts the canvas from the server copy — discarding that edit — and `nextDirtyState(current, 'saved')` clears the flag. The operator loses work with no signal, which is the exact failure this story exists to prevent. The discard is pre-existing (the remount always did it); what is new is the flag *mislabelling* it. Three defensible answers and the choice is the owner's: **(a)** make the canvas non-interactive while `busy`, matching how the buttons already behave; **(b)** keep the post-save message honest by naming what was discarded, on the pattern `handleSave`'s 409 branch already uses; **(c)** accept and document as a known narrow window. **Resolved 2026-08-04: option (a), the owner's call.** An effect keyed on `busy` alone discards the active object and drops `canvas.selection`, `selectable` and `evented` for the duration of any request, so the gap cannot be reached rather than being reported after the fact — the same posture the toolbar buttons already take. Discarding the selection closes the two non-pointer paths in the same move: with nothing selected, `applyTextStyle` changes nothing and the text field disables itself. Guarded by *"AC-1: the canvas stops accepting input while busy"*, whose four injected defects (dropping each of the three properties, and re-keying the effect) each turned the suite red. Verified in the browser by holding the PUT open with CDP `Fetch` interception and dragging into the gap: **7/7**, including a control drag while idle that MUST move pixels (it did) against the mid-save drag that must not (canvas hash identical, `30f0d8f7…` → `30f0d8f7…`), plus the lock lifting once the request settles. [`src/components/admin/ArtifactEditor.tsx` — the `[busy]` effect]
-
-- [x] [Review][Defer] Browser Back/Forward bypasses the navigation guard [`src/components/navigation-blocker.tsx`] — deferred, out of AC scope. `onNavigate` fires only for `<Link>` clicks and `beforeunload` does not fire for same-document history navigation, so a `popstate` leaves the editor unguarded. The App Router ships no supported hook for blocking it, and AC-4 deliberately scopes this story to the three exits it names. Not a regression — nothing was guarded before this change. Recorded in `deferred-work.md`.
-
-- [x] [Review][Defer] A failed template load cannot be retried by re-clicking the same row [`src/components/admin/ArtifactEditor.tsx` — Templates list `onClick`] — deferred, pre-existing. The new `item.id === selectedId` short-circuit was read as causing this, but the old `setSelectedId(item.id)` was equally inert: React bails on an identical state value, so the `[selectedId]` effect never re-ran either. Observable behaviour is unchanged by this diff. Recorded in `deferred-work.md`.
-
-**Dismissed, with the check that dismissed each one:**
-
-1. *Inline canvas text editing leaves the flag false; add `text:changed`* (raised independently by two layers) — not reachable. `elementToFabricObject` constructs `fabric.FabricText` (`ArtifactEditor.tsx:164`); inline editing and `text:changed` belong to `IText`/`Textbox` (`node_modules/fabric/dist/index.js:22384,22916`), neither of which this editor uses.
-2. *Background-colour / background-image / `path:created` mutations bypass the listeners* — no such affordance exists; the editor offers no background control and no drawing mode.
-3. *Ctrl/Cmd/middle-click and `target="_blank"` prompt unnecessarily* — Next returns before the guard: `linkClicked` exits on `isModifiedEvent(e)` or a `download` attribute **above** the `onNavigate` call (`node_modules/next/dist/client/app-dir/link.js:53-60`).
-4. *A seed image loading asynchronously fires `object:added` after the listeners attach* — no async `canvas.add` exists. Image elements are painted as a `fabric.Rect` placeholder, and the background image is `await`ed and assigned to `canvas.backgroundImage` before the paint loop. Refuted empirically too: browser check 1 mounted a background-image template clean.
-5. *`EXPERIENCE.md` and `epics.md` are missing from the diff* — false. The reviewed diff carries 11 files including both; the layer also cited a path (`docs/EXPERIENCE.md`) that does not exist in this repository.
-6. *A second prompt can appear while a confirmed switch is still loading* — the outgoing canvas is still mounted and still dirty in that window, so prompting again is correct, not a defect.
-7. *A `loadTemplate` failure strands the flag at true* — intended, and commented as such: the previous canvas is still mounted with the unsaved work on it, so the guard must stay armed.
-8. *The test file matches text despite claiming AST assertions* — already disclosed in its own header; the few `assert.match` calls read `node.getText()` of one resolved node, never the file.
-9. *The context value churns and re-renders both children* — `useMemo` recomputes only when `isBlocked` flips, which is the transition itself.
-10. *The Text field marks dirty on focus or on an unchanged submit* — React's `onChange` fires on input, not focus. Refuted empirically: browser check 12 recorded `dirty=false` after the selection click and `true` only after the typed edit.
-
-**Acceptance Auditor: no findings.** All seven ACs verified, AD-13 and AD-24 upheld, and each of the three disclosed deviations judged genuinely acceptable with its own rationale.
+- [x] [Review][Decision → PATCHED] Edits made *during* an in-flight Save are discarded, and the flag then reports clean — The toolbar disables while `busy`, but the Fabric canvas stays […]
+- [x] [Review][Defer] Browser Back/Forward bypasses the navigation guard [`src/components/navigation-blocker.tsx`] — deferred, out of AC scope.
+- [x] [Review][Defer] A failed template load cannot be retried by re-clicking the same row [`src/components/admin/ArtifactEditor.tsx` — Templates list `onClick`] — deferred, pre-existing.
 
 ## Dev Notes
 
@@ -211,17 +196,11 @@ claude-opus-5[1m], effort xhigh (bmad-dev-story, 2026-08-04)
 
 ### Debug Log References
 
-**Environment.** The worktree had no `node_modules`; `npm ci` was run first (exit 0; `better-sqlite3` loaded from its shipped prebuild despite npm's `allow-scripts` warning — verified by requiring it). `npm run build` was then required because `tests/auth-http.test.mjs` spawns the built server. Node in this worktree is **24.18.0**, not the 22.x the story names — see Completion Notes.
-
-**Fail-first (AC-5).** `tests/canvas-dirty-guard.test.mjs` was written and registered in `package.json` before any implementation existed, then run:
-
-```
-✖ tests\canvas-dirty-guard.test.mjs
-  ERR_MODULE_NOT_FOUND  .../src/lib/canvas-dirty-guard.ts
-ℹ tests 1 · pass 0 · fail 1
-```
-
-**Guard hardening — the suite was proved to react.** `project-context.md` requires that a new guard be shown to catch the defect it claims to catch, because this repo has repeatedly shipped guards that read the wrong branch. Thirteen defects were injected one at a time, the focused suite run, and the tree restored; **all thirteen turned it red**:
+- `npm run build` was then required because `tests/auth-http.test.mjs` spawns the built server.
+- ``` ✖ tests\canvas-dirty-guard.test.mjs ERR_MODULE_NOT_FOUND .../src/lib/canvas-dirty-guard.ts ℹ tests 1 · pass 0 · fail 1 ```
+- Thirteen defects were injected one at a time, the focused suite run, and the tree restored; **all thirteen turned it red**:
+- **16 of 16 checks passed.**
+- A first implementation pass took it to 34 (+2 errors); both were mine and both were fixed rather than tolerated:
 
 | # | Injected defect | Assertion that fired |
 | --- | --- | --- |
@@ -238,13 +217,6 @@ claude-opus-5[1m], effort xhigh (bmad-dev-story, 2026-08-04)
 | 11 | the suite unregistered from `package.json` | this suite is registered in package.json |
 | 12 | a fresh template mount stops clearing the flag | each clearing event is raised on exactly one success path |
 | 13 | Save stops clearing the flag | each clearing event is raised on exactly one success path |
-
-**Browser verification (2026-08-04) — the half `node:test` structurally cannot reach.**
-
-This repo has no `jsdom` and no `@testing-library`, so Fabric mutation events, a real `beforeunload` and a real `<Link>` click are covered in the suite by TypeScript-AST assertions rather than by execution. Those behaviours were therefore exercised in an actual browser, on the precedent `tests/theme-chrome.test.mjs` already records for AC-1 of Story 17.1 (*"verified in the browser and is recorded in the story's Debug Log"*).
-
-Method: headless Chrome driven over the DevTools Protocol from a throwaway script, against `next dev` on a **scratch `DB_PATH`** with a bootstrap admin — the developer `data.db` was never written to. Real `Input.dispatchMouseEvent` clicks and drags, so sticky activation is genuine (`beforeunload` requires it); `window.confirm` replaced by a spy recording its message and returning a chosen answer; `Page.javascriptDialogOpening` observed for the native prompt. **16 of 16 checks passed.**
-
 | # | Checked in the browser | Result |
 | --- | --- | --- |
 | 1 | Fresh mount shows no indicator | pass |
@@ -263,11 +235,6 @@ Method: headless Chrome driven over the DevTools Protocol from a throwaway scrip
 | 13 | A successful Save clears the indicator | pass |
 | 13b | After Save, reload raises no prompt | pass |
 | 14 | A read-only template shows no indicator and arms no guard | pass |
-
-Two incidental findings worth keeping. **Selecting** a canvas element left the flag `false` — check 12 recorded `dirty=false` after the selection click and `true` only after the edit — which is the registration-order hazard observed from the other side: a listener wired above the paint loop would have failed exactly there. And the horizontal page overflow visible in the captures is **pre-existing**, not introduced here: it is present and identical in the *clean* capture, where the indicator is absent, and the Save/Reset row sits at the same position in both. It is not this story's to fix.
-
-**Verification runs (final, after the lint fix below).**
-
 | Command | Result |
 | --- | --- |
 | `node --import ./tests/register-ts-resolve.mjs --test --experimental-strip-types tests/canvas-dirty-guard.test.mjs` | **27 pass, 0 fail** |
@@ -277,38 +244,14 @@ Two incidental findings worth keeping. **Selecting** a canvas element left the f
 | `npm test` | **468 tests, 467 pass, 0 fail, 1 skipped** (the skip is pre-existing, in `tests/auth-rate-limit.test.mjs`) |
 | `npm run lint` | **32 problems (15 errors, 17 warnings)** — identical to the baseline measured on this worktree with `git status` clean before any edit |
 
-**The lint baseline was re-measured, not copied.** Measured on the clean tree at `94d2b7b`: **32 problems (15 errors, 17 warnings)** — the story's carried-over number happened to be right, but it was re-taken rather than trusted, per `project-context.md`. A first implementation pass took it to 34 (+2 errors); both were mine and both were fixed rather than tolerated:
-
-1. `react-hooks` *"Calling setState synchronously within an effect can trigger cascading renders"* — the `'template-changed'` clear was in the mount effect. Moved into `loadTemplate`, which is a strict improvement rather than a lint dodge (see Completion Notes).
-2. `@next/next/no-assign-module-variable` — a local named `module` in the test file. Renamed to `moduleSource`.
-
 ### Completion Notes List
 
-**What shipped.** Four leaks were identified in the story; three are closed and the fourth is deliberately not.
-
-- **AC-1** — `isDirty` in `ArtifactEditor`, driven entirely by `nextDirtyState` from the new module. Set by the three Fabric canvas events (`object:added`, `object:removed`, `object:modified`) *and* explicitly by the four handlers that mutate the canvas outside a Fabric event. Cleared on a successful Save, a successful Reset, and every fresh template mount. An *Unsaved changes* line renders beside Save/Reset while `isDirty && isEditable`.
-- **AC-2** — `beforeUnloadGuard` registered on `window` only while an editable canvas is dirty, removed in the same effect's cleanup.
-- **AC-3** — the Templates list `onClick` confirms before a real switch; re-clicking the row already open short-circuits and prompts nothing.
-- **AC-4** — `NavigationBlockerProvider` + `CustomLink` on Next 16's `onNavigate`, mounted on `AdminArtifactsPage` and **not** on `src/app/layout.tsx`. `Header`'s five links go through `CustomLink`; every other page has no provider, reads the context default `isBlocked: false`, and is unchanged.
-- **`LogoutButton` untouched**, as AC-4 requires, and asserted as such by the suite.
-
-**Three disclosed deviations from the story text. None changes an AC outcome; each is stated here so review does not have to find it.**
-
-1. **The fresh-mount clear lives in `loadTemplate`, not at the start of `mountCanvas`.** Task 2 named `mountCanvas`; putting a synchronous `setState` in that effect is a lint error under this repo's `react-hooks` config (it was, +1 error). `loadTemplate` is the single path every canvas remount arrives through — first load, template switch, and the reload behind a 409 — so coverage is identical, and it is **more** correct in one case the effect version got wrong by omission: a load that *fails* leaves the previous canvas mounted with its unsaved work still on it, and the flag must survive that. It now does. Pinned by the suite (`each clearing event is raised on exactly one success path`) and by probes 12/13.
-
-2. **`navigation-blocker.tsx` sits at `src/components/`, not `src/components/admin/`.** The story's Project Structure Notes suggested `admin/` and said "or similar name"; AC-4 itself specifies no path. `Header` is shared chrome rendered by every gated page, so importing the wrapper from an `admin/` subtree would make app-wide chrome depend on an admin-scoped module. The *provider* is still page-scoped exactly as AC-4 requires — only the module's home moved. The file's own doc comment records the reason.
-
-3. **One `EXPERIENCE.md` line was corrected beyond the two AC-6 names.** AC-6 says "nothing else in that file changes". The *Component Patterns* row for `admin/ArtifactEditor` ended *"navigating away loses them silently"* — a sentence this story makes false, in the same file as the two entries it closes. Leaving it would have had the pattern table contradict the surface row and the Open Item that both record the fix, which is the "never leave docs lying" rule in `AGENTS.md` and the four-artifact-families rule in `project-context.md`. The correction is one row, states what it used to say and why it changed, and points at the surface row rather than restating it. **`DESIGN.md` was not touched**, as AC-6 requires — no Open Item there names this story, and this change introduces no token and no new component identity.
-
-**Two things the story warned about were checked empirically rather than assumed.**
-
-- **Registration order.** `mountCanvas` paints seed elements with `canvas.add()`, which fires `object:added`. The mutation listeners are attached *after* that loop, in the same block as the existing `selection:*` listeners; probe 1 confirms that moving them one block earlier turns the suite red. Without this, every fresh template mount would arm the guard on a canvas nobody had touched.
-- **Whether `obj.set(...)` fires `object:modified`.** It does not — Fabric raises that on interactive transforms, not on a direct `set`. So `applyTextStyle` and `handleTextContentChange` mark dirty explicitly, and each does so only when something actually changed (pressing *Apply to selection* with nothing selected must not claim an edit). Verified in `node_modules/fabric` rather than inferred.
-- Related, and also checked in the Fabric source: `canvas.dispose()` → `destroy()` clears `_objects` directly and never calls `remove()`, so teardown raises no `object:removed`. The listeners are torn down before `dispose()` regardless — the existing cleanup order, now load-bearing for a second reason.
-
-**AC-7 deviation: Node 24.18.0, not 22.x.** The story specifies Node 22.x (`>=22.12`) and that is what CI runs. This worktree has 24.18.0 and no version manager was assumed on the operator's behalf. Everything passes here, and nothing added is version-sensitive: the new module is plain TypeScript with no imports, and the test file uses `node:test` + the `typescript` compiler API, both already used across the suite on both versions. **CI on Node 22 is still the authority** — one known 22-vs-24 divergence is already recorded in `tests/theme-chrome.test.mjs` (a top-level-await race that CI lost and developer machines won), which is why the new suite hoists its own dynamic import above the first `test()` rather than relying on either runtime's timing.
-
-**No architecture spine amendment.** `AD-13` is unchanged: the flag is a boolean side-observation of canvas mutation events and never calls `serializeCanvas` outside Save. `AD-24` already names this story by number as its live instance, so citing it is enough. No route, no IA-table row, no schema change, no API route, no settings key.
+- `loadTemplate` is the single path every canvas remount arrives through — first load, template switch, and the reload behind a 409 — so coverage is identical, and it is **more** correct in one case the effect version got wrong by omission: a load that *fails* leaves the previous canvas mounted with its unsaved work still on it, and the flag must survive that.
+- Pinned by the suite (`each clearing event is raised on exactly one success path`) and by probes 12/13.
+- Leaving it would have had the pattern table contradict the surface row and the Open Item that both record the fix, which is the "never leave docs lying" rule in `AGENTS.md` and the four-artifact-families rule in `project-context.md`.
+- So `applyTextStyle` and `handleTextContentChange` mark dirty explicitly, and each does so only when something actually changed (pressing *Apply to selection* with nothing selected must not claim an edit).
+- - Related, and also checked in the Fabric source: `canvas.dispose()` → `destroy()` clears `_objects` directly and never calls `remove()`, so teardown raises no `object:removed`.
+- **No architecture spine amendment.** `AD-13` is unchanged: the flag is a boolean side-observation of canvas mutation events and never calls `serializeCanvas` outside Save.
 
 ### File List
 
