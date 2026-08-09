@@ -15,6 +15,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -83,6 +84,32 @@ function sourceIndex() {
 
 const { text: SOURCE } = sourceIndex();
 
+// A cited path that is GIT-IGNORED is legitimately absent, not rot: AGENTS.md
+// documents `data/local/default-registry.json` as where private congregation data
+// goes, and the spine cites it for exactly that reason. Checking the working tree
+// alone made this guard pass on a developer machine that has the file and fail in
+// CI, which does not — a false negative locally and a false positive in CI.
+const ignoredPaths = (() => {
+  const missing = new Set();
+  for (const rel of DOCS) {
+    const abs = path.join(ROOT, rel);
+    if (!fs.existsSync(abs)) continue;
+    for (const m of fs.readFileSync(abs, 'utf8').matchAll(PATH_RE)) {
+      if (!fs.existsSync(path.join(ROOT, m[1]))) missing.add(m[1]);
+    }
+  }
+  if (!missing.size) return new Set();
+  try {
+    // `check-ignore` exits 1 when nothing matches, which is not an error here
+    const out = execFileSync('git', ['check-ignore', '--stdin'],
+      { cwd: ROOT, input: [...missing].join('\n'), encoding: 'utf8' });
+    return new Set(out.split(/\r?\n/).map((s) => s.trim().replace(/\\/g, '/')).filter(Boolean));
+  } catch (err) {
+    if (err.status === 1) return new Set();
+    throw err;
+  }
+})();
+
 function unresolved() {
   const found = [];
   for (const rel of DOCS) {
@@ -95,7 +122,7 @@ function unresolved() {
       const c = m[1];
       if (seen.has(c) || NOT_A_CITATION.test(c)) continue;
       seen.add(c);
-      if (!fs.existsSync(path.join(ROOT, c))) found.push({ base, c });
+      if (!fs.existsSync(path.join(ROOT, c)) && !ignoredPaths.has(c)) found.push({ base, c });
     }
     for (const m of body.matchAll(SYM_RE)) {
       const c = m[1];
