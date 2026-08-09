@@ -16,7 +16,8 @@ Welcome to the documentation index for `worship-presenter-web`. This page acts a
 
 - **Tech Stack:** Next.js 16, React 19, SQLite (`better-sqlite3`), Tailwind CSS v4, PptxGenJS, JSZip, Fabric.js (canvas editor)
 - **Application Entry Points:**
-  - Standard Browser UI Layout: [src/app/layout.tsx](../src/app/layout.tsx)
+  - Operator UI Layout: [src/app/(operator)/layout.tsx](<../src/app/(operator)/layout.tsx>)
+  - Projected UI Layout: [src/app/(projected)/layout.tsx](<../src/app/(projected)/layout.tsx>)
   - Bot Webhook Entry Point: [src/app/api/webhook/route.ts](../src/app/api/webhook/route.ts)
   - Session Interceptor: [src/proxy.ts](../src/proxy.ts) (Next 16 renamed the `middleware` convention to `proxy`; the proxy runs on the Node.js runtime and re-checks each session against SQLite)
 - **Primary Database File:** `data.db` (SQLite, WAL mode active). In production the path comes from `DB_PATH` and points at a durable host directory, never a container layer — see [Durable Server Deployment](./deploy.md)

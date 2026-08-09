@@ -14,10 +14,10 @@
  * file is the net for both: *what* — the projected tree paints in literals or
  * registry-resolved inline styles; and *where* — the projected output, not the
  * operator's own preview of it (`SlidePreviewList` is hub chrome and follows the
- * theme deliberately). The *shell behind* a projected route — `layout.tsx`, a
- * `not-found.tsx`, a server-rendered first paint — is **Story 17.7's** contract,
- * not this file's. `FULL_SCREEN` below covers the two client surfaces that can
- * call a hook; it cannot cover a Server Component, and nothing here pretends to.
+ * theme deliberately). Story 17.7 extended this same net to the *shell behind*
+ * a projected route — `layout.tsx`, framework fallbacks, and server first paint.
+ * `FULL_SCREEN` still covers the client hook defence; structural discovery from
+ * `src/app/(projected)` covers the Server Components above it.
  *
  * The projected surface is two routes, and each is a route shell plus a client
  * tree. Both halves are guarded, because the shell is reached at the same URL
@@ -26,9 +26,10 @@
  *   slideshow/page.tsx           -> SlideshowClient -> SlideView -> ArtifactSlide
  *   present/projector/page.tsx   -> ProjectorClient -> SlideView -> ArtifactSlide
  *
- * The closure test walks *out of* those files transitively and requires every
- * module it reaches to be guarded or token-free — no directory is exempt by
- * name. It does not walk *upward*; that is the half Story 17.7 owns.
+ * The closure test starts at every route special file in the projected group,
+ * walks *out of* them transitively, and requires every module it reaches to be
+ * guarded or token-free — no directory is exempt by name. The route group is
+ * the structural upward boundary, so a new shell joins without a leaf list.
  *
  * **Every scan strips comments first**, with a scanner rather than a regex.
  * Four assertions here were satisfiable by a word in a comment before
@@ -52,6 +53,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import ts from 'typescript';
+import {
+  discoverAppPages,
+  discoverLocalModuleImports,
+  discoverModuleGraph,
+  discoverProjectedRoutes,
+  PROJECTED_ROUTE_GROUP,
+  projectedUrlForPage,
+} from './helpers/projected-routes.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readRaw = (rel) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
@@ -88,6 +97,7 @@ const { claimProjectedShell, resetProjectedShellForTest } = await import(
 const { THEME_ORDER, nextTheme, asThemeChoice } = await import(
   srcUrl('src', 'lib', 'theme-cycle.ts')
 );
+const projectedRoutes = discoverProjectedRoutes(repoRoot);
 
 // --- source hygiene ---------------------------------------------------------
 
@@ -592,18 +602,228 @@ function themeReferences(source) {
 
 // --- AC-4: the projected output cannot see the operator's theme -------------
 
-const PROJECTED = [
-  'src/components/SlideView.tsx',
-  'src/components/artifacts/ArtifactSlide.tsx',
-  'src/app/services/[id]/present/projector/ProjectorClient.tsx',
-  'src/app/services/[id]/slideshow/SlideshowClient.tsx',
+const PROJECTED = projectedRoutes.specialFiles;
   // The route shells. Reached at the same projected URL whenever
   // `buildSlidePlan` throws, which a registry failure is enough to cause — so a
   // token-painted error card here lands on the room-facing screen and follows
   // the operator's theme while it is there.
-  'src/app/services/[id]/present/projector/page.tsx',
-  'src/app/services/[id]/slideshow/page.tsx',
-];
+
+test('Story 17.7: the projected route group owns both unchanged public URLs', () => {
+  assert.deepEqual(projectedRoutes.urls, [
+    '/services/[id]/present/projector',
+    '/services/[id]/slideshow',
+  ]);
+  assert.equal(projectedRoutes.layouts.length, 1, 'one projected root owns both URLs');
+  assert.equal(projectedRoutes.layouts[0], `${PROJECTED_ROUTE_GROUP}/layout.tsx`);
+  assert.equal(
+    fs.existsSync(path.join(repoRoot, 'src/app/layout.tsx')),
+    false,
+    'multiple roots require removing the top-level layout'
+  );
+  const allPages = discoverAppPages(repoRoot);
+  for (const url of projectedRoutes.urls) {
+    const owners = allPages.filter((file) => projectedUrlForPage(file) === url);
+    assert.deepEqual(
+      owners,
+      projectedRoutes.pages.filter((file) => projectedUrlForPage(file) === url),
+      `${url} must have no owner outside ${PROJECTED_ROUTE_GROUP}`
+    );
+  }
+});
+
+test('Story 17.7: every projected framework fallback is discovered structurally', () => {
+  for (const name of ['not-found.tsx', 'error.tsx']) {
+    assert.ok(
+      projectedRoutes.specialFiles.includes(`${PROJECTED_ROUTE_GROUP}/${name}`),
+      `${name} must live inside the projected root boundary`
+    );
+  }
+});
+
+test('Story 17.7: projected page normalization removes route groups and nothing else', () => {
+  assert.equal(
+    projectedUrlForPage('src/app/(projected)/services/[id]/present/projector/page.tsx'),
+    '/services/[id]/present/projector'
+  );
+});
+
+function unwrapExpression(node) {
+  let current = node;
+  while (
+    current &&
+    (ts.isParenthesizedExpression(current) ||
+      ts.isAsExpression(current) ||
+      ts.isSatisfiesExpression(current))
+  ) current = current.expression;
+  return current;
+}
+
+function isFunctionNode(node) {
+  return (
+    ts.isFunctionDeclaration(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isArrowFunction(node) ||
+    ts.isMethodDeclaration(node)
+  );
+}
+
+function defaultReturnedRoot(source, file) {
+  const { component, sourceFile } = defaultExportedFunction(source, file);
+  if (!ts.isBlock(component.body)) return { root: unwrapExpression(component.body), sourceFile };
+  const returned = [];
+  function visit(node) {
+    if (node !== component.body && isFunctionNode(node)) return;
+    if (ts.isReturnStatement(node) && node.expression) {
+      returned.push(unwrapExpression(node.expression));
+      return;
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(component.body);
+  assert.equal(returned.length, 1, `${file} must return exactly one top-level JSX root`);
+  return { root: returned[0], sourceFile };
+}
+
+function jsxElementName(node) {
+  const tag = ts.isJsxElement(node) ? node.openingElement.tagName : node.tagName;
+  return tag?.getText();
+}
+
+function findRenderedElement(root, name, file) {
+  const found = [];
+  function visit(node) {
+    if ((ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) && jsxElementName(node) === name) {
+      found.push(node);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(root);
+  assert.equal(found.length, 1, `${file} must render exactly one <${name}> in its returned tree`);
+  return found[0];
+}
+
+function styleIdentifierFor(element, file) {
+  const attributes = ts.isJsxElement(element)
+    ? element.openingElement.attributes.properties
+    : element.attributes.properties;
+  const style = attributes.find(
+    (attribute) => ts.isJsxAttribute(attribute) && attribute.name.getText() === 'style'
+  );
+  assert.ok(style?.initializer && ts.isJsxExpression(style.initializer), `${file}'s rendered element needs a style expression`);
+  assert.ok(ts.isIdentifier(style.initializer.expression), `${file}'s rendered style must name a literal object`);
+  return style.initializer.expression.text;
+}
+
+function literalStyleObject(sourceFile, styleName, file) {
+  let styleObject;
+  function visit(node) {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === styleName &&
+      node.initializer &&
+      ts.isObjectLiteralExpression(node.initializer)
+    ) styleObject = node.initializer;
+    ts.forEachChild(node, visit);
+  }
+  visit(sourceFile);
+  assert.ok(styleObject, `${file}'s ${styleName} must be a literal object`);
+  assert.equal(
+    styleObject.properties.some((property) => ts.isSpreadAssignment(property)),
+    false,
+    `${file}'s ${styleName} must not spread values that override literal shell claims`
+  );
+  return styleObject;
+}
+
+function styleLiteral(styleObject, property, expected, message) {
+  const claims = styleObject.properties.filter(
+    (entry) =>
+      ts.isPropertyAssignment(entry) &&
+      ((ts.isIdentifier(entry.name) && entry.name.text === property) ||
+        (ts.isStringLiteral(entry.name) && entry.name.text === property))
+  );
+  assert.equal(claims.length, 1, `${message}.${property} must be stated exactly once`);
+  const initializer = claims[0].initializer;
+  const actual = ts.isStringLiteral(initializer)
+    ? initializer.text
+    : ts.isNumericLiteral(initializer)
+      ? Number(initializer.text)
+      : undefined;
+  assert.equal(actual, expected, `${message}.${property} must be the literal ${expected}`);
+}
+
+function projectedShellLiteral(element, property, expected) {
+  const file = `${PROJECTED_ROUTE_GROUP}/layout.tsx`;
+  const source = read(file);
+  const { root, sourceFile } = defaultReturnedRoot(source, file);
+  const rendered = findRenderedElement(root, element, file);
+  const styleName = styleIdentifierFor(rendered, file);
+  assert.equal(styleName, `${element}Style`, `<${element}> must use ${element}Style`);
+  styleLiteral(literalStyleObject(sourceFile, styleName, file), property, expected, styleName);
+}
+
+for (const [element, property, expected] of [
+  ['html', 'backgroundColor', '#000000'],
+  ['html', 'overflow', 'hidden'],
+  ['html', 'scrollbarGutter', 'auto'],
+  ['body', 'backgroundColor', '#000000'],
+  ['body', 'overflow', 'hidden'],
+]) {
+  test(`Story 17.7: projected root server-renders ${element}.${property} as a literal`, () => {
+    projectedShellLiteral(element, property, expected);
+  });
+}
+
+for (const forbidden of ['ThemeProvider', 'getUiLocale', 'suppressHydrationWarning']) {
+  const claim = forbidden === 'ThemeProvider'
+    ? 'projected root excludes operator providers: ThemeProvider'
+    : `projected root excludes operator shell state ${forbidden}`;
+  test(`Story 17.7: ${claim}`, () => {
+    const layout = stripComments(read(`${PROJECTED_ROUTE_GROUP}/layout.tsx`));
+    assert.doesNotMatch(layout, new RegExp(`\\b${forbidden}\\b`));
+  });
+}
+
+test('Story 17.7: projected not-found and error fallbacks are literal and generic', () => {
+  for (const name of ['not-found.tsx', 'error.tsx']) {
+    const file = `${PROJECTED_ROUTE_GROUP}/${name}`;
+    const source = read(file);
+    const { root, sourceFile } = defaultReturnedRoot(source, file);
+    const rendered = findRenderedElement(root, 'main', file);
+    const styleName = styleIdentifierFor(rendered, file);
+    const styleObject = literalStyleObject(sourceFile, styleName, file);
+    for (const [property, expected] of [
+      ['position', 'fixed'],
+      ['inset', 0],
+      ['overflowY', 'auto'],
+      ['backgroundColor', '#000000'],
+      ['color', '#FFFFFF'],
+    ]) styleLiteral(styleObject, property, expected, `${file}:${styleName}`);
+
+    let detailExpression = null;
+    let forbiddenAttribute = null;
+    function inspect(node) {
+      if (ts.isJsxSpreadAttribute(node)) forbiddenAttribute = 'spread attribute';
+      if (
+        ts.isJsxAttribute(node) &&
+        ['href', 'action', 'formAction', 'onClick', 'onSubmit'].includes(node.name.getText())
+      ) forbiddenAttribute = node.name.getText();
+      if (ts.isJsxExpression(node) && !ts.isJsxAttribute(node.parent) && node.expression) {
+        detailExpression = node.expression.getText(sourceFile);
+      }
+      ts.forEachChild(node, inspect);
+    }
+    inspect(root);
+    assert.equal(forbiddenAttribute, null, `${file} must expose no navigation affordance`);
+    assert.equal(detailExpression, null, `${file} must render no runtime/server detail`);
+    assert.doesNotMatch(
+      stripComments(source),
+      /\b(?:useRouter|redirect)\s*\(|\b(?:router|location|window\.location)\s*\.\s*(?:push|replace|assign)\s*\(/,
+      `${file} must not navigate imperatively`
+    );
+  }
+});
 
 /**
  * A second way the theme reaches the projected tree, found while verifying AC-4
@@ -943,10 +1163,7 @@ test('AC-4: every projected focusable states a literal outline colour', () => {
 });
 
 /** The two room-facing route shells: the `buildSlidePlan` failure branches. */
-const ROUTE_SHELLS = [
-  'src/app/services/[id]/present/projector/page.tsx',
-  'src/app/services/[id]/slideshow/page.tsx',
-];
+const ROUTE_SHELLS = projectedRoutes.pages;
 
 test('the room-facing failure branches can both be scrolled', () => {
   // Not a theme assertion. It lives here because this is the file that knows
@@ -960,11 +1177,11 @@ test('the room-facing failure branches can both be scrolled', () => {
   // on the one screen whose job is telling the operator how to recover.
   for (const file of ROUTE_SHELLS) {
     const source = read(file);
-    const covering = jsxTags(source).filter(({ tag }) =>
-      /(?:^|\s)fixed inset-0(?:$|\s)/.test(classNameValues(tag)[0] ?? '')
+    const covering = jsxReturnBranches(source).flat().filter((tag) =>
+      tag && /(?:^|\s)fixed inset-0(?:$|\s)/.test(classNameValues(tag)[0] ?? '')
     );
     assert.equal(covering.length, 1, `${file} should have one full-screen branch`);
-    const [value] = classNameValues(covering[0].tag);
+    const [value] = classNameValues(covering[0]);
     assert.match(
       value,
       /(?:^|\s)overflow-(?:y-)?auto(?:$|\s)/,
@@ -988,27 +1205,7 @@ test('the room-facing failure branches can both be scrolled', () => {
  * module joined the projected tree unwalked.
  */
 function moduleImports(file) {
-  const source = read(file);
-  const specifiers = [
-    ...[
-      ...source.matchAll(
-        /\b(?:import|export)\s+(?!type\b)[\s\S]*?\bfrom\s+["']([^"']+)["']/g
-      ),
-    ].map((m) => m[1]),
-    ...[...source.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g)].map((m) => m[1]),
-    // A bare side-effect import carries no `from` clause at all.
-    ...[...source.matchAll(/\bimport\s+["']([^"']+)["']/g)].map((m) => m[1]),
-  ];
-  const inRepo = specifiers.filter((s) => s.startsWith('.') || s.startsWith('@/'));
-  return inRepo.flatMap((specifier) => {
-    const base = specifier.startsWith('@/')
-      ? `src/${specifier.slice('@/'.length)}`
-      : path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier));
-    const resolved = ['.tsx', '.ts', '/index.tsx', '/index.ts']
-      .map((ext) => `${base}${ext}`)
-      .find((candidate) => fs.existsSync(path.join(repoRoot, candidate)));
-    return resolved ? [{ specifier, resolved }] : [];
-  });
+  return discoverLocalModuleImports(repoRoot, file);
 }
 
 /**
@@ -1032,20 +1229,33 @@ const projectedTree = (() => {
   let cached = null;
   return () => {
     if (cached) return cached;
-    const seen = new Map(PROJECTED.map((file) => [file, null]));
-    const queue = [...PROJECTED];
-    while (queue.length > 0) {
-      const file = queue.shift();
-      for (const { specifier, resolved } of moduleImports(file)) {
-        if (seen.has(resolved)) continue;
-        seen.set(resolved, `${file} -> ${specifier}`);
-        queue.push(resolved);
-      }
-    }
-    cached = [...seen].map(([file, via]) => ({ file, via }));
+    cached = discoverModuleGraph(repoRoot, PROJECTED);
     return cached;
   };
 })();
+
+test('Story 17.7: the projected closure follows route stylesheets and non-TS imports', () => {
+  assert.ok(
+    projectedTree().some(({ file }) => file === `${PROJECTED_ROUTE_GROUP}/projected.css`),
+    'the projected layout imports projected.css; the closure must reach it'
+  );
+});
+
+test('Story 17.7: no operator theme provider is reachable indirectly', () => {
+  const files = projectedTree().map(({ file }) => file);
+  assert.equal(
+    files.includes('src/components/ThemeProvider.tsx'),
+    false,
+    'the projected graph must not import the operator ThemeProvider under any alias'
+  );
+  for (const file of files.filter((candidate) => /\.(?:[cm]?[jt]sx?)$/.test(candidate))) {
+    assert.doesNotMatch(
+      stripComments(read(file)),
+      /(?:from\s*|import\s*)['"]next-themes['"]|require\(\s*['"]next-themes['"]\s*\)/,
+      `${file} must not create a second operator theme boundary`
+    );
+  }
+});
 
 test('AC-4: reachable projected modules paint no theme-coloured edge', () => {
   const offenders = [];
@@ -1195,7 +1405,7 @@ function createElementStyleCalls(source, file = 'fixture.tsx') {
       node.expression.name.text === 'createElement' &&
       subject &&
       ts.isIdentifier(subject) &&
-      ['SlideView', 'ArtifactSlide'].includes(subject.text)
+      PROJECTED_COMPONENT_NAMES.has(subject.text)
     ) {
       const props = node.arguments[1];
       let unsafe = false;
@@ -1279,19 +1489,58 @@ test('AC-4: createElement checks exactly the projected props object', () => {
 });
 
 /** The parameter list of the file's default-exported function, as source. */
-function exportedProps(source) {
-  const at = source.indexOf('export default function');
-  assert.ok(at !== -1, 'expected a default-exported function');
-  const open = source.indexOf('(', at);
-  let depth = 0;
-  for (let i = open; i < source.length; i += 1) {
-    if (source[i] === '(') depth += 1;
-    else if (source[i] === ')') {
-      depth -= 1;
-      if (depth === 0) return source.slice(open, i + 1);
+function defaultExportedFunction(source, file = 'fixture.tsx') {
+  const sourceFile = parseSource(source, file);
+  const direct = sourceFile.statements.find(
+    (statement) =>
+      ts.isFunctionDeclaration(statement) &&
+      statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) &&
+      statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)
+  );
+  if (direct) return { component: direct, sourceFile };
+
+  const assignment = sourceFile.statements.find(
+    (statement) => ts.isExportAssignment(statement) && !statement.isExportEquals
+  );
+  assert.ok(assignment, `${file} must keep a default-exported function component`);
+  let expression = assignment.expression;
+  while (
+    ts.isParenthesizedExpression(expression) ||
+    ts.isAsExpression(expression) ||
+    ts.isSatisfiesExpression(expression)
+  ) {
+    expression = expression.expression;
+  }
+  let component = expression;
+  if (ts.isIdentifier(expression)) {
+    const declaration = sourceFile.statements.find(
+      (statement) =>
+        (ts.isFunctionDeclaration(statement) && statement.name?.text === expression.text) ||
+        (ts.isVariableStatement(statement) &&
+          statement.declarationList.declarations.some(
+            (candidate) => ts.isIdentifier(candidate.name) && candidate.name.text === expression.text
+          ))
+    );
+    if (declaration && ts.isFunctionDeclaration(declaration)) component = declaration;
+    else if (declaration && ts.isVariableStatement(declaration)) {
+      component = declaration.declarationList.declarations.find(
+        (candidate) => ts.isIdentifier(candidate.name) && candidate.name.text === expression.text
+      )?.initializer;
     }
   }
-  assert.fail('unbalanced parameter list');
+  assert.ok(
+    component &&
+      (ts.isFunctionDeclaration(component) ||
+        ts.isFunctionExpression(component) ||
+        ts.isArrowFunction(component)),
+    `${file}'s default export must resolve to a function component`
+  );
+  return { component, sourceFile };
+}
+
+function exportedProps(source, file = 'fixture.tsx') {
+  const { component, sourceFile } = defaultExportedFunction(source, file);
+  return `(${component.parameters.map((parameter) => parameter.getText(sourceFile)).join(', ')})`;
 }
 
 /** The type annotation on the props parameter, as source. */
@@ -1365,13 +1614,7 @@ function withoutObjectLiterals(text) {
 const TYPE_NOISE = new Set(['extends', 'type', 'interface', 'readonly', 'keyof', 'infer']);
 
 function assertClosedPropsStructure(source, file) {
-  const sourceFile = parseSource(source, file);
-  const component = sourceFile.statements.find(
-    (statement) =>
-      ts.isFunctionDeclaration(statement) &&
-      statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)
-  );
-  assert.ok(component, `${file} must keep a default-exported function`);
+  const { component, sourceFile } = defaultExportedFunction(source, file);
   const parameter = component.parameters[0];
   assert.ok(parameter, `${file}'s exported component must declare its props`);
 
@@ -1466,7 +1709,7 @@ function assertClosedPropsStructure(source, file) {
  * it contains `className` by definition.
  */
 function exportedPropsShape(source, file) {
-  const params = exportedProps(source);
+  const params = exportedProps(source, file);
   assertClosedPropsStructure(source, file);
   const annotation = propsAnnotation(params);
   assert.notEqual(
@@ -1536,14 +1779,39 @@ test('AC-4: projected props remain closed object literals', () => {
   );
 });
 
-test('AC-4: neither projected component accepts a className at all', () => {
+test('Story 17.7: sync and async default exports reach substantive guard checks', () => {
+  for (const source of [
+    'export default function X({ slide }: { slide: string }) { return <div className="fixed inset-0 text-white" />; }',
+    'export default async function X({ slide }: { slide: string }) { return <div className="fixed inset-0 text-white" />; }',
+    'export default ({ slide }: { slide: string }) => <div className="fixed inset-0 text-white" />;',
+    'const X = async ({ slide }: { slide: string }) => <div className="fixed inset-0 text-white" />; export default X;',
+    'function X({ slide }: { slide: string }) { return <div className="fixed inset-0 text-white" />; } export default X;',
+  ]) {
+    assert.doesNotThrow(() => exportedPropsShape(source, 'fixture.tsx'));
+    assert.deepEqual(
+      jsxReturnBranches(source).flat().map((root) => classNameValues(root)[0]),
+      ['fixed inset-0 text-white']
+    );
+  }
+});
+
+const PROJECTED_COMPONENT_FILES = projectedTree()
+  .map(({ file }) => file)
+  .filter((file) => file.endsWith('.tsx'));
+const PROJECTED_COMPONENT_NAMES = new Set(
+  PROJECTED_COMPONENT_FILES.map((file) => path.posix.basename(file, '.tsx'))
+);
+
+test('AC-4: projected components cannot accept a className from outside', () => {
   // The invariant above as a type signature rather than a regex, which is what
   // makes a `{...props}` spread, a `React.createElement(ArtifactSlide, …)`, a
   // renamed default import and a `.ts` call site fail to compile instead of
   // slipping past a scan of `.tsx` files. Only the PROPS are checked — both
   // files legitimately set `className` on their own elements; what they must not
   // do is let a caller supply one.
-  for (const file of ['src/components/SlideView.tsx', 'src/components/artifacts/ArtifactSlide.tsx']) {
+  for (const file of PROJECTED_COMPONENT_FILES) {
+    const { component } = defaultExportedFunction(read(file), file);
+    if (component.parameters.length === 0) continue;
     assert.doesNotMatch(
       exportedPropsShape(read(file), file),
       /\bclassName\b/,
@@ -1556,10 +1824,34 @@ test('AC-4: neither projected component accepts a className at all', () => {
 
 // --- AC-4: the themed app shell under the full-screen surfaces --------------
 
-const FULL_SCREEN = [
-  'src/app/services/[id]/present/projector/ProjectorClient.tsx',
-  'src/app/services/[id]/slideshow/SlideshowClient.tsx',
-];
+function firstClientBoundaries(page) {
+  const boundaries = [];
+  const seen = new Set([page]);
+  const queue = moduleImports(page).map(({ resolved }) => resolved);
+  while (queue.length > 0) {
+    const file = queue.shift();
+    if (seen.has(file)) continue;
+    seen.add(file);
+    if (/^\s*['\"]use client['\"]/m.test(read(file))) {
+      boundaries.push(file);
+      continue;
+    }
+    queue.push(...moduleImports(file).map(({ resolved }) => resolved));
+  }
+  return boundaries;
+}
+
+const FULL_SCREEN = [...new Set(projectedRoutes.pages.flatMap(firstClientBoundaries))];
+
+test('Story 17.7: every projected page crosses exactly one structural client boundary', () => {
+  for (const page of projectedRoutes.pages) {
+    assert.equal(
+      firstClientBoundaries(page).length,
+      1,
+      `${page} must reach one room-facing client before any deeper client subtree`
+    );
+  }
+});
 
 for (const file of FULL_SCREEN) {
   test(`AC-4: ${file} neutralises the themed html/body shell`, () => {
@@ -1876,10 +2168,11 @@ function branchSurfaceRoot(subtree) {
  * read as a branch. That direction also fails loudly, never silently, which is
  * this file's standing policy for a limit it has not closed.
  */
-function exportedFunctionBody(source) {
-  const at = source.indexOf('export default function');
-  const params = exportedProps(source);
-  return balancedBlock(source, source.indexOf(params, at) + params.length);
+function exportedFunctionBody(source, file = 'fixture.tsx') {
+  const { component, sourceFile } = defaultExportedFunction(source, file);
+  assert.ok(component.body, `${file}'s default-exported function needs a body`);
+  const body = component.body.getText(sourceFile);
+  return ts.isBlock(component.body) ? body : `return ${body}`;
 }
 
 function jsxReturnBranches(source) {
@@ -1900,8 +2193,8 @@ function jsxReturnBranches(source) {
 }
 
 for (const file of [
-  'src/app/services/[id]/present/PresenterOperator.tsx',
-  'src/app/services/[id]/present/SlideGridDialog.tsx',
+  'src/app/(operator)/services/[id]/present/PresenterOperator.tsx',
+  'src/app/(operator)/services/[id]/present/SlideGridDialog.tsx',
 ]) {
   test(`AC-3: ${file} pins its own dark surface on every branch it renders`, () => {
     const branches = jsxReturnBranches(read(file));
@@ -1924,7 +2217,7 @@ for (const file of [
 // --- AC-1, AC-2, AC-5: the choice is mounted, and mounted in one place ------
 
 test('AC-1/AC-2: the root layout mounts the theme provider and suppresses the html mismatch', () => {
-  const layout = read('src/app/layout.tsx');
+  const layout = read('src/app/(operator)/layout.tsx');
 
   assert.match(
     layout,
@@ -1946,7 +2239,7 @@ test('AC-1/AC-2: the root layout mounts the theme provider and suppresses the ht
 
 // Story 17.3 — browser tab/bookmark name the product, not create-next-app.
 test('Story 17.3: root metadata names Worship Presenter Web, not create-next-app boilerplate', () => {
-  const layout = read('src/app/layout.tsx');
+  const layout = read('src/app/(operator)/layout.tsx');
 
   assert.doesNotMatch(
     layout,
@@ -2033,7 +2326,7 @@ test('AC-5: sonner reads the theme, and the provider sits above it', () => {
     'sonner must not mount its own provider — one provider, at the root'
   );
   assert.match(
-    read('src/app/layout.tsx'),
+    read('src/app/(operator)/layout.tsx'),
     /<ThemeProvider>/,
     'the provider is above sonner because it is above everything'
   );
@@ -2636,32 +2929,32 @@ const UNPAIRED_CHROMATIC_TEXT = [
   // decision for untokenized hues lives in `DESIGN.md` Open Item 4 (no story
   // owner yet). Cited so a reader can check the claim rather than take the
   // file's word for it.
-  'src/app/services/[id]/EditForm.tsx: text-amber-200 [:471, DESIGN.md Open Item 4]',
-  'src/app/services/[id]/EditForm.tsx: text-amber-300 [:473, DESIGN.md Open Item 4]',
-  'src/app/services/[id]/EditForm.tsx: text-red-200 [:463, DESIGN.md Open Item 4]',
-  'src/app/services/[id]/EditForm.tsx: text-red-500 [:911, DESIGN.md Open Item 4]',
-  'src/app/services/new/CreateForm.tsx: text-amber-200 [:444, DESIGN.md Open Item 4]',
-  'src/app/services/new/CreateForm.tsx: text-amber-200 [:481, DESIGN.md Open Item 4]',
-  'src/app/services/new/CreateForm.tsx: text-amber-300 [:447, DESIGN.md Open Item 4]',
-  'src/app/services/new/CreateForm.tsx: text-amber-300 [:483, DESIGN.md Open Item 4]',
-  'src/app/services/new/CreateForm.tsx: text-red-200 [:473, DESIGN.md Open Item 4]',
-  'src/app/services/new/CreateForm.tsx: text-red-500 [:880, DESIGN.md Open Item 4]',
+  'src/app/(operator)/services/[id]/EditForm.tsx: text-amber-200 [:471, DESIGN.md Open Item 4]',
+  'src/app/(operator)/services/[id]/EditForm.tsx: text-amber-300 [:473, DESIGN.md Open Item 4]',
+  'src/app/(operator)/services/[id]/EditForm.tsx: text-red-200 [:463, DESIGN.md Open Item 4]',
+  'src/app/(operator)/services/[id]/EditForm.tsx: text-red-500 [:911, DESIGN.md Open Item 4]',
+  'src/app/(operator)/services/new/CreateForm.tsx: text-amber-200 [:444, DESIGN.md Open Item 4]',
+  'src/app/(operator)/services/new/CreateForm.tsx: text-amber-200 [:481, DESIGN.md Open Item 4]',
+  'src/app/(operator)/services/new/CreateForm.tsx: text-amber-300 [:447, DESIGN.md Open Item 4]',
+  'src/app/(operator)/services/new/CreateForm.tsx: text-amber-300 [:483, DESIGN.md Open Item 4]',
+  'src/app/(operator)/services/new/CreateForm.tsx: text-red-200 [:473, DESIGN.md Open Item 4]',
+  'src/app/(operator)/services/new/CreateForm.tsx: text-red-500 [:880, DESIGN.md Open Item 4]',
   // Pinned dark, so it cannot express itself in `dark:` variants at all: the
   // Presenter renders dark under either theme (AC-3), which is why
   // `presenter-model.ts:48-54` keeps a second tone table instead of adding dark
   // halves to the first. Not a defect and not deferred — the opposite surface.
-  'src/app/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:583, pinned dark, AC-3]',
-  'src/app/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:627, pinned dark, AC-3]',
-  'src/app/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:709, pinned dark, AC-3]',
-  'src/app/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:829, pinned dark, AC-3]',
+  'src/app/(operator)/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:583, pinned dark, AC-3]',
+  'src/app/(operator)/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:627, pinned dark, AC-3]',
+  'src/app/(operator)/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:709, pinned dark, AC-3]',
+  'src/app/(operator)/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:829, pinned dark, AC-3]',
   // The lost-sync line (Story 17.5, AC-5/AC-7): reuses the same pinned-dark
   // amber treatment as the four sites above rather than adding a new hue, so
   // this is the fifth site sharing one already-filed exception, not a new one.
-  'src/app/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:604, pinned dark, AC-3/Story 17.5 AC-5]',
-  'src/app/services/[id]/present/presenter-model.ts: text-amber-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
-  'src/app/services/[id]/present/presenter-model.ts: text-emerald-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
-  'src/app/services/[id]/present/presenter-model.ts: text-indigo-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
-  'src/app/services/[id]/present/presenter-model.ts: text-sky-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
+  'src/app/(operator)/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:604, pinned dark, AC-3/Story 17.5 AC-5]',
+  'src/app/(operator)/services/[id]/present/presenter-model.ts: text-amber-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
+  'src/app/(operator)/services/[id]/present/presenter-model.ts: text-emerald-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
+  'src/app/(operator)/services/[id]/present/presenter-model.ts: text-indigo-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
+  'src/app/(operator)/services/[id]/present/presenter-model.ts: text-sky-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
 ];
 
 test('AC-6: every chromatic text shade states both halves, or is a filed exception', () => {
@@ -2708,7 +3001,7 @@ test('AC-6: the hand-rolled red pair is the destructive token, so it says so', (
   // from it the moment the identity is retuned.
   for (const file of [
     'src/components/LogoutButton.tsx',
-    'src/app/announcements/AnnouncementsManager.tsx',
+    'src/app/(operator)/announcements/AnnouncementsManager.tsx',
   ]) {
     const source = read(file);
     assert.doesNotMatch(

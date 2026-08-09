@@ -24,12 +24,9 @@ export default function SlideshowClient({
     slides.length
   );
 
-  // `bg-black` below covers this surface, but not the shell behind it: `body`
-  // carries `bg-background` and `html` reserves a scrollbar gutter, so the theme
-  // paints a strip down the edge that `fixed inset-0` never reaches. The
-  // projector neutralised that for itself from the start; this surface did not,
-  // and once an operator can pick a theme the strip follows the pick — live,
-  // because next-themes syncs across same-origin windows. AC-4.
+  // The projected root owns literal-black server first paint. Keep the shared
+  // per-document claim too: it is the hydrated defence if browser code or a
+  // future stylesheet changes the shell while this full-screen client is live.
   useProjectedShell();
 
   useEffect(() => {

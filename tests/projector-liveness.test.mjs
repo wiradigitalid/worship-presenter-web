@@ -317,7 +317,7 @@ test('AC-3: the two cadence constants are named, exported once, and sane', () =>
 // --- AC-6: the wiring this repo cannot exercise, asserted over the AST ------
 
 test('AC-6: ProjectorClient emits the heartbeat on an interval, inside the pinned effect', () => {
-  const file = ast('src/app/services/[id]/present/projector/ProjectorClient.tsx');
+  const file = ast('src/app/(projected)/services/[id]/present/projector/ProjectorClient.tsx');
   assert.ok(
     importedNames(file, '@/lib/projector-liveness').some((name) =>
       name.includes('HEARTBEAT')
@@ -351,7 +351,7 @@ test('AC-6: ProjectorClient emits the heartbeat on an interval, inside the pinne
 });
 
 test('AC-1: ProjectorClient posts the ack as a bare, state-free message', () => {
-  const file = ast('src/app/services/[id]/present/projector/ProjectorClient.tsx');
+  const file = ast('src/app/(projected)/services/[id]/present/projector/ProjectorClient.tsx');
   const posts = callsNamed(file, 'ch.postMessage').filter(
     (call) => call.getStart() > callsNamed(file, 'setInterval')[0]?.getStart()
   );
@@ -363,7 +363,7 @@ test('AC-1: ProjectorClient posts the ack as a bare, state-free message', () => 
 });
 
 test('AC-3/AC-4: PresenterOperator reads liveness through the shared evaluator, not a second copy', () => {
-  const file = ast('src/app/services/[id]/present/PresenterOperator.tsx');
+  const file = ast('src/app/(operator)/services/[id]/present/PresenterOperator.tsx');
   const imported = importedNames(file, '@/lib/projector-liveness');
 
   assert.ok(
@@ -385,7 +385,7 @@ test('AC-3/AC-4: PresenterOperator reads liveness through the shared evaluator, 
 });
 
 test('AC-4: the closed poll never treats a null handle as evidence of death', () => {
-  const file = ast('src/app/services/[id]/present/PresenterOperator.tsx');
+  const file = ast('src/app/(operator)/services/[id]/present/PresenterOperator.tsx');
   const dispatches = callsNamed(file, 'dispatchLiveness').filter((call) =>
     call.arguments.some((arg) => arg.getText().includes('handle-closed'))
   );
@@ -426,7 +426,7 @@ test('AC-4: the closed poll never treats a null handle as evidence of death', ()
 });
 
 test('Review [High, blocking 1]: PresenterOperator gates the ack dispatch through the shared isProjectorMessage predicate', () => {
-  const file = ast('src/app/services/[id]/present/PresenterOperator.tsx');
+  const file = ast('src/app/(operator)/services/[id]/present/PresenterOperator.tsx');
   assert.ok(
     importedNames(file, '@/lib/present-channel').includes('isProjectorMessage'),
     'the listener must classify inbound messages through the one predicate present-channel.ts ' +
@@ -462,7 +462,7 @@ test('Review [High, blocking 1]: PresenterOperator gates the ack dispatch throug
 });
 
 test('Review [High, blocking 3]: Open projector reattaches a frozen (open-but-silent) handle instead of only focusing it', () => {
-  const file = ast('src/app/services/[id]/present/PresenterOperator.tsx');
+  const file = ast('src/app/(operator)/services/[id]/present/PresenterOperator.tsx');
   const openProjectorDecl = nodes(
     file,
     (node) => ts.isVariableDeclaration(node) && node.name.getText() === 'openProjector'

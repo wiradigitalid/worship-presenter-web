@@ -1,28 +1,29 @@
 # Source Tree Analysis
 
-This document provides a detailed breakdown of the file and directory layout of the `bic-pptx-workflow` project, along with summaries of folder responsibilities and system entry points.
+This document provides a detailed breakdown of the file and directory layout of the active `worship-presenter-web` project, along with summaries of folder responsibilities and system entry points.
 
 ## Project Structure Overview
 
 ```text
-bic-pptx-workflow/
+worship-presenter-web/
 ├── .github/                 # GitHub actions and CI workflows
 ├── _bmad/                   # BMad agent configurations and customization scripts
 ├── _bmad-output/            # Outputs from BMad execution runs (PRDs, plans, etc.)
-├── data/                    # Committed default seed corpora (bible/kjv.json, song-book/sdah.json)
+├── data/                    # Committed default seed corpora under data/<locale>/
 ├── docs/                    # Technical documentation, design specs, and manuals
 ├── public/                  # Public static assets (images, icons)
 ├── scripts/                 # Administration and database import/deploy scripts
 ├── src/                     # Application source code
 │   ├── app/                 # Next.js App Router Pages, Layouts, and API Routes
-│   │   ├── admin/           # Admin settings and account management views
-│   │   ├── announcements/   # Flyer uploads and slide management
+│   │   ├── (operator)/      # Operator root: dashboard, admin, login, services, presenter
+│   │   │   ├── layout.tsx   # Metadata, fonts, UI locale, and ThemeProvider [Entry Point]
+│   │   │   └── page.tsx     # Dashboard landing page view
+│   │   ├── (projected)/     # Room-facing root: slideshow, projector, safe fallbacks
+│   │   │   ├── layout.tsx   # Literal-black projected document shell [Entry Point]
+│   │   │   ├── error.tsx    # Generic projected error boundary
+│   │   │   └── not-found.tsx # Generic projected not-found boundary
 │   │   ├── api/             # Backend API Route Handlers (Webhook, Services, etc.)
-│   │   ├── login/           # Session login page
-│   │   ├── services/        # Service rundown list and slide presenter controllers
 │   │   ├── globals.css      # Core Tailwind CSS imports and themes
-│   │   ├── layout.tsx       # Root Next.js layout configuration [Entry Point]
-│   │   └── page.tsx         # Dashboard landing page view
 │   ├── components/          # Reusable React components
 │   │   ├── ui/              # Basic layout design component primitives (dialog, popover)
 │   │   ├── Header.tsx       # Standard page header layout
@@ -51,8 +52,8 @@ bic-pptx-workflow/
 ### `/src/app/`
 Contains Next.js page components, layouts, and API endpoints. It defines the routing paths of the application.
 - **Entry Points:** 
-  - `src/app/layout.tsx` defines the outer UI container (styles, metadata, headers).
-  - `src/app/page.tsx` renders the primary dashboard where church services are listed.
+  - `src/app/(operator)/layout.tsx` defines operator styles, metadata, locale, and theme; `src/app/(projected)/layout.tsx` owns literal-black room-facing first paint and projected fallbacks.
+  - `src/app/(operator)/page.tsx` renders the primary dashboard where church services are listed.
 
 ### `/src/app/api/`
 Houses Next.js API route handlers which handle request parsing and issue database queries.

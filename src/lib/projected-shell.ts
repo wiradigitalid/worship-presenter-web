@@ -26,14 +26,15 @@
  * restore that assumes one consumer breaks as soon as there are two: the second
  * claim would snapshot the first claim's `#000000`, and the first release would
  * then restore black to the operator's whole app shell permanently. Story 17.1
- * already doubled the callers from one to two, and Story 17.7 adds a route-group
- * layout over the same URLs. Only the first claim snapshots and only the last
- * release restores.
+ * already doubled the callers from one to two. Story 17.7 put a server-rendered
+ * route-group shell over those URLs; this claim remains the hydrated defence.
+ * Only the first claim for a document snapshots and only its last release restores.
  *
  * It lives apart from the `useProjectedShell` hook because none of this is
  * React: it is a DOM mutation with a lifetime, so it is testable with a document
- * stub in the `node:test` harness, and a Server-Component layout can reach it
- * without a hook.
+ * stub in the `node:test` harness. It is hydrated defence only; a Server
+ * Component cannot access `document`, so the projected root layout owns the
+ * server-rendered first paint separately.
  */
 
 /**
@@ -63,15 +64,22 @@ const CLAIMED: ReadonlyArray<
   ['body', 'backgroundColor', '#000000'],
 ];
 
-let claims = 0;
-let restore: (() => void) | null = null;
+type ClaimState = {
+  doc: ShellDocument;
+  claims: number;
+  restore: (() => void) | null;
+  generation: number;
+};
+
+const claimStates = new WeakMap<ShellDocument, ClaimState>();
+const activeStates = new Set<ClaimState>();
 
 /**
- * Bumped by every reset, and captured by each release closure.
+ * Each document carries its own generation, captured by each release closure.
  *
- * Without it, `resetProjectedShellForTest()` zeroed the counter while leaving
+ * Without it, `resetProjectedShellForTest()` zeroed claim counts while leaving
  * already-issued releases live, and a stale one then took `claims` to **-1** —
- * after which every later claim skipped the whole `claims === 0` block and the
+ * after which later claims skipped the whole `claims === 0` block and the
  * shell kept `background: white` and `scrollbar-gutter: stable` for the rest of
  * the process. Driven against the real module, that is exactly what happened.
  * Unreachable from app code, where each closure decrements once behind its own
@@ -79,7 +87,6 @@ let restore: (() => void) | null = null;
  * releasing and silently wedges every test after it — in the module AD-24 names
  * as the room-facing surface's closure mechanism.
  */
-let generation = 0;
 
 /**
  * Claim the shell. Returns the release function; call it exactly once per
@@ -87,26 +94,32 @@ let generation = 0;
  * development is one such interleaving.
  */
 export function claimProjectedShell(doc: ShellDocument): () => void {
-  const era = generation;
-  if (claims === 0) {
+  let state = claimStates.get(doc);
+  if (!state) {
+    state = { doc, claims: 0, restore: null, generation: 0 };
+    claimStates.set(doc, state);
+  }
+  const era = state.generation;
+  if (state.claims === 0) {
     const previous = CLAIMED.map(
       ([element, property]) => doc[element].style[property] ?? ''
     );
     for (const [element, property, value] of CLAIMED) {
       doc[element].style[property] = value;
     }
-    restore = () => {
+    state.restore = () => {
       CLAIMED.forEach(([element, property], i) => {
         doc[element].style[property] = previous[i];
       });
     };
+    activeStates.add(state);
   }
-  claims += 1;
+  state.claims += 1;
 
   let released = false;
   return () => {
     // A release from before a reset belongs to a shell that no longer exists.
-    if (released || era !== generation) return;
+    if (released || era !== state.generation) return;
     released = true;
     // Floored so the counter cannot go negative and permanently disable the
     // `claims === 0` block — the state in which a projected surface stops
@@ -117,10 +130,12 @@ export function claimProjectedShell(doc: ShellDocument): () => void {
     // count, so removing this line alone keeps the suite green. It is kept
     // because the class of bug is one where the symptom appears in a later,
     // unrelated test and the cause is invisible from there.
-    claims = Math.max(0, claims - 1);
-    if (claims === 0 && restore) {
-      restore();
-      restore = null;
+    state.claims = Math.max(0, state.claims - 1);
+    if (state.claims === 0 && state.restore) {
+      state.restore();
+      state.restore = null;
+      activeStates.delete(state);
+      claimStates.delete(doc);
     }
   };
 }
@@ -137,8 +152,12 @@ export function claimProjectedShell(doc: ShellDocument): () => void {
  * it the header comment above still described a reachable state.
  */
 export function resetProjectedShellForTest(): void {
-  restore?.();
-  claims = 0;
-  restore = null;
-  generation += 1;
+  for (const state of activeStates) {
+    state.restore?.();
+    state.claims = 0;
+    state.restore = null;
+    state.generation += 1;
+    claimStates.delete(state.doc);
+  }
+  activeStates.clear();
 }

@@ -478,7 +478,7 @@ An Operator can read the Web Hub in their own language. An Admin sets `ui_locale
 
 **Consequences (testable):**
 - User-facing interface text is resolved from a string catalogue rather than written inline, and the language is switchable without a deploy.
-- The document's `lang` attribute follows `ui_locale`. Today `src/app/layout.tsx` hard-codes `lang="en"`, which is the entirety of this product's internationalisation.
+- Operator documents' `lang` attribute follows `ui_locale` through `src/app/(operator)/layout.tsx`. The sibling room-facing root does not read the interface-language setting; projected content language remains authored data and there is no `projection_locale`.
 - **The planner's operator-facing labels are in scope.** `src/lib/slide-plan.ts` hard-codes English headings — *Welcome*, *Opening Song*, *Congregation, please stand*, *Prayer Partners*, *Break Time*. Measured 2026-08-01, these populate the plan's `LegacyProjection` field, which is read **only** by the Presenter model and the slide preview list. **Neither the PPTX nor the projector reads it.** They are operator chrome, they belong to `ui_locale`, and they are the one place where this requirement reaches beyond `.tsx` files.
 - **Projected slide text is out of scope, by construction.** Slide content lives in the Artifact Registry as authored data (FR-20, FR-21) and is already Admin-editable without a deploy. `ui_locale` never reaches a room-facing surface — the constraint Epic 17 states as *the congregation never sees operator chrome*, read in the other direction.
 - An unresolved string is visible as a defect rather than rendering blank.

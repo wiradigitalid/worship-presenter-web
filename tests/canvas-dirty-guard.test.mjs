@@ -673,7 +673,7 @@ test('AC-4: every Header link routes through the guard', () => {
 });
 
 test('AC-4: the provider mounts on the page, never on the root layout', () => {
-  const page = ast('src/app/admin/artifacts/page.tsx');
+  const page = ast('src/app/(operator)/admin/artifacts/page.tsx');
   const provider = nodes(
     page,
     (node) =>
@@ -692,7 +692,7 @@ test('AC-4: the provider mounts on the page, never on the root layout', () => {
     );
   }
 
-  const layout = ast('src/app/layout.tsx');
+  const layout = ast('src/app/(operator)/layout.tsx');
   assert.ok(
     !hasUseClient(layout),
     "AD-24: `'use client'` on the root layout converts the whole app"
