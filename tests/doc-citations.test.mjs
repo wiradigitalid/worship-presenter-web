@@ -1,0 +1,151 @@
+// Planning artifacts cite the code: file paths, and symbol names in backticks.
+// When a story renames or deletes what they cite and nobody repairs the citation,
+// the document keeps saying something the code stopped doing. That is how
+// `data/hymns.json`, `seedBibleCorpus` and `READ_ONLY_BASE_TYPES` survived in the
+// spine after the change sets that removed them.
+//
+// This is a RATCHET, not a spell-checker. The set of citations that do not
+// resolve is pinned below, each with the reason it is allowed. A new unresolvable
+// citation fails the suite; repairing one and forgetting this list also fails it,
+// so the list cannot quietly rot into a wildcard.
+//
+// WHAT THIS GUARD DOES NOT COVER, stated so it is not read as more than it is:
+// a prose claim that cites nothing. "The seed is missing-only" is unverifiable
+// here whether or not it is true. Only citation-bearing claims are checked.
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const ROOT = path.resolve(import.meta.dirname, '..');
+const UX = '_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10';
+const ARCH = '_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10';
+
+const DOCS = [
+  `${ARCH}/ARCHITECTURE-SPINE.md`,
+  '_bmad-output/planning-artifacts/epics.md',
+  '_bmad-output/implementation-artifacts/deferred-work.md',
+  `${UX}/EXPERIENCE.md`,
+  `${UX}/DESIGN.md`,
+  '_bmad-output/planning-artifacts/prds/prd-bic-pptx-workflow-2026-07-10/prd.md',
+];
+
+// Citations allowed not to resolve, each with why. Keyed "<basename>|<citation>".
+// A dated record, a supersession sentence, or a [TARGET] state legitimately names
+// something the tree does not hold.
+const ALLOWED = new Map(Object.entries({
+  // --- paths a shipped rename left behind, still named by dated records ---
+  'ARCHITECTURE-SPINE.md|data/bible/kjv.json': 'struck/closed Deferred entries and the Song of Songs analysis; Story 21.2 moved it to data/en/bible-translation/',
+  'ARCHITECTURE-SPINE.md|data/hymns.json': 'struck Deferred entry; the entry itself says the path is stale',
+  'epics.md|data/bible/kjv.json': 'dated delivery records and the FR-24 supersession sentence, which must name the old path',
+  'epics.md|data/hymns.json': 'dated records of what Stories 22.1/22.2 replaced',
+  'epics.md|data/en/song-book/sdah.json': 'TARGET state — Story 22.3 performs this move',
+  'epics.md|scripts/import-kjv.mjs': 'retired by Story 21.1; named as the thing that was retired',
+  'epics.md|scripts/import-hymnal.mjs': 'retired by Story 22.1; named as the thing that was retired',
+  'deferred-work.md|data/bible/kjv.json': 'dated owner decision and its resolution note',
+  'deferred-work.md|data/hymns.json': 'the closed hymnal-corpus entry, kept as a record',
+  'deferred-work.md|scripts/import-kjv.mjs': 'retired; the entry records the retirement',
+  'deferred-work.md|scripts/import-hymnal.mjs': 'retired; the entry records the retirement',
+  'deferred-work.md|src/middleware.ts': 'the entry says "the deleted src/middleware.ts" — AD-5 records the rename to src/proxy.ts',
+  'EXPERIENCE.md|data/bible/kjv.json': 'dated record of what Story 21.1 shipped',
+  'prd.md|data/bible/kjv.json': 'the FR-24 supersession sentence, which must name the superseded path',
+  'ARCHITECTURE-SPINE.md|data/en/song-book/sdah.json': 'AD-26 is [TARGET]; Story 22.3 creates this path',
+
+  // --- symbols a shipped change removed, still named by records ---
+  'ARCHITECTURE-SPINE.md|isKjvCorpusEmpty': 'the rename sentence isKjvCorpusEmpty() -> isBibleTranslationEmpty(code)',
+  'ARCHITECTURE-SPINE.md|reseedArtifactTemplateIfUntouched': 'struck entry listing what AD-17 retired',
+  'epics.md|isKjvCorpusEmpty': 'dated story text naming the symbol Story 21.2 replaced',
+  'epics.md|weHaveThisHopeFixed': 'dated record of a helper Story 20.1 removed with skipTitle',
+  'deferred-work.md|isKjvCorpusEmpty': 'dated smoke-check findings that name the pre-rename symbol',
+  'ARCHITECTURE-SPINE.md|songset1': 'AD-19 names it as the REJECTED spelling — "songset1 re-imports the positional reading this decision exists to remove"',
+
+  // --- ROT. Not exceptions: live, present-tense claims that the code contradicts.
+  // Pinned here only so this guard can be committed green while the repair is
+  // routed correctly. Every one is a spine or epics edit, and AGENTS.md reserves
+  // spine edits for a `bmad-architecture` Update run rather than a drive-by fix.
+  // Delete each entry as its repair lands — the second test below enforces that.
+  'ARCHITECTURE-SPINE.md|READ_ONLY_BASE_TYPES': 'ROT — AD-18 Binds names it; Story 20.2 deleted it. Code has ARTIFACT_BASE_TYPES (3 kinds). Owner: bmad-architecture Update',
+  'ARCHITECTURE-SPINE.md|EDITABLE_BASE_TYPES': 'ROT — same clause, same cause. Owner: bmad-architecture Update',
+  'ARCHITECTURE-SPINE.md|seedBibleCorpus': 'ROT — AD-25 gap and Deferred describe it in the present tense; the function is reconcileBibleCorpus (src/lib/db/index.ts). The gap statement itself may also be stale. Owner: bmad-architecture Update',
+  'ARCHITECTURE-SPINE.md|componentImports': 'ROT — AD-24 closure gate names it; the helper is moduleImports (tests/theme-chrome.test.mjs:990) since Story 17.8. Owner: bmad-architecture Update',
+  'epics.md|READ_ONLY_BASE_TYPES': 'ROT — Story 20.2 block still describes the collapse as pending; it shipped. Owner: Correct Course or the Epic 20 owner',
+  'epics.md|EDITABLE_BASE_TYPES': 'ROT — same block, same cause',
+  'deferred-work.md|seedBibleCorpus': 'ROT — the resolved-entry text describes it in the present tense; it is reconcileBibleCorpus now',
+  'deferred-work.md|resolveIntercessoryStandingHymns': 'ROT — the Resolved table cites it as the evidence for a closed item; Story 20.1 deleted it with skipTitle',
+}));
+
+// Citations this guard must not chase: commit SHAs, PPTX media names, and the
+// Next.js docs that live under node_modules rather than in this repo.
+const NOT_A_CITATION = /^(?:[0-9a-f]{7,40}|image\d+|docs\/0\d-)/;
+
+const PATH_RE = /`?\b((?:src|tests|scripts|data|public)\/[A-Za-z0-9_./-]+\.[a-z]{2,4})\b/g;
+// also matches the `name()` form, which is how most function citations are written
+const SYM_RE = /`([a-z][A-Za-z0-9]{7,}|[A-Z][A-Z0-9_]{7,})(?:\(\))?`/g;
+
+function sourceIndex() {
+  const files = [];
+  const walk = (d) => {
+    if (!fs.existsSync(d)) return;
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) { if (e.name !== 'node_modules') walk(p); }
+      else files.push(p);
+    }
+  };
+  ['src', 'tests', 'scripts', 'data'].forEach((d) => walk(path.join(ROOT, d)));
+  const text = files
+    // This file names every retired symbol in ALLOWED. Indexing it would make
+    // each one "exist" in the source and silently disarm the guard.
+    .filter((f) => path.basename(f) !== 'doc-citations.test.mjs')
+    .filter((f) => /\.(ts|tsx|mjs|js|json)$/.test(f))
+    .map((f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } })
+    .join('\n');
+  return { files, text };
+}
+
+const { text: SOURCE } = sourceIndex();
+
+function unresolved() {
+  const found = [];
+  for (const rel of DOCS) {
+    const abs = path.join(ROOT, rel);
+    if (!fs.existsSync(abs)) continue;
+    const base = path.basename(rel);
+    const body = fs.readFileSync(abs, 'utf8');
+    const seen = new Set();
+    for (const m of body.matchAll(PATH_RE)) {
+      const c = m[1];
+      if (seen.has(c) || NOT_A_CITATION.test(c)) continue;
+      seen.add(c);
+      if (!fs.existsSync(path.join(ROOT, c))) found.push({ base, c });
+    }
+    for (const m of body.matchAll(SYM_RE)) {
+      const c = m[1];
+      if (seen.has(c) || NOT_A_CITATION.test(c)) continue;
+      seen.add(c);
+      if (!SOURCE.includes(c)) found.push({ base, c });
+    }
+  }
+  return found;
+}
+
+test('every code citation in a planning artifact resolves, or is a pinned exception', () => {
+  const missing = unresolved()
+    .filter(({ base, c }) => !ALLOWED.has(`${base}|${c}`))
+    .map(({ base, c }) => `${base} cites ${c}, which is not in the tree`);
+
+  assert.deepEqual(missing, [],
+    'A planning artifact cites code that does not exist. Repair the citation, or — if it is a '
+    + 'dated record, a supersession sentence, or a [TARGET] state — add it to ALLOWED with the reason.\n'
+    + missing.join('\n'));
+});
+
+test('the exception list carries no entry that has since been repaired', () => {
+  const live = new Set(unresolved().map(({ base, c }) => `${base}|${c}`));
+  const stale = [...ALLOWED.keys()].filter((k) => !live.has(k));
+
+  assert.deepEqual(stale, [],
+    'These exceptions no longer describe anything: the citation now resolves, or the text was '
+    + 'removed. Delete them so the list cannot drift into a wildcard.\n' + stale.join('\n'));
+});
