@@ -7,7 +7,8 @@
 #
 # This file is the sprint TRACKING record: one key, one status, nothing else.
 # Narrative — why a status changed, what a run decided, what a close did not cover —
-# belongs in sprint-status-history.md, never here (bmad-sprint-planning schema).
+# belongs in .archive/sprint-status-history.md, never here (bmad-sprint-planning
+# schema). That record is compacted; the verbatim original is at commit e61de4b.
 
 # STATUS DEFINITIONS:
 # ==================
