@@ -2,8 +2,9 @@
 title: 'Story 17.7: Projected shell route group'
 type: 'feature'
 created: '2026-08-09'
-status: 'in-review'
+status: 'done'
 baseline_revision: 'a74190329d93c36b60e2cd70f640bda426d294e4'
+final_revision: '362cd0423338f6b912d6e1820fca3b8a9ba7b478'
 review_loop_iteration: 1
 followup_review_recommended: true
 context:
