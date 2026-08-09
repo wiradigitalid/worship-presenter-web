@@ -134,6 +134,7 @@ second was created by fixing the first.
 | Experience, IA, surfaces, flows | `_bmad-output/planning-artifacts/ux-designs/**/EXPERIENCE.md` |
 | Runtime rules for this repo | `_bmad-output/project-context.md` |
 | Package versions | `package.json` (over architecture prose) |
+| Open debt / deferred work | `_bmad-output/implementation-artifacts/deferred-work.md` — the single register of open implementation debt. The spine's *Deferred* holds deferred **decisions** only and `EXPERIENCE.md`'s *Open Items* behavioural questions only; neither carries work items |
 
 ## Allowed without a new story
 

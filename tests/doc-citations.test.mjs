@@ -36,28 +36,19 @@ const DOCS = [
 // something the tree does not hold.
 const ALLOWED = new Map(Object.entries({
   // --- paths a shipped rename left behind, still named by dated records ---
-  'ARCHITECTURE-SPINE.md|data/bible/kjv.json': 'struck/closed Deferred entries and the Song of Songs analysis; Story 21.2 moved it to data/en/bible-translation/',
-  'ARCHITECTURE-SPINE.md|data/hymns.json': 'struck Deferred entry; the entry itself says the path is stale',
   'epics.md|data/bible/kjv.json': 'dated delivery records and the FR-24 supersession sentence, which must name the old path',
   'epics.md|data/hymns.json': 'dated records of what Stories 22.1/22.2 replaced',
   'epics.md|data/en/song-book/sdah.json': 'TARGET state — Story 22.3 performs this move',
   'epics.md|scripts/import-kjv.mjs': 'retired by Story 21.1; named as the thing that was retired',
   'epics.md|scripts/import-hymnal.mjs': 'retired by Story 22.1; named as the thing that was retired',
-  'deferred-work.md|data/bible/kjv.json': 'dated owner decision and its resolution note',
-  'deferred-work.md|data/hymns.json': 'the closed hymnal-corpus entry, kept as a record',
-  'deferred-work.md|scripts/import-kjv.mjs': 'retired; the entry records the retirement',
-  'deferred-work.md|scripts/import-hymnal.mjs': 'retired; the entry records the retirement',
-  'deferred-work.md|src/middleware.ts': 'the entry says "the deleted src/middleware.ts" — AD-5 records the rename to src/proxy.ts',
   'EXPERIENCE.md|data/bible/kjv.json': 'dated record of what Story 21.1 shipped',
   'prd.md|data/bible/kjv.json': 'the FR-24 supersession sentence, which must name the superseded path',
-  'ARCHITECTURE-SPINE.md|data/en/song-book/sdah.json': 'AD-26 is [TARGET]; Story 22.3 creates this path',
+  'ARCHITECTURE-SPINE.md|data/en/song-book/sdah.json': 'AD-26 is decided but unbuilt; Story 22.3 creates this path',
 
   // --- symbols a shipped change removed, still named by records ---
   'ARCHITECTURE-SPINE.md|isKjvCorpusEmpty': 'the rename sentence isKjvCorpusEmpty() -> isBibleTranslationEmpty(code)',
-  'ARCHITECTURE-SPINE.md|reseedArtifactTemplateIfUntouched': 'struck entry listing what AD-17 retired',
   'epics.md|isKjvCorpusEmpty': 'dated story text naming the symbol Story 21.2 replaced',
   'epics.md|weHaveThisHopeFixed': 'dated record of a helper Story 20.1 removed with skipTitle',
-  'deferred-work.md|isKjvCorpusEmpty': 'dated smoke-check findings that name the pre-rename symbol',
   'ARCHITECTURE-SPINE.md|songset1': 'AD-19 names it as the REJECTED spelling — "songset1 re-imports the positional reading this decision exists to remove"',
 }));
 
