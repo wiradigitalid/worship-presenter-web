@@ -54,14 +54,13 @@ so that I can see a generated deck without inventing a congregation first.
 
 ### Review Findings
 
-- [x] [Review][Decision] Test npm spawn — resolved 2026-08-03: story updated to document the `npm-cli.js` spawn pattern via `npm_execpath` (option A); avoids unreliable Windows `.cmd` spawn without `shell: true`.
 
+- [x] [Review][Decision] Test npm spawn — resolved 2026-08-03: story updated to document the `npm-cli.js` spawn pattern via `npm_execpath` (option A); avoids unreliable Windows `.cmd` spawn […]
 - [x] [Review][Patch] Reuse synthetic sermon speaker `Pastor Adam` [`src/lib/demo-seed.ts:19`]
 - [x] [Review][Patch] Catch `seedDemoService` throws in CLI wrapper for user-facing failure output [`scripts/seed-demo.mjs:10-17`]
 - [x] [Review][Patch] Assert exactly one announcement row after first seed [`tests/demo-seed.test.mjs:77`]
 - [x] [Review][Patch] Isolate test subprocess from parent `IMAGE_URL_ALLOWLIST` [`tests/demo-seed.test.mjs:33`]
 - [x] [Review][Patch] Remove stale "implementation has not started" completion note [`23-1-opt-in-demo-seed.md:139`]
-
 - [x] [Review][Defer] Concurrent `seed:demo` race on empty table could create two services [`src/lib/demo-seed.ts:46-48`] — deferred, pre-existing CLI pattern; negligible for opt-in demo CLI
 
 ## Dev Notes
@@ -146,12 +145,8 @@ GPT-5.6-Codex
 
 ### Completion Notes List
 
-- Ultimate context engine analysis completed - comprehensive developer guide created.
-- Validation improvements applied 2026-08-03: the test contract executes the real opt-in command and verifies persisted service-bound announcement media reaches the normal slide-plan path.
-- Implemented the opt-in `seed:demo` command with one synthetic service, a KJV-resolved verse, valid SDAH hymns, and an `example.com` announcement flyer.
-- The command refuses non-empty installations before writing; the test spawns npm via `npm_execpath` / `npm-cli.js` with `shell: false` for both success and refusal paths.
-- Code review 2026-08-03: five patch items applied; npm spawn contract documented in story; concurrent-seed race deferred.
-- Validation passed: focused demo/service/slide-plan tests (14/14), `npm run build`, `npm test` (440 pass, 0 fail, 1 skipped), targeted ESLint, public-repository guard (5/5), and `git diff --check`.
+- - Code review 2026-08-03: five patch items applied; npm spawn contract documented in story; concurrent-seed race deferred.
+- - Validation passed: focused demo/service/slide-plan tests (14/14), `npm run build`, `npm test` (440 pass, 0 fail, 1 skipped), targeted ESLint, public-repository guard (5/5), and `git diff --check`.
 
 ### File List
 

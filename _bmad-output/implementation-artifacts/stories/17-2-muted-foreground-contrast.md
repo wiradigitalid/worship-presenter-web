@@ -150,10 +150,11 @@ claude-sonnet-5-thinking-high (Cursor)
 
 ### Debug Log References
 
-- Review closure (2026-08-03): a fresh Chrome load of `/login` in light mode resolved `#6f6f6f` on `#ffffff` / `#f5f5f5` / `#f3f3f3` at 5.0249:1 / 4.6090:1 / 4.5285:1. Node **22.23.2** then completed `npm ci`, `next build`, TypeScript, and the full registered suite: **439 pass, 0 fail, 1 skipped**. A temporary second `:root` block made the strengthened theme guard fail 2/57, then was reverted.
-
-- Fail-first: `tests/theme-chrome.test.mjs` failed 3/57 before token edit — light `muted` at 4.3492:1 and ambient glow below 4.5:1 with pre-story `oklch(0.556 0 0)`.
-- After `oklch(0.543 0 0)`: theme-chrome **57/57**; full suite **439/439** pass (1 skipped) after `npm run build` and `npm rebuild better-sqlite3` on Node 24.18.0 host.
+- - Review closure (2026-08-03): a fresh Chrome load of `/login` in light mode resolved `#6f6f6f` on `#ffffff` / `#f5f5f5` / `#f3f3f3` at 5.0249:1 / 4.6090:1 / 4.5285:1.
+- Node **22.23.2** then completed `npm ci`, `next build`, TypeScript, and the full registered suite: **439 pass, 0 fail, 1 skipped**.
+- A temporary second `:root` block made the strengthened theme guard fail 2/57, then was reverted.
+- - Fail-first: `tests/theme-chrome.test.mjs` failed 3/57 before token edit — light `muted` at 4.3492:1 and ambient glow below 4.5:1 with pre-story `oklch(0.556 0 0)`.
+- - After `oklch(0.543 0 0)`: theme-chrome **57/57**; full suite **439/439** pass (1 skipped) after `npm run build` and `npm rebuild better-sqlite3` on Node 24.18.0 host.
 
 ### Completion Notes List
 
@@ -177,11 +178,10 @@ claude-sonnet-5-thinking-high (Cursor)
 
 ### Review Findings
 
+
 - [x] [Review][Patch] Record a fresh browser-resolved measurement before closing the contrast item [`_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10/DESIGN.md:104`].
 - [x] [Review][Patch] Guard the full one-token scope, not a subset of token declarations [`tests/theme-chrome.test.mjs:2373`].
 - [x] [Review][Patch] Reject duplicate overriding token blocks when parsing the effective stylesheet [`tests/theme-chrome.test.mjs:2303`].
-- [x] [Review][Patch] Synchronize the Foundation visual-identity summary with the deliberate token override [`_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10/EXPERIENCE.md:27`].
+- [x] [Review][Patch] Synchronize the Foundation visual-identity summary with the deliberate token override […]
 - [x] [Review][Patch] Keep Epic 17/Story 17.2 tracking at review until the reviewer gate closes [`_bmad-output/planning-artifacts/epics.md:280`].
 - [x] [Review][Patch] Verify and record the required checks on Node 22.x [`_bmad-output/implementation-artifacts/stories/17-2-muted-foreground-contrast.md:154`].
-
-- 2026-08-03: Story 17.2 implemented — light `muted-foreground` token darkened; contrast regression added; UX authority docs synced; Open Item 1 closed.

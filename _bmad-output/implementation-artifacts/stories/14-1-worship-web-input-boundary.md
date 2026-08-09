@@ -36,6 +36,8 @@ _Code review `e2ed0ce..f049d32` (2026-07-19) — Blind Hunter + Edge Case Hunter
 - [x] [Review][Decision] Hymn search → **5a** client preload 695; forms use `hymnIndex` prop
 
 #### Patch (applied 2026-07-19)
+
+
 - [x] [Review][Patch] Align CreateForm/EditForm/API to SPEC companion fields
 - [x] [Review][Patch] CAP-4: remove overwrite; allowSecond INSERT; fix `rows`→`services`
 - [x] [Review][Patch] Slide 56 combined family+youth; amend SPEC constraint
@@ -69,6 +71,8 @@ _Prior criticals (master wipe-on-every-save, `collData.rows`, overwrite, docs≠
 - [x] [Review][Decision] Empty master wipe → **1b** refuse wiping global master to empty unless `clearMaster: true`
 
 #### Patch (applied 2026-07-19 re-run)
+
+
 - [x] [Review][Patch] `syncWorshipAnnouncements` + `clearMaster` guard + form confirm UX
 - [x] [Review][Patch] PUT applies structured overlays after re-parse even when raw changes
 - [x] [Review][Patch] Clear stale `familyYouth` when split prayer fields saved; Slide 56 fallback fixed

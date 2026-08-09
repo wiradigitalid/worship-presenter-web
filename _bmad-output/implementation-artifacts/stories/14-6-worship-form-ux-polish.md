@@ -79,15 +79,7 @@ Cursor Grok 4.5
 
 ### Completion Notes List
 
-- Story 14.6 created from SPEC companion revisions (no prior backlog); epic + sprint entry added.
-- Removed Service Highlights card from `/services/[id]` chrome; kept Announcement flyers strip + Unmapped Content.
-- Hymn autocomplete displays `N - Title` via shared helpers; parent/API still number-only; filter accepts display-formatted queries.
-- Identical Announcement Flyers bottom helper on CreateForm + EditForm (Master vs one-off).
-- `npm test`: 51/51 pass.
-- ✅ Resolved review finding: restored conditional Missing hymns warning from `failedHymnNumbers` on `/services/[id]`.
-- ✅ Resolved review finding: `commitDraft` no longer calls `onChange(trimmed)` for non-numeric ambiguous input — reverts to prior number or clears.
-- Unified chrome warning into one **Input issues** card (failed hymns + unmapped lines); only renders when either is non-empty.
-- ✅ Resolved review finding: dedupe Missing hymns — EditForm hydrates `failedHymnNumbers` from `initialParsed`; page Input issues card is unmapped-only.
+- _no gate, caveat or verification figure recorded; see git for the full record_
 
 ### File List
 

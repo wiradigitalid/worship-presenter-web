@@ -161,12 +161,7 @@ Cursor Grok 4.5
 
 ### Completion Notes List
 
-- Removed Order of Service card from `[id]/page.tsx`; kept announcement strip, Highlights, Unmapped, action header.
-- Rewrote EditForm as create-parity primary surface: deleted `isEditing`/`rawExpanded`/read-only branch; ungated preview; 7/5 grid; raw `h-72` + `detectedDate`; Special Song inside Divine Worship; Announcements Card; upload label parity; preview `slide.body` + `max-h-[600px]`.
-- Preserved PUT + `updated_at` concurrency, 409 alert+refresh, Cancel=`resetFromProps()` only, `clearMaster` confirm, Parse hydrate without `fields`, no `participantsRaw` on PUT, no CAP-4 collision UX.
-- Added `scrollbar-gutter: stable` on `html` in `@layer base`.
-- Skipped shared form extraction to keep AC delivery tight — `CreateForm.tsx`, `EditForm.tsx`, and `form-fields.md` must stay in sync for future tweaks.
-- No new unit tests (no shared helpers extracted); existing suite green.
+- - Rewrote EditForm as create-parity primary surface: deleted `isEditing`/`rawExpanded`/read-only branch; ungated preview; 7/5 grid; raw `h-72` + `detectedDate`; Special Song inside Divine Worship; Announcements Card; upload label parity; preview `slide.body` + `max-h-[600px]`.
 
 ### File List
 
