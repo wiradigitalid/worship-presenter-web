@@ -148,7 +148,7 @@ development_status:
   17-4-canvas-dirty-state-guard: done
   17-5-projector-liveness: done
   17-6-toast-channel-decision: done
-  17-7-projected-shell-route-group: backlog
+  17-7-projected-shell-route-group: done
   17-8-guard-criteria-encoding: done
   17-9-toast-channel-wiring: backlog
   epic-17-retrospective: optional

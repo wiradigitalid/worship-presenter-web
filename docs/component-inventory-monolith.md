@@ -35,33 +35,33 @@ A button that initiates session destruction.
 
 ### 2. Specialized Feature Components
 
-#### `ServicesList` (`src/app/ServicesList.tsx`)
+#### `ServicesList` (`src/app/(operator)/ServicesList.tsx`)
 The dashboard core listing church services sorted by date.
 - **Features:**
   - Search filter bar (`GET /api/services?q=`).
   - Lists service date, created date, and parsing status (e.g., failed hymn indicators).
   - Quick action buttons: View details, Presentation Operator dashboard, Projector Screen view, Download PowerPoint slide deck, and Delete service.
 
-#### `AccountsManager` (`src/app/admin/AccountsManager.tsx`)
+#### `AccountsManager` (`src/app/(operator)/admin/AccountsManager.tsx`)
 Management console for operator and admin accounts.
 - **Features:**
   - Tables list of current usernames and roles.
   - "Add Account" popover with username, password, and role selector.
 
-#### `RetentionSettings` (`src/app/admin/RetentionSettings.tsx`)
+#### `RetentionSettings` (`src/app/(operator)/admin/RetentionSettings.tsx`)
 System cleanup utility.
 - **Features:**
   - Configures settings key/value.
   - Allows administrative cleanups of database history or temp slides.
 
-#### `AnnouncementsManager` (`src/app/announcements/AnnouncementsManager.tsx`)
+#### `AnnouncementsManager` (`src/app/(operator)/announcements/AnnouncementsManager.tsx`)
 Drag-and-drop file flyer slide upload.
 - **Features:**
   - Uploads local images using `POST /api/upload`.
   - Integrates draggable list layout to sort announcement flyers using order handles.
   - Persists order configurations via backend APIs.
 
-#### `EditForm` (`src/app/services/[id]/EditForm.tsx`)
+#### `EditForm` (`src/app/(operator)/services/[id]/EditForm.tsx`)
 Dual panel workspace for a service rundown.
 - **Features:**
   - Textarea markdown rundown editor panel.
@@ -78,7 +78,7 @@ Renders an individual slide page.
   - Scale-to-fit letterbox viewport calculations.
   - Supports image slides, lyrics/text slides, and announcement flyers.
 
-#### `PresenterOperator` (`src/app/services/[id]/present/PresenterOperator.tsx`)
+#### `PresenterOperator` (`src/app/(operator)/services/[id]/present/PresenterOperator.tsx`)
 Real-time dashboard for the AV operator in the church.
 - **Features:**
   - Sidebar showing service rundown schedule (sections, hymns, speaker roles, announcements).
@@ -86,7 +86,7 @@ Real-time dashboard for the AV operator in the church.
   - Dynamic scripture quick search overlay allowing search in the KJV Bible and instant projection on screen.
   - Broadcasts slide changes (`{type: "sync", index}`) and scripture overlays via the `BroadcastChannel`.
 
-#### `ProjectorClient` (`src/app/services/[id]/present/projector/ProjectorClient.tsx`)
+#### `ProjectorClient` (`src/app/(projected)/services/[id]/present/projector/ProjectorClient.tsx`)
 Full-screen projection view meant for the church projector screen.
 - **Features:**
   - Listens to slide index sync actions via `BroadcastChannel`.

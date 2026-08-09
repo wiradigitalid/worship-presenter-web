@@ -79,8 +79,8 @@ export default async function ProjectorPage({
     // fixed. `min-h-full` on the inner column keeps it centred while it fits and
     // lets it grow past the fold when it does not.
     //
-    // Scope: the `html`/`body` reset behind this shell is Story 17.7's — this is
-    // the branch's own element, which is the half round 2 patched inside 17.1.
+    // The projected route-group root owns the `html`/`body` shell behind this
+    // branch; this literal-colour element owns the scrollable failure content.
     return (
       <div className="fixed inset-0 overflow-y-auto bg-black text-white">
         <div className="flex min-h-full flex-col items-center justify-center px-12 py-16 text-center">

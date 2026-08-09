@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import ThemeProvider from "@/components/ThemeProvider";
 import { getUiLocale } from "@/lib/settings";
-import "./globals.css";
+import "../globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 /** `ui_locale` is read from SQLite on every request — static `lang` would lie. */
 export const dynamic = 'force-dynamic';
 
-export default function RootLayout({
+export default function OperatorLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;

@@ -29,7 +29,7 @@ export default async function AdminArtifactsPage() {
       <div className="relative z-10 mx-auto max-w-6xl">
         {/* The editor writes the blocked flag and the header's links read it, so
             the provider has to contain both. It mounts here and not on
-            `src/app/layout.tsx`: AD-24 puts a client boundary at the narrowest
+            `src/app/(operator)/layout.tsx`: AD-24 puts a client boundary at the narrowest
             layout covering its consumers, and every consumer of this one is on
             this page. Passing `children` through it does not make them client
             components — they arrive already server-rendered. */}

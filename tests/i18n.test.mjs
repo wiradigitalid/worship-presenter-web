@@ -6,8 +6,8 @@
  * the same roots as `tests/theme-chrome.test.mjs` and asserts no module in that
  * tree imports the catalogue or reads `ui_locale` / `getUiLocale`.
  *
- * `<html lang>` in the root layout is the deliberate exception (AC-10): it
- * follows `ui_locale` on room-facing routes too, but paints no string.
+ * `<html lang>` in the operator root is the deliberate document-level use.
+ * Story 17.7's sibling projected root does not read `ui_locale` at all.
  */
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,6 +16,11 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import {
+  discoverLocalModuleImports,
+  discoverModuleGraph,
+  discoverProjectedRoutes,
+} from './helpers/projected-routes.mjs';
 
 register(
   'data:text/javascript,' +
@@ -117,55 +122,17 @@ async function adminRequest(init = {}) {
 
 const read = (rel) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
 
-/** Same roots as `tests/theme-chrome.test.mjs` PROJECTED. */
-const PROJECTED = [
-  'src/components/SlideView.tsx',
-  'src/components/artifacts/ArtifactSlide.tsx',
-  'src/app/services/[id]/present/projector/ProjectorClient.tsx',
-  'src/app/services/[id]/slideshow/SlideshowClient.tsx',
-  'src/app/services/[id]/present/projector/page.tsx',
-  'src/app/services/[id]/slideshow/page.tsx',
-];
+/** Same structurally discovered roots as `tests/theme-chrome.test.mjs`. */
+const PROJECTED = discoverProjectedRoutes(repoRoot).specialFiles;
 
 const ROOM_FACING_LIB = ['src/lib/pptx.ts'];
 
 function moduleImports(file) {
-  const source = read(file);
-  const specifiers = [
-    ...[
-      ...source.matchAll(
-        /\b(?:import|export)\s+(?!type\b)[\s\S]*?\bfrom\s+["']([^"']+)["']/g
-      ),
-    ].map((m) => m[1]),
-    ...[...source.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g)].map(
-      (m) => m[1]
-    ),
-    ...[...source.matchAll(/\bimport\s+["']([^"']+)["']/g)].map((m) => m[1]),
-  ];
-  const inRepo = specifiers.filter((s) => s.startsWith('.') || s.startsWith('@/'));
-  return inRepo.flatMap((specifier) => {
-    const base = specifier.startsWith('@/')
-      ? `src/${specifier.slice('@/'.length)}`
-      : path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier));
-    const resolved = ['.tsx', '.ts', '/index.tsx', '/index.ts']
-      .map((ext) => `${base}${ext}`)
-      .find((candidate) => fs.existsSync(path.join(repoRoot, candidate)));
-    return resolved ? [resolved] : [];
-  });
+  return discoverLocalModuleImports(repoRoot, file).map(({ resolved }) => resolved);
 }
 
 function projectedTree() {
-  const seen = new Map(PROJECTED.map((file) => [file, null]));
-  const queue = [...PROJECTED];
-  while (queue.length > 0) {
-    const file = queue.shift();
-    for (const resolved of moduleImports(file)) {
-      if (seen.has(resolved)) continue;
-      seen.set(resolved, file);
-      queue.push(resolved);
-    }
-  }
-  return [...seen.keys()];
+  return discoverModuleGraph(repoRoot, PROJECTED).map(({ file }) => file);
 }
 
 /**
@@ -376,7 +343,7 @@ test('the projected tree does not reach catalogue text or call getUiLocale', () 
     offenders,
     [],
     `room-facing modules must not reach catalogue text or call getUiLocale ` +
-      `(layout lang is the deliberate exception, not in this tree). ` +
+      `(only the sibling operator root applies ui_locale to document lang). ` +
       `Found: ${offenders.join(' | ')}`
   );
 });
