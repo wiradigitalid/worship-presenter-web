@@ -6,7 +6,7 @@
  * delete and style edit is invisible to the application — and there were four
  * ways out of the editor that discarded it without a word. This file is the
  * regression net for the three that this story closes (the fourth, logout, is
- * `EXPERIENCE.md` Open Item 5 and deliberately out of scope).
+ * deferred-work.md operator-UI wiring and deliberately out of scope).
  *
  * **Two kinds of assertion, and the split is forced by the runtime.** The
  * transition rules and the `beforeunload` handler are a plain `.ts` module with
@@ -708,7 +708,7 @@ test('AC-4: the provider mounts on the page, never on the root layout', () => {
 test('AC-4: logout is left alone, deliberately', () => {
   // `LogoutButton` navigates with `router.replace()` inside a click handler, so
   // `onNavigate` never runs for it. Guarding it needs a second mechanism and
-  // belongs to EXPERIENCE.md Open Item 5, which owns mid-edit interruption.
+  // belongs to deferred-work.md (logout from a dirty canvas), which owns mid-edit interruption.
   const logout = ast('src/components/LogoutButton.tsx');
   assert.equal(identifiers(logout, 'useNavigationBlocker').length, 0);
   assert.equal(identifiers(logout, 'mayDiscard').length, 0);

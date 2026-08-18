@@ -16,11 +16,11 @@ updated: 2026-08-18
 | FR-11b | FR-27 |
 | UJ-1 | UJ-1 |
 
-The full table (including other areas) stays in the `operator-turn` addendum until prior-knowledge is retired.
+The full table (including other areas) stays in the `operator-turn` addendum.
 
 ## Source material
 
-`prior-knowledge/_bmad-output/planning-artifacts/prds/prd-bic-pptx-workflow-2026-07-10/prd.md` §4.1, FR-11b.
+DEC-001. Old PRD §4.1, FR-11b — mapped, not copied.
 
 ## Not a promise
 

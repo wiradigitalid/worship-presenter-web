@@ -20,16 +20,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const UX = 'prior-knowledge/_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10';
-const ARCH = 'prior-knowledge/_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10';
-
 const DOCS = [
-  `${ARCH}/ARCHITECTURE-SPINE.md`,
-  'prior-knowledge/_bmad-output/planning-artifacts/epics.md',
-  'prior-knowledge/_bmad-output/implementation-artifacts/deferred-work.md',
-  `${UX}/EXPERIENCE.md`,
-  `${UX}/DESIGN.md`,
-  'prior-knowledge/_bmad-output/planning-artifacts/prds/prd-bic-pptx-workflow-2026-07-10/prd.md',
+  '.how/_platform/ARCHITECTURE-SPINE.md',
+  '_bmad-output/implementation-artifacts/deferred-work.md',
+  '.how/_platform/design-system.md',
 ];
 
 // Citations allowed not to resolve, each with why. Keyed "<basename>|<citation>".
@@ -37,19 +31,10 @@ const DOCS = [
 // something the tree does not hold.
 const ALLOWED = new Map(Object.entries({
   // --- paths a shipped rename left behind, still named by dated records ---
-  'epics.md|data/bible/kjv.json': 'dated delivery records and the FR-24 supersession sentence, which must name the old path',
-  'epics.md|data/hymns.json': 'dated records of what Stories 22.1/22.2 replaced',
-  'epics.md|data/en/song-book/sdah.json': 'TARGET state — Story 22.3 performs this move',
-  'epics.md|scripts/import-kjv.mjs': 'retired by Story 21.1; named as the thing that was retired',
-  'epics.md|scripts/import-hymnal.mjs': 'retired by Story 22.1; named as the thing that was retired',
-  'EXPERIENCE.md|data/bible/kjv.json': 'dated record of what Story 21.1 shipped',
-  'prd.md|data/bible/kjv.json': 'the FR-24 supersession sentence, which must name the superseded path',
   'ARCHITECTURE-SPINE.md|data/en/song-book/sdah.json': 'AD-26 is decided but unbuilt; Story 22.3 creates this path',
 
   // --- symbols a shipped change removed, still named by records ---
   'ARCHITECTURE-SPINE.md|isKjvCorpusEmpty': 'the rename sentence isKjvCorpusEmpty() -> isBibleTranslationEmpty(code)',
-  'epics.md|isKjvCorpusEmpty': 'dated story text naming the symbol Story 21.2 replaced',
-  'epics.md|weHaveThisHopeFixed': 'dated record of a helper Story 20.1 removed with skipTitle',
   'ARCHITECTURE-SPINE.md|songset1': 'AD-19 names it as the REJECTED spelling — "songset1 re-imports the positional reading this decision exists to remove"',
 }));
 

@@ -26,4 +26,4 @@ Run this gate. Do not skip it because the change “looks small”.
 
 There is no exception for docs-only, agent-rules-only, or “already reviewed” changes. Public history is forever.
 
-See `.constitution/public-repository.md` and `prior-knowledge/docs/PRIVATE-DATA.md`.
+See `.constitution/public-repository.md` and `.constitution/project/private-data.md`.

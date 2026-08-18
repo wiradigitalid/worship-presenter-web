@@ -13,3 +13,4 @@ updated: 2026-08-19T00:11
 - (event) Raw material moved to prior-knowledge/ at the repo root (docs + old _bmad-output). Not _bmad-output/prior-knowledge.
 - (event by user) Owner set policy.doc_language and doc_filename_language to English and overrode the language-guide default: existing corpus migrated. Markers [MISSING] [ASSUMED] [PARTIAL]; critical column yes/no. Filename slugs English (e.g. rundown-to-service, UC-7-delete-service).
 - (event) Link repair after English slug migration: source-material paths expanded to prior-knowledge/; deferred-work citations now the archive file; Artifact reset route written in full; BMad custom config pins document_output_language English.
+- (event) DEC-001 applied: prior-knowledge retired. Live facts extracted; archive folder removed.

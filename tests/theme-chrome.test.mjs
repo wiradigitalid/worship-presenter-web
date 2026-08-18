@@ -2254,7 +2254,7 @@ test('Story 17.3: root metadata names Worship Presenter Web, not create-next-app
   assert.match(
     layout,
     /title:\s*["']Worship Presenter Web["']/,
-    'metadata.title must be the product-owned name from DESIGN.md frontmatter'
+    'metadata.title must be the product-owned name from design-system.md frontmatter'
   );
 });
 
@@ -2313,8 +2313,8 @@ test('AC-5: sonner reads the theme, and the provider sits above it', () => {
   // entire content of the claim.
   //
   // AC-5 is structural on purpose: `<Toaster />` is mounted nowhere and `toast(`
-  // is called nowhere, at the owner's direction. That is filed as EXPERIENCE.md
-  // Open Item 4 under Story 17.6, which owns the decision.
+  // is called nowhere, at the owner's direction. That is filed as
+  // `17-9-toast-channel-wiring` in deferred-work.md under Story 17.6, which owns the decision.
   assert.match(
     read('src/components/ui/sonner.tsx'),
     /useTheme\(\)/,
@@ -2581,7 +2581,7 @@ const AMBIENT_GLOW_ALPHA = 0.05;
 
 /**
  * Achromatic `oklch(L 0 0)` → nearest 8-bit sRGB, via CSS Color 4 OKLab → linear
- * sRGB → transfer function. Matches the canvas byte comparison in DESIGN.md.
+ * sRGB → transfer function. Matches the canvas byte comparison in design-system.md.
  */
 function oklchAchromaticToSrgb8(L) {
   const cube = L ** 3;
@@ -2782,8 +2782,7 @@ test('Story 17.2: only the light muted-foreground token moves — other root and
 
 // --- AC-6: the measurements, and the shades that needed them ----------------
 
-const DESIGN_MD =
-  'prior-knowledge/_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10/DESIGN.md';
+const DESIGN_MD = '.how/_platform/design-system.md';
 
 test('AC-6: the four load-bearing dark pairs are recorded in DESIGN.md as measurements', () => {
   // The test that carried this label asserted only that `dark:text-{hue}-`
@@ -2926,7 +2925,7 @@ const UNPAIRED_CHROMATIC_TEXT = [
   // The two forms' warning and error banners, which paint a DARK-only shade on
   // a surface that is light by default — `text-amber-200` over `bg-amber-500/10`,
   // `text-red-200` over `bg-red-500/10`. Round 2 measured these; the product
-  // decision for untokenized hues lives in `DESIGN.md` Open Item 4 (no story
+  // decision for untokenized hues lives in deferred-work.md (theme closure; no story
   // owner yet). Cited so a reader can check the claim rather than take the
   // file's word for it.
   'src/app/(operator)/services/[id]/EditForm.tsx: text-amber-200 [:471, DESIGN.md Open Item 4]',

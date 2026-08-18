@@ -45,16 +45,64 @@ npm run setup
 npm run dev
 ```
 
-`npm run setup` generates `.env` with fresh secrets, creates the database, seeds the slide registry, and prints the admin password it generated for you. Then open <http://localhost:3000>.
+`npm run setup` generates `.env` with fresh secrets, creates the database, seeds the slide registry, and prints the admin password it generated for you. Then open <http://localhost:3000> and sign in as `admin`. Re-running setup is safe: it never overwrites an existing `.env` or database.
 
-See [prior-knowledge/docs/QUICKSTART.md](prior-knowledge/docs/QUICKSTART.md) for the longer walkthrough, and [prior-knowledge/docs/PRIVATE-DATA.md](prior-knowledge/docs/PRIVATE-DATA.md) before you put your own congregation's details in.
+See [`.constitution/project/private-data.md`](.constitution/project/private-data.md) before you put your own congregation's details in.
+
+### Create a service
+
+**Services → New.** Paste a rundown into the raw text box. The shape it expects looks like this (synthetic names):
+
+```
+SABBATH, MARCH 14, 2026
+
+BIBLE TALK (09.30-10.50 /80 min)
+》welcome remarks: Mrs. Lestari
+Song Leader : Ms. Ayu
+[  ] Opening song : SDAH #159 The Old Rugged Cross
+Memory Verse & Opening Prayer : Mr. Bagas
+Closing Prayer : Mr. Damar (1m)
+
+DIVINE SERVICE (10.50- 12.05/ 75 min)
+Song Leader : Ms. Kirana
+[  ] Opening Song : SDAH #83 O Worship the King
+Intercessory Prayer: Mr. Farid (5m)
+Sermon : Pr. Andi Hartono "Working Out" (45m)
+[  ] Closing Song : SDAH #249 Praise Him! Praise Him!
+```
+
+Press **Parse**. Roles, timings and hymn numbers are pulled out into the form; hymns are resolved to titles from the corpus. Anything the parser could not place is listed rather than dropped.
+
+Fill in the sermon flyer and family/youth photographs if you have them, then save.
+
+### Present it
+
+From the service page:
+
+- **Download PPTX** — the offline deck. This is the one that runs the service if the network, the laptop or the hub lets you down.
+- **Present** — the operator console. Current and next slide, a filmstrip, a slide list, and **All slides** to jump anywhere.
+- **Open projector** — a separate window to drag onto the second screen. Arrow keys advance both. `B` blanks the projector and restores it.
+
+### Optional extras
+
+**Scripture lookup.** Presenter mode can put a KJV passage on the projector. The corpus ships at `data/en/bible-translation/kjv.json` and is reconciled from that file on every boot.
+
+**Chat intake.** `POST /api/webhook` with an `x-webhook-secret` header accepts a rundown as JSON, so a bot can create or correct a service. The secret is in `.env`; the endpoint is gated by it alone and never by a session.
+
+### Troubleshooting
+
+**`Missing song book corpus`** — `data/song-book/sdah.json` is absent. It ships with the repository, so restore it from version control: `git checkout -- data/song-book/sdah.json`. Then `npm run corpus:verify` to confirm both corpora are whole.
+
+**Locked out** — `npm run auth:set-password -- admin` sets a new password from an interactive prompt. `npm run auth:unlock -- --list` shows and clears sign-in throttling.
+
+**Deck missing images** — remote images must pass the URL safety rules. Uploading to the hub instead always works.
 
 ## Making it yours
 
 The shipped registry is a worked example — a real order of service with placeholder contact and payment details. Two things to change:
 
 1. **Slide templates.** Sign in as an administrator and open `/admin/artifacts`. Every template is editable on a canvas; the standing slides (offering, midweek prayer, contact) are where your own details go.
-2. **Private overrides.** If you would rather keep your congregation's registry out of git entirely, drop it at `data/local/default-registry.json` and the app seeds from that instead. That path is git-ignored. See [prior-knowledge/docs/PRIVATE-DATA.md](prior-knowledge/docs/PRIVATE-DATA.md).
+2. **Private overrides.** If you would rather keep your congregation's registry out of git entirely, drop it at `data/local/default-registry.json` and the app seeds from that instead. That path is git-ignored. See [`.constitution/project/private-data.md`](.constitution/project/private-data.md).
 
 ## Shipped corpora
 
@@ -73,15 +121,15 @@ If you are adapting this for a different hymnal, add your corpus at `data/song-b
 
 ## Deployment
 
-It runs anywhere Node 20 runs, including a Docker container — see [prior-knowledge/docs/deployment-guide.md](prior-knowledge/docs/deployment-guide.md). SQLite, uploaded images and the deck cache all need durable paths; the deployment guide covers which.
+It runs anywhere Node 20 runs, including a Docker container — see [`.constitution/project/deployment.md`](.constitution/project/deployment.md). SQLite, uploaded images and the deck cache all need durable paths; that file covers which.
 
 ## Project history
 
 This project began as a private repository for one congregation. That history is not carried over here, because it contained real member names, photographs of identifiable people including minors, private message screenshots, and a live payment code — none of which belonged in a public repository, and none of which can be un-published once indexed.
 
-This repository therefore starts from a single initial commit with a synthetic example congregation. The design documents under `prior-knowledge/` came across and were sanitised; they are worth reading if you want to understand why the system is shaped the way it is.
+This repository therefore starts from a single initial commit with a synthetic example congregation. Why the system is shaped the way it is lives in `.what/` and `.how/` (DEC-001).
 
-Contributors: please read [prior-knowledge/docs/PRIVATE-DATA.md](prior-knowledge/docs/PRIVATE-DATA.md) before your first commit. There is a test that fails if congregation data reaches a tracked file, and it is there for a reason.
+Contributors: please read [`.constitution/project/private-data.md`](.constitution/project/private-data.md) before your first commit. There is a test that fails if congregation data reaches a tracked file, and it is there for a reason.
 
 ## Licence
 

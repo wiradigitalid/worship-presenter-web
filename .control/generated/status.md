@@ -17,13 +17,11 @@ validator_dilewati:
   V14: generated/timeline.yaml belum ada — keterlambatan tetap dihitung dari registry, tetapi kehadirannya
     di generated/report tidak diperiksa
   V19: hanya baris RTR- yang diperiksa mekanis; sisa distilasi dijaga wdi-build
-  V27: kamar `.constitution/project/` kosong, dan itu keadaan yang sah — aturan generic MUST NOT dipindahkan
-    ke sini supaya kamarnya terpakai
   V3: belum ada wave, jadi belum ada story — tiap UC tak terjadwal adalah keadaan yang benar. Cakupan
     penuh katalog diperiksa di G5
 pertanyaan_terbuka:
   blocking: 0
-  assumptions: 10
+  assumptions: 14
   external: 1
   answered: 1
   blocking_jatah: 9

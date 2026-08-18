@@ -20,7 +20,7 @@ For the **Operator** (brief primary) and account Admin. How a person runs a mult
 
 **Not here** — Rundown intake: `rundown-to-service`. PPTX file contents and Registry: `offline-deck`. PPTX download is promised there (FR-14); the Hub here is only the *door* to that action.
 
-Source material: `prior-knowledge/_bmad-output/planning-artifacts/prds/prd-bic-pptx-workflow-2026-07-10/prd.md` §4.3–4.4, §4.6–4.9, §4.11–4.12. As-built EXPERIENCE: `prior-knowledge/_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10/EXPERIENCE.md` (cited, not copied; wdi-ux was not run).
+Source material: three area PRDs and `requirements.yaml`. Old epic/PRD numbers map in the `operator-turn` addendum (DEC-001). Operator chrome tokens: `.how/_platform/design-system.md`. Screens: `.how/_platform/inventory-screen.md`. `wdi-ux` was not run.
 
 ## 1. Vision
 

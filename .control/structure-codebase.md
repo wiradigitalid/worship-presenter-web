@@ -29,9 +29,8 @@ worship-presenter-web/
 ├── .constitution/            # [docs] method kit
 ├── .control/                 # [docs] control plane
 ├── .what/ · .how/            # [docs] corpus
-├── prior-knowledge/          # [docs] pre-WDI archive
 ├── _bmad/                    # BMad installer
-├── _bmad-output/             # [docs] live BMad workspace (cleared of old planning)
+├── _bmad-output/             # [docs] live BMad workspace (deferred-work)
 ├── .cursor/                  # editor rules
 ├── Dockerfile                # ★ prod image
 ├── docker-compose.yml
@@ -80,7 +79,7 @@ tests/public-repo-guard.test.mjs  # ★ public-repo absence-guard
 ## Unclaimed
 
 - `.cursor/` — editor, not product.
-- `_bmad-output/` — leftover BMad workspace; old planning is in `prior-knowledge/`.
+- `_bmad-output/` — live BMad workspace; open implementation debt in `implementation-artifacts/deferred-work.md`.
 
 ---
 

@@ -28,4 +28,4 @@ deployment that skips those is insecure regardless of the code.
 
 If this repository ever contains data about a real person who did not consent to
 it, that is a security issue and will be treated as one. See
-[prior-knowledge/docs/PRIVATE-DATA.md](prior-knowledge/docs/PRIVATE-DATA.md).
+[`.constitution/project/private-data.md`](.constitution/project/private-data.md).

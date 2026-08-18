@@ -21,8 +21,7 @@ Written and refreshed only by `wdi-init` intent `structure`, never by hand. Rule
 .control/                     # what currently holds — registries + maps
 .what/                        # what was promised — brief, 3 PRD, 3 SRS
 .how/                         # how it is built — spine, C4, 3 SDD deep
-_bmad-output/                 # BMad workspace — old planning moved
-prior-knowledge/              # pre-WDI archive (not a method layer)
+_bmad-output/                 # BMad workspace — deferred-work register
 ```
 
 ## Per layer
@@ -48,7 +47,8 @@ prior-knowledge/              # pre-WDI archive (not a method layer)
 │   ├── index.yaml            # ★ product.name, mode, gates_passed
 │   ├── components.yaml       # ★ PC · container web · LC
 │   ├── requirements.yaml
-│   └── usecases.yaml
+│   ├── usecases.yaml
+│   └── decisions.yaml        # DEC-001 applied
 ├── questions/assumptions.md
 ├── memlog/
 ├── generated/                # validate.py --generate
@@ -78,6 +78,7 @@ prior-knowledge/              # pre-WDI archive (not a method layer)
 .how/
 ├── _platform/
 │   ├── ARCHITECTURE-SPINE.md # ★
+│   ├── design-system.md      # operator chrome tokens (DEC-001)
 │   ├── c4-l1-system-context.md
 │   ├── c4-l2-containers.md
 │   ├── c4-l3-web.md
@@ -87,9 +88,9 @@ prior-knowledge/              # pre-WDI archive (not a method layer)
 └── registry/
 ```
 
-### `prior-knowledge/`
+### `_bmad-output/`
 
-Archive: the old `docs/` and `_bmad-output/` planning/implementation/specs. Not authority. README at that folder's root.
+Live BMad workspace. Open implementation debt: `implementation-artifacts/deferred-work.md`.
 
 ## Product Components
 
@@ -107,16 +108,14 @@ Archive: the old `docs/` and `_bmad-output/` planning/implementation/specs. Not 
 | `registry/components.yaml` | 3 PC `mode: deep`, container `web`, LC-1…LC-16 |
 | `registry/requirements.yaml` | BG · CAP · FR-1…28 · NFR · UJ |
 | `registry/usecases.yaml` | UC-1…UC-23 |
-| `registry/decisions.yaml` | empty |
+| `registry/decisions.yaml` | DEC-001 applied — pre-method archive retired |
 | `registry/waves.yaml` | empty |
 | `generated/` | filled by `validate.py --generate` |
 
 ## Findings
 
-- `docs/` at the root already moved to `prior-knowledge/docs/`.
-- Planning artifacts no longer live under the BMad-root `_bmad-output/` folder; the copy is `prior-knowledge/_bmad-output/`.
 - `inventory.py` does not derive a Next.js inventory — written by hand from `src/`.
-- `wdi-ux` was not run; `01-ux/` is empty on all three PCs; EXPERIENCE/DESIGN are in the archive.
+- `wdi-ux` was not run; `01-ux/` is empty on all three PCs; operator chrome tokens live in `.how/_platform/design-system.md` (DEC-001).
 - The `weekly-sabbath` PRD folder was withdrawn (too global); three area PRDs replace it. History: `.control/memlog/prd-weekly-sabbath.md`.
 - `gates_passed` is empty until the owner marks a gate.
 - `g4_passed: false` on all three PCs; `wdi-review` has not been run (the owner skipped the gate check).

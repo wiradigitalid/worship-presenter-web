@@ -78,7 +78,7 @@ A Registry edit that makes lyrics unreadable (NFR-3).
 
 ## Slots
 
-`mode: deep`. Rules: `02-rules/rules-registry.md`. Domain: `03-domain/domain-model.md`, `state-machines.md`. Flows: `04-usecases/UC-14-edit-layout.md`, `UC-15-reorder-and-delete.md` (critical), `UC-16-sync-artifact.md`. Branches: `05-scenarios/SCN-5-delete-survives-restart.md`.
+`mode: deep`. Rules: `02-rules/rules-registry.md`. Domain: `03-domain/domain-model.md`, `state-machines.md`, `deck-frame.md`. Flows: `04-usecases/UC-14-edit-layout.md`, `UC-15-reorder-and-delete.md` (critical), `UC-16-sync-artifact.md`. Branches: `05-scenarios/SCN-5-delete-survives-restart.md`.
 
 ## Open Items
 

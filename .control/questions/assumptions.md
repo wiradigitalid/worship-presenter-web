@@ -22,3 +22,7 @@ states.
 | OQ-10 | An empty `WEBHOOK_SECRET` string is treated the same as unset (reject intake). | 401 vs 503 confuses OQ-4 go-live. | 2026-08-18 | agent |
 | OQ-11 | BR-6 wins: linear advance during blank does not shift the Deck index. | Blank is mistaken for shifting the slide on the projector. | 2026-08-18 | agent |
 | OQ-12 | "Nearest Sabbath" = the next Sabbath or today in the venue time zone, not the previous one. | A Telegram correction changes the wrong week. | 2026-08-18 | agent |
+| OQ-13 | Accessibility floor is out of v1 scope; the canvas editor stays pointer-first with no keyboard equivalent. | A later NFR or owner decision needs a story the current corpus does not promise. | 2026-08-19 | agent |
+| OQ-14 | Until AD-16 ships, a stale snapshot has no extra operator affordance — "nothing" is the chosen answer, not an omission. | Story 20.8 must add a badge or line; the spine already records the three constraints. | 2026-08-19 | agent |
+| OQ-15 | Reset restores the shipped label (including a rename), and an authored row exposes no Reset; that as-built pair stands until Story 20.3 designs otherwise. | Two rows in one list will keep offering different verbs and surprise the administrator. | 2026-08-19 | agent |
+| OQ-16 | An unmapped rundown line stays NFR-5's visible miss; no extra explanation names the colliding books when a second translation makes a former hit ambiguous. | The operator reads a typo; Stories 21.4 / 21.5 are not blocked (spine). | 2026-08-19 | agent |

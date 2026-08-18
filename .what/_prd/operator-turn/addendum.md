@@ -10,7 +10,7 @@ updated: 2026-08-18
 
 ## Old → new ID mapping (complete)
 
-Condition 1 for retiring prior-knowledge. Old PRD numbers are not corpus IDs until this table.
+Condition 1 for retiring the pre-method archive (DEC-001). Old PRD numbers are not corpus IDs until this table.
 
 | Old | New | PRD area |
 |---|---|---|
@@ -28,7 +28,7 @@ Condition 1 for retiring prior-knowledge. Old PRD numbers are not corpus IDs unt
 
 ## Source material
 
-Old PRD §4.3–4.9, §4.11–4.12. EXPERIENCE/DESIGN: `prior-knowledge/_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10/` — as-built, aligned with the code; not landed through wdi-ux.
+DEC-001. Old PRD §4.3–4.9, §4.11–4.12 — mapped, not copied. Operator chrome: `.how/_platform/design-system.md`. Screens: `.how/_platform/inventory-screen.md`. `wdi-ux` was not run.
 
 ## `weekly-sabbath` folder
 

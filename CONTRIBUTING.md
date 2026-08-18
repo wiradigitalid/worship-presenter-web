@@ -5,7 +5,7 @@ to a different order of service.
 
 ## Before your first commit
 
-Read [prior-knowledge/docs/PRIVATE-DATA.md](prior-knowledge/docs/PRIVATE-DATA.md). This repository is public and
+Read [`.constitution/project/private-data.md`](.constitution/project/private-data.md). This repository is public and
 a congregation's own data must not enter it. There is a test that enforces this;
 if it fails, the finding is the point.
 

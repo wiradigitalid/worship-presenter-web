@@ -2,21 +2,15 @@
 title: "Addendum: Worship Presenter Web"
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
-note: "Detail that does not fit the 1–2 page brief. Source material lives in prior-knowledge/; here only technical constraints and path references."
+updated: 2026-08-19
+note: "Detail that does not fit the 1–2 page brief. Technical constraints and path references only."
 ---
 
 # Addendum
 
-## Source material (in `prior-knowledge/`, not folded in)
+## Source material
 
-- Original brief: `prior-knowledge/_bmad-output/planning-artifacts/briefs/brief-bic-pptx-workflow-2026-07-10/brief.md`
-- Operational addendum + Rundown examples: `prior-knowledge/_bmad-output/planning-artifacts/briefs/brief-bic-pptx-workflow-2026-07-10/addendum.md`
-- Source Deck anatomy: `prior-knowledge/_bmad-output/planning-artifacts/briefs/brief-bic-pptx-workflow-2026-07-10/source-pptx-structure.md`
-- PRD: `prior-knowledge/_bmad-output/planning-artifacts/prds/prd-bic-pptx-workflow-2026-07-10/prd.md`
-- Spine: `prior-knowledge/_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md`
-
-They enter the corpus only through the skill that owns the slot (G2 PRD, G3 blueprint). The archive folder is **not** deleted until the owner decides to retire it through a `DEC-`.
+DEC-001 retired the pre-method archive. Live promises sit in the three area PRDs and `requirements.yaml`. Deck frame: `.what/registry/03-domain/deck-frame.md`. Spine: `.how/_platform/ARCHITECTURE-SPINE.md`. Old → new IDs: `.what/_prd/operator-turn/addendum.md`.
 
 ## Technical constraints (they only shape implementation)
 

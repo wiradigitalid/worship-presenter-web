@@ -23,4 +23,4 @@ PPTX generate: Node child process + PptxGenJS, then exit. The slide plan is asse
 
 ## Source material
 
-`prior-knowledge/_bmad-output/planning-artifacts/prds/prd-bic-pptx-workflow-2026-07-10/prd.md` §4.2, §4.5, §4.10. Old spine for ADs that G3 lifted: `prior-knowledge/_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md`.
+DEC-001. Old PRD §4.2, §4.5, §4.10 — mapped, not copied. ADs live in `.how/_platform/ARCHITECTURE-SPINE.md`.

@@ -52,7 +52,7 @@ Ini yang dibaca pemilik di **G3 Blueprint**, bukan tujuh berkas. Isinya tidak di
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
 | Operator | On-duty at the venue laptop | Slideshow, presenter, projector, verse |
-| Jemaat | Screen audience | Do not open this surface |
+| Congregation | Screen audience | Do not open this surface |
 
 ### registry — Registry
 

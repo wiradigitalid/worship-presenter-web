@@ -115,7 +115,7 @@ Process timeout: Next/Node default. The Hub does not retry to the client unless 
 | --- | --- | --- | --- |
 | Hub route verbs match the inventory | verified | `src/app/api/**/route.ts` 2026-08-18 | — |
 | No GET `/api/services/[id]` | verified | no GET export in `services/[id]/route.ts` | RSC page |
-| Not all four Service mutation paths have 409 | [PARTIAL] | spine AD-6 *Not yet closed*; `prior-knowledge/_bmad-output/implementation-artifacts/deferred-work.md` | debt, not a G4 fix |
+| Not all four Service mutation paths have 409 | [PARTIAL] | spine AD-6 *Not yet closed*; `_bmad-output/implementation-artifacts/deferred-work.md` | debt, not a G4 fix |
 | Numeric timeout per route | [ASSUMED] | did not read `maxDuration` | platform default |
 | LC-12 parse+write | verified | `src/lib/parser.ts`, `src/lib/services/update-service.ts` | — |
 | LC-13 PPTX on-demand | verified | `src/lib/pptx.ts` | — |
