@@ -1,7 +1,7 @@
 ---
 topic: Worship Presenter Web
 artifact: .what/_product-brief/brief.md
-updated: 2026-08-19T00:06
+updated: 2026-08-19T00:11
 ---
 
 - (decision by coach) Create Fast path: the G1 problem is rebuilding the weekly Sabbath Deck (~52 hours/year, one Operator, late changes fail), not a Go/SPA rewrite.
@@ -12,3 +12,4 @@ updated: 2026-08-19T00:06
 - (event by coach) Create complete; gates_passed not filled — G1 belongs to the owner.
 - (event) Raw material moved to prior-knowledge/ at the repo root (docs + old _bmad-output). Not _bmad-output/prior-knowledge.
 - (event by user) Owner set policy.doc_language and doc_filename_language to English and overrode the language-guide default: existing corpus migrated. Markers [MISSING] [ASSUMED] [PARTIAL]; critical column yes/no. Filename slugs English (e.g. rundown-to-service, UC-7-delete-service).
+- (event) Link repair after English slug migration: source-material paths expanded to prior-knowledge/; deferred-work citations now the archive file; Artifact reset route written in full; BMad custom config pins document_output_language English.

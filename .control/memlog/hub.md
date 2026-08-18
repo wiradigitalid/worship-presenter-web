@@ -1,7 +1,7 @@
 ---
 topic: Hub
 artifact: .what/hub/SRS-hub.md
-updated: 2026-08-19T00:06
+updated: 2026-08-19T00:11
 ---
 
 - (event) G4 guarded as-built: UC-1, UC-5, UC-7; LC-1..LC-8; picoclaw integration.
@@ -9,3 +9,4 @@ updated: 2026-08-19T00:06
 - (event) wdi-review medium: structure+prose+edge-case. Not stamped: open findings. Blocking OQ-7 delete vs PII files. Assumptions OQ-8 same date, OQ-10 empty secret.
 - (decision by user) OQ-7: deleting a Service deletes UPLOADS_DIR files belonging to that Service; recurring announcements remain. PPTX cache not answered. deleteService + tests.
 - (event by user) Owner set policy.doc_language and doc_filename_language to English and overrode the language-guide default: existing corpus migrated. Markers [MISSING] [ASSUMED] [PARTIAL]; critical column yes/no. Filename slugs English (e.g. rundown-to-service, UC-7-delete-service).
+- (event) Link repair after English slug migration: source-material paths expanded to prior-knowledge/; deferred-work citations now the archive file; Artifact reset route written in full; BMad custom config pins document_output_language English.
