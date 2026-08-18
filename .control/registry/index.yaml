@@ -7,7 +7,7 @@
 # constitution.md Pasal 1 dan judul brief mengutip nilai ini — mereka MUST NOT menjadi sumber kedua.
 product:
   name: "Worship Presenter Web"
-  client: ""
+  client: "Church Name"
 
 # KEDALAMAN GLOBAL. Satu-satunya knob kedalaman dokumen, dan ia MUST NOT ikut mengendalikan intensitas
 # review — itu `risk_accepted` per komponen di components.yaml.
