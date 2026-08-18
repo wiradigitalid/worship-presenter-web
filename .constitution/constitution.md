@@ -4,22 +4,24 @@ status: Accepted
 
 # Constitution — worship-presenter-web
 
-Everything in `.constitution/` that is method text arrives from `handbook/method` via
-`wdi-method sync`. Articles 1, 2, and 5 below are this product's. Articles 3, 4, 6, and 7
-are the method.
+Everything in `.constitution/` that is method text arrives from the public WDI
+Method package via `npx wdi-method install` / `update`. Articles 1, 2, and 5
+below are this product's. Articles 3, 4, 6, and 7 are the method.
 
 An agent working here MUST be able to act on the contents of this repo alone.
 
 ## Article 1 — Scope
 
-This repo covers **Worship Presenter Web**: authoring and presenting a congregation's
-worship service on the web. One product, one repo. A second product MUST get a repo of
-its own.
+This repo covers the product named at `product.name` in
+`.control/registry/index.yaml`. One product, one repo. A second product MUST
+get a repo of its own.
 
-An agent working here MUST NOT demand that `personal-notes`, `ops`, `handbook`, or
-`brain` be open in the same session.
+`product.client` in the same file names the client if there is one, and stays
+empty if there is not. The product brief at G1 uses `product.name` as its
+title. Neither this file nor the brief is a second source of the name.
 
-The legacy private repository `bic-pptx-workflow` is frozen. New work MUST happen here.
+An agent working here MUST NOT demand that sibling organisation repositories
+be open in the same session.
 
 ## Article 2 — Content boundary, `.work/`, and cross-repo references
 
@@ -33,6 +35,7 @@ photographs, source decks, and anything under `data/local/` MUST NOT enter git.
 
 What else is particular to this repo:
 
+- The legacy private repository `bic-pptx-workflow` is frozen. New work MUST happen here.
 - `3p.md` MUST NOT be created here. Operational engagement memory lives outside.
 - `.work/` is **gitignored** in this public repo. It MUST NOT be committed. Scratch that needs to
   survive a clone goes to `_bmad-output/` or the corpus — never to `.work/`.
@@ -83,20 +86,21 @@ one wins, and the disagreement MUST be reported as a defect rather than resolved
 opened first. A rule MUST NOT be born in a `Reference` file; when one is noticed there, it is stated as a
 finding and written in the guide that owns it.
 
-## Article 5 — The method arrives from handbook
+## Article 5 — The method arrives from WDI Method
 
 `.constitution/` guides and templates (except this file's Articles 1, 2, and 5,
 `public-repository.md`, `codebase/*-guide.md` once `Accepted`, and any extra file this
-repo added), the `wdi-*` skills, and `_bmad/custom/*.toml` arrive from `handbook/method`.
+repo added), the `wdi-*` skills, and `_bmad/custom/*.toml` arrive from the public
+WDI Method package via `npx wdi-method install` / `update`.
 
 - A method file MUST NOT be invented or patched here to improve the method. If a rule is
-  wrong, it is fixed in the live repo that currently develops the method, promoted to
-  handbook, then brought here with `wdi-method sync`.
-- `wdi-method sync` MUST overwrite method files and MUST NOT touch `.what/`, `.how/`,
+  wrong, it is fixed in the WDI Method package, then brought here with `update`.
+- `wdi-method update` MUST overwrite method files and MUST NOT touch `.what/`, `.how/`,
   `.control/` product state, this file's Articles 1–2 and 5, `public-repository.md`,
-  `codebase/*-guide.md` once `Accepted`, or extra constitution files this repo added.
+  `codebase/*-guide.md` once `Accepted`, extra constitution files this repo added, or
+  `_bmad/custom/*.user.toml`.
 - A rule particular to this repo MUST be written out in full in this file or a sibling,
-  and MUST NOT be replaced by a pointer into handbook.
+  and MUST NOT be replaced by a pointer into another repository.
 
 A prefix in `.claude/skills/` names the **method**, not the owner: `bmad-*` is BMad's,
 `wdi-*` is this method's.

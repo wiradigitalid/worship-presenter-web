@@ -3,6 +3,12 @@
 # Memuat yang tidak punya rumah di registry lain: kedalaman global, peran, jatah waktu gate, jatah
 # pertanyaan terbuka, dan kosakata `touches`.
 
+# IDENTITAS PRODUK. Satu-satunya tempat terstruktur. Diisi di G1.
+# constitution.md Pasal 1 dan judul brief mengutip nilai ini — mereka MUST NOT menjadi sumber kedua.
+product:
+  name: "Worship Presenter Web"
+  client: ""
+
 # KEDALAMAN GLOBAL. Satu-satunya knob kedalaman dokumen, dan ia MUST NOT ikut mengendalikan intensitas
 # review — itu `risk_accepted` per komponen di components.yaml.
 #   catalog  daftar UC + tiga inventaris + C4; nol berkas tambahan per komponen. G4 dilewati

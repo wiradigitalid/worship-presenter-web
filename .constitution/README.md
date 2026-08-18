@@ -4,17 +4,18 @@ status: Reference
 
 # `.constitution/` — index
 
-Method files arrive from `handbook/method` via `wdi-method sync`. Load
-[`constitution.md`](constitution.md) before acting. Guides are loaded **lazily** — only when the
-task matches, and every guide states when on its own **Loaded when:** line.
+Method files arrive from the public WDI Method package via `npx wdi-method install`
+or `update`. Load [`constitution.md`](constitution.md) before acting. Guides are
+loaded **lazily** — only when the task matches, and every guide states when on its
+own **Loaded when:** line.
 
 Every file here carries a `status:` — Article 4 owns the five values. Only `Accepted` binds;
 `Reference` explains and MUST NOT be cited to reject a change. A template carries no status of its
 own, because its frontmatter belongs to the artifact it produces.
 
-A file this product added (one that is not in the snapshot) stays here across `sync` and MUST be
+A file this product added (one that is not in the snapshot) stays here across `update` and MUST be
 listed from `constitution.md` Article 2 or from `AGENTS.md` routing — this index is overwritten on
-every sync.
+every update.
 
 ## `method/` — the explanation, `status: Reference`
 
@@ -25,7 +26,7 @@ Never a rule. When it disagrees with a guide, the guide wins and the disagreemen
 | [`method/README.md`](method/README.md) | You want the whole shape in five minutes — five gates, two settings, fifteen skills, WDI ↔ BMad |
 | [`method/artifact-map.md`](method/artifact-map.md) | "Where does this file go", or "does this document exist at my `mode`" |
 | [`method/rationale.md`](method/rationale.md) | Before changing a rule, to know what you would break |
-| [`method/portability.md`](method/portability.md) | Which files are the method and which are the product; how promote and sync move them |
+| [`method/portability.md`](method/portability.md) | Which files are the method and which are the product; how promote and install move them |
 
 ## Cross-domain
 

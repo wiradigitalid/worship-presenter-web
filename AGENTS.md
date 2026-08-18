@@ -1,8 +1,8 @@
 # Agent Rules — worship-presenter-web
 
 This repository is **public**. Congregation data never enters it. The WDI method applies; method
-files arrive from `handbook/method` via `wdi-method sync`. This file is loaded every session;
-everything else is loaded **lazily**, only when the task matches.
+files arrive from the public WDI Method package via `npx wdi-method install` / `update`. This file
+is loaded every session; everything else is loaded **lazily**, only when the task matches.
 
 ## Public repository
 
@@ -78,7 +78,7 @@ that touches no `FR`, `UC`, `AD-N`, or domain model) MAY still ship against thos
 
 ## What MUST NOT be done
 
-- A method file MUST NOT be invented here. Fix it in the live method repo, promote, then `sync`.
+- A method file MUST NOT be invented here. Fix it in the WDI Method package, then `npx wdi-method update`.
 - A file in `_bmad-output/prior-knowledge/` MUST NOT be copied into `.what/` or `.how/`.
 - `.control/generated/` MUST NOT be written by hand.
 - The two structure maps MUST NOT be edited by hand — `wdi-init` intent `structure` re-derives them.

@@ -84,14 +84,14 @@ document.
 
 Method files in `.constitution/` (except this product's Articles 1, 2, and 5, `codebase/*-guide.md`
 once `Accepted`, and any extra file this repo added), the `wdi-*` skills, and `_bmad/custom/*.toml`
-arrive from `handbook/method` via `wdi-method sync`.
+arrive from the public WDI Method package via `npx wdi-method install` / `update`.
 
 At **read time** this repo is self-contained: every file the rules need is here, readable with the
-repo alone. At **change time** the method still has one writer — the live product repo that currently
-develops it. Two rules follow:
+repo alone. At **change time** the method has one published writer — the WDI Method package. Two
+rules follow:
 
 - A method file MUST NOT be invented or patched here to improve the method. If a rule is wrong, it
-  is fixed in the live repo, promoted to handbook, then brought here with `sync`.
+  is fixed in the WDI Method package, then brought here with `update`.
 - A rule particular to this repo MUST be written out in full, and MUST NOT be replaced by a pointer
-  into handbook.
+  into another repository.
 
