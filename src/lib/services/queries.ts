@@ -1,7 +1,13 @@
 /**
  * Read/delete SQL for the services table. No HTTP concerns live here.
  */
+import fs from 'fs';
 import type Database from 'better-sqlite3';
+import { parseImagesPayloadJson } from '@/lib/images';
+import {
+  localUploadFilename,
+  resolveLocalUploadFsPath,
+} from '@/lib/uploads';
 import type { ServiceListItem, ServiceRow } from './types';
 
 const LIST_COLUMNS = `id, date, raw_payload, parsed_data, created_at,
@@ -61,18 +67,104 @@ export function listServices(
   return rows.map(toListItem);
 }
 
+function filenamesFromImagesJson(json: string | null | undefined): string[] {
+  const extras = parseImagesPayloadJson(json);
+  const refs = [
+    extras.sermonGraphicUrl,
+    extras.familyPhotoUrl,
+    extras.youthPhotoUrl,
+    ...extras.urls,
+  ].filter((x): x is string => typeof x === 'string');
+  const names: string[] = [];
+  for (const ref of refs) {
+    const name = localUploadFilename(ref);
+    if (name) names.push(name);
+  }
+  return names;
+}
+
+function collectServiceLocalUploads(
+  db: Database.Database,
+  serviceId: number
+): Set<string> {
+  const names = new Set<string>();
+  const row = db
+    .prepare<[number], { images_payload: string | null }>(
+      'SELECT images_payload FROM services WHERE id = ?'
+    )
+    .get(serviceId);
+  if (!row) return names;
+  for (const name of filenamesFromImagesJson(row.images_payload)) {
+    names.add(name);
+  }
+  const items = db
+    .prepare<[number], { image_url: string }>(
+      'SELECT image_url FROM announcement_items WHERE service_id = ?'
+    )
+    .all(serviceId);
+  for (const item of items) {
+    const name = localUploadFilename(item.image_url);
+    if (name) names.add(name);
+  }
+  return names;
+}
+
+function localUploadStillReferenced(
+  db: Database.Database,
+  filename: string
+): boolean {
+  const services = db
+    .prepare<[], { images_payload: string | null }>(
+      'SELECT images_payload FROM services'
+    )
+    .all();
+  for (const service of services) {
+    if (filenamesFromImagesJson(service.images_payload).includes(filename)) {
+      return true;
+    }
+  }
+  const items = db
+    .prepare<[], { image_url: string }>('SELECT image_url FROM announcement_items')
+    .all();
+  for (const item of items) {
+    if (localUploadFilename(item.image_url) === filename) return true;
+  }
+  return false;
+}
+
+function unlinkUnreferencedLocalUploads(
+  db: Database.Database,
+  filenames: Set<string>
+): void {
+  for (const filename of filenames) {
+    if (localUploadStillReferenced(db, filename)) continue;
+    const filePath = resolveLocalUploadFsPath(`/api/uploads/${filename}`);
+    if (!filePath) continue;
+    try {
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    } catch (error) {
+      console.error('Error unlinking service upload:', filename, error);
+    }
+  }
+}
+
 /**
  * Delete a service. Returns false when no row matched.
  * `announcement_items` rows disappear via the FK cascade.
+ * Local `/api/uploads/…` files bound only to this Service are unlinked (FR-10).
+ * Recurring announcement files stay (BR-5).
  */
 export function deleteService(
   db: Database.Database,
   serviceId: number
 ): boolean {
+  const localUploads = collectServiceLocalUploads(db, serviceId);
   const result = db
     .prepare<[number]>('DELETE FROM services WHERE id = ?')
     .run(serviceId);
-  return result.changes > 0;
+  if (result.changes === 0) return false;
+  unlinkUnreferencedLocalUploads(db, localUploads);
+  return true;
 }
 
 /** Effective optimistic-concurrency token for a row. */

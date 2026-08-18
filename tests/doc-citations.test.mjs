@@ -20,16 +20,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const UX = '_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10';
-const ARCH = '_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10';
+const UX = 'prior-knowledge/_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10';
+const ARCH = 'prior-knowledge/_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10';
 
 const DOCS = [
   `${ARCH}/ARCHITECTURE-SPINE.md`,
-  '_bmad-output/planning-artifacts/epics.md',
-  '_bmad-output/implementation-artifacts/deferred-work.md',
+  'prior-knowledge/_bmad-output/planning-artifacts/epics.md',
+  'prior-knowledge/_bmad-output/implementation-artifacts/deferred-work.md',
   `${UX}/EXPERIENCE.md`,
   `${UX}/DESIGN.md`,
-  '_bmad-output/planning-artifacts/prds/prd-bic-pptx-workflow-2026-07-10/prd.md',
+  'prior-knowledge/_bmad-output/planning-artifacts/prds/prd-bic-pptx-workflow-2026-07-10/prd.md',
 ];
 
 // Citations allowed not to resolve, each with why. Keyed "<basename>|<citation>".

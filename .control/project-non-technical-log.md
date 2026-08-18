@@ -1,23 +1,23 @@
 # Project Non-Technical Log
 
-**Dimuat saat:** sebuah fakta non-teknis yang membatasi pembangunan produk ini berubah, atau saat
-mencari tahu apa yang sudah berlaku di luar kode.
+**Loaded when:** a non-technical fact that constrains building this product changes, or when
+looking up what already holds outside the code.
 
-Ditulis lewat skill `wdi-log` intent `fact`, tidak pernah dengan tangan langsung.
+Written through skill `wdi-log` intent `fact`, never by hand.
 
-Tes satu kalimat: **kalau angkanya dihapus dan faktanya masih berguna bagi yang membangun, ia boleh
-di sini.**
+The one-sentence test: **if the number is deleted and the fact is still useful to someone building, it may
+live here.**
 
-Kategori: `domain` · `akun` · `legal` · `jadwal` · `organisasi`.
+Categories: `domain` · `account` · `legal` · `schedule` · `organisation`.
 
-## Berlaku
+## In force
 
-| id | Tanggal | Kategori | Fakta | Akibat | Sumber |
+| id | Date | Category | Fact | Consequence | Source |
 |---|---|---|---|---|---|
 | — | — | — | — | — | — |
 
-## Tidak Berlaku Lagi
+## No longer in force
 
-| id | Fakta | Berhenti berlaku | Digantikan |
+| id | Fact | Stopped holding | Replaced by |
 |---|---|---|---|
 | — | — | — | — |

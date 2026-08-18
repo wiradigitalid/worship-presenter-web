@@ -1,11 +1,14 @@
 ---
 topic: Worship Presenter Web
-updated: 2026-08-18T22:29
+artifact: .what/_product-brief/brief.md
+updated: 2026-08-19T00:06
 ---
 
-- (decision by coach) Create Fast path: masalah G1 adalah rakit ulang Deck Sabbath mingguan (~52 jam/tahun, satu Operator, perubahan terlambat gagal), bukan rewrite Go/SPA.
-- (decision by user) Primary = Operator (tim multimedia). Klien = Church Name. product.name = Worship Presenter Web.
-- (assumption by coach) OQ-1 Events Rundown tetap parseable; OQ-2 satu gereja satu alur; OQ-3 venue bisa putar PPTX. Ketiganya gagal tes blocking.
-- (event by coach) brief.md + addendum.md di .what/_product-brief/; bahan mentah dikutip path _bmad-output/briefs/brief-bic-pptx-workflow-2026-07-10, tidak dilebur.
-- (event by coach) Polish structure+prose: Node/PptxGenJS pindah ke addendum; Hub/picoclaw/Sabbath masuk glossary; OQ-4 external go-live secrets/DB path.
-- (event by coach) Create complete; gates_passed tidak diisi — G1 milik pemilik.
+- (decision by coach) Create Fast path: the G1 problem is rebuilding the weekly Sabbath Deck (~52 hours/year, one Operator, late changes fail), not a Go/SPA rewrite.
+- (decision by user) Primary = Operator (multimedia team). Client = Church Name. product.name = Worship Presenter Web.
+- (assumption by coach) OQ-1 Events Rundown stays parseable; OQ-2 one church one flow; OQ-3 venue can play PPTX. All three fail the blocking tests.
+- (event by coach) brief.md + addendum.md in .what/_product-brief/; raw material cited at path _bmad-output/briefs/brief-bic-pptx-workflow-2026-07-10, not merged.
+- (event by coach) Polish structure+prose: Node/PptxGenJS moved to addendum; Hub/picoclaw/Sabbath entered the glossary; OQ-4 external go-live secrets/DB path.
+- (event by coach) Create complete; gates_passed not filled — G1 belongs to the owner.
+- (event) Raw material moved to prior-knowledge/ at the repo root (docs + old _bmad-output). Not _bmad-output/prior-knowledge.
+- (event by user) Owner set policy.doc_language and doc_filename_language to English and overrode the language-guide default: existing corpus migrated. Markers [MISSING] [ASSUMED] [PARTIAL]; critical column yes/no. Filename slugs English (e.g. rundown-to-service, UC-7-delete-service).

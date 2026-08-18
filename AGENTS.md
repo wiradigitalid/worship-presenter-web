@@ -34,15 +34,15 @@ BMad first, then WDI Method. In the product repo:
 
 ```bash
 npx bmad-method install
-npx github:wiradigitalid/wdi-method
+npx wdi-method
 ```
 
 No subcommand opens the installer TUI. It detects an existing install and offers
 **update**. Non-interactive:
 
 ```bash
-npx github:wiradigitalid/wdi-method install --yes
-npx github:wiradigitalid/wdi-method update --yes
+npx wdi-method install --yes
+npx wdi-method update --yes
 ```
 
 BMad: https://github.com/bmad-code-org/BMAD-METHOD
@@ -56,19 +56,34 @@ the task matches.
 
 ## Language
 
-Prose in this repo is Bahasa Indonesia; a technical term the industry writes in English MUST be left
-in English — an Indonesian equivalent MUST NOT be invented. Which language a **name** is written in —
-code identifiers, files, database columns — is governed by `.constitution/language-guide.md`.
+**Two settings decide this, and they live in `.control/registry/index.yaml` under `policy:`.** Both are
+free text and both default to English:
 
-The agent-instruction files are the exception the Rule-Writing Standard already claims: `AGENTS.md`,
-`CLAUDE.md`, and everything under `.constitution/`. Nothing else in this repo is one — `.control/`,
-`.what/`, and `.how/` are product content and MUST stay Bahasa Indonesia, and translating them MUST
-NOT be proposed as tidying. A literal value written into an Indonesian document — a marker such as
-`[TIDAK ADA]`, an answer option such as `ya / tidak / ubah` — stays Indonesian wherever it appears,
-including inside an English guide.
+| Setting | Governs |
+|---|---|
+| `doc_language` | The prose of working documents in `.what/` · `.how/` · `.control/` |
+| `doc_filename_language` | The slug part of a document filename |
 
-A **registry value** is a machine-facing key and stays English: `mode: catalog`, `status: applied`,
-`risk_accepted: low`. Those names are used as written in prose too — one thing, one name.
+Read those two before writing a document. A technical term the industry writes in English MUST be left in
+English whatever the setting says — an equivalent MUST NOT be invented for it.
+
+**These files are always English, whatever the settings say:** `AGENTS.md`, `CLAUDE.md`, and everything
+under `.constitution/`. They are agent instructions, and they travel to every repo through the
+`wdi-method` package. The one exception is `.constitution/project/`, which is this product's own room.
+
+**Always English and never a setting**, because a script matches them:
+
+- method terminology — `DEC` `SRS` `SDD` `UC` `FR` `AD`, the gate names, the values of `mode` and
+  `risk_accepted`
+- document code prefixes — `UC-` `DEC-` `SRS-`; only the slug after them follows `doc_filename_language`
+- markers — `[NEEDS CONFIRMATION]` `[MISSING]` `[ASSUMED]` `[PARTIAL]`, and `yes`/`no` in a `critical`
+  column
+- registry values — `mode: catalog`, `status: applied`, `risk_accepted: low`. Used as written in prose
+  too: one thing, one name
+- code identifiers, database columns, config keys — `language-guide.md` owns these
+
+**A corpus written before these settings existed MUST NOT be migrated for them.** The readers accept more
+than one language, so existing documents keep working and only new writing follows the setting.
 
 ## The thing in your hand → its folder
 
@@ -77,6 +92,7 @@ Read this instead of reasoning about what `.what/` and `.how/` mean.
 | The thing in your hand | Its folder |
 |---|---|
 | A rule, a guide, a template — how we work | `.constitution/` |
+| A rule that binds **only this product** | `.constitution/project/` — `update` never writes over it, `promote` never publishes it |
 | The explanation of a rule, never a rule itself | `.constitution/method/` |
 | A decision, an open question, a registry, a structure map, minutes | `.control/` |
 | The brief, a PRD, a use case, a business rule — what is promised | `.what/` |

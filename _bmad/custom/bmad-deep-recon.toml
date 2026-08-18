@@ -1,11 +1,11 @@
-# Skill ini dikirim dengan `persistent_facts = []`, jadi tidak seperti 41 skill lain ia tidak
-# memungut konteks proyek sendiri. Berkas ini menutup celah itu; tanpanya riset menjelang G1 berjalan
-# tanpa kosakata dan aturan repo, dan hasilnya memakai istilah yang tidak ada di Glossary.
+# This skill ships with `persistent_facts = []`, so unlike 41 other skills it does not
+# pick up project context on its own. This file closes that gap; without it, research before G1
+# runs without the repo's vocabulary and rules, and the output uses terms that are not in the Glossary.
 
 [workflow]
 
 persistent_facts = [
   "file:{project-root}/.control/product-glossary.md",
-  "Laporan riset mendarat di _bmad-output/ dan tinggal di sana selamanya. Ia MUST NOT dipromosikan ke .what/ dan MUST NOT dilebur ke brief maupun PRD; `DEC-` dan PRD merujuknya lewat path. Folder run-nya MUST NOT dihapus — intent Update membacanya kembali sebagai original inputs.",
-  "Istilah domain MUST memakai entri Glossary apa adanya. Istilah baru yang muncul dari riset MUST diusulkan sebagai entri Glossary, bukan dipakai diam-diam.",
+  "Research reports land in _bmad-output/ and stay there forever. They MUST NOT be promoted into .what/ and MUST NOT be merged into the brief or a PRD; a `DEC-` and a PRD cite them by path. The run folder MUST NOT be deleted — an Update intent rereads it as original inputs.",
+  "Domain terms MUST use the Glossary entry as written. A new term that appears from research MUST be proposed as a Glossary entry, not used in silence.",
 ]

@@ -1,21 +1,21 @@
-# G5 — satu-satunya pelaksana, dan wdi-build yang mendispatch-nya. Pelaksana MUST NOT merakit
-# rantai sendiri.
+# G5 — the only executor, and wdi-build is what dispatches it. The executor MUST NOT assemble
+# the chain itself.
 #
-# Memasok disiplin test-first yang bmad-build tidak punya: ia mengaudit test SETELAH implementasi
-# (Matrix Test Audit di step-03), tetapi tidak pernah mewajibkan sebuah test gagal lebih dulu.
+# Supplies the test-first discipline that bmad-build does not have: it audits tests AFTER
+# implementation (Matrix Test Audit in step-03), but never requires a test to fail first.
 #
-# Aturan merge: string mengganti, list menambah, tabel merge per key.
-# .claude/skills/bmad-build/customize.toml MUST NOT diedit — ia ditimpa tiap update.
+# Merge rule: strings replace, lists append, tables merge by key.
+# .claude/skills/bmad-build/customize.toml MUST NOT be edited — it is overwritten on every update.
 
 [workflow]
 
-# Mengganti handoff step-03 bawaan. Semua yang dibawa bawaan tetap ada (subagent tanpa konteks
-# percakapan, spec sebagai satu-satunya sumber kebenaran, memuat berkas `context:`, laporan
-# penutup); siklus test-first inilah yang ditambahkan override ini.
+# Replaces the stock step-03 handoff. Everything the stock brings remains (subagent with no
+# conversation context, spec as the sole source of truth, load `context:` files, closing
+# report); the test-first cycle is what this override adds.
 #
-# Sengaja memuat METODE saja. Pernyataan ulang tujuan, daftar berkas, acceptance criteria, dan
-# aturan gaya rumah TIDAK masuk dispatch — semuanya sudah ada di spec, dan step-03 melarang
-# menggandakannya di sini.
+# Deliberately holds METHOD only. Restating goals, file lists, acceptance criteria, and
+# house style MUST NOT enter the dispatch — they already live in the spec, and step-03
+# forbids duplicating them here.
 
 implementation_handoff = """
 Launch a subagent with no prior conversation context, with this prompt:
@@ -35,18 +35,18 @@ Launch a subagent with no prior conversation context, with this prompt:
 """
 
 persistent_facts = [
-  "Repo ini berjalan di stories mode. sprint-status.yaml tidak ada dan MUST NOT dibuat; status story tinggal di frontmatter story file.",
-  "Satu Logical Component MUST terdaftar di components.yaml sebelum story yang menyentuhnya dikerjakan.",
-  "Saat ada yang rusak dan sebabnya belum diketahui, wdi-systematic-debugging MUST dijalankan sebelum perbaikan apa pun diusulkan.",
+  "This repo runs in stories mode. sprint-status.yaml does not exist and MUST NOT be created; story status lives in the story file frontmatter.",
+  "A Logical Component MUST be registered in components.yaml before a story that touches it is worked.",
+  "When something is broken and the cause is not yet known, wdi-systematic-debugging MUST run before any fix is proposed.",
 ]
 
-# Tidak dioverride, dan itu disengaja:
+# Not overridden, and that is deliberate:
 #
-# - review_layers — tiga layer bawaan (blind-hunter, edge-case-hunter, verification-gap) plus
-#   Review Panel dua keluarga CLI yang dijalankan bmad-code-review sesudahnya sudah menutup
-#   kebutuhan review repo ini. Menambah layer keempat memakan token tanpa menutup celah.
+# - review_layers — the three stock layers (blind-hunter, edge-case-hunter, verification-gap) plus
+#   the two-CLI-family Review Panel that bmad-code-review runs afterwards already cover this
+#   repo's review need. Adding a fourth layer spends tokens without closing a gap.
 #
-# - on_complete — pembaruan registry setelah story selesai adalah tugas wdi-build dan skill pemilik
-#   lapisannya,
-#   bukan bmad-build. Menaruhnya di sini membuat dua penulis untuk satu berkas.
-#   Checklist penutup story ada di 05-gates.md.
+# - on_complete — registry updates after a story finishes belong to wdi-build and the skill that
+#   owns that layer,
+#   not bmad-build. Putting them here makes two writers for one file.
+#   The story-closing checklist lives in 05-gates.md.

@@ -47,14 +47,14 @@ npm run dev
 
 `npm run setup` generates `.env` with fresh secrets, creates the database, seeds the slide registry, and prints the admin password it generated for you. Then open <http://localhost:3000>.
 
-See [docs/QUICKSTART.md](docs/QUICKSTART.md) for the longer walkthrough, and [docs/PRIVATE-DATA.md](docs/PRIVATE-DATA.md) before you put your own congregation's details in.
+See [prior-knowledge/docs/QUICKSTART.md](prior-knowledge/docs/QUICKSTART.md) for the longer walkthrough, and [prior-knowledge/docs/PRIVATE-DATA.md](prior-knowledge/docs/PRIVATE-DATA.md) before you put your own congregation's details in.
 
 ## Making it yours
 
 The shipped registry is a worked example — a real order of service with placeholder contact and payment details. Two things to change:
 
 1. **Slide templates.** Sign in as an administrator and open `/admin/artifacts`. Every template is editable on a canvas; the standing slides (offering, midweek prayer, contact) are where your own details go.
-2. **Private overrides.** If you would rather keep your congregation's registry out of git entirely, drop it at `data/local/default-registry.json` and the app seeds from that instead. That path is git-ignored. See [docs/PRIVATE-DATA.md](docs/PRIVATE-DATA.md).
+2. **Private overrides.** If you would rather keep your congregation's registry out of git entirely, drop it at `data/local/default-registry.json` and the app seeds from that instead. That path is git-ignored. See [prior-knowledge/docs/PRIVATE-DATA.md](prior-knowledge/docs/PRIVATE-DATA.md).
 
 ## Shipped corpora
 
@@ -73,15 +73,15 @@ If you are adapting this for a different hymnal, add your corpus at `data/song-b
 
 ## Deployment
 
-It runs anywhere Node 20 runs, including a Docker container — see [docs/deployment-guide.md](docs/deployment-guide.md). SQLite, uploaded images and the deck cache all need durable paths; the deployment guide covers which.
+It runs anywhere Node 20 runs, including a Docker container — see [prior-knowledge/docs/deployment-guide.md](prior-knowledge/docs/deployment-guide.md). SQLite, uploaded images and the deck cache all need durable paths; the deployment guide covers which.
 
 ## Project history
 
 This project began as a private repository for one congregation. That history is not carried over here, because it contained real member names, photographs of identifiable people including minors, private message screenshots, and a live payment code — none of which belonged in a public repository, and none of which can be un-published once indexed.
 
-This repository therefore starts from a single initial commit with a synthetic example congregation. The design documents under `_bmad-output/` came across and were sanitised; they are worth reading if you want to understand why the system is shaped the way it is.
+This repository therefore starts from a single initial commit with a synthetic example congregation. The design documents under `prior-knowledge/` came across and were sanitised; they are worth reading if you want to understand why the system is shaped the way it is.
 
-Contributors: please read [docs/PRIVATE-DATA.md](docs/PRIVATE-DATA.md) before your first commit. There is a test that fails if congregation data reaches a tracked file, and it is there for a reason.
+Contributors: please read [prior-knowledge/docs/PRIVATE-DATA.md](prior-knowledge/docs/PRIVATE-DATA.md) before your first commit. There is a test that fails if congregation data reaches a tracked file, and it is there for a reason.
 
 ## Licence
 

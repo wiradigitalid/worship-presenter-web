@@ -1,47 +1,69 @@
 # Product Glossary
 
-**Dimuat saat:** menulis dokumen apa pun di korpus.
+**Loaded when:** writing any document in the corpus.
 
-SSOT kosakata **produk** — apa yang produk ini bicarakan. Tiap istilah didefinisikan **sekali** di
-sini, lalu dipakai apa adanya di seluruh korpus.
+SSOT for **product** vocabulary — what this product talks about. Each term is defined **once**
+here, then used as written throughout the corpus.
 
-Kosakata **metode** tinggal di `.constitution/method-glossary.md` dan MUST NOT didefinisikan ulang di
-sini. Tes pemisahnya: apakah istilah ini tetap berlaku kalau dipakai di produk lain? Ya →
-`method-glossary.md`, tidak → sini.
+**Method** vocabulary lives in `.constitution/method-glossary.md` and MUST NOT be redefined
+here. The split test: would this term still apply on a different product? Yes →
+`method-glossary.md`, no → here.
 
-## Aturan
+## Rules
 
-- Istilah baru yang muncul di dokumen mana pun MUST ditambahkan ke sini **dalam lintasan yang sama**.
-- Definisi MUST menyebut hubungan ke istilah lain dan kardinalitasnya bila relevan.
-- Satu istilah MUST NOT punya dua entri.
-- Berkas ini lahir **kosong** dan diisi dari produknya. Entri pertamanya lahir bersama brief di G1.
+- A new term that appears in any document MUST be added here **in the same pass**.
+- A definition MUST name its relation to other terms and its cardinality when relevant.
+- One term MUST NOT have two entries.
+- This file is born **empty** and filled from the product. Its first entries are born with the brief at G1.
 
-## Entri
+## Entries
 
-**Admin** — pemegang akun yang mengelola akses dan pengaturan Hub. Bukan Operator saat menayangkan.
+**Admin** — account holder who manages access, Hub settings, and the Artifact Registry. Not the Operator while presenting.
 
-**Deck** — presentasi yang digenerate untuk satu Service, dijamin sebagai PPTX offline.
+**Artifact Registry** — ordered set of Artifact Templates; the source of *which slides exist* and *their order*. One Registry for this congregation's flow, not per-church.
 
-**Events** — kelompok terpisah dari Operator; menyerahkan Rundown (peserta, lagu, poster, pengumuman) lewat Telegram.
+**Artifact Template** — one Artifact Registry entry: the layout of one slide (elements, sizes, content bindings). The unit Admin edits.
 
-**Hub** — daftar Service berlogin untuk review, edit, generate ulang, dan unduh PPTX. Bukan situs publik.
+**Data Locale** — the language of a **corpus** (a Bible translation or Song Book). Not UI Locale. Never controls what the Jemaat sees.
 
-**Jemaat** — penerima tayangan. Tidak pernah membuka produk.
+**Deck** — the presentation generated for one Service, guaranteed as an offline PPTX.
 
-**Operator** — anggota tim multimedia yang mereview Service di Hub dan menayangkannya pada Sabbath. Pengguna **primary**.
+**Events** — a group separate from Operator; they hand over the Rundown (participants, songs, posters, announcements) via Telegram.
 
-**picoclaw** — agen yang membaca Rundown di Telegram dan memanggil API. Bukan antarmuka Operator.
+**Hub** — logged-in Service list for review, edit, regenerate, and PPTX download. Not a public site.
 
-**PPTX** — berkas OpenXML yang diunduh sebelum ibadah; jaminan Sabbath independen dari internet venue.
+**Jemaat** — the audience of the projection. Never opens the product.
 
-**Run-Sheet** — tampilan web urutan ibadah lengkap satu Service (peran, nama, lagu, waktu) untuk Operator, bukan untuk layar Jemaat.
+**Operator** — a multimedia-team member who reviews the Service in Hub and presents it on Sabbath. The **primary** user.
 
-**Rundown** — teks semi-terstruktur yang Events kirim, menggambarkan urutan satu Service.
+**picoclaw** — the agent that reads the Rundown on Telegram and calls the API. Not the Operator interface.
 
-**Sabbath** — hari ibadah mingguan tempat Deck ditayangkan.
+**Placeholder Catalog** — closed set of weekly-payload placeholders that may be bound on a General entry. Extending the catalog is a development change.
 
-**Service** — satu ibadah bertanggal; unit yang dikelola sistem. Satu Service memiliki satu payload minggu, satu Deck, satu Run-Sheet, dan gambar unggahannya.
+**PPTX** — the OpenXML file downloaded before worship; the Sabbath guarantee independent of venue internet.
 
-**Song Book** — sumber lirik (judul + bait/reff) yang di-ship sebagai seed, diindeks nomor dalam buku itu. Bukan hasil cari web.
+**Presenter** — two-screen browser surface (Operator control + Jemaat image) plus slideshow; not an offline guarantee.
 
-**Telegram** — saluran masukan yang Events sudah pakai; bukan antarmuka Operator.
+**Projector Liveness** — verdict on whether the projector window still answers: `none`, `live`, or `lost`. Not a state stored in SQLite.
+
+**Run-Sheet** — web view of one Service's full worship order (roles, names, songs, times) for the Operator, not for the Jemaat screen.
+
+**Rundown** — the semi-structured text Events send, describing one Service's order.
+
+**Sabbath** — the weekly worship day on which the Deck is presented.
+
+**Service** — one dated worship gathering; the unit the system manages. One Service has one weekly payload, one Deck, one Run-Sheet, and its uploaded images.
+
+**Service Registry Snapshot** — a copy of the Artifact Registry taken when the Service is created, and which it renders afterwards.
+
+**Slide Kind** — authoring-authority category: General, SongSet, or Announcement. Nothing extends a kind's authority.
+
+**Song Book** — lyrics source (title + verse/chorus) shipped as seed, indexed by number in that book. Not a web search result.
+
+**SongSet Slot** — one of four fixed song-block positions (opening/closing Bible Talk, opening/closing Divine Service). Slot identity belongs to the system, not Admin.
+
+**Sync Artifact** — Admin action that replaces a Service's Snapshot with the live Artifact Registry.
+
+**Telegram** — the intake channel Events already use; not the Operator interface.
+
+**UI Locale** — the Operator interface language. Does not reach the Jemaat screen.

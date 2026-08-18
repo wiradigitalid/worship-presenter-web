@@ -1,15 +1,150 @@
-# requirements.yaml — SSOT untuk BG · CAP · FR · NFR · UJ
+# requirements.yaml — SSOT for BG · CAP · FR · NFR · UJ
 #
-# Kunci berbahasa Inggris; isi nilainya Bahasa Indonesia.
-# Nomor dialokasikan DARI SINI dan MUST NOT dimulai ulang per dokumen, per komponen, atau per rilis.
-# Deretnya global untuk satu produk.
+# Keys are English; values follow `policy.doc_language`.
+# Numbers are allocated FROM HERE and MUST NOT restart per document, per component, or per release.
+# The series is global for one product.
+# Mapping from old PRD numbers → ids here: .what/_prd/operator-turn/addendum.md
 
-goals: []
+goals:
+  - id: BG-1
+    text: The Sabbath Deck is generated from a Rundown, not assembled by hand, every week.
+  - id: BG-2
+    text: Anyone on the multimedia rotation can review and present a Service, without Deck-assembly skill.
+  - id: BG-3
+    text: Sabbath does not depend on venue internet — the PPTX is already on the laptop before worship.
 
-capabilities: []
+capabilities:
+  - id: CAP-1
+    text: Intake a Rundown from Telegram into a weekly payload
+    goal: BG-1
+    target_release: as-built
+    priority: must
+  - id: CAP-2
+    text: Assemble a Deck from the fixed frame plus the weekly payload
+    goal: BG-1
+    target_release: as-built
+    priority: must
+    depends_on: [CAP-1]
+  - id: CAP-3
+    text: Hub Service list, preview, delete, PPTX retention
+    goal: BG-2
+    target_release: as-built
+    priority: must
+  - id: CAP-4
+    text: Edit Service fields and regenerate in place
+    goal: BG-2
+    target_release: as-built
+    priority: must
+    depends_on: [CAP-3]
+  - id: CAP-5
+    text: Download a PPTX that presents without a network
+    goal: BG-3
+    target_release: as-built
+    priority: must
+    depends_on: [CAP-2]
+  - id: CAP-6
+    text: Present in the browser — slideshow, presenter, on-demand verse
+    goal: BG-2
+    target_release: as-built
+    priority: must
+    depends_on: [CAP-3]
+  - id: CAP-7
+    text: Run-Sheet of the full worship order
+    goal: BG-2
+    target_release: as-built
+    priority: must
+    depends_on: [CAP-3]
+  - id: CAP-8
+    text: Per-person accounts and two Roles
+    goal: BG-2
+    target_release: as-built
+    priority: must
+  - id: CAP-9
+    text: Artifact Registry — Deck layout and order
+    goal: BG-1
+    target_release: as-built
+    priority: must
+    depends_on: [CAP-2]
+  - id: CAP-10
+    text: Several Bible translations, several Song Books, two language axes
+    goal: BG-2
+    target_release: as-built
+    priority: must
 
-functional: []
+functional:
+  - { id: FR-1,  capability: CAP-1, text: "Ingest a Rundown from Telegram into a structured weekly payload" }
+  - { id: FR-2,  capability: CAP-1, text: "Validate and resolve hymns by Song Book number, at the API" }
+  - { id: FR-3,  capability: CAP-1, text: "Manage the announcement list that persists across weeks" }
+  - { id: FR-4,  capability: CAP-2, text: "Assemble a Deck from the fixed frame plus the weekly payload" }
+  - { id: FR-5,  capability: CAP-2, text: "Render a song block into readable lyric slides" }
+  - { id: FR-6,  capability: CAP-2, text: "Render non-song variable content onto its slide kinds" }
+  - { id: FR-7,  capability: CAP-2, text: "Apply one elegant transition chosen by Admin" }
+  - { id: FR-8,  capability: CAP-3, text: "List Services by date" }
+  - { id: FR-9,  capability: CAP-3, text: "Preview a Service per slide in the browser" }
+  - { id: FR-10, capability: CAP-3, text: "Manually delete a Service and its assets, including local files in UPLOADS_DIR" }
+  - { id: FR-11, capability: CAP-4, text: "Edit Service fields through the Hub form" }
+  - { id: FR-12, capability: CAP-1, text: "Send a correction via Telegram to an existing Service" }
+  - { id: FR-13, capability: CAP-4, text: "Regenerate this Service's Deck in place" }
+  - { id: FR-14, capability: CAP-5, text: "Download a PPTX that presents fully offline" }
+  - { id: FR-15, capability: CAP-6, text: "Present a Service as a fullscreen slideshow in the browser" }
+  - { id: FR-16, capability: CAP-6, text: "Two-screen presenter view in the browser" }
+  - { id: FR-17, capability: CAP-7, text: "Display the full worship order as a Run-Sheet" }
+  - { id: FR-18, capability: CAP-8, text: "Per-person authentication with Admin and Operator Roles" }
+  - { id: FR-19, capability: CAP-6, text: "Search and display an on-demand verse in Presenter" }
+  - { id: FR-20, capability: CAP-9, text: "Admin changes a slide's layout through the Artifact Registry" }
+  - { id: FR-21, capability: CAP-9, text: "Admin changes slide order and membership in the Artifact Registry" }
+  - { id: FR-22, capability: CAP-10, text: "Read verses from the selected translation, default KJV" }
+  - { id: FR-23, capability: CAP-10, text: "Resolve hymns from the selected Song Book, default SDAH" }
+  - { id: FR-24, capability: CAP-10, text: "Browse installed corpora by language; the default filters the display, not the data" }
+  - { id: FR-25, capability: CAP-10, text: "Display the Operator interface in the Operator's language" }
+  - { id: FR-26, capability: CAP-3, text: "Auto-delete only PPTX files that have expired under the retention policy", no_uc: "automatic retention, not a user action" }
+  - { id: FR-27, capability: CAP-4, text: "Create a new Service from the Hub form" }
+  - { id: FR-28, capability: CAP-4, text: "First save wins when edits collide" }
 
-nonfunctional: []
+nonfunctional:
+  - id: NFR-1
+    goal: BG-3
+    text: A downloaded PPTX presents the full Service without a network.
+    enforced_by: [tests/pptx-content.test.mjs]
+  - id: NFR-2
+    goal: BG-2
+    text: Assemble and export one Service PPTX of ~68 slides within the song-swap window of ≤ 5 minutes.
+    enforced_by: [tests/pptx-ceiling.test.mjs]
+  - id: NFR-3
+    goal: BG-1
+    text: Lyric slides are never cramped; the Jemaat can read from the pews.
+    enforced_by: [tests/lyrics.test.mjs]
+  - id: NFR-4
+    goal: BG-1
+    text: Deck generation runs without interactive PowerPoint; fonts and backgrounds render headless.
+    enforced_by: [tests/pptx-content.test.mjs]
+  - id: NFR-5
+    goal: BG-1
+    text: Rundown parsing fails visibly, not silently; every unmapped input reaches the Operator.
+    enforced_by: [tests/parser.test.mjs]
+  - id: NFR-6
+    goal: BG-2
+    text: Service data and actions require authentication and a Role; no public endpoint exposes PII.
+    enforced_by: [tests/auth-http.test.mjs, tests/public-repo-guard.test.mjs]
+  - id: NFR-7
+    goal: BG-3
+    text: The font set is guaranteed and installed on the presentation machine; line wrapping can be computed.
+    enforced_by: [tests/pptx-content.test.mjs]
+  - id: NFR-8
+    goal: BG-1
+    text: A mis-structured Registry produces a broken Deck; every placeholder binds to exactly one element, and the initial Registry produces every slide the Blueprint names.
+    enforced_by: [tests/registry-seed-conformance.test.mjs, tests/artifact-hydration.test.mjs]
+  - id: NFR-9
+    goal: BG-1
+    text: Structure Admin writes survives restart and redeploy; deletions stay deleted.
+    enforced_by: [tests/registry-reseed.test.mjs]
 
-journeys: []
+journeys:
+  - id: UJ-1
+    text: Events send a Rundown on Telegram; the Service is ready to review without them opening Hub.
+  - id: UJ-2
+    text: Operator reviews the Service on Friday in ≤ 10 minutes and downloads the PPTX.
+  - id: UJ-3
+    text: A late correction (song swap) arrives and the Deck is regenerated in ≤ 5 minutes.
+  - id: UJ-4
+    text: Operator presents Sabbath from the offline PPTX, with presenter view as a complement.

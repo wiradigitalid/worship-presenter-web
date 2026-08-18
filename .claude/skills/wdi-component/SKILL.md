@@ -11,9 +11,15 @@ shape with `mode`, and the only one that runs more than once for a reason other 
 | `mode` | This skill |
 |---|---|
 | `catalog` | **Not run. G4 is skipped.** |
-| `outline` | intent `behaviour` |
+| `outline` | `behaviour` + `design` **as far as § Structure**, and no further |
 | `guarded` | `behaviour` + `design` |
 | `deep` | `behaviour` + `design` |
+
+This table said `outline` → `behaviour` only until 2026-08-18. It contradicted **Step 4 of this same
+skill**, which starts `Decision Summary` and `Structure` "from `outline`", and it contradicted
+`delivery-flow-guide.md`, which owns the mapping and lists both for `outline`. Read literally, it would
+have left every `outline` component with an SDD that is a template skeleton forever — and V13 would have
+been right to keep flagging it.
 
 Read the component's `mode` from its row in `components.yaml`, falling back to `mode:` in `index.yaml`. Read
 its `risk_accepted` from the same row; it decides the review lenses and nothing else.
@@ -111,16 +117,16 @@ NOT register a `container`, and you MUST NOT register `ui-screen` or `ui-composi
 
 ## Step 5 — Evidence, and the as-built case
 
-Every technical claim about code that already exists MUST name what was read. The four labels — `[ASUMSI]` ·
-`[PARTIAL]` · `[PERLU DIKONFIRMASI]` · `[TIDAK ADA]` — are mandatory, and their ladder rules are in
+Every technical claim about code that already exists MUST name what was read. The four labels — `[ASSUMED]` ·
+`[PARTIAL]` · `[NEEDS CONFIRMATION]` · `[MISSING]` — are mandatory, and their ladder rules are in
 `sdd-guide.md`.
 
 **Raising a component's `mode` after its code runs is the case this matters most for.** What you write then is
 an **as-built record, not a design**, and you MUST NOT raise a claim to verified without naming the file that
 proves it. Two labels MUST be acted on rather than left in the text:
 
-- `[PERLU DIKONFIRMASI]` → `wdi-question`, before G4 opens.
-- `[TIDAK ADA]` → dispositioned as a `BUG-`, a correction, or planned work. It MUST NOT be deleted; the
+- `[NEEDS CONFIRMATION]` → `wdi-question`, before G4 opens.
+- `[MISSING]` → dispositioned as a `BUG-`, a correction, or planned work. It MUST NOT be deleted; the
   sentence is the only surviving evidence that somebody once believed the thing existed.
 
 ## Step 6 — Drift

@@ -259,6 +259,34 @@ the same three dozen historical files and the diff stops carrying information.
 
 File naming that must survive every OS is governed by `structure-guide.md` and MUST NOT be restated here.
 
+## `.constitution/project/` — this product's custom rules
+
+The rest of `.constitution/` **belongs to the method**: it ships in the `wdi-method` package and is
+**overwritten** on every `update`. This folder is the only one that is not. `update` seeds it once and
+never writes over it again, and `promote` **skips it**, so a rule that names a client cannot reach the
+public package.
+
+| Goes here | Does not, and its home |
+|---|---|
+| A review policy a client requires | product / client name → `index.yaml` `product:` |
+| A process rule that came from a contract | code conventions → `codebase/*-guide.md` |
+| A policy that differs from the method default | scope and ownership → `constitution.md` Art. 1, 2, 5 |
+| A prohibition specific to this domain | agent instructions → `AGENTS.md`, outside the marked block |
+
+**A generic rule MUST NOT be moved here.** If it holds in any project it belongs to the package — fix
+it there, then `promote`. Using this room to bypass the package is how a method stops being generic
+with nobody deciding it, and **an empty room is a valid state**: filling it so that it gets used is the
+very failure this rule prevents.
+
+Frontmatter is required and **V27** checks it: `scope: project` · a one-line `purpose:`. A file MAY
+narrow or add with nothing further; to **contradict** a generic rule it MUST name that rule in
+`overrides:` and carry `decision:` naming the `DEC-` that decided it. A method that can be contradicted
+without a decision stops being trustworthy in the next repo.
+
+**Whole files, not marked blocks.** `AGENTS.md` uses a marked block because it is one file;
+`.constitution/` has fifty-odd, and blocks inside them would make `update` perform surgery in every
+file — one broken marker and either the product's rule is erased or the generic rule freezes.
+
 ## Documents that predate the method
 
 A repository that already had documentation keeps it in `_bmad-output/prior-knowledge/`. It follows the same

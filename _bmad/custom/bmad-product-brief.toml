@@ -1,34 +1,36 @@
-# Kelas A — menulis langsung ke korpus.
-# Singleton: satu produk, satu brief, lintas rilis. Produk kedua MUST dapat repo sendiri.
+# Class A — writes straight into the corpus.
+# Singleton: one product, one brief, across releases. A second product MUST get its own repo.
 #
-# Dipanggil lewat `wdi-problem`, bukan langsung. Override di sini yang menentukan
-# ke mana artefaknya mendarat; skill wrapper yang memeriksa isinya.
+# Invoked through `wdi-problem`, not directly. This override decides where the artifact
+# lands; the skill wrapper checks its contents.
 
 [workflow]
 
 brief_template     = "{project-root}/.constitution/document/templates/brief.md"
 
-# run_folder_pattern MUST konstan — tanpa {project_name} dan tanpa {date}.
-# Itu yang memaksa singleton: tiap run jatuh ke folder yang sama, jadi run kedua
-# terdeteksi sebagai resume/update, bukan folder sebelah.
-# Hasilnya .what/_product-brief/brief.md dan .what/_product-brief/addendum.md;
-# kedua nama berkas itu di-hardcode di SKILL.md dan tidak bisa diatur.
+# run_folder_pattern MUST be constant — no {project_name} and no {date}.
+# That forces the singleton: every run lands in the same folder, so a second run
+# is detected as resume/update, not a neighbouring folder.
+# Result: .what/_product-brief/brief.md and .what/_product-brief/addendum.md;
+# those two filenames are hardcoded in SKILL.md and cannot be configured.
 brief_output_path  = "{project-root}/.what"
 run_folder_pattern = "_product-brief"
 
-# Append-only terhadap default `skill:bmad-review lenses=structure,prose`.
+# Append-only against the default `skill:bmad-review lenses=structure,prose`.
 doc_standards = ["file:{project-root}/.constitution/document/brief-guide.md"]
 
 persistent_facts = [
-  "Seluruh panggilan memlog.py — init, append, set, dan pembacaan saat resume atau intent Update — MUST memakai --path {project-root}/.control/memlog/brief.md. --workspace MUST NOT dipakai; ia akan menaruh .memlog.md di dalam .what/, dan tidak ada memlog yang boleh tinggal di korpus.",
+  "Every memlog.py call — init, append, set, and reads on resume or Update intent — MUST use --path {project-root}/.control/memlog/brief.md. --workspace MUST NOT be used; it would drop .memlog.md inside .what/, and no memlog may live in the corpus.",
 
-  "Template brief membuka dengan izin membuang section yang tidak layak. Izin itu MUST NOT diterapkan pada delapan section wajib: The Problem, Who This Serves, Goals, Success Criteria, Scope In, Scope Out, Constraints, Assumptions — beserta Prerequisites. Section template lain MAY dibuang.",
+  "The brief template opens with permission to drop sections that do not earn their place. That permission MUST NOT apply to the eight required sections: The Problem, Who This Serves, Goals, Success Criteria, Scope In, Scope Out, Constraints, Assumptions — plus Prerequisites. Other template sections MAY be dropped.",
 
-  "Goals MUST bernomor BG-1, BG-2, dan seterusnya. MUST NOT bernomor G1, G2 — G1 sampai G5 adalah nama lima gate di metode ini, dan BG adalah mata rantai pertama rantai traceability BG -> CAP -> FR/NFR -> UC -> Story -> Test.",
+  "Goals MUST be numbered BG-1, BG-2, and so on. MUST NOT be numbered G1, G2 — G1 through G5 are the five gate names in this method, and BG is the first link of the traceability chain BG -> CAP -> FR/NFR -> UC -> Story -> Test.",
 
-  "Tabel Who This Serves MUST memuat tepat satu baris bertanda primary, dan MUST memuat seluruh stakeholder termasuk yang tidak pernah membuka produknya.",
+  "The Who This Serves table MUST contain exactly one row marked primary, and MUST contain every stakeholder including those who never open the product.",
 
-  "Brief MUST NOT memuat daftar Product Component dan MUST NOT mengisi product_components maupun logical_components. Slicing lahir di EKOR G2 lewat wdi-init intent `component`, dibaca dari brief plus seluruh PRD.",
+  "The brief MUST NOT list Product Components and MUST NOT fill product_components or logical_components. Slicing is born at the TAIL of G2 through wdi-init intent `component`, read from the brief plus every PRD.",
 
-  "Keluaran riset, brainstorming, forge, dan PRFAQ MUST tetap di _bmad-output/. Ia MUST NOT dilebur ke dalam brief dan MUST NOT dipromosikan ke .what/; `DEC-` atau PRD merujuknya lewat path. Folder run itu MUST NOT dihapus — intent Update membacanya kembali sebagai original inputs.",
+  "Research, brainstorming, forge, and PRFAQ output MUST stay in _bmad-output/. It MUST NOT be merged into the brief and MUST NOT be promoted into .what/; a `DEC-` or PRD cites it by path. That run folder MUST NOT be deleted — an Update intent rereads it as original inputs.",
+
+  "Working-document prose follows policy.doc_language in .control/registry/index.yaml (English). Filename slugs follow policy.doc_filename_language (English).",
 ]

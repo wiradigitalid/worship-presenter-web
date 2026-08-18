@@ -1,5 +1,5 @@
-# waves.yaml — rencana kerja.
+# waves.yaml — work plan.
 #
-# `release` MUST disebut tiap wave. STATUS STORY MUST NOT DISALIN KE SINI.
+# `release` MUST be named on every wave. STORY STATUS MUST NOT BE COPIED HERE.
 
 waves: []

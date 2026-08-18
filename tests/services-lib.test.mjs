@@ -499,6 +499,46 @@ test('delete: removes an existing row once and reports unknown ids', () => {
   assert.equal(deleteService(getDb(), 999999), false);
 });
 
+test('delete: unlinks this Service local uploads and keeps recurring ones', () => {
+  const uploadsDir = path.join(tmp, 'uploads');
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  process.env.UPLOADS_DIR = uploadsDir;
+
+  const goneName = `${'ab'.repeat(16)}.jpg`;
+  const oneOffName = `${'ef'.repeat(16)}.webp`;
+  const keepName = `${'cd'.repeat(16)}.png`;
+  const gonePath = path.join(uploadsDir, goneName);
+  const oneOffPath = path.join(uploadsDir, oneOffName);
+  const keepPath = path.join(uploadsDir, keepName);
+  fs.writeFileSync(gonePath, 'gone');
+  fs.writeFileSync(oneOffPath, 'one-off');
+  fs.writeFileSync(keepPath, 'keep');
+
+  const created = create({
+    raw_payload: RAW('SABBATH, JANUARY 2, 2027'),
+    familyPhotoUrl: `/api/uploads/${goneName}`,
+  });
+  assert.equal(created.ok, true);
+
+  getDb()
+    .prepare(
+      `INSERT INTO announcement_items (image_url, service_id, sort_order)
+       VALUES (?, ?, 0)`
+    )
+    .run(`/api/uploads/${oneOffName}`, created.id);
+  getDb()
+    .prepare(
+      `INSERT INTO announcement_items (image_url, service_id, sort_order)
+       VALUES (?, NULL, 0)`
+    )
+    .run(`/api/uploads/${keepName}`);
+
+  assert.equal(deleteService(getDb(), created.id), true);
+  assert.equal(fs.existsSync(gonePath), false);
+  assert.equal(fs.existsSync(oneOffPath), false);
+  assert.equal(fs.existsSync(keepPath), true);
+});
+
 test('readJsonBody maps unparseable bodies to the shared Invalid JSON failure', async () => {
   const bad = await readJsonBody(
     new Request('http://localhost/api/services', {

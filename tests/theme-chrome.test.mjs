@@ -2783,7 +2783,7 @@ test('Story 17.2: only the light muted-foreground token moves — other root and
 // --- AC-6: the measurements, and the shades that needed them ----------------
 
 const DESIGN_MD =
-  '_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10/DESIGN.md';
+  'prior-knowledge/_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10/DESIGN.md';
 
 test('AC-6: the four load-bearing dark pairs are recorded in DESIGN.md as measurements', () => {
   // The test that carried this label asserted only that `dark:text-{hue}-`

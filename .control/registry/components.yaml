@@ -1,21 +1,168 @@
-# components.yaml — SSOT untuk Product Component, container, dan Logical Component
+# components.yaml — SSOT for Product Component, container, and Logical Component
 #
-# Tiga hal berbeda, dua di antaranya berbagi kata "component":
-#   Product Component (PC) — irisan DOMAIN, permukaan yang bisa disebut pengguna
-#   Container              — unit yang berjalan atau dideploy sendiri; C4 L2 memilikinya
-#   Logical Component (LC) — satu unit build yang bisa ditunjuk
+# Three different things, two of which share the word "component":
+#   Product Component (PC) — a DOMAIN slice, a surface a user can name
+#   Container              — a unit that runs or deploys on its own; C4 L2 owns it
+#   Logical Component (LC) — one addressable unit of build
 #
-# `mode` — KEDALAMAN DOKUMEN. Ditulis HANYA pada komponen yang memang perlu beda dari global.
-# `risk_accepted` — INTENSITAS REVIEW, bukan kedalaman. low · medium · high
-# `owns` — entitas domain yang komponen ini BERWENANG MENULIS.
-# `g4_passed` — hanya berarti pada komponen ber-mode di atas catalog.
+# Born 2026-08-18 from the brief + three area PRDs. Name = the surface a user can name.
+# mode deep (2026-08-18, owner): complete as-built — ABCE, contracts, data dictionary, scenarios.
+# Previously guarded. risk_accepted stays medium (not high).
+# risk_accepted medium: Hub and Registry touch personal data (names, photos, prayers).
+# Presenter displays PII but does not collect it — still medium because of verse overlay
+# and the live channel; not high (needs a DEC-).
 #
-# Komponen lahir lewat wdi-init intent `component` di ekor G2. Berkas ini lahir kosong.
+# Container as-built: one Next.js process (`web`). The Go+SPA direction in the brief addendum
+# does not reverse AD-2 until a DEC- exists (OQ-6).
 
-product_components: []
+product_components:
+  - id: hub
+    name: "Hub"
+    mode: deep
+    g4_passed: false
+    risk_accepted: medium
+    risk_note: "congregation personal data in the Service payload and announcement list; Operator accounts"
+    owns:
+      - Service
+      - AnnouncementItem
+      - Account
+      - AppSetting
+    srs: .what/hub/SRS-hub.md
+    sdd: .how/hub/SDD-hub.md
+    containers:
+      - web
+
+  - id: presenter
+    name: "Presenter"
+    mode: deep
+    g4_passed: false
+    risk_accepted: medium
+    risk_note: "displays names and verses on the room screen; does not write the weekly payload"
+    owns:
+      - BibleTranslation
+      - BibleBook
+      - BibleVerse
+    srs: .what/presenter/SRS-presenter.md
+    sdd: .how/presenter/SDD-presenter.md
+    containers:
+      - web
+
+  - id: registry
+    name: "Registry"
+    mode: deep
+    g4_passed: false
+    risk_accepted: medium
+    risk_note: "Deck structure; deleting an entry is irreversible; not weekly content"
+    owns:
+      - ArtifactTemplate
+      - ServiceRegistrySnapshot
+    srs: .what/registry/SRS-registry.md
+    sdd: .how/registry/SDD-registry.md
+    containers:
+      - web
 
 platform_owns: []
 
-containers: []
+containers:
+  - id: web
+    name: "Web (Next.js App Router)"
+    built: true
+    note: "One as-built process: Operator UI, API, PPTX generate, presenter. SQLite file in the same process (not a separate container)."
 
-logical_components: []
+logical_components:
+  - id: LC-1
+    name: "Hub auth API"
+    type: gateway
+    component: hub
+    container: web
+    area: auth
+  - id: LC-2
+    name: "Hub services API"
+    type: gateway
+    component: hub
+    container: web
+    area: services
+  - id: LC-3
+    name: "Hub announcements API"
+    type: gateway
+    component: hub
+    container: web
+    area: announcements
+  - id: LC-4
+    name: "Hub upload API"
+    type: gateway
+    component: hub
+    container: web
+    area: uploads
+  - id: LC-5
+    name: "Hub accounts API"
+    type: gateway
+    component: hub
+    container: web
+    area: accounts
+  - id: LC-6
+    name: "Hub settings API"
+    type: gateway
+    component: hub
+    container: web
+    area: settings
+  - id: LC-7
+    name: "Hub hymns API"
+    type: gateway
+    component: hub
+    container: web
+    area: hymns
+  - id: LC-8
+    name: "Hub webhook API"
+    type: gateway
+    component: hub
+    container: web
+    area: webhook
+  - id: LC-9
+    name: "Presenter scripture API"
+    type: gateway
+    component: presenter
+    container: web
+    area: scripture
+  - id: LC-10
+    name: "Presenter sync channel"
+    type: gateway
+    component: presenter
+    container: web
+    area: present-channel
+  - id: LC-11
+    name: "Registry artifacts API"
+    type: gateway
+    component: registry
+    container: web
+    area: artifacts
+  - id: LC-12
+    name: "Hub rundown parse and service write"
+    type: service
+    component: hub
+    container: web
+    area: services
+  - id: LC-13
+    name: "Hub PPTX generate"
+    type: job
+    component: hub
+    container: web
+    area: pptx
+  - id: LC-14
+    name: "Presenter session"
+    type: service
+    component: presenter
+    container: web
+    area: present-channel
+  - id: LC-15
+    name: "Registry store"
+    type: service
+    component: registry
+    container: web
+    area: artifacts
+  - id: LC-16
+    name: "Slide plan builder"
+    type: service
+    component: hub
+    container: web
+    area: slide-plan

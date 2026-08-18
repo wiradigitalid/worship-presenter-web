@@ -1,18 +1,18 @@
-# Kelas A — menulis langsung ke korpus.
+# Class A — writes straight into the corpus.
 #
-# Satu PRD per **inisiatif / area fungsi**, bukan per rilis. Ia living document:
-# perubahan perilaku masuk lewat intent Update ke PRD yang sama, bukan PRD baru.
-# Rilis dibawa registry lewat target_release, bukan oleh nama folder.
+# One PRD per **initiative / functional area**, not per release. It is a living document:
+# behaviour changes enter through an Update intent on the same PRD, not a new PRD.
+# Release is carried by the registry via target_release, not by the folder name.
 #
-# run_folder_pattern MUST diisi slug inisiatif dan MUST NOT memakai {date}.
-# Saat inisiatif baru dibuka, DUA baris MUST diubah bersamaan:
-#   1. run_folder_pattern             -> slug inisiatif berikutnya
-#   2. --path .../prd-<slug>.md       -> memlog inisiatif berikutnya
-# Mengubah salah satu saja menghasilkan PRD baru yang menempel pada memlog lama.
+# run_folder_pattern MUST be filled with the initiative slug and MUST NOT use {date}.
+# When a new initiative is opened, BOTH lines MUST change together:
+#   1. run_folder_pattern             -> next initiative slug
+#   2. --path .../prd-<slug>.md       -> next initiative memlog
+# Changing only one produces a new PRD glued to the old memlog.
 #
-# Nilai bawaan di bawah sengaja tidak bisa dipakai apa adanya — ia MUST diganti
-# di langkah 4 runbook. PRD yang mendarat di folder bernama ISI-slug-inisiatif
-# adalah tanda langkah itu terlewat.
+# The default below is deliberately unusable as-is — it MUST be replaced
+# at runbook step 4. A PRD landing in a folder named ISI-slug-inisiatif
+# is the sign that step was skipped.
 
 [workflow]
 
@@ -22,21 +22,23 @@ run_folder_pattern = "ISI-slug-inisiatif"
 
 doc_standards = ["file:{project-root}/.constitution/document/prd-guide.md"]
 
-# Fakta di bawah sengaja mengulang sebagian prd-guide.md. Sebabnya waktu: doc_standards baru
-# menyala di langkah Polish, sedangkan deteksi intent Create-versus-Update terjadi di aktivasi.
-# Yang otoritatif tetap prd-guide.md; kalau keduanya berselisih, guide yang menang dan baris di
-# sini MUST diperbaiki.
+# Facts below deliberately repeat parts of prd-guide.md. Reason: timing — doc_standards only
+# fires at Polish, while Create-versus-Update detection happens at activation.
+# The guide remains authoritative; if the two disagree, the guide wins and the rows here
+# MUST be fixed.
 persistent_facts = [
   "file:{project-root}/.control/registry/requirements.yaml",
   "file:{project-root}/.constitution/document/prd-guide.md",
 
-  "FR-N, NFR-N, UJ-N, dan CAP-N MUST dialokasikan dari requirements.yaml dan MUST NOT dimulai ulang dari 1. PRD inisiatif berikutnya melanjutkan deret PRD sebelumnya — deretnya global, satu produk satu deret.",
+  "FR-N, NFR-N, UJ-N, and CAP-N MUST be allocated from requirements.yaml and MUST NOT restart from 1. The next initiative PRD continues the previous PRD's series — the series is global, one product one series.",
 
-  "PRD ini living document. Perubahan perilaku, penambahan fitur yang erat kaitannya, maupun koreksi janji MUST masuk lewat intent Update ke PRD yang sama. PRD baru MUST NOT dibuat hanya karena rilisnya berganti; ia dibuat hanya saat area fungsinya benar-benar berbeda dan tidak enak dibaca kalau digabung.",
+  "This PRD is a living document. Behaviour changes, closely related feature additions, or promise corrections MUST enter through an Update intent on the same PRD. A new PRD MUST NOT be created only because the release changed; it is created only when the functional area is genuinely different and would be unpleasant to read if merged.",
 
-  "Tiap run intent Update MUST menambah tepat satu baris di tabel Revision History PRD: tanggal, apa yang berubah dalam bahasa pembaca luar, dan sebabnya. Tabel itu untuk pembaca; memlog untuk audit. Keduanya MUST NOT saling menggantikan.",
+  "Each Update intent run MUST add exactly one row to the PRD Revision History table: date, what changed in the outside reader's language, and why. That table is for the reader; the memlog is for audit. They MUST NOT replace each other.",
 
-  "Rilis MUST NOT dinyatakan lewat nama folder PRD maupun judulnya. Ia dibawa field target_release di requirements.yaml dan waves.yaml. Menyebut nomor rilis di dalam prosa PRD MAY dilakukan sebagai konteks, tetapi yang mengikat tetap registry.",
+  "A release MUST NOT be stated through the PRD folder name or its title. It is carried by the target_release field in requirements.yaml and waves.yaml. Naming a release number in PRD prose MAY be done as context, but the registry remains binding.",
 
-  "Seluruh panggilan memlog.py — init, append, set, dan pembacaan saat resume atau intent Update — MUST memakai --path {project-root}/.control/memlog/prd-ISI-slug-inisiatif.md. Slug-nya MUST sama dengan run_folder_pattern di atas, dan kedua baris MUST diubah bersamaan saat inisiatif berganti. --workspace MUST NOT dipakai.",
+  "Every memlog.py call — init, append, set, and reads on resume or Update intent — MUST use --path {project-root}/.control/memlog/prd-ISI-slug-inisiatif.md. The slug MUST match run_folder_pattern above, and both lines MUST change together when the initiative changes. --workspace MUST NOT be used.",
+
+  "Working-document prose follows policy.doc_language in .control/registry/index.yaml (English). Filename slugs follow policy.doc_filename_language (English). Method terms, markers, and IDs stay English.",
 ]

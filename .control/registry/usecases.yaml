@@ -1,6 +1,144 @@
-# usecases.yaml — SSOT untuk UC
+# usecases.yaml — SSOT for UC
 #
-# `critical: true` bila UC itu menyentuh UANG, DATA PRIBADI, atau TINDAKAN TAK-TERBALIKKAN.
-# Label ini menentukan sesuatu HANYA pada `mode: deep`.
+# `critical: true` only money, personal data COLLECTED/CHANGED, or an irreversible action.
+# Global series, 2026-08-18.
 
-usecases: []
+usecases:
+  - id: UC-1
+    title: "Events send a Rundown on Telegram and its Service appears"
+    actor: Events
+    component: hub
+    satisfies: [FR-1, FR-2]
+    critical: true
+  - id: UC-2
+    title: "I paste a Rundown in Hub and a new Service is saved"
+    actor: Operator
+    component: hub
+    satisfies: [FR-27]
+    critical: true
+  - id: UC-3
+    title: "I open the dated Service list"
+    actor: Operator
+    component: hub
+    satisfies: [FR-8]
+    critical: false
+  - id: UC-4
+    title: "I follow the worship order from the Run-Sheet"
+    actor: Operator
+    component: hub
+    satisfies: [FR-17]
+    critical: false
+  - id: UC-5
+    title: "I edit Service fields in Hub"
+    actor: Operator
+    component: hub
+    satisfies: [FR-11]
+    critical: true
+  - id: UC-6
+    title: "I regenerate this Service's Deck"
+    actor: Operator
+    component: hub
+    satisfies: [FR-13]
+    critical: false
+  - id: UC-7
+    title: "I delete this Service and its assets"
+    actor: Operator
+    component: hub
+    satisfies: [FR-10]
+    critical: true
+  - id: UC-8
+    title: "I preview the Service slides in the browser"
+    actor: Operator
+    component: hub
+    satisfies: [FR-9]
+    critical: false
+  - id: UC-9
+    title: "I manage Operator and Admin accounts"
+    actor: Admin
+    component: hub
+    satisfies: [FR-18]
+    critical: false
+  - id: UC-10
+    title: "I read Hub in my language"
+    actor: Operator
+    component: hub
+    satisfies: [FR-25]
+    critical: false
+  - id: UC-11
+    title: "I present a fullscreen slideshow"
+    actor: Operator
+    component: presenter
+    satisfies: [FR-15]
+    critical: false
+  - id: UC-12
+    title: "I run the two-screen presenter"
+    actor: Operator
+    component: presenter
+    satisfies: [FR-16]
+    critical: false
+  - id: UC-13
+    title: "I display an on-demand verse on the projector"
+    actor: Operator
+    component: presenter
+    satisfies: [FR-19, FR-22]
+    critical: false
+  - id: UC-14
+    title: "I change a slide's layout"
+    actor: Admin
+    component: registry
+    satisfies: [FR-20]
+    critical: false
+  - id: UC-15
+    title: "I reorder slides and deletions stay deleted"
+    actor: Admin
+    component: registry
+    satisfies: [FR-21]
+    critical: true
+  - id: UC-16
+    title: "I Sync Artifact to a Service already reviewed"
+    actor: Admin
+    component: registry
+    satisfies: [FR-21]
+    critical: false
+  - id: UC-17
+    title: "Events correct one song via Telegram"
+    actor: Events
+    component: hub
+    satisfies: [FR-12]
+    critical: true
+  - id: UC-18
+    title: "I download the PPTX for Sabbath"
+    actor: Operator
+    component: hub
+    satisfies: [FR-14]
+    critical: false
+  - id: UC-19
+    title: "I choose one transition for the whole Deck"
+    actor: Admin
+    component: hub
+    satisfies: [FR-7]
+    critical: false
+  - id: UC-20
+    title: "I see a Deck that matches this week's payload"
+    actor: Operator
+    component: registry
+    satisfies: [FR-4, FR-5, FR-6]
+    critical: false
+  - id: UC-21
+    title: "I manage the announcement list that persists across weeks"
+    actor: Operator
+    component: hub
+    satisfies: [FR-3]
+    critical: false
+  - id: UC-22
+    title: "I browse Song Books and translations by language"
+    actor: Admin
+    component: hub
+    satisfies: [FR-23, FR-24]
+    critical: false
+  - id: UC-23
+    title: "My edit is rejected because someone else already saved"
+    actor: Operator
+    component: hub
+    satisfies: [FR-28]
+    critical: false

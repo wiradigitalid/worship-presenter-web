@@ -15,6 +15,6 @@ This repository is public. Before any commit:
 
 **Commit/push gate:** also follow `.cursor/rules/public-repo-commit-audit.mdc` — run the guard before every commit and every push.
 
-Full constitution: `.constitution/public-repository.md` and `docs/PRIVATE-DATA.md`.
+Full constitution: `.constitution/public-repository.md` and `prior-knowledge/docs/PRIVATE-DATA.md`.
 
 The legacy repo `bic-pptx-workflow` is frozen; develop only here (`worship-presenter-web`).

@@ -1,15 +1,16 @@
-# Kelas C — satu run per (wave x Product Component), habis setelah G5.
+# Class C — one run per (wave x Product Component), gone after G5.
 #
-# Slug menentukan apakah spec fana atau hidup: slug yang sama mendarat di folder yang sama dan
-# mempertahankan capability ID. Slug per-PC saja akan membuat SPEC.md jadi dokumen hidup per PC —
-# saingan langsung SRS. Slug w<N>-<pc> menjaga spec tetap fana, dan CAP-N tetap terjaga karena
-# dialokasikan dari registry, bukan dari mekanisme internal BMad.
+# The slug decides whether a spec is ephemeral or living: the same slug lands in the same folder and
+# keeps the capability ID. A per-PC slug alone would make SPEC.md a living document per PC —
+# a direct rival of the SRS. The slug w<N>-<pc> keeps the spec ephemeral, and CAP-N stays sound
+# because it is allocated from the registry, not from BMad's internal mechanism.
 
 [workflow]
 
 persistent_facts = [
-  "Slug spec MUST berbentuk w<N>-<pc>, satu run per pasangan wave x Product Component.",
-  "SPEC.md MUST NOT memuat apa pun yang tidak berasal dari SRS, SDD, atau PRD. Temuan baru MUST didaratkan ke korpus oleh skill pemilik lapisannya — tabel kepemilikan di .constitution/document/corpus-guide.md — sebelum wave ditutup, bukan dibiarkan tinggal di spec.",
-  "CAP-N MUST dialokasikan dari {project-root}/.control/registry/requirements.yaml.",
+  "The spec slug MUST be shaped w<N>-<pc>, one run per wave x Product Component pair.",
+  "SPEC.md MUST NOT hold anything that did not come from the SRS, SDD, or PRD. New findings MUST be landed in the corpus by the skill that owns that layer — ownership table in .constitution/document/corpus-guide.md — before the wave closes, not left sitting in the spec.",
+  "CAP-N MUST be allocated from {project-root}/.control/registry/requirements.yaml.",
   "file:{project-root}/.control/product-glossary.md",
+  "Working-document prose follows policy.doc_language in .control/registry/index.yaml (English).",
 ]

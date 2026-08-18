@@ -1,0 +1,47 @@
+---
+type: model
+component: registry
+layer: physical
+created: 2026-08-18
+updated: 2026-08-18
+---
+
+# Model — Registry (physical)
+
+```mermaid
+erDiagram
+  artifact_templates {
+    TEXT id PK
+    TEXT payload
+    INTEGER position
+  }
+```
+
+## Entities
+
+| Entity | Table | Identified by |
+| --- | --- | --- |
+| ArtifactTemplate | `artifact_templates` | `id` TEXT |
+| ServiceRegistrySnapshot | — | [MISSING] table |
+
+## Data dictionary
+
+| Table | Column | Type | Meaning |
+| --- | --- | --- | --- |
+| artifact_templates | id | TEXT PK | Stable |
+| artifact_templates | label | TEXT | Derived index (AD-18) |
+| artifact_templates | base_type | TEXT | Slot/kind key (AD-19); payload is authoritative |
+| artifact_templates | payload | TEXT | Layout JSON + baseType |
+| artifact_templates | updated_at | TEXT | Concurrency |
+| artifact_templates | seed_hash | TEXT | Seed origin / Reset |
+| artifact_templates | position | INTEGER | 0..N-1 with no gap |
+
+## Invariants
+
+- `position` unique and sequential after bootstrap
+- `base_type`/`label` columns must agree with the payload on the same write (AD-18; agreement tests still debt)
+- Seeder does not fill a missing id after bootstrap (AD-17)
+
+## Physical notes
+
+No snapshot table. `RegistrySnapshot` in code = live map per plan build, a name clash with AD-16.

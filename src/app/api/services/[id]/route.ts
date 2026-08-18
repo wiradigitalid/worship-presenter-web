@@ -5,7 +5,7 @@ import { narrowUpdateBody, readJsonBody } from '@/lib/services/body';
 import { deleteService } from '@/lib/services/queries';
 import { updateService } from '@/lib/services/update-service';
 
-/** DELETE /api/services/[id] — remove a service (announcements cascade). */
+/** DELETE /api/services/[id] — remove a service, one-off announcements, and unreferenced local uploads. */
 export async function DELETE(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> }

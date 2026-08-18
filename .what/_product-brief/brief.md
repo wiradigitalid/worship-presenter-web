@@ -7,115 +7,115 @@ updated: 2026-08-18
 
 # Product Brief: Worship Presenter Web
 
-Klien: **Church Name**. Identitas terstruktur: `.control/registry/index.yaml`.
+Client: **Church Name**. Structured identity: `.control/registry/index.yaml`.
 
 ## Executive Summary
 
-Setiap Sabbath, Operator menayangkan Deck ibadah ~68 slide. Hari ini satu orang merakitnya dengan tangan: salin berkas minggu lalu, ganti lagu, nama, poster, pengumuman. Kira-kira satu jam seminggu — ~52 jam setahun — dari relawan yang sebenarnya bisa dipakai untuk hal lain. Hanya orang itu yang bisa mengerjakannya. Perubahan mendadak hampir tidak masuk. Perangkat lunak worship siap-pakai yang pernah dicoba gagal karena harus diinstal di laptop Operator, lalu hanya satu orang yang paham.
+Every Sabbath, an Operator presents a worship Deck of ~68 slides. Today one person assembles it by hand: copy last week's file, swap songs, names, posters, announcements. Roughly one hour a week — ~52 hours a year — from a volunteer who could otherwise be used for something else. Only that person can do the work. Last-minute changes almost never make it in. Off-the-shelf worship software that was tried failed because it had to be installed on the Operator's laptop, and then only one person understood it.
 
-Produk ini mengubah Deck mingguan menjadi **artefak yang digenerate**. Events mengirim Rundown ke saluran yang sudah mereka pakai (Telegram). picoclaw membaca itu dan memanggil API. Aplikasi merakit presentasi dari kerangka tetap plus isi minggu itu, menampilkan Service bertanggal di Hub berlogin untuk review Jumat, dan menghasilkan **PPTX offline** supaya Sabbath tidak bergantung internet venue.
+This product turns the weekly Deck into a **generated artifact**. Events send a Rundown on the channel they already use (Telegram). picoclaw reads it and calls the API. The application assembles the presentation from a fixed frame plus that week's content, shows a dated Service in a logged-in Hub for Friday review, and produces an **offline PPTX** so Sabbath does not depend on venue internet.
 
-Janji ini sempit dan jujur: jam merakit hilang, giliran Operator melebar ke siapa pun di tim multimedia, dan alatnya **dipakai tiap minggu** — bukan percobaan yang ditinggalkan.
+The promise is narrow and honest: assembly hours disappear, the Operator turn widens to anyone on the multimedia team, and the tool is **used every week** — not a trial that gets abandoned.
 
 ## The Problem
 
-Satu relawan merakit ulang Deck Sabbath setiap minggu. Kerja itu rapuh di empat titik:
+One volunteer rebuilds the Sabbath Deck every week. That work is fragile at four points:
 
-- **Lirik adalah lubang waktu dan lubang salah.** Empat himne menjadi puluhan slide yang diketik tangan. Typo pernah tampil di depan Jemaat.
-- **Perubahan mendadak hampir mustahil.** Tukar lagu Sabtu pagi, dalam alur salin-tempel, praktis tidak terjadi.
-- **Sisa minggu lalu lolos.** Deck baru dimulai dari berkas lama; konten usang kadang ikut ke layar.
-- **Kontinuitas di satu orang.** Hanya pembangun saat ini yang bisa menghasilkan Deck. Tiap ganti orang, setup hilang dan alat diganti.
+- **Lyrics are a time sink and an error sink.** Four hymns become dozens of slides typed by hand. A typo has appeared in front of the congregation.
+- **Last-minute changes are almost impossible.** Swapping a song on Saturday morning, in a copy-paste workflow, practically never happens.
+- **Last week's leftovers leak through.** A new Deck starts from the old file; stale content sometimes reaches the screen.
+- **Continuity sits with one person.** Only the current builder can produce a Deck. Every time the person changes, the setup is lost and the tool is replaced.
 
-Status quo jalan, tetapi memakan ~52 jam setahun, menahan orang terampil di data-entry, menolak perubahan terlambat, dan pecah ketika orangnya berganti.
+The status quo works, but it consumes ~52 hours a year, parks skilled people in data-entry, refuses late changes, and breaks when the person rotates.
 
 ## The Solution
 
-Aplikasi web yang merakit Deck dari Rundown, bukan dari berkas PowerPoint minggu lalu.
+A web application that assembles a Deck from a Rundown, not from last week's PowerPoint file.
 
-1. **Kumpul.** Events mengirim peserta, nomor himne, poster, dan instruksi pengumuman lewat Telegram — tanpa perangkat lunak presentasi.
-2. **Tafsir.** picoclaw memanggil API: isi payload minggu itu, resolve lirik dari Song Book menurut nomor (bukan cari bebas di web), unggah gambar.
-3. **Rakit.** Aplikasi menggabungkan kerangka tetap (pembuka, pembagi, liturgi, persembahan, penutup) dengan isi variabel (lagu, ayat, khotbah, keluarga/pemuda, flyer). Tiap minggu adalah satu **Service** bertanggal.
-4. **Review Jumat.** Operator membuka Hub, mencocokkan Run-Sheet dan data, mengedit jika salah, generate ulang, mengunduh PPTX ke laptop presentasi.
-5. **Sabbath.** Operator menayangkan berkas yang sudah diunduh. Projector bersih; laptop Operator menampilkan presenter view (slide kini/berikut + Run-Sheet). Internet venue boleh mati.
-6. **Bersih.** Service dan asetnya bisa dihapus per minggu agar penyimpanan tidak tumbuh tanpa batas.
+1. **Gather.** Events send participants, hymn numbers, posters, and announcement instructions via Telegram — without presentation software.
+2. **Interpret.** picoclaw calls the API: fill that week's payload, resolve lyrics from the Song Book by number (not free web search), upload images.
+3. **Assemble.** The application combines the fixed frame (opening, dividers, liturgy, offering, closing) with variable content (songs, verses, sermon, family/youth, flyers). Each week is one dated **Service**.
+4. **Friday review.** The Operator opens the Hub, matches the Run-Sheet and data, edits if wrong, regenerates, downloads the PPTX to the presentation laptop.
+5. **Sabbath.** The Operator presents the already-downloaded file. The projector is clean; the Operator laptop shows presenter view (current/next slide + Run-Sheet). Venue internet may be down.
+6. **Clean.** A Service and its assets can be deleted per week so storage does not grow without bound.
 
-Hub adalah daftar Service berlogin — bukan situs publik. Slideshow di browser adalah pelengkap; **jaminan Sabbath adalah PPTX offline**.
+The Hub is a logged-in Service list — not a public site. The in-browser slideshow is a complement; **the Sabbath guarantee is the offline PPTX**.
 
 ## What Makes This Different
 
-Bukan karena bisa generate slide — FreeWorship, OpenLP, ProPresenter sudah bisa. Bedanya *cara orang sampai ke situ*:
+Not because it can generate slides — FreeWorship, OpenLP, ProPresenter already can. The difference is *how people get there*:
 
-- **Nol instal di laptop Operator.** Alasan percobaan desktop ditinggalkan.
-- **Masukan di Telegram**, tempat Events sudah berkoordinasi.
-- **Tidak ada penjaga gerbang tunggal.** Pengetahuan ada di alur, bukan di satu laptop.
-- **Deck mengikuti pakem jemaat ini**, bukan memaksa ibadah ke struktur alat generik.
-- **Revisi cepat.** Ubah isian, generate ulang.
+- **Zero install on the Operator laptop.** The reason desktop trials were abandoned.
+- **Input on Telegram**, where Events already coordinate.
+- **No single gatekeeper.** Knowledge lives in the flow, not on one laptop.
+- **The Deck follows this congregation's pattern**, rather than forcing worship into a generic tool's structure.
+- **Fast revision.** Change the fields, regenerate.
 
-Alasan lain yang jujur: **kepemilikan** — pengembang solo menguasai kerangka dan punya fondasi untuk otomasi mekanis berikutnya. Itu bukan moat teknis.
+Another honest reason: **ownership** — a solo developer masters the frame and has a foundation for the next mechanical automations. That is not a technical moat.
 
 ## Who This Serves
 
 | Role | Need | Tier |
 |---|---|---|
-| Operator (tim multimedia) | Menjalankan Sabbath tanpa harus bisa merakit 68 slide; review Jumat ≤ 10 menit; PPTX offline di laptop venue | **primary** |
-| Events | Menyerahkan Rundown seperti mengirim chat; tidak membuka perangkat lunak presentasi | secondary |
-| Admin | Mengelola akun dan pengaturan tanpa mengasuh sistem tiap minggu | secondary |
-| Pengembang solo | Merawat ketiga lapisan (skill picoclaw, API, Hub) sendirian | secondary |
-| Klien (Church Name) | Ibadah tertayang benar tiap Sabbath, tanpa ketergantungan pada satu relawan | secondary |
-| Jemaat | Tidak pernah membuka alat; merasakan layar yang lebih bersih dan perubahan terlambat yang masih sempat masuk | secondary |
+| Operator (multimedia team) | Run Sabbath without needing to assemble 68 slides; Friday review ≤ 10 minutes; offline PPTX on the venue laptop | **primary** |
+| Events | Hand over a Rundown the way they send a chat; do not open presentation software | secondary |
+| Admin | Manage accounts and settings without nursing the system every week | secondary |
+| Solo developer | Maintain all three layers (picoclaw skill, API, Hub) alone | secondary |
+| Client (Church Name) | Worship displayed correctly every Sabbath, without depending on one volunteer | secondary |
+| Congregation | Never open the tool; experience a cleaner screen and late changes that still make it in | secondary |
 
 ## Goals
 
-- **BG-1** — Deck Sabbath digenerate dari Rundown, bukan dirakit tangan, setiap minggu.
-- **BG-2** — Siapa pun di rotasi multimedia bisa mereview dan menayangkan Service, tanpa keahlian merakit Deck.
-- **BG-3** — Sabbath tidak bergantung internet venue: PPTX sudah di laptop sebelum ibadah.
+- **BG-1** — The Sabbath Deck is generated from a Rundown, not assembled by hand, every week.
+- **BG-2** — Anyone on the multimedia rotation can review and present a Service, without Deck-assembly skill.
+- **BG-3** — Sabbath does not depend on venue internet: the PPTX is already on the laptop before worship.
 
 ## Success Criteria
 
-Ukuran utama: gereja memakainya **setiap Sabbath selama satu kuartal (~13 minggu beruntun)**.
+Primary measure: the church uses it **every Sabbath for one quarter (~13 consecutive weeks)**.
 
-Pendukung: merakit tangan ~1 jam menjadi review Jumat ≤ 10 menit; giliran Operator tidak lagi = orang yang bisa PowerPoint; tukar lagu terlambat regenerate ≤ 5 menit; tidak ada sisa konten minggu lalu di layar; lirik datang dari Song Book, bukan ketikan.
+Supporting: hand assembly of ~1 hour becomes Friday review ≤ 10 minutes; the Operator turn is no longer = the person who can do PowerPoint; a late song swap regenerates in ≤ 5 minutes; no leftover last-week content on screen; lyrics come from the Song Book, not typing.
 
 ## Scope
 
 ### Scope In
 
-- Intake Telegram → picoclaw → API.
-- Lirik dari Song Book menurut nomor; bukan pencarian lirik bebas.
-- Generate Deck: judul lagu + lirik, ayat, khotbah + grafis, keluarga/pemuda, gambar pengumuman yang sudah jadi. Hanya nama yang memang tercetak di Deck.
-- Hub berlogin: daftar Service, preview, edit-dan-generate-ulang, unduh PPTX, hapus per minggu.
-- Run-Sheet urutan ibadah lengkap (peran, nama, lagu, waktu) untuk Operator.
-- Presenter view: projector bersih + layar Operator (kini/berikut + Run-Sheet).
-- Satu transisi fade.
+- Telegram intake → picoclaw → API.
+- Lyrics from the Song Book by number; not free lyric search.
+- Generate Deck: song title + lyrics, verses, sermon + graphics, family/youth, finished announcement images. Only names that actually print on the Deck.
+- Logged-in Hub: Service list, preview, edit-and-regenerate, download PPTX, delete per week.
+- Full worship-order Run-Sheet (roles, names, songs, times) for the Operator.
+- Presenter view: clean projector + Operator screen (current/next + Run-Sheet).
+- One fade transition.
 
 ### Scope Out
 
-- Multi-gereja / alur per-gereja yang bisa dikonfigurasi.
-- Lagu kontemporer di luar Song Book.
-- Generate flyer dari data (flyer diunggah sudah jadi).
-- Mencetak peran peserta yang Deck tidak tampilkan (itu di Run-Sheet).
-- Banyak jenis transisi.
-- Kendali live ala ProPresenter (urut ulang di atas panggung); produk menghasilkan Deck linear.
+- Multi-church / a per-church flow that can be configured.
+- Contemporary songs outside the Song Book.
+- Generating flyers from data (flyers are uploaded already finished).
+- Printing participant roles that the Deck does not show (that belongs on the Run-Sheet).
+- Many transition types.
+- Live control in the ProPresenter style (reorder on stage); the product produces a linear Deck.
 
 ## Constraints
 
-- Hub **bukan publik**; akses berakun.
-- Tayangan Sabbath **tidak boleh** bergantung internet venue — PPTX offline adalah jaminan, bukan cadangan opsional.
-- Repo ini **publik**: data Jemaat, foto, doa, pembayaran, dan Deck sumber **tidak** masuk git.
-- Lirik **hanya** dari Song Book yang di-ship; bukan unggahan bebas atau web search.
-- Masukan Events tetap di saluran yang sudah mereka pakai; produk tidak memaksa mereka membuka tool baru untuk *menyerahkan* Rundown.
+- The Hub is **not public**; access is by account.
+- The Sabbath presentation **must not** depend on venue internet — the offline PPTX is the guarantee, not an optional fallback.
+- This repo is **public**: congregation data, photos, prayers, payments, and source Decks **do not** enter git.
+- Lyrics **only** from the shipped Song Book; not free upload or web search.
+- Events input stays on the channel they already use; the product does not force them to open a new tool to *hand over* a Rundown.
 
 ## Assumptions
 
-- [ASSUMPTION] Events akan terus mengirim Rundown dalam bentuk yang parseable seperti sekarang. Salah: intake pecah, Operator terpaksa ketik form tiap minggu. (OQ-1)
-- [ASSUMPTION] Satu gereja, satu alur ibadah, untuk cakupan produk ini. Salah: Scope In tidak cukup; itu kerja produk kedua atau PRD baru. (OQ-2)
-- [ASSUMPTION] Venue punya laptop yang bisa memutar PPTX (PowerPoint atau padanan). Salah: jaminan offline tidak tertunaikan. (OQ-3)
+- [ASSUMED] Events will keep sending Rundowns in a parseable form like today. Wrong: intake breaks, the Operator is forced to type a form every week. (OQ-1)
+- [ASSUMED] One church, one worship flow, for this product's scope. Wrong: Scope In is not enough; that is a second product or a new PRD. (OQ-2)
+- [ASSUMED] The venue has a laptop that can play PPTX (PowerPoint or equivalent). Wrong: the offline guarantee is not fulfilled. (OQ-3)
 
 ## Prerequisites
 
-- Korpus Song Book (dan terjemahan kitab yang di-ship) ada di repo — sudah terpenuhi.
-- Rahasia `AUTH_SECRET` / `WEBHOOK_SECRET` dan path tahan lama untuk basis data di host — belum terpenuhi; menunggu host produksi (OQ-4 di `.control/questions/external.md`). Syarat go-live, bukan G1.
+- The Song Book corpus (and the shipped scripture translations) is in the repo — already met.
+- `AUTH_SECRET` / `WEBHOOK_SECRET` secrets and a durable path for the database on the host — not yet met; waiting on the production host (OQ-4 in `.control/questions/external.md`). A go-live requirement, not G1.
 
 ## Vision
 
-Kalau ini menempel, pola yang sama — masukan di tempat orang sudah bicara, tafsir, rakit, Hub, cadangan offline — dipakai untuk kerja mekanis gereja berikutnya. Gereja lain punya alur lain; konfigurasi per-jemaat adalah visi, bukan Scope In.
+If this sticks, the same pattern — input where people already talk, interpret, assemble, Hub, offline fallback — is used for the church's next mechanical work. Other churches have other flows; per-congregation configuration is vision, not Scope In.

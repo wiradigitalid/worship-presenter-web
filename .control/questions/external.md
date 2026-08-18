@@ -1,11 +1,11 @@
-# Menunggu Pihak Luar
+# Waiting on Outside
 
-**Dimuat saat:** ada jawaban yang hanya bisa datang dari luar sesi ini.
+**Loaded when:** an answer can only come from outside this session.
 
-Berkas ini **tidak menahan gate** kecuali barisnya juga ditunjuk dari `blocking.md`.
+This file **does not hold a gate** unless its row is also pointed to from `blocking.md`.
 
-## Terbuka
+## Open
 
-| id | Pertanyaan | Menunggu | Sejak |
+| id | Question | Waiting | Since |
 |---|---|---|---|
-| OQ-4 | Kapan host produksi memasang `AUTH_SECRET`, `WEBHOOK_SECRET`, dan path tahan lama untuk basis data? | kodesh87 — host LiveServer; sebelum go-live (bukan G1) | 2026-08-18 |
+| OQ-4 | When will the production host set `AUTH_SECRET`, `WEBHOOK_SECRET`, and a durable path for the database? | kodesh87 — LiveServer host; before go-live (not G1) | 2026-08-18 |
