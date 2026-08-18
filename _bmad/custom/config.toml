@@ -2,5 +2,10 @@
 #
 # bmad-help and bmad-correct-course read {project_knowledge}. While it points at docs/,
 # both read a folder that has already been dissolved.
+#
+# document_output_language is pinned here so an installer re-run cannot flip corpus
+# language. Working-document prose also follows policy.doc_language in
+# .control/registry/index.yaml (English). Chat language is separate (communication_language).
 
+document_output_language = "English"
 project_knowledge = "{project-root}/.control"

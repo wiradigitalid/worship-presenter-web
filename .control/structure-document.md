@@ -114,7 +114,7 @@ Archive: the old `docs/` and `_bmad-output/` planning/implementation/specs. Not 
 ## Findings
 
 - `docs/` at the root already moved to `prior-knowledge/docs/`.
-- `_bmad-output/planning-artifacts/` no longer lives at the BMad root; its copy is in `prior-knowledge/_bmad-output/`.
+- Planning artifacts no longer live under the BMad-root `_bmad-output/` folder; the copy is `prior-knowledge/_bmad-output/`.
 - `inventory.py` does not derive a Next.js inventory — written by hand from `src/`.
 - `wdi-ux` was not run; `01-ux/` is empty on all three PCs; EXPERIENCE/DESIGN are in the archive.
 - The `weekly-sabbath` PRD folder was withdrawn (too global); three area PRDs replace it. History: `.control/memlog/prd-weekly-sabbath.md`.

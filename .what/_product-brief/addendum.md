@@ -11,8 +11,8 @@ note: "Detail that does not fit the 1–2 page brief. Source material lives in p
 ## Source material (in `prior-knowledge/`, not folded in)
 
 - Original brief: `prior-knowledge/_bmad-output/planning-artifacts/briefs/brief-bic-pptx-workflow-2026-07-10/brief.md`
-- Operational addendum + Rundown examples: `.../addendum.md`
-- Source Deck anatomy: `.../source-pptx-structure.md`
+- Operational addendum + Rundown examples: `prior-knowledge/_bmad-output/planning-artifacts/briefs/brief-bic-pptx-workflow-2026-07-10/addendum.md`
+- Source Deck anatomy: `prior-knowledge/_bmad-output/planning-artifacts/briefs/brief-bic-pptx-workflow-2026-07-10/source-pptx-structure.md`
 - PRD: `prior-knowledge/_bmad-output/planning-artifacts/prds/prd-bic-pptx-workflow-2026-07-10/prd.md`
 - Spine: `prior-knowledge/_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md`
 

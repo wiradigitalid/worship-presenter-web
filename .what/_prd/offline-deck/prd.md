@@ -20,7 +20,7 @@ For the Operator who needs the file, and the Admin who owns layout. **The Sabbat
 
 **Not here** — how a Rundown enters: `rundown-to-service`. How the Operator reviews and presents in the browser: `operator-turn`.
 
-Source material: old PRD §4.2, §4.5, §4.10.
+Source material: `prior-knowledge/_bmad-output/planning-artifacts/prds/prd-bic-pptx-workflow-2026-07-10/prd.md` §4.2, §4.5, §4.10.
 
 ## 1. Vision
 

@@ -24,7 +24,7 @@ UC-14, UC-15. Admin-only (AD-14).
 | GET `/api/admin/artifacts` | Ordered list | UC-15 |
 | GET `/api/admin/artifacts/[id]` | One payload | UC-14 |
 | PUT `/api/admin/artifacts/[id]` | Save layout | UC-14 |
-| POST `.../reset` | Restore seed | UC-15 |
+| POST `/api/admin/artifacts/[id]/reset` | Restore seed | UC-15 |
 
 ## Five lanes
 

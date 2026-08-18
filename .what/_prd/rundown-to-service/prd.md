@@ -22,7 +22,7 @@ For the product owner and Events. States how **this week's content** enters the 
 
 Source material: `prior-knowledge/_bmad-output/planning-artifacts/prds/prd-bic-pptx-workflow-2026-07-10/prd.md` §4.1 and FR-11b. Not folded in.
 
-UX is not rewritten here; as-built is aligned with the code, citing the old EXPERIENCE path.
+UX is not rewritten here; as-built is aligned with the code, citing `prior-knowledge/_bmad-output/planning-artifacts/ux-designs/ux-bic-pptx-workflow-2026-07-10/EXPERIENCE.md` (wdi-ux was not run).
 
 ## 1. Vision
 
