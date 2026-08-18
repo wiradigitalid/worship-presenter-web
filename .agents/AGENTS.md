@@ -1,75 +1,118 @@
-# Public repository — congregation data never enters it
+# Agent Rules — worship-presenter-web
 
-**This repository is public.** Before any commit, know what may not be in it.
+This repository is **public**. Congregation data never enters it. The WDI method applies; method
+files arrive from `handbook/method` via `wdi-method sync`. This file is loaded every session;
+everything else is loaded **lazily**, only when the task matches.
 
-This project began as a private repository. By the time it was audited it held
-real member names, photographs of identifiable people including children,
-screenshots of a private conversation, and a scannable payment code. Nothing was
-added maliciously; each file arrived as a reasonable working artifact and nobody
-remembered it later. That history could not be cleaned, which is why this
-repository starts fresh.
+## Public repository
 
-## Never commit
+Full rule: `.constitution/public-repository.md`. Before **every** `git commit` and **every** `git push`:
 
-- Real people's names, photographs, prayer requests, phone numbers, addresses
-- Bank account numbers, payment QR codes, any live payment detail
-- Uploaded flyers or member images (`data/uploads/`)
-- Exported or rendered slide images (`slides/`, `slides-all/`, `slides-new/`)
-- Source presentation decks (`*.pptx`, `*.potx`)
-- Local databases, `.env`, anything under `data/local/`
-- Text extracted from a source deck for a **payload-bearing** slide — family/youth,
-  sermon speaker, special song, verse reading, song lyrics. Those text runs are that
-  week's data, not template copy. `data/asset-map.json` once committed a family's
-  surname, three given names and their prayer request this way, and the sermon
-  speaker's full name twice more
+1. Refuse to stage `.env*`, `data/local/`, `data/uploads/`, `data.db*`, `slides*/`, `*.pptx` /
+   `*.potx`, or any real congregation / payment / production-host data.
+2. Run `node --import ./tests/register-ts-resolve.mjs --test --experimental-strip-types tests/public-repo-guard.test.mjs`
+   (or `npm test`).
+3. On failure, fix the tracked content. Never weaken the guard.
 
-Example content uses a **synthetic congregation**. Keep it synthetic. If you need
-a realistic name, invent one — do not reach for a real member's.
+Never commit real names, photographs, prayer requests, phones, addresses, bank accounts, payment QR
+codes, uploaded flyers, rendered slides, or source decks. Example content uses a **synthetic
+congregation**. Invent a name — do not reach for a real member's. Real data lives in
+`data/local/default-registry.json` (gitignored). The legacy repo `bic-pptx-workflow` is frozen.
 
-**Prefer not producing the value to blocking it afterwards.** A fingerprint list
-only knows names someone already registered — never the next family. Where a
-generator reads real material, filter at the generator: `evidenceFor` in
-`scripts/extract-pptx-assets.mjs`, asserted by `tests/asset-map-evidence.test.mjs`.
+## Language
 
-## Where real data goes
+Prose in this repo is Bahasa Indonesia; a technical term the industry writes in English MUST be left
+in English. Names — code identifiers, files, database columns — follow `.constitution/language-guide.md`.
 
-`data/local/default-registry.json` — git-ignored, preferred by the seeder over
-the shipped example whenever present. See `docs/PRIVATE-DATA.md`.
+`AGENTS.md`, `CLAUDE.md`, and `.constitution/` are agent-instruction files (English). `.control/`,
+`.what/`, and `.how/` are product content and MUST stay Bahasa Indonesia. Registry values are
+English keys: `mode: catalog`, `status: applied`, `risk_accepted: low`.
 
-## Enforcement
+## The thing in your hand → its folder
 
-`tests/public-repo-guard.test.mjs` fails the build when a congregation directory
-is tracked, an image is committed outside `public/`, a deck is committed, or a
-known private literal or real name reaches a tracked file. If it fails, the
-finding is the point — do not weaken the test to make it pass.
+| The thing in your hand | Its folder |
+|---|---|
+| A rule, a guide, a template — how we work | `.constitution/` |
+| The explanation of a rule, never a rule itself | `.constitution/method/` |
+| A decision, an open question, a registry, a structure map, minutes | `.control/` |
+| The brief, a PRD, a use case, a business rule — what is promised | `.what/` |
+| The spine, C4, an inventory, an SDD, a contract — how it is built | `.how/` |
+| A skill run's working output, and documents that predate the method | `_bmad-output/` |
+| Scratch that empties when the task closes. **Gitignored here** — this repo is public | `.work/` |
+| The application | `src/` · `public/` · `scripts/` · `tests/` |
 
-`tests/asset-map-evidence.test.mjs` covers what that guard structurally cannot:
-deck text recorded for a payload-bearing slide, whether or not anyone has ever
-registered the name inside it. It fails on the shape of the leak, not the identity.
+Existing planning, UX, spine, specs, and stories live in `_bmad-output/` until they enter the corpus
+through the skill that owns each slot. They MUST NOT be copied into `.what/` or `.how/` by hand.
+`docs/` is leftover operator material — inventory, not a second corpus.
 
-The same rule is restated in `.constitution/public-repository.md` so agent hosts
-and humans share one hard gate.
+The placement test: **is this file still correct after its wave has passed?** Yes → the corpus. No →
+`_bmad-output/`. In doubt → `document/corpus-guide.md`.
 
-## Commit / push audit (mandatory)
+## Depth, gates, skills
 
-This repository is public. Before **every** `git commit` and **every** `git push`:
+| Field | Where | Controls |
+|---|---|---|
+| `mode` | `index.yaml` globally, `components.yaml` per component | **Document depth** only. `catalog` · `outline` · `guarded` · `deep`; default `catalog` |
+| `risk_accepted` | `components.yaml` per component | **Review intensity** only. `low` · `medium` · `high` |
 
-1. Refuse to stage `.env*`, `data/local/`, `data/uploads/`, `data.db*`, `slides*/`,
-   `*.pptx` / `*.potx`, or any real congregation / payment / production-host data.
-2. Run the guard (or full `npm test`):
-   `node --import ./tests/register-ts-resolve.mjs --test --experimental-strip-types tests/public-repo-guard.test.mjs`
-3. Fix content on failure — never weaken the guard. Do not push until it is green.
+Per-component `mode` wins. No third scope. A component at `catalog` **skips G4**. Neither field MUST
+be derived from the other. `document/delivery-flow-guide.md` owns both.
 
-Cursor agents also load `.cursor/rules/public-repo-commit-audit.mdc`.
+| Gate | Decides | Skill |
+|---|---|---|
+| **G1 Problem** | What the problem is, whose it is, why it earns work | `wdi-problem` |
+| **G2 Product** | What is built, and how it feels to use | `wdi-product` · optional `wdi-ux` |
+| **G3 Blueprint** | The whole portrait, once per product | `wdi-blueprint` |
+| **G4 Component** | How one component is built — **skipped at `catalog`** | `wdi-component` |
+| **G5 Release** | Whether it is done and proven | `wdi-build` |
 
-## Active vs frozen repository
+Before G1 and at the tail of G2: `wdi-init` (`setup` · `component` · `mode` · `risk` · `structure`).
+Any time: `wdi-decision` · `wdi-question` · `wdi-log` · `wdi-help` · `wdi-reconcile` · `wdi-review` ·
+`wdi-report` · `wdi-systematic-debugging`.
 
-- **Active:** this repository (`worship-presenter-web`) — all product work lives
-  here.
-- **Frozen:** the legacy private repository `bic-pptx-workflow` is retired. Do
-  not implement features or continue development there.
+**No BMad skill is invoked directly.** Each has a wrapper.
 
----
+Until G1–G3 have been run here, the documents that describe this product remain in
+`_bmad-output/planning-artifacts/` and `_bmad-output/specs/`. Fast Path (`wdi-build` / a small fix
+that touches no `FR`, `UC`, `AD-N`, or domain model) MAY still ship against those.
+
+## What MUST NOT be done
+
+- A method file MUST NOT be invented here. Fix it in the live method repo, promote, then `sync`.
+- A file in `_bmad-output/prior-knowledge/` MUST NOT be copied into `.what/` or `.how/`.
+- `.control/generated/` MUST NOT be written by hand.
+- The two structure maps MUST NOT be edited by hand — `wdi-init` intent `structure` re-derives them.
+- A `DEC-` with status `applied` MUST NOT be edited except to record supersession.
+- A file in `.constitution/method/` MUST NOT be cited to reject a change (`status: Reference`).
+- More than the component's `mode` demands MUST NOT be written.
+- `.claude/skills/bmad-*/customize.toml` MUST NOT be edited; customise through `_bmad/custom/`.
+
+## Routing — load a guide when the task matches
+
+| Task | Load |
+|---|---|
+| Wanting the whole method in five minutes | `.constitution/method/README.md` |
+| About to change a rule, and needing to know what breaks | `.constitution/method/rationale.md` |
+| Asking whether a document exists at this `mode`, or where a file goes | `.constitution/method/artifact-map.md` |
+| Unsure whether a file may exist in this repo | `.constitution/repo-guide.md` · `public-repository.md` |
+| Unsure where a file lives | `.constitution/document/corpus-guide.md` |
+| Unsure what a method term means | `.constitution/method-glossary.md` |
+| Unsure about a domain term | `.control/product-glossary.md` |
+| Naming anything | `.constitution/language-guide.md` |
+| Asking "which gate now, what next" | `.constitution/document/delivery-flow-guide.md` · skill `wdi-help` |
+| Setting `mode` or `risk_accepted` | `delivery-flow-guide.md` · skill `wdi-init` |
+| Invoking a BMad skill | `.constitution/document/bmad-guide.md` |
+| Writing a brief / PRD / UX / SRS / SDD / spine | the matching `document/*-guide.md` |
+| Opening a `DEC-` | `.constitution/document/decision-guide.md` |
+| Looking for where code or documents live | `.control/structure-codebase.md` · `structure-document.md` |
+| Writing or reviewing code | `.constitution/codebase/stack-guide.md` · `conventions-guide.md` · `brownfield-guide.md` |
+
+## Bugs, decisions, questions
+
+- A bug, a failing test, or unexpected behaviour → `wdi-systematic-debugging`, **before** any fix.
+- A decision worth remembering → `wdi-decision`. Not mandatory unless it contradicts an `AD-N`.
+- Something that cannot be decided now → `wdi-question`. Default class: `assumptions.md`.
+- A non-technical fact that constrains the build → `wdi-log` intent `fact`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
@@ -77,75 +120,23 @@ Cursor agents also load `.cursor/rules/public-repo-commit-audit.mdc`.
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-<!-- BEGIN:bmad-process-gate -->
-# BMad process gate (mandatory)
+## Code
 
-**Coding must stay on-course with BMad artifacts.** Do not invent or ship a large feature/boundary that drifts from planning and implementation tracking.
+Next.js app in `src/`. Package versions: `package.json`. Until `codebase/*-guide.md` are
+`Accepted`, they MAY be read as guidance and MUST NOT reject a change.
 
-## Model / tool bias (read this)
+A test that asserts something is **absent** is worth nothing until it has been seen to fail. Prove
+every new or changed absence-guard by injecting the defect, then reverting. Inject every form the
+guard claims to cover. Do not narrow a guard to silence a false positive without re-proving it.
 
-Google AI Pro / Antigravity (and similar “jump-to-code” agents) tend to skip planning and implement large surfaces after a Spec or PRD tweak. That path caused Epic 14 drift (Correct Course + deep code review debt). **Assume you have that bias. Compensate by stopping for process, not by coding harder.**
+## Policy
 
-## Hard rules before non-trivial code
-
-1. **Do not** implement a new capability, API surface, or multi-file UI/boundary unless one of these exists and you are following it:
-   - A story under `_bmad-output/implementation-artifacts/stories/` with clear AC, **or**
-   - A SPEC under `_bmad-output/specs/` that you are implementing via the story/dev skills, **or**
-   - An explicit user-invoked Correct Course / Spec / Create Story / Dev Story / Quick Dev skill run.
-2. **Required sequence for new product work:** Epic → Story → Spec (when needed) → implement (`bmad-dev-story` / approved Quick Dev) → `bmad-code-review`. Do not jump from PRD/Spec edit straight to thousands of lines of app code.
-3. **If code already diverged from artifacts:** stop feature coding; run `bmad-correct-course` (or ask the user to) and reconcile docs/sprint status before more implementation.
-4. **While coding an approved story/spec:** keep `parsed` contracts, form fields, APIs, and slide behavior aligned with the SPEC/companions and story AC. If you must change behavior, update the artifact in the same change set — never leave docs lying. This explicitly includes the architecture and UX spines:
-   - Add, rename, or remove a **route or surface** → update the IA table in `EXPERIENCE.md` in the same change set.
-   - Override a **design token** or add a UI component with a visual delta → update `DESIGN.md`.
-   - Change a **structural invariant** (auth gate, storage target, slide-order source, sync channel, schema path) → amend the architecture spine via `bmad-architecture` Update. Never renumber an existing `AD-n`; add the next one. (One recorded exception, not a precedent: the 2026-07-30 fold-in of the Epic 16 child spine, waived by the owner, with an AD map published in the spine and every live citation repaired in the same change set.)
-
-   These four artifact families drifted precisely because nothing named them here.
-
-## A guard must be proved to fail
-
-A test that asserts something is **absent** — a guard, a grep, a regression net — is worth nothing
-until it has been seen to fail. Story 20.2 shipped two such guards that could not fail, and the
-second was created by fixing the first.
-
-- MUST prove every new or changed absence-guard by injecting the exact defect it claims to catch,
-  then reverting. Record the command, the injected mutation, the failing assertion, and the revert.
-- MUST inject in **every form the guard claims to cover** — JSON value, TS literal, `switch` case,
-  array member — not only the form easiest to write. A pattern that catches `baseType: 'x'` but
-  misses `"baseType": "x"` covers no JSON file, and `data/` is entirely JSON.
-- MUST NOT record a guard as "verified" without that injection. A proof that is asserted rather
-  than re-runnable does not satisfy this rule.
-- MUST NOT narrow a guard to silence a false positive without re-proving it still fails on the real
-  defect. That over-correction is exactly how Story 20.2's second blind spot appeared.
-- MUST state which surface a guard actually protects. Where a value is constrained by a TypeScript
-  union, `tsc` is the primary guard and a text scan exists for the untyped surfaces (`data/*.json`,
-  `*.mjs` tests); a text scan MUST NOT claim coverage the compiler already provides.
-
-## Authority map
-
-| Concern | Source of truth |
-|--------|------------------|
-| What to build (contract) | `_bmad-output/specs/**/SPEC.md` + companions |
-| Delivery unit / AC | `_bmad-output/implementation-artifacts/stories/*.md` |
-| Sprint tracking | `_bmad-output/implementation-artifacts/sprint-status.yaml` |
-| Product requirements | `_bmad-output/planning-artifacts/prds/**` |
-| Epics | `_bmad-output/planning-artifacts/epics.md` |
-| Structural invariants | `_bmad-output/planning-artifacts/architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md` — **one spine per project** (the BMad default). Decisions are `AD-n` in that one file and the `INIT AD-n` citation form is retired. The Epic 16 child spine was folded in on 2026-07-30; its folder keeps only the run record |
-| Visual identity (tokens, components) | `_bmad-output/planning-artifacts/ux-designs/**/DESIGN.md` |
-| Experience, IA, surfaces, flows | `_bmad-output/planning-artifacts/ux-designs/**/EXPERIENCE.md` |
-| Runtime rules for this repo | `_bmad-output/project-context.md` |
-| Package versions | `package.json` (over architecture prose) |
-| Open debt / deferred work | `_bmad-output/implementation-artifacts/deferred-work.md` — the single register of open implementation debt. The spine's *Deferred* holds deferred **decisions** only and `EXPERIENCE.md`'s *Open Items* behavioural questions only; neither carries work items |
-
-## Allowed without a new story
-
-- Bugfix tightly scoped to existing behavior already described by artifacts
-- Test-only additions for existing code
-- Docs/typo sync that does not invent new product behavior
-- User-explicit one-line / mechanical edits
-
-When unsure whether work is “large”: treat it as large and use the BMad path.
+- A skill MUST NOT be invoked automatically. Name the one that fits and wait for the owner's
+  go-ahead. Reading a skill as reference is fine.
+- `.work/` is gitignored here. It MUST NOT be imported by `src/`, MUST NOT be committed, and MUST be
+  excluded when searching for code.
 
 ## Sync rule for this file
 
-`CLAUDE.md` must remain `@AGENTS.md`. Keep `.agents/AGENTS.md` and `.cursorrules` **identical** to this file’s BMad gate + Next.js blocks so Antigravity / Cursor / Codex ChatGPT load the same rules.
-<!-- END:bmad-process-gate -->
+`CLAUDE.md` MUST remain `@AGENTS.md`. `.agents/AGENTS.md` and `.cursorrules` MUST be identical to
+this file.

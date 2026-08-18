@@ -1,3 +1,7 @@
+---
+status: Accepted
+---
+
 # Public repository constitution
 
 This repository is public. A congregation's own data never enters it.
