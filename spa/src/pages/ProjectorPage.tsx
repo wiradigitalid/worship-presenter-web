@@ -39,6 +39,7 @@ export default function ProjectorPage() {
     <ProjectorClient
       serviceId={data.id}
       slides={data.plan || []}
+      planIdentity={typeof data.plan_identity === 'string' ? data.plan_identity : ''}
       transition={data.transition || 'fade'}
     />
   );

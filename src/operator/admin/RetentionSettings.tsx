@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,9 +33,9 @@ export default function RetentionSettings({
         cache_files_removed: number;
       };
       setDays(data.pptx_retention_days);
-      setMessage(
-        `Saved. Removed ${data.cache_files_removed} expired cache file(s).`
-      );
+      const saved = `Saved. Removed ${data.cache_files_removed} expired cache file(s).`;
+      setMessage(saved);
+      toast(saved);
     } catch {
       setMessage('Failed to save retention setting.');
     } finally {

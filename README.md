@@ -121,7 +121,7 @@ If you are adapting this for a different hymnal, add your corpus at `data/song-b
 
 ## Deployment
 
-It runs anywhere Node 20 runs, including a Docker container — see [`.constitution/project/deployment.md`](.constitution/project/deployment.md). SQLite, uploaded images and the deck cache all need durable paths; that file covers which.
+It runs anywhere Node 22 runs, including a Docker container — see [`.constitution/project/deployment.md`](.constitution/project/deployment.md). SQLite, uploaded images and the deck cache all need durable paths; that file covers which.
 
 ## Project history
 

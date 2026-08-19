@@ -16,6 +16,7 @@ const dbIndexRel = 'src/lib/db/index.ts';
 const CORPUS_TABLE_ALLOWLIST = new Set([
   'bible_translations',
   'bible_books',
+  'bible_book_names',
   'bible_verses',
   'hymns',
 ]);

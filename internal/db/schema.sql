@@ -75,6 +75,15 @@ CREATE TABLE IF NOT EXISTS bible_books (
   short_name TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS bible_book_names (
+  translation_code TEXT NOT NULL,
+  book_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  short_name TEXT NOT NULL,
+  PRIMARY KEY (translation_code, book_id),
+  FOREIGN KEY (book_id) REFERENCES bible_books(id)
+);
+
 CREATE TABLE IF NOT EXISTS bible_verses (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   book_id INTEGER NOT NULL,

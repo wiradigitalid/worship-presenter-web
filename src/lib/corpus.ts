@@ -237,6 +237,16 @@ export function loadBibleCorpus(code = DEFAULT_TRANSLATION): BibleCorpus {
     throw new Error(`Bible corpus declares no provenance: ${corpusPath}`);
   }
 
+  if (Object.prototype.hasOwnProperty.call(raw, 'aliases')) {
+    throw new Error(
+      `Bible corpus must not carry an aliases field (AD-28): ${corpusPath}`
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(meta, 'aliases')) {
+    throw new Error(
+      `Bible corpus translation metadata must not carry aliases (AD-28): ${corpusPath}`
+    );
+  }
   const bookRows = raw?.books;
   if (!Array.isArray(bookRows) || bookRows.length === 0) {
     throw new Error(`Bible corpus has no books: ${corpusPath}`);
@@ -251,6 +261,11 @@ export function loadBibleCorpus(code = DEFAULT_TRANSLATION): BibleCorpus {
     const shortName = String(r.shortName ?? name).trim();
     if (!Number.isInteger(id) || id <= 0 || !name) {
       throw new Error(`Bible corpus book ${index} is malformed: ${corpusPath}`);
+    }
+    if (Object.prototype.hasOwnProperty.call(r, 'aliases')) {
+      throw new Error(
+        `Bible corpus book ${name || id} must not carry aliases (AD-28): ${corpusPath}`
+      );
     }
     const chapterRows = r.chapters;
     if (!Array.isArray(chapterRows) || chapterRows.length === 0) {

@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useRouter } from '@/lib/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import {
   UI_LOCALE_ORDER,
   type UiLocale,
 } from '@/lib/i18n';
+import { announceUiLocale } from '@/lib/ui-locale-document';
 
 export default function UiLocaleSettings({
   initialLocale,
@@ -43,9 +45,13 @@ export default function UiLocaleSettings({
       const data = (await res.json()) as { ui_locale: UiLocale };
       setDisplayLocale(data.ui_locale);
       setPendingLocale(data.ui_locale);
-      setMessage(
-        resolveString(`admin.uiLocale.saved.${data.ui_locale}`, data.ui_locale)
+      const saved = resolveString(
+        `admin.uiLocale.saved.${data.ui_locale}`,
+        data.ui_locale
       );
+      setMessage(saved);
+      toast(saved);
+      announceUiLocale(data.ui_locale);
       // Only to re-render the root layout so `<html lang>` follows the new
       // setting. This component's own state is already correct above, which is
       // why there is no prop-sync effect: nothing else writes `ui_locale`.

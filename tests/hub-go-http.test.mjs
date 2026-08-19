@@ -191,6 +191,20 @@ test('GET /api/scripture looks up a KJV verse from the bootstrapped corpus', asy
   assert.ok(res.body.text.length > 0);
 });
 
+test('GET /api/scripture matches Song of Solomon and echoes the canonical name', async () => {
+  const res = await json(
+    `${base}/api/scripture?ref=${encodeURIComponent('Song of Solomon 1:1')}&translation=KJV`
+  );
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.match(res.body.reference, /^Song of Solomon 1:1$/);
+});
+
+test('GET /api/scripture aliases ps to Psalms and does not echo the typed form', async () => {
+  const res = await json(`${base}/api/scripture?ref=ps+23:1&translation=KJV`);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.reference, 'Psalms 23:1');
+});
+
 test('GET /api/admin/settings and accounts and artifacts on a fresh hub', async () => {
   const settings = await json(`${base}/api/admin/settings`);
   assert.equal(settings.status, 200);

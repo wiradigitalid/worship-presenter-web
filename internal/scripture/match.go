@@ -1,0 +1,183 @@
+package scripture
+
+import (
+	"strings"
+	"unicode"
+)
+
+type BookName struct {
+	ID        int
+	Name      string
+	ShortName string
+}
+
+type Alias struct {
+	Alias  string
+	BookID int
+}
+
+// AliasesFor is matcher-owned, keyed by translation code. Never a corpus field.
+func AliasesFor(translation string) []Alias {
+	switch strings.ToUpper(strings.TrimSpace(translation)) {
+	case "KJV":
+		return []Alias{
+			{Alias: "ps", BookID: 19},
+			{Alias: "psalm", BookID: 19},
+			{Alias: "psalms", BookID: 19},
+			{Alias: "sos", BookID: 22},
+			{Alias: "song of songs", BookID: 22},
+			{Alias: "song of solomon", BookID: 22},
+		}
+	default:
+		return nil
+	}
+}
+
+func normalize(s string) string {
+	fields := strings.Fields(strings.ToLower(strings.TrimSpace(s)))
+	return strings.Join(fields, " ")
+}
+
+// ParseRef splits a typed reference into a book part and verse numbers.
+// The book part is not capped at two words and may contain hyphens.
+func ParseRef(raw string) (bookPart string, chapter, start, end int, ok bool) {
+	value := strings.TrimSpace(strings.ReplaceAll(raw, "+", " "))
+	value = stripExamplePrefix(value)
+	if value == "" {
+		return "", 0, 0, 0, false
+	}
+	// Walk from the end looking for chapter:verse so the book name can be
+	// any length, including hyphenated Indonesian names.
+	colon := strings.LastIndex(value, ":")
+	if colon <= 0 {
+		return "", 0, 0, 0, false
+	}
+	before := strings.TrimSpace(value[:colon])
+	after := strings.TrimSpace(value[colon+1:])
+	space := strings.LastIndexFunc(before, unicode.IsSpace)
+	if space < 0 {
+		return "", 0, 0, 0, false
+	}
+	bookPart = strings.TrimSpace(before[:space])
+	chapterStr := strings.TrimSpace(before[space+1:])
+	chapter, okCh := atoiPositive(chapterStr)
+	if !okCh {
+		return "", 0, 0, 0, false
+	}
+	start, end, okV := parseVerseSpan(after)
+	if !okV || bookPart == "" {
+		return "", 0, 0, 0, false
+	}
+	return bookPart, chapter, start, end, true
+}
+
+func parseVerseSpan(after string) (start, end int, ok bool) {
+	after = strings.TrimSpace(after)
+	sep := -1
+	for i, r := range after {
+		if r == '-' || r == '–' || r == ',' {
+			sep = i
+			break
+		}
+	}
+	if sep < 0 {
+		n, okN := atoiPositive(after)
+		return n, n, okN
+	}
+	left, okL := atoiPositive(strings.TrimSpace(after[:sep]))
+	right, okR := atoiPositive(strings.TrimSpace(after[sep+1:]))
+	if !okL || !okR || right < left {
+		return 0, 0, false
+	}
+	return left, right, true
+}
+
+func atoiPositive(s string) (int, bool) {
+	n := 0
+	if s == "" {
+		return 0, false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return 0, false
+		}
+		n = n*10 + int(r-'0')
+	}
+	if n <= 0 {
+		return 0, false
+	}
+	return n, true
+}
+
+func stripExamplePrefix(value string) string {
+	lower := strings.ToLower(value)
+	for _, p := range []string{"e.g. ", "eg. ", "example: "} {
+		if strings.HasPrefix(lower, p) {
+			return strings.TrimSpace(value[len(p):])
+		}
+	}
+	return value
+}
+
+// MatchBook picks the unique longest prefix among corpus names and scoped aliases.
+// Ambiguous matches (two ids at the same length) are unmapped.
+func MatchBook(bookPart string, names []BookName, aliases []Alias) (id int, canonical string, ok bool) {
+	input := normalize(bookPart)
+	if input == "" {
+		return 0, "", false
+	}
+	type cand struct {
+		id        int
+		canonical string
+		keyLen    int
+	}
+	var found []cand
+	consider := func(key string, bookID int, canonicalName string) {
+		k := normalize(key)
+		if k == "" {
+			return
+		}
+		if input == k || strings.HasPrefix(input, k+" ") {
+			found = append(found, cand{id: bookID, canonical: canonicalName, keyLen: len(k)})
+		}
+	}
+	byID := map[int]string{}
+	for _, n := range names {
+		byID[n.ID] = n.Name
+		consider(n.Name, n.ID, n.Name)
+		consider(n.ShortName, n.ID, n.Name)
+	}
+	for _, a := range aliases {
+		consider(a.Alias, a.BookID, byID[a.BookID])
+	}
+	if len(found) == 0 {
+		return 0, "", false
+	}
+	max := 0
+	for _, c := range found {
+		if c.keyLen > max {
+			max = c.keyLen
+		}
+	}
+	winnerID := 0
+	winnerName := ""
+	for _, c := range found {
+		if c.keyLen != max {
+			continue
+		}
+		if winnerID != 0 && c.id != winnerID {
+			return 0, "", false
+		}
+		winnerID = c.id
+		if c.canonical != "" {
+			winnerName = c.canonical
+		}
+	}
+	if winnerName == "" {
+		winnerName = byID[winnerID]
+	}
+	if winnerName == "" {
+		winnerName = bookPart
+	}
+	return winnerID, winnerName, true
+}

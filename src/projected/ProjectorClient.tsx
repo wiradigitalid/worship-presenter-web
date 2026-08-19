@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { SlidePlanItem } from '@/lib/slide-plan';
 import SlideView from '@/components/SlideView';
 import {
+  adoptsSharedState,
   blankStateOf,
   liveTransitionOf,
   openPresentChannel,
@@ -16,10 +17,13 @@ import '@/projected/projected.css';
 export default function ProjectorClient({
   serviceId,
   slides,
+  planIdentity,
   transition: configuredTransition,
 }: {
   serviceId: number;
   slides: SlidePlanItem[];
+  /** Fingerprint of the deck this window fetched (AD-10). */
+  planIdentity: string;
   /**
    * The deck's configured style, read server-side. It is where this window
    * starts and what it falls back to; the Presenter may override it live for
@@ -38,6 +42,7 @@ export default function ProjectorClient({
     slides.length
   );
   const [blank, setBlank] = useState(false);
+  const [stalePlan, setStalePlan] = useState(false);
   const [overlay, setOverlay] = useState<{
     reference: string;
     text: string;
@@ -49,9 +54,13 @@ export default function ProjectorClient({
   // reaches the current `goTo` through this ref instead, which keeps the
   // subscription pinned to `serviceId` alone.
   const goToRef = useRef(goTo);
+  const planIdentityRef = useRef(planIdentity);
   useEffect(() => {
     goToRef.current = goTo;
   }, [goTo]);
+  useEffect(() => {
+    planIdentityRef.current = planIdentity;
+  }, [planIdentity]);
 
   useEffect(() => {
     const ch = openPresentChannel(serviceId);
@@ -60,6 +69,13 @@ export default function ProjectorClient({
     const onMessage = (ev: MessageEvent<PresentMessage>) => {
       const msg = ev.data;
       if (!msg || typeof msg !== 'object') return;
+      if (!adoptsSharedState(msg, planIdentityRef.current)) {
+        if (msg.type === 'sync' || msg.type === 'blank' || msg.type === 'transition' || msg.type === 'scripture' || msg.type === 'clear-scripture') {
+          setStalePlan(true);
+        }
+        return;
+      }
+      setStalePlan(false);
       // Read first and for every message that carries them, so the
       // `request-sync` answer is as authoritative as a deliberate blank or a
       // deliberate style change: a projector opened or reloaded mid-session
@@ -106,6 +122,30 @@ export default function ProjectorClient({
   // hook, because it is the same `fixed inset-0` pattern at an equally
   // room-facing URL. See that file for what the strip down the edge looked like.
   useProjectedShell();
+
+  if (stalePlan) {
+    return (
+      <div
+        className="fixed inset-0 overflow-hidden text-white"
+        style={{ backgroundColor: '#000000', color: '#FFFFFF' }}
+      >
+        <p
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: 0,
+            fontFamily: 'sans-serif',
+            fontSize: '1.25rem',
+          }}
+        >
+          Unable to continue.
+        </p>
+      </div>
+    );
+  }
 
   const slide = slides[index];
   const outgoingSlide = outgoing === null ? undefined : slides[outgoing];

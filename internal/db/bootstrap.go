@@ -244,12 +244,20 @@ func reconcileOneBible(db *sql.DB, corpusPath, code string) error {
 	}
 	sum := sha256.Sum256(raw)
 	contentHash := hex.EncodeToString(sum[:])
+	var probe map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &probe); err != nil {
+		return err
+	}
+	if _, ok := probe["aliases"]; ok {
+		return fmt.Errorf("bible corpus must not carry an aliases field (AD-28): %s", corpusPath)
+	}
 	var stored sql.NullString
 	_ = db.QueryRow(`SELECT content_hash FROM bible_translations WHERE code = ?`, code).Scan(&stored)
 	if stored.Valid && stored.String == contentHash {
-		var n int
+		var n, names int
 		_ = db.QueryRow(`SELECT COUNT(*) FROM bible_verses WHERE translation_code = ?`, code).Scan(&n)
-		if n > 0 {
+		_ = db.QueryRow(`SELECT COUNT(*) FROM bible_book_names WHERE translation_code = ?`, code).Scan(&names)
+		if n > 0 && names > 0 {
 			return nil
 		}
 	}
@@ -291,8 +299,17 @@ func reconcileOneBible(db *sql.DB, corpusPath, code string) error {
 		}
 		if _, err := tx.Exec(
 			`INSERT INTO bible_books (id, name, short_name) VALUES (?, ?, ?)
-			 ON CONFLICT(id) DO UPDATE SET name = excluded.name, short_name = excluded.short_name`,
+			 ON CONFLICT(id) DO NOTHING`,
 			book.ID, book.Name, short,
+		); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(
+			`INSERT INTO bible_book_names (translation_code, book_id, name, short_name)
+			 VALUES (?, ?, ?, ?)
+			 ON CONFLICT(translation_code, book_id) DO UPDATE SET
+			   name = excluded.name, short_name = excluded.short_name`,
+			metaCode, book.ID, book.Name, short,
 		); err != nil {
 			return err
 		}

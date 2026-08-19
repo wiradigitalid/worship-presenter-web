@@ -254,6 +254,7 @@ func (s *Server) getService(w http.ResponseWriter, r *http.Request) {
 		CreatedAt     string          `json:"created_at"`
 		UpdatedAt     string          `json:"updated_at"`
 		Plan          any             `json:"plan"`
+		PlanIdentity  string          `json:"plan_identity"`
 		Transition    string          `json:"transition"`
 	}
 	var parsed, images, parts sql.NullString
@@ -276,12 +277,14 @@ func (s *Server) getService(w http.ResponseWriter, r *http.Request) {
 	date, items, transition, err := plan.PlanForService(s.DB, id)
 	if err == nil {
 		out.Plan = items
+		out.PlanIdentity = plan.Identity(items)
 		out.Transition = transition
 		if date != "" {
 			out.Date = date
 		}
 	} else {
 		out.Plan = []any{}
+		out.PlanIdentity = plan.Identity(nil)
 		out.Transition = plan.LoadTransition(s.DB)
 	}
 	writeJSON(w, http.StatusOK, out)

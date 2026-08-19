@@ -6,18 +6,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/wiradigitalid/worship-presenter-web/internal/scripture"
 )
-
-var scriptureRefRE = regexp.MustCompile(`(?i)^((?:[1-3]\s+)?[A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(\d+)\s*:\s*(\d+)(?:\s*[-–]\s*(\d+)|\s*,\s*(\d+))?\s*$`)
-
-var bookAliases = map[string]string{
-	"psalm":            "Psalms",
-	"psalms":           "Psalms",
-	"ps":               "Psalms",
-	"song of solomon":  "Song of Solomon",
-	"songofsolomon":    "Song of Solomon",
-	"sos":              "Song of Solomon",
-}
 
 func (s *Server) getScripture(w http.ResponseWriter, r *http.Request) {
 	ref := strings.TrimSpace(r.URL.Query().Get("ref"))
@@ -84,27 +75,12 @@ func (s *Server) listTranslationCodes() ([]string, error) {
 }
 
 func (s *Server) lookupScripture(ref, code string) (map[string]string, bool) {
-	value := strings.TrimSpace(strings.ReplaceAll(ref, "+", " "))
-	value = regexp.MustCompile(`(?i)^(?:e\.g\.|eg\.|example:)\s*`).ReplaceAllString(value, "")
-	value = strings.TrimSpace(value)
-	m := scriptureRefRE.FindStringSubmatch(value)
-	if m == nil {
+	bookPart, chapter, start, end, ok := scripture.ParseRef(ref)
+	if !ok {
 		return nil, false
 	}
-	book := strings.Join(strings.Fields(strings.TrimSpace(m[1])), " ")
-	chapter, _ := strconv.Atoi(m[2])
-	start, _ := strconv.Atoi(m[3])
-	end := start
-	if m[4] != "" {
-		end, _ = strconv.Atoi(m[4])
-	} else if m[5] != "" {
-		end, _ = strconv.Atoi(m[5])
-	}
-	if chapter <= 0 || start <= 0 || end < start {
-		return nil, false
-	}
-	bookID := s.resolveBookID(book)
-	if bookID == 0 {
+	bookID, canonical, ok := s.resolveBook(bookPart, code)
+	if !ok {
 		return nil, false
 	}
 	rows, err := s.DB.Query(
@@ -129,7 +105,7 @@ func (s *Server) lookupScripture(ref, code string) (map[string]string, bool) {
 	if len(texts) == 0 {
 		return nil, false
 	}
-	reference := book + " " + strconv.Itoa(chapter) + ":" + strconv.Itoa(start)
+	reference := canonical + " " + strconv.Itoa(chapter) + ":" + strconv.Itoa(start)
 	if start != end {
 		reference += "-" + strconv.Itoa(end)
 	}
@@ -140,33 +116,45 @@ func (s *Server) lookupScripture(ref, code string) (map[string]string, bool) {
 	}, true
 }
 
-func (s *Server) resolveBookID(bookName string) int {
-	normalized := strings.ToLower(strings.TrimSpace(bookName))
-	aliased := bookAliases[normalized]
-	if aliased == "" {
-		aliased = bookName
-	}
-	candidates := []string{aliased, strings.TrimSpace(bookName), strings.ReplaceAll(aliased, " ", "")}
-	seen := map[string]struct{}{}
-	for _, c := range candidates {
-		key := strings.ToLower(c)
-		if _, ok := seen[key]; ok {
-			continue
+func (s *Server) resolveBook(bookPart, translation string) (int, string, bool) {
+	names := s.loadBookNames(translation)
+	id, canonical, ok := scripture.MatchBook(bookPart, names, scripture.AliasesFor(translation))
+	return id, canonical, ok
+}
+
+func (s *Server) loadBookNames(translation string) []scripture.BookName {
+	rows, err := s.DB.Query(
+		`SELECT book_id, name, short_name FROM bible_book_names WHERE translation_code = ?`,
+		translation,
+	)
+	if err == nil {
+		defer rows.Close()
+		var out []scripture.BookName
+		for rows.Next() {
+			var n scripture.BookName
+			if err := rows.Scan(&n.ID, &n.Name, &n.ShortName); err != nil {
+				break
+			}
+			out = append(out, n)
 		}
-		seen[key] = struct{}{}
-		var id int
-		err := s.DB.QueryRow(
-			`SELECT id FROM bible_books
-			  WHERE lower(name) = ? OR lower(short_name) = ?
-			     OR lower(replace(short_name, ' ', '')) = ?
-			  LIMIT 1`,
-			key, key, strings.ReplaceAll(key, " ", ""),
-		).Scan(&id)
-		if err == nil {
-			return id
+		if len(out) > 0 {
+			return out
 		}
 	}
-	return 0
+	fallback, err := s.DB.Query(`SELECT id, name, short_name FROM bible_books`)
+	if err != nil {
+		return nil
+	}
+	defer fallback.Close()
+	var out []scripture.BookName
+	for fallback.Next() {
+		var n scripture.BookName
+		if err := fallback.Scan(&n.ID, &n.Name, &n.ShortName); err != nil {
+			return out
+		}
+		out = append(out, n)
+	}
+	return out
 }
 
 func stripVerseMarkup(text string) string {

@@ -22,35 +22,38 @@ export type PresentMessage =
       index: number;
       blank: boolean;
       transition: SlideTransition;
+      planIdentity: string;
     }
   | { type: 'request-sync' }
   /**
    * The projector reporting its own liveness, and nothing else (`AD-29`).
    * Sent unprompted by the projector window for as long as it is mounted;
    * the presenter only ever observes it. It carries no `index`, no `blank`,
-   * no `transition` and no other shared state, which is what puts it outside
-   * this file's own header contract above rather than in tension with it —
-   * that contract governs every message that touches shared state, and this
-   * one touches none. `request-sync` already is the projector's first hello
-   * (`ProjectorClient.tsx`'s mount-time post), so this is not a second one:
-   * it is the same announcement, repeated for as long as the window lives.
-   * Idempotent by construction — two in one window, or one arriving late,
-   * both mean only "something was alive at that moment" — so no sequence
-   * number or request/response pairing may be layered over it.
+   * no `transition`, no `planIdentity` and no other shared state, which is
+   * what puts it outside this file's own header contract above rather than
+   * in tension with it — that contract governs every message that touches
+   * shared state, and this one touches none. `request-sync` already is the
+   * projector's first hello (`ProjectorClient.tsx`'s mount-time post), so
+   * this is not a second one: it is the same announcement, repeated for as
+   * long as the window lives. Idempotent by construction — two in one
+   * window, or one arriving late, both mean only "something was alive at
+   * that moment" — so no sequence number or request/response pairing may
+   * be layered over it.
    */
   | { type: 'projector-alive' }
-  | { type: 'blank'; blank: boolean }
+  | { type: 'blank'; blank: boolean; planIdentity: string }
   /**
    * A live-only override of the deck's configured transition. Nothing stores
    * it: it exists for the length of a Presenter session and no longer.
    */
-  | { type: 'transition'; transition: SlideTransition }
+  | { type: 'transition'; transition: SlideTransition; planIdentity: string }
   | {
       type: 'scripture';
       reference: string;
       text: string;
+      planIdentity: string;
     }
-  | { type: 'clear-scripture' };
+  | { type: 'clear-scripture'; planIdentity: string };
 
 /**
  * The blank state a message asserts, or `null` when it says nothing about it —
@@ -104,6 +107,27 @@ export function liveTransitionOf(msg: PresentMessage): SlideTransition | null {
  */
 export function isProjectorMessage(msg: PresentMessage): boolean {
   return msg.type === 'request-sync' || msg.type === 'projector-alive';
+}
+
+/**
+ * The plan identity a shared-state message asserts, or `null` when the
+ * message is projector-originated (AD-29: no shared state) or the field is
+ * missing. A missing field is not "match whatever I hold" — AD-10 is
+ * fail-closed, so the receiver must refuse.
+ */
+export function sharedStatePlanIdentity(msg: PresentMessage): string | null {
+  if (isProjectorMessage(msg)) return null;
+  const value: unknown = (msg as { planIdentity?: unknown }).planIdentity;
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+/** Whether the receiver may adopt index, blank, transition, or overlay. */
+export function adoptsSharedState(
+  msg: PresentMessage,
+  ownIdentity: string
+): boolean {
+  const theirs = sharedStatePlanIdentity(msg);
+  return theirs !== null && theirs === ownIdentity;
 }
 
 export function presentChannelName(serviceId: number | string): string {

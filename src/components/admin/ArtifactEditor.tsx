@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   ArtifactLayout,
@@ -801,6 +802,7 @@ export default function ArtifactEditor() {
       setIsDirty((current) => nextDirtyState(current, 'saved'));
       setStatus('success');
       setMessage('Template saved');
+      toast('Template saved');
       await loadList();
     } catch (err) {
       setStatus('error');
@@ -834,6 +836,7 @@ export default function ArtifactEditor() {
       setIsDirty((current) => nextDirtyState(current, 'reset'));
       setStatus('success');
       setMessage('Template reset from seed');
+      toast('Template reset from seed');
       await loadList();
     } catch (err) {
       setStatus('error');
@@ -910,6 +913,7 @@ export default function ArtifactEditor() {
       }
       setStatus('success');
       setMessage(`Deleted ${item.label}`);
+      toast(`Deleted ${item.label}`);
     } catch (err) {
       setStatus('error');
       setMessage(err instanceof Error ? err.message : 'Delete failed');
@@ -949,6 +953,7 @@ export default function ArtifactEditor() {
       await reconcileSelectedTemplate(summaries);
       setStatus('success');
       setMessage('Template order saved');
+      toast('Template order saved');
     } catch (err) {
       setStatus('error');
       setMessage(err instanceof Error ? err.message : 'Reorder failed');

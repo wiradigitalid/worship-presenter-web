@@ -130,10 +130,8 @@ export function reconcileBibleCorpus(database: Database.Database) {
   if (descriptors.length > 1) {
     console.warn(
       `[corpus] ${descriptors.length} bible translations installed ` +
-        `(${descriptors.map((d) => d.code).join(', ')}) — bible_books holds one ` +
-        `global row per book, so the translation reconciling last owns every ` +
-        `book name for every reader. Story 21.4 arbitrates this; until it lands, ` +
-        `book names are last-writer-wins.`
+        `(${descriptors.map((d) => d.code).join(', ')}) — display names live in ` +
+        `bible_book_names per translation; bible_books is identity only.`
     );
   }
 
@@ -148,16 +146,18 @@ export function reconcileBibleCorpus(database: Database.Database) {
       content_hash = excluded.content_hash
   `);
 
-  // The `DO UPDATE` below is AD-27's arbitration point, and it arbitrates by
-  // last writer. `bible_books` is one global row per book while `name` and
-  // `short_name` are per-translation values, so a second corpus repoints every
-  // book name for every reader — silently. It cannot fire while one corpus ships,
-  // which `tests/corpus-closure.test.mjs` pins (AC-13). Story 21.4 owns the fix;
-  // do not add a corpus file before it lands.
+  // Identity only: a second translation must not overwrite names on this row.
+  // Display names belong in bible_book_names (AD-27 / Story 21.4).
   const insertBook = database.prepare(`
     INSERT INTO bible_books (id, name, short_name)
     VALUES (@id, @name, @short_name)
-    ON CONFLICT(id) DO UPDATE SET
+    ON CONFLICT(id) DO NOTHING
+  `);
+
+  const upsertBookName = database.prepare(`
+    INSERT INTO bible_book_names (translation_code, book_id, name, short_name)
+    VALUES (@translation_code, @book_id, @name, @short_name)
+    ON CONFLICT(translation_code, book_id) DO UPDATE SET
       name = excluded.name,
       short_name = excluded.short_name
   `);
@@ -199,6 +199,12 @@ export function reconcileBibleCorpus(database: Database.Database) {
         for (const book of corpus.books) {
           insertBook.run({
             id: book.id,
+            name: book.name,
+            short_name: book.shortName,
+          });
+          upsertBookName.run({
+            translation_code: corpus.code,
+            book_id: book.id,
             name: book.name,
             short_name: book.shortName,
           });
@@ -477,6 +483,15 @@ export function getDb() {
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
         short_name TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS bible_book_names (
+        translation_code TEXT NOT NULL,
+        book_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        short_name TEXT NOT NULL,
+        PRIMARY KEY (translation_code, book_id),
+        FOREIGN KEY (book_id) REFERENCES bible_books(id)
       );
 
       CREATE TABLE IF NOT EXISTS bible_verses (

@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import ThemeProvider from '@/components/ThemeProvider';
+import { Toaster } from '@/components/ui/sonner';
+import OperatorDocumentLang from './OperatorDocumentLang';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import CreateServicePage from './pages/CreateServicePage';
@@ -37,6 +39,8 @@ export default function App() {
   }
   return (
     <ThemeProvider>
+      <OperatorDocumentLang />
+      <Toaster />
       <div className="min-h-full">{routes}</div>
     </ThemeProvider>
   );

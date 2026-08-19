@@ -182,6 +182,14 @@ test('setUiLocale rejects unknown locales', () => {
   assert.throws(() => setUiLocale('fr'), /ui_locale must be one of/);
 });
 
+test('the operator SPA shell applies ui_locale without mounting on projected routes', () => {
+  const app = read('spa/src/App.tsx');
+  assert.match(app, /OperatorDocumentLang/);
+  const block = /if \(projected\) \{[\s\S]*?\n  \}/.exec(app);
+  assert.ok(block);
+  assert.doesNotMatch(block[0], /OperatorDocumentLang|ui-locale-document|getUiLocale/);
+});
+
 test('the projected tree does not reach catalogue text or call getUiLocale', () => {
   const offenders = [];
   for (const file of projectedTree()) {

@@ -33,21 +33,25 @@ function normalizeScriptureInput(raw: string): string {
     .trim();
 }
 
-/** Parse refs like `John 4:23`, `John+4:23`, `1 John 1:1-3`, `Acts 18:9,10`. */
+/** Parse refs like `John 4:23`, `Song of Solomon 1:1`, `Hakim-hakim 2:16`. */
 export function parseScriptureRef(raw: string): ParsedRef | null {
   const value = normalizeScriptureInput(raw);
   if (!value) return null;
 
-  const m = value.match(
-    /^((?:[1-3]\s+)?[A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(\d+)\s*:\s*(\d+)(?:\s*[-–]\s*(\d+)|\s*,\s*(\d+))?\s*$/
-  );
-  if (!m) return null;
-
-  const book = m[1].replace(/\s+/g, ' ').trim();
-  const chapter = Number(m[2]);
-  const verseStart = Number(m[3]);
-  const verseEnd = Number(m[4] || m[5] || m[3]);
+  const colon = value.lastIndexOf(':');
+  if (colon <= 0) return null;
+  const before = value.slice(0, colon).trim();
+  const after = value.slice(colon + 1).trim();
+  const space = before.search(/\s+\S+$/);
+  if (space < 0) return null;
+  const book = before.slice(0, space).replace(/\s+/g, ' ').trim();
+  const chapter = Number(before.slice(space + 1).trim());
+  const span = after.match(/^(\d+)(?:\s*[-–]\s*(\d+)|\s*,\s*(\d+))?$/);
+  if (!span) return null;
+  const verseStart = Number(span[1]);
+  const verseEnd = Number(span[2] || span[3] || span[1]);
   if (
+    !book ||
     !Number.isInteger(chapter) ||
     !Number.isInteger(verseStart) ||
     !Number.isInteger(verseEnd) ||
@@ -61,37 +65,86 @@ export function parseScriptureRef(raw: string): ParsedRef | null {
   return { book, chapter, verseStart, verseEnd };
 }
 
-/** Common operator aliases → canonical bible_books.name / short_name. */
-const BOOK_ALIASES: Record<string, string> = {
-  psalm: 'Psalms',
-  psalms: 'Psalms',
-  ps: 'Psalms',
-  'song of solomon': 'Song of Solomon',
-  songofsolomon: 'Song of Solomon',
-  sos: 'Song of Solomon',
-};
+type BookName = { id: number; name: string; shortName: string };
 
-function resolveBookId(bookName: string): number | null {
-  const db = getDb();
-  const normalized = bookName.trim().toLowerCase();
-  const aliased = (BOOK_ALIASES[normalized] || bookName).trim();
-  const candidates = Array.from(
-    new Set([aliased, bookName.trim(), aliased.replace(/\s+/g, '')])
-  );
+function aliasesFor(translation: string): Array<{ alias: string; bookId: number }> {
+  if (translation.trim().toUpperCase() !== 'KJV') return [];
+  return [
+    { alias: 'ps', bookId: 19 },
+    { alias: 'psalm', bookId: 19 },
+    { alias: 'psalms', bookId: 19 },
+    { alias: 'sos', bookId: 22 },
+    { alias: 'song of songs', bookId: 22 },
+    { alias: 'song of solomon', bookId: 22 },
+  ];
+}
 
-  for (const candidate of candidates) {
-    const key = candidate.toLowerCase();
-    const row = db
-      .prepare(
-        `SELECT id FROM bible_books
-         WHERE lower(name) = ? OR lower(short_name) = ?
-            OR lower(replace(short_name, ' ', '')) = ?
-         LIMIT 1`
-      )
-      .get(key, key, key.replace(/\s+/g, '')) as { id: number } | undefined;
-    if (row) return row.id;
+function normalizeBookKey(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function matchBook(
+  bookPart: string,
+  names: BookName[],
+  aliases: Array<{ alias: string; bookId: number }>
+): { id: number; canonicalName: string } | null {
+  const input = normalizeBookKey(bookPart);
+  if (!input) return null;
+  const byId = new Map(names.map((n) => [n.id, n.name]));
+  const found: Array<{ id: number; canonical: string; keyLen: number }> = [];
+  const consider = (key: string, bookId: number, canonical: string) => {
+    const k = normalizeBookKey(key);
+    if (!k) return;
+    if (input === k || input.startsWith(`${k} `)) {
+      found.push({ id: bookId, canonical, keyLen: k.length });
+    }
+  };
+  for (const n of names) {
+    consider(n.name, n.id, n.name);
+    consider(n.shortName, n.id, n.name);
   }
-  return null;
+  for (const a of aliases) {
+    consider(a.alias, a.bookId, byId.get(a.bookId) ?? '');
+  }
+  if (found.length === 0) return null;
+  const max = Math.max(...found.map((c) => c.keyLen));
+  const longest = found.filter((c) => c.keyLen === max);
+  const ids = new Set(longest.map((c) => c.id));
+  if (ids.size !== 1) return null;
+  const winner = longest[0];
+  return {
+    id: winner.id,
+    canonicalName: winner.canonical || byId.get(winner.id) || bookPart,
+  };
+}
+
+function loadBookNames(translationCode: string): BookName[] {
+  const db = getDb();
+  try {
+    const named = db
+      .prepare(
+        `SELECT book_id AS id, name, short_name AS shortName
+           FROM bible_book_names WHERE translation_code = ?`
+      )
+      .all(translationCode) as BookName[];
+    if (named.length > 0) return named;
+  } catch {
+    // Tests and databases created before bible_book_names still read bible_books.
+  }
+  return db
+    .prepare(`SELECT id, name, short_name AS shortName FROM bible_books`)
+    .all() as BookName[];
+}
+
+function resolveBookId(
+  bookName: string,
+  translationCode: string
+): { id: number; canonicalName: string } | null {
+  return matchBook(
+    bookName,
+    loadBookNames(translationCode),
+    aliasesFor(translationCode)
+  );
 }
 
 /** True when the named translation holds no verses in the table. */
@@ -118,8 +171,8 @@ export function lookupScripture(
   const parsed = parseScriptureRef(ref);
   if (!parsed) return null;
 
-  const bookId = resolveBookId(parsed.book);
-  if (bookId == null) return null;
+  const matched = resolveBookId(parsed.book, code);
+  if (matched == null) return null;
 
   const db = getDb();
   const rows = db
@@ -130,7 +183,7 @@ export function lookupScripture(
        ORDER BY verse ASC`
     )
     .all(
-      bookId,
+      matched.id,
       parsed.chapter,
       parsed.verseStart,
       parsed.verseEnd,
@@ -145,8 +198,8 @@ export function lookupScripture(
   const text = rows.map((r) => stripVerseMarkup(r.verse_text)).join(' ');
   const reference =
     parsed.verseStart === parsed.verseEnd
-      ? `${parsed.book} ${parsed.chapter}:${parsed.verseStart}`
-      : `${parsed.book} ${parsed.chapter}:${parsed.verseStart}-${parsed.verseEnd}`;
+      ? `${matched.canonicalName} ${parsed.chapter}:${parsed.verseStart}`
+      : `${matched.canonicalName} ${parsed.chapter}:${parsed.verseStart}-${parsed.verseEnd}`;
 
   return { reference, text, translation: code };
 }

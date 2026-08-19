@@ -205,9 +205,10 @@ func (s *Server) getSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"username": acct.Username,
-		"role":     acct.Role,
-		"id":       acct.ID,
+		"username":  acct.Username,
+		"role":      acct.Role,
+		"id":        acct.ID,
+		"ui_locale": s.uiLocale(),
 	})
 }
 

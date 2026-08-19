@@ -22,6 +22,8 @@ const {
   openPresentChannel,
   presentChannelName,
   isProjectorMessage,
+  adoptsSharedState,
+  sharedStatePlanIdentity,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'present-channel.ts')).href
 );
@@ -198,4 +200,25 @@ test('a sync with no transition field leaves the projector on its own setting', 
   // resolves to `false` there and to `null` here.
   assert.equal(liveTransitionOf({ type: 'sync', index: 3, blank: false }), null);
   assert.equal(liveTransitionOf({ type: 'transition' }), null);
+});
+
+test('AD-10: a shared-state message is adopted only when plan identities match', () => {
+  const own = 'abc';
+  const sync = {
+    type: 'sync',
+    index: 2,
+    blank: false,
+    transition: 'fade',
+    planIdentity: 'abc',
+  };
+  assert.equal(sharedStatePlanIdentity(sync), 'abc');
+  assert.equal(adoptsSharedState(sync, own), true);
+  assert.equal(adoptsSharedState({ ...sync, planIdentity: 'other' }, own), false);
+  assert.equal(
+    adoptsSharedState({ type: 'sync', index: 2, blank: false, transition: 'fade' }, own),
+    false,
+    'a missing identity is fail-closed, not a match'
+  );
+  assert.equal(adoptsSharedState({ type: 'request-sync' }, own), false);
+  assert.equal(adoptsSharedState({ type: 'projector-alive' }, own), false);
 });

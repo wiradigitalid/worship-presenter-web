@@ -245,12 +245,15 @@ export default function PresenterOperator({
   serviceDate,
   slides,
   runSheetItems,
+  planIdentity,
   transition: deckTransition,
 }: {
   serviceId: number;
   serviceDate: string;
   slides: SlidePlanItem[];
   runSheetItems: ParsedItem[];
+  /** Fingerprint of the deck this console fetched (AD-10). */
+  planIdentity: string;
   /**
    * The deck's configured style, read server-side — the same one every PPTX
    * download is generated from. It is where a session starts and what a new
@@ -280,6 +283,8 @@ export default function PresenterOperator({
   const indexRef = useRef(0);
   const blankRef = useRef(false);
   const transitionRef = useRef<SlideTransition>(deckTransition);
+  const planIdentityRef = useRef(planIdentity);
+  planIdentityRef.current = planIdentity;
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
   const activeFrameRef = useRef<HTMLButtonElement | null>(null);
   const projectorRef = useRef<Window | null>(null);
@@ -372,6 +377,7 @@ export default function PresenterOperator({
         index: clamped,
         blank: blankRef.current,
         transition: transitionRef.current,
+        planIdentity: planIdentityRef.current,
       });
     },
     [broadcast, slides.length]
@@ -387,7 +393,11 @@ export default function PresenterOperator({
     (next: boolean) => {
       blankRef.current = next;
       setBlank(next);
-      broadcast({ type: 'blank', blank: next });
+      broadcast({
+        type: 'blank',
+        blank: next,
+        planIdentity: planIdentityRef.current,
+      });
     },
     [broadcast]
   );
@@ -406,7 +416,11 @@ export default function PresenterOperator({
     (next: SlideTransition) => {
       transitionRef.current = next;
       setLiveTransition(next);
-      broadcast({ type: 'transition', transition: next });
+      broadcast({
+        type: 'transition',
+        transition: next,
+        planIdentity: planIdentityRef.current,
+      });
     },
     [broadcast]
   );
@@ -424,6 +438,7 @@ export default function PresenterOperator({
       index: indexRef.current,
       blank: blankRef.current,
       transition: transitionRef.current,
+      planIdentity: planIdentityRef.current,
     });
 
     const onMessage = (ev: MessageEvent<PresentMessage>) => {
@@ -535,6 +550,7 @@ export default function PresenterOperator({
         type: 'scripture',
         reference: data.reference,
         text: data.text,
+        planIdentity: planIdentityRef.current,
       });
     } catch {
       setScriptureError('Lookup failed');
@@ -660,7 +676,12 @@ export default function PresenterOperator({
             </Button>
             <Button
               variant="ghost"
-              onClick={() => broadcast({ type: 'clear-scripture' })}
+              onClick={() =>
+                broadcast({
+                  type: 'clear-scripture',
+                  planIdentity: planIdentityRef.current,
+                })
+              }
             >
               Clear scripture
             </Button>

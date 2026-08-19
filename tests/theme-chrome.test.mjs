@@ -2322,15 +2322,8 @@ test('AC-1: the theme flip does not animate the whole shell', () => {
 });
 
 test('AC-5: sonner reads the theme, and the provider sits above it', () => {
-  // The claim is not "sonner calls useTheme" — it did that before this story and
-  // the call resolved to nothing. It is that mounting the provider ABOVE it is
-  // what gives the call a value, so sonner needed no edit. Asserting only the
-  // first half passed with `ThemeProvider` deleted from the layout, which is the
-  // entire content of the claim.
-  //
-  // AC-5 is structural on purpose: `<Toaster />` is mounted nowhere and `toast(`
-  // is called nowhere, at the owner's direction. That is filed as
-  // `17-9-toast-channel-wiring` in deferred-work.md under Story 17.6, which owns the decision.
+  // Mount is operator-shell only: `<Toaster />` lives inside ThemeProvider in
+  // the SPA, and `toast(` is the combined inline+toast channel (17-9).
   assert.match(
     read('src/components/ui/sonner.tsx'),
     /useTheme\(\)/,
@@ -2341,10 +2334,25 @@ test('AC-5: sonner reads the theme, and the provider sits above it', () => {
     /ThemeProvider/,
     'sonner must not mount its own provider — one provider, at the root'
   );
+  const app = read('spa/src/App.tsx');
   assert.match(
-    read('spa/src/App.tsx'),
+    app,
     /<ThemeProvider>/,
     'the provider is above sonner because it is above operator chrome'
+  );
+  assert.match(
+    app,
+    /<Toaster \/>/,
+    'Toaster mounts once on the operator shell, not per page'
+  );
+  const block = /if \(projected\) \{[\s\S]*?\n  \}/.exec(app);
+  assert.ok(block, 'App.tsx must branch projected routes away from the operator shell');
+  assert.doesNotMatch(block[0], /Toaster/, 'projected branch must not mount Toaster');
+  assert.match(
+    read('src/operator/admin/RetentionSettings.tsx') +
+      read('src/components/admin/ArtifactEditor.tsx'),
+    /toast\(/,
+    'the confirmation channel has at least one toast( call site'
   );
 });
 

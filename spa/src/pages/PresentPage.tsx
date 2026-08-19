@@ -31,6 +31,7 @@ export default function PresentPage() {
       serviceDate={data.date}
       slides={data.plan || []}
       runSheetItems={parsed.items || []}
+      planIdentity={typeof data.plan_identity === 'string' ? data.plan_identity : ''}
       transition={data.transition || 'fade'}
     />
   );

@@ -149,7 +149,7 @@ export function parseScriptureValue(raw: string): ParsedScripture | null {
   if (!value || value === '-' || value === '—') return null;
 
   const split = value.match(
-    /^((?:[1-3]\s+)?[A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(\d+:[\d,\-–]+)(?:\s*[—–\-:]\s*|\s+)(.+)$/
+    /^(.+?)\s+(\d+:[\d,\-–]+)(?:\s*[—–\-:]\s*|\s+)(.+)$/
   );
   if (split) {
     return {
@@ -159,7 +159,7 @@ export function parseScriptureValue(raw: string): ParsedScripture | null {
   }
 
   const refOnly = value.match(
-    /^((?:[1-3]\s+)?[A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(\d+:[\d,\-–]+)\s*$/
+    /^(.+?)\s+(\d+:[\d,\-–]+)\s*$/
   );
   if (refOnly) {
     return {

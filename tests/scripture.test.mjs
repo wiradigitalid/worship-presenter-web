@@ -100,10 +100,31 @@ test('lookupScripture range joins verses', () => {
   assert.match(passage.text, /God is a Spirit/);
 });
 
-test('lookupScripture aliases Psalm to Psalms', () => {
-  const passage = lookupScripture('Psalm 23:1', 'KJV');
+test('ps 23:1 looks up Psalms and returns the canonical name', () => {
+  const passage = lookupScripture('ps 23:1', 'KJV');
   assert.ok(passage);
-  assert.match(passage.text, /The LORD is my shepherd/);
+  assert.equal(passage.reference, 'Psalms 23:1');
+});
+
+test('parseScriptureRef accepts three-word and hyphenated book names', () => {
+  assert.deepEqual(parseScriptureRef('Song of Solomon 1:1'), {
+    book: 'Song of Solomon',
+    chapter: 1,
+    verseStart: 1,
+    verseEnd: 1,
+  });
+  assert.deepEqual(parseScriptureRef('Hakim-hakim 2:16'), {
+    book: 'Hakim-hakim',
+    chapter: 2,
+    verseStart: 16,
+    verseEnd: 16,
+  });
+  assert.deepEqual(parseScriptureRef('Kisah Para Rasul 1:8'), {
+    book: 'Kisah Para Rasul',
+    chapter: 1,
+    verseStart: 8,
+    verseEnd: 8,
+  });
 });
 
 test('lookupScripture reads only the named translation', () => {

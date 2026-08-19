@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,9 +38,9 @@ export default function TransitionSettings({
       if (!res.ok) throw new Error('save failed');
       const data = (await res.json()) as { slide_transition: SlideTransition };
       setTransition(data.slide_transition);
-      setMessage(
-        `Saved. New decks and the projector now use ${SLIDE_TRANSITION_SPECS[data.slide_transition].label}.`
-      );
+      const saved = `Saved. New decks and the projector now use ${SLIDE_TRANSITION_SPECS[data.slide_transition].label}.`;
+      setMessage(saved);
+      toast(saved);
     } catch {
       setMessage('Failed to save the transition setting.');
     } finally {

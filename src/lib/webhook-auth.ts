@@ -1,5 +1,14 @@
+import { timingSafeEqual } from 'node:crypto';
+
 /** Result when webhook auth fails; `null` means allowed. */
 export type WebhookAuthFailure = { status: 401 | 503; error: string };
+
+function secretsEqual(expected: string, provided: string): boolean {
+  const left = Buffer.from(expected);
+  const right = Buffer.from(provided);
+  if (left.length !== right.length) return false;
+  return timingSafeEqual(left, right);
+}
 
 /**
  * Validate webhook secret from env vs provided header value.
@@ -16,7 +25,7 @@ export function assertWebhookSecretValue(
       error: 'Webhook not configured (WEBHOOK_SECRET missing)',
     };
   }
-  if (!provided || provided !== envSecret) {
+  if (!provided || !secretsEqual(envSecret, provided)) {
     return { status: 401, error: 'Unauthorized' };
   }
   return null;

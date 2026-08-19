@@ -521,4 +521,5 @@ test('GET /api/session returns the bootstrap operator', async () => {
   assert.equal(status, 200);
   assert.equal(body.username, BOOTSTRAP_USER);
   assert.equal(body.role, 'admin');
+  assert.ok(['en', 'id'].includes(body.ui_locale));
 });
