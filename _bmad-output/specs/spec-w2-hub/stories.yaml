@@ -1,0 +1,52 @@
+# Wave W2 x Hub — FR-14. Execution order is list order.
+# Realises SPEC.md CAP-5. Story status is never recorded here or in waves.yaml.
+
+- id: "2-1"
+  title: Go process listens, gates, and opens SQLite
+  description: >-
+    Ships the always-on Go API process: AD-5 matcher, session cookie re-check,
+    SQLite open with startup DDL, gated 401 without a live cookie. Prove the
+    gate without Next. Serving SPA/static files after a valid session is in
+    scope; the full Operator chrome is not.
+  spec_checkpoint: true
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Read SPEC.md and every path in its companions. Do not edit .what/, .how/,
+    or an applied DEC-. Verification in stack.md; traps in brownfield.md.
+    Land proof in internal/gate tests and tests/go-http-gate.test.mjs; add the
+    mjs file to package.json test. Keep tests/proxy-matcher.test.mjs lists
+    aligned with the Go prefix list. On unknown test failure run
+    wdi-systematic-debugging; escalate on a third failed fix. Commit locally,
+    never push. Public repository: invent names; no congregation data.
+
+- id: "2-2"
+  title: PPTX worker draws a finished plan and exits
+  description: >-
+    Extract draw-only PptxGenJS from src/lib/pptx.ts into src/lib/pptx-draw.ts
+    and workers/pptx/draw.mjs. The child receives plan JSON, writes OpenXML,
+    exits. Module graph has no SQLite. As-built generatePptx keeps working by
+    wrapping the draw function.
+  spec_checkpoint: true
+  done_checkpoint: true
+  depends_on: ["2-1"]
+  invoke_dev_with: >-
+    Read SPEC.md companions. Do not import getDb, slide-plan, or settings into
+    the worker. Prove the absence-guard by injecting the defect then reverting.
+    Land tests/pptx-worker.test.mjs and list it in package.json. Existing
+    tests/pptx-content.test.mjs must stay green. Commit locally, never push.
+
+- id: "2-3"
+  title: Go GET pptx assembles the plan and execs the worker
+  description: >-
+    Go serves GET /api/services/{id}/pptx (inventory row 8): load the Service
+    from SQLite, assemble the slide plan in Go (LC-16), exec the PPTX worker
+    with the finished plan, return the OpenXML file. Node must not open SQLite
+    on that path. FR-14 is not done until a real Service round-trips.
+  spec_checkpoint: true
+  done_checkpoint: true
+  depends_on: ["2-2"]
+  invoke_dev_with: >-
+    Go owns SQLite and plan assembly. Do not spawn a Node planner that calls
+    getDb or buildSlidePlan. Prefer modernc.org/sqlite. Land
+    tests/pptx-go-http.test.mjs and list it in package.json. Add go test ./...
+    to CI. Inventory numbers stay 1-33. Commit locally, never push.

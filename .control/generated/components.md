@@ -7,7 +7,9 @@ product_components:
 - id: hub
   name: Hub
   containers:
-  - web
+  - api
+  - spa
+  - pptx-worker
   logical_components:
   - LC-1
   - LC-12
@@ -23,7 +25,8 @@ product_components:
 - id: presenter
   name: Presenter
   containers:
-  - web
+  - api
+  - spa
   logical_components:
   - LC-10
   - LC-14
@@ -31,7 +34,8 @@ product_components:
 - id: registry
   name: Registry
   containers:
-  - web
+  - api
+  - spa
   logical_components:
   - LC-11
   - LC-15

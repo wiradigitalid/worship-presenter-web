@@ -46,3 +46,39 @@ decisions:
       - .what/_prd/operator-turn/addendum.md
       - .what/_prd/offline-deck/addendum.md
       - _bmad-output/prior-knowledge/README.md
+  - id: DEC-003
+    status: applied
+    title: Go API, React SPA, on-demand Node PPTX worker
+    file: .control/decisions/DEC-003-go-api-react-spa-pptx-worker.md
+    touches:
+      - _bmad-output/planning-artifacts/sprint-change-proposal-2026-08-19.md
+      - .constitution/project/codebase-brownfield-guide.md
+      - .constitution/project/codebase-stack-guide.md
+      - .constitution/project/deployment.md
+      - .constitution/project/inventory-readers.py
+      - .control/decisions/DEC-003-go-api-react-spa-pptx-worker.md
+      - .control/questions/answered.md
+      - .control/questions/assumptions.md
+      - .control/registry/components.yaml
+      - .control/registry/decisions.yaml
+      - .control/structure-codebase.md
+      - .control/structure-document.md
+      - .how/_platform/ARCHITECTURE-SPINE.md
+      - .how/_platform/c4-l1-system-context.md
+      - .how/_platform/c4-l2-containers.md
+      - .how/_platform/c4-l3-api.md
+      - .how/_platform/c4-l3-spa.md
+      - .how/_platform/cross-cutting.md
+      - .how/_platform/design-system.md
+      - .how/_platform/inventory-api.md
+      - .how/_platform/inventory-screen.md
+      - .how/hub/04-components/LC-12-service-write.md
+      - .how/hub/04-components/LC-13-pptx.md
+      - .how/hub/04-components/LC-16-slide-plan.md
+      - .how/hub/SDD-hub.md
+      - .how/presenter/04-components/LC-14-session.md
+      - .how/presenter/SDD-presenter.md
+      - .how/registry/04-components/LC-15-store.md
+      - .how/registry/SDD-registry.md
+      - .what/_product-brief/addendum.md
+      - .what/hub/SRS-hub.md

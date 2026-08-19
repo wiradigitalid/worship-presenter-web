@@ -7,7 +7,7 @@ decision: null
 
 # Deployment — this product
 
-The as-built is one Next.js process and one SQLite file (AD-2, AD-4). **Do not run multiple application instances against the same database file.**
+The as-built until the cutover wave is still one Next.js process. The **rule** (DEC-003 / AD-4 / AD-30) is one Docker Compose unit whose always-on process is the Go API, plus a Node binary only to exec the PPTX worker. **Do not run multiple API processes against the same database file.**
 
 ## Durable paths
 
@@ -23,7 +23,7 @@ SQLite, the PPTX cache, and uploads must sit on host storage that survives a con
 | `UPLOADS_DIR` | Local image files (when used) |
 | `PPTX_RETENTION_DAYS` | Cache retention; default 60. `0` keeps forever |
 | `IMAGE_URL_ALLOWLIST` | Hostnames allowed for remote image fetch (AD-8) |
-| `PORT` | Next listen port |
+| `PORT` | Go API listen port (as-built Next: 3000 until cutover) |
 
 `docker-compose.yml` and `Dockerfile` at the repo root are the as-built packaging. A Cloudflare Tunnel in front of `localhost:3000` is the published pattern; there is no public inbound port on the venue router.
 
@@ -39,4 +39,4 @@ On open the app sets WAL, `busy_timeout = 5000`, and `foreign_keys = ON`. Keep t
 
 The production shape assumed at G3 is an always-on Windows host with Docker Desktop (WSL2). Sleep and hibernation off. Fonts used by PptxGenJS must be installed on that machine (NFR-7). Phase-1 decks name Arial; if the venue machine lacks it, install a font pack or accept the host’s default sans-serif substitution.
 
-A standalone Next.js build does not copy `data/`; copy the shipped corpora into the image. Never bake `data.db`.
+A production image copies shipped corpora. Never bake `data.db`. After cutover the image is Go + SPA assets + a Node binary for the PPTX child (OQ-35).

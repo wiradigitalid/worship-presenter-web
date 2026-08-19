@@ -3,7 +3,7 @@ type: lc
 id: LC-14
 name: Presenter session
 lc_type: service
-container: web
+container: spa
 component: presenter
 created: 2026-08-18
 updated: 2026-08-19

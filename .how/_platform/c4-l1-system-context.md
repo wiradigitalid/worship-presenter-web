@@ -8,7 +8,7 @@ updated: 2026-08-19
 
 # C4 L1 — System context
 
-Provenance: as-built `src/` + EXPERIENCE IA. Not regenerated from scratch.
+Provenance: as-built `src/` + EXPERIENCE IA. Amended DEC-003 (not regenerated from scratch).
 
 ```mermaid
 C4Context
@@ -29,4 +29,4 @@ C4Context
     Rel(congregation, ppt, "watches the screen")
 ```
 
-This phase: Operator enters the Rundown in Hub. Telegram and picoclaw remain on the diagram as last-phase intake (CAP-11). External systems: Telegram, picoclaw, PPTX player. Our one container: `web` (Next.js). The Go+SPA direction is in the brief addendum, not yet an AD (OQ-6).
+This phase: Operator enters the Rundown in Hub. Telegram and picoclaw remain on the diagram as last-phase intake (CAP-11). External systems: Telegram, picoclaw, PPTX player. Inside the boundary (L2): `api`, `spa`, `pptx-worker` (DEC-003 / AD-30).

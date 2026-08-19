@@ -1,7 +1,7 @@
 ---
 topic: Presenter
 artifact: .what/presenter/SRS-presenter.md
-updated: 2026-08-19T14:18
+updated: 2026-08-19T19:25
 ---
 
 - (event) G4 guarded as-built: UC-11..13; LC-9, LC-10. Plan identity AD-10 still [MISSING].
@@ -16,3 +16,4 @@ updated: 2026-08-19T14:18
 - (event) wdi-review SDD: slideshow off channel; UC-11 control is the page not LC-14; LC-14 Interface Required vs As-built; PresentMessage transition/clear-scripture; AD-29 no-evidence-yet. OQ-28/29. Not stamped.
 - (event) wdi-review: UC-13 replace overlay on second lookup; SCN-4 failed lookup does not clear a showing overlay (PresenterOperator). Stamp pending.
 - (event) Owner held G4. V13 stamped SRS+SDD at 02f8d3a. g4_passed true.
+- (event) DEC-003: Presenter screens and LC-10/14 on spa; LC-9 on api; AD-30 quoted.

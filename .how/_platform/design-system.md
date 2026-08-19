@@ -12,7 +12,7 @@ description: Operator hub for preparing and projecting a worship service.
 
 Tokens and base components for Hub and Presenter **operator** surfaces. The Congregation screen is the Artifact Registry, not this file.
 
-As-built: shadcn/ui (base-nova) on Next.js + Tailwind 4. Zero brand hue in `globals.css` tokens. `wdi-ux` was not run; this file is extracted so the archive can retire (DEC-001).
+As-built: shadcn/ui (base-nova) + Tailwind 4. Target UI is the React SPA (DEC-003); tokens stay here. Zero brand hue in `globals.css` tokens. `wdi-ux` was not run; this file is extracted so the archive can retire (DEC-001).
 
 ## Tokens (from `src/app/globals.css`)
 

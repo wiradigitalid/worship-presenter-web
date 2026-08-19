@@ -5,7 +5,7 @@ status: draft
 created: 2026-08-18
 updated: 2026-08-19
 realizes: [UC-14, UC-15, UC-16, UC-20]
-binds: [AD-5, AD-6, AD-7, AD-8, AD-9, AD-11, AD-12, AD-13, AD-14, AD-15, AD-16, AD-17, AD-18, AD-19, AD-20, AD-21, AD-22]
+binds: [AD-5, AD-6, AD-7, AD-8, AD-9, AD-11, AD-12, AD-13, AD-14, AD-15, AD-16, AD-17, AD-18, AD-19, AD-20, AD-21, AD-22, AD-30]
 reviewed:
   date: '2026-08-19'
   sha: 'a2bf8b0dbdda61810be611576e31ec120e54d96d'
@@ -39,11 +39,11 @@ Direction: Admin screen → LC-11 → LC-15 → `artifact_templates`. Hub/Presen
 
 | AD | Quoted rule | How it lands here |
 | --- | --- | --- |
-| AD-5 | `src/proxy.ts` is the one request gate, and its `config.matcher` regex **is** the authorization boundary — anything it does not match is served with no session check at all, so a new exclusion ships together with its assertion in `tests/proxy-matcher.test.mjs` in the same change set. | `/admin/artifacts` and `/api/admin/artifacts/**` sit inside the matcher (AD-14). |
+| AD-5 | The Go API has one request gate, and its path matcher **is** the authorization boundary — anything it does not match is served with no session check at all, so a new exclusion ships together with its assertion test in the same change set. | `/admin/artifacts` and `/api/admin/artifacts/**` sit inside the matcher (AD-14). As-built until cutover: `src/proxy.ts`. |
 | AD-6 | every service mutation carries the client's `updated_at` as a precondition; a stale value is rejected with HTTP 409 and the client re-reads before retrying. No write path may bypass the precondition. | PUT/DELETE/order artifacts: `updatedAt` / `RegistryStaleError`. Sync Artifact is Hub LC-2 (`updated_at` / `ServiceStaleError`). |
 | AD-7 | `buildSlidePlan` is the single source of slide order and content for every surface. | Registry supplies entries; the plan orders. |
 | AD-8 | image references resolve only through the shared helpers in `src/lib` | Save canvas. |
-| AD-9 | schema changes go through the app's startup DDL on the `getDb` path. | `artifact_templates` and `service_registry_snapshots`. |
+| AD-9 | schema changes go through the Go API's startup DDL when it opens SQLite. | `artifact_templates` and `service_registry_snapshots`. |
 | AD-11 | The live Artifact Registry is stored in SQLite on the durable `DB_PATH` (AD-4). | Not live JSON. |
 | AD-12 | a renderer never **reads data from** the registry itself. | Plan only. |
 | AD-13 | The Canvas Editor uses an Uncontrolled Wrapper pattern. | Fabric holds state until save. |
@@ -56,12 +56,13 @@ Direction: Admin screen → LC-11 → LC-15 → `artifact_templates`. Hub/Presen
 | AD-20 | every slide in the deck originates from an ordered registry entry. | Planner does not inject liturgy slides. AD-20 *Prevents* first half is still debt (handlers still pick the hymn). |
 | AD-21 | All persisted data shares **one monotonic version number** in `settings` | `data_version`. |
 | AD-22 | authoring authority is fixed per kind, and no surface widens it. | General vs SongSet vs Announcement. |
+| AD-30 | The Go API is the only always-on server: it owns SQLite, assembles the slide plan, and serves JSON | LC-11 / LC-15 on `api`; Admin UI on `spa`. |
 
 AD-1, AD-2, AD-4, AD-10, AD-24 are not quoted here (OQ-30): they bind the container / chrome, not Registry rows.
 
 ## Failure Behaviour · [guarded]
 
-Boundaries = inventory-api rows 25–28, 31–32 plus inventory-screen row 7 (`/admin/artifacts`). Process timeout: Next/Node default. Registry does not retry to the client; Admin presses again.
+Boundaries = inventory-api rows 25–28, 31–32 plus inventory-screen row 7 (`/admin/artifacts`). Process timeout: Go API after cutover. As-built Next/Node default. Registry does not retry to the client; Admin presses again.
 
 | Boundary | Slow | Absent | Lying | What the user sees | What is logged |
 | --- | --- | --- | --- | --- | --- |

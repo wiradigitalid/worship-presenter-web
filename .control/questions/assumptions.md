@@ -16,7 +16,6 @@ states.
 | OQ-2 | One church, one worship flow, for this product's scope. | Scope In is not enough; that is a second product or a new PRD. | 2026-08-18 | agent |
 | OQ-3 | The venue has a laptop that can play PPTX (PowerPoint or equivalent). | The offline guarantee (BG-3) is not fulfilled. | 2026-08-18 | agent |
 | OQ-5 | PPTX remains the offline guarantee; the browser slideshow is best-effort after one Service is loaded. | BG-3 is read as if the slideshow must be offline. | 2026-08-18 | agent |
-| OQ-6 | The G3 portrait is as-built one `web` container (AD-2/AD-4). The Go+SPA direction in the brief addendum has not yet reversed an AD. | If the owner treats Go+SPA as binding now, the spine is wrong until a `DEC-` exists. | 2026-08-18 | agent |
 | OQ-8 | Same date: webhook overwrites (upsert); the Hub form does not create a second row without confirmation. | If both last-write, Hub fields vanish silently; if both hold, Telegram fails. | 2026-08-18 | agent |
 | OQ-10 | An empty `WEBHOOK_SECRET` string is treated the same as unset (reject intake). | 401 vs 503 confuses OQ-4 go-live. | 2026-08-18 | agent |
 | OQ-12 | "Nearest Sabbath" = the next Sabbath or today in the venue time zone, not the previous one. | A Telegram correction changes the wrong week. | 2026-08-18 | agent |
@@ -41,3 +40,6 @@ states.
 | OQ-32 | When Sync Artifact ships, a corrupt live Registry row is omitted and logged like plan read; it is not frozen into the snapshot. | An unrenderable snapshot, or Sync fails closed with no recovery. | 2026-08-19 | agent |
 | OQ-33 | PUT `/api/announcements` with `items: []` is a total replace and wipes recurring rows. A confirm or 400 is a later story. | Operator loses the master flyer list with no extra prompt. | 2026-08-19 | agent |
 | OQ-34 | Announcement PUT/PATCH are last-write-wins; AD-6 does not apply to this resource. | Two Operators silently overwrite flyer order or URLs. | 2026-08-19 | agent |
+| OQ-35 | The production image includes a Node binary solely to exec the PPTX worker; it is not a 24/7 Node server. | PPTX download fails in Docker, or a Node HTTP server is left running “for convenience”. | 2026-08-19 | agent |
+| OQ-36 | Development uses a SPA bundler plus the Go API on another origin; production Go serves the SPA same-origin. | Session cookies fail across origins, or Next.js is kept as a BFF. | 2026-08-19 | agent |
+| OQ-37 | Presenter sync stays in the SPA (`BroadcastChannel`, AD-10); Go is not the sync bus. | A WebSocket story appears and AD-10 must be reopened. | 2026-08-19 | agent |

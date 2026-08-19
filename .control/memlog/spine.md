@@ -1,7 +1,7 @@
 ---
 topic: Spine Worship Presenter Web
 artifact: .how/_platform/ARCHITECTURE-SPINE.md
-updated: 2026-08-19T11:32
+updated: 2026-08-19T19:36
 ---
 
 - (decision) Spine welded from as-built; AD-n not renumbered. Container web. Go+SPA = OQ-6, not a new AD.
@@ -15,3 +15,5 @@ updated: 2026-08-19T11:32
 - (event) wdi-review structure+prose: accepted Stack (seed) marker and AD-17 past-tense on the closed substitution loop. Dismissed rewriting AD-2/AD-3/AD-28 Rules — product phase is not an invariant; Design Paradigm and mermaid already recut Hub now / CAP-11 later. Trace not stamped (blockers adjudicated; working tree dirty).
 - (event) wdi-blueprint platform amendment: inventory readers landed (96dfd61). Three inventories aligned to engine columns (API Host web, screen web/<Component>, States not Actor). inventory.py --write then prose restored (What it holds / Description / UC). Rows 12-13 dropped (rebuild names, numbers retired). Spine/C4/containers/platform_owns unchanged (amendment not create; bmad-architecture not re-dispatched). Roll-up regenerated. V13 still empty until wdi-review.
 - (event) wdi-review structure+prose at 9ab0996. No contract BLOCKER. Editorial CONDENSE of AD essays deferred (OQ-18); binds vs NFR-7 as range-plus-exception (OQ-19). Trace stamped.
+- (event) DEC-003 applied: AD-30 process split; AD-2/4/5/9/24 amended in place; C4 L2/L3 recut to api + spa + pptx-worker; inventories Host/Screen renamed without renumbering.
+- (event by user) Owner held G3 and G4 over the DEC-003 delta (2026-08-19). Proceed to wdi-build W2. V13 stamp waits for the commit that contains the delta.

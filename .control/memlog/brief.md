@@ -1,7 +1,7 @@
 ---
 topic: Worship Presenter Web
 artifact: .what/_product-brief/brief.md
-updated: 2026-08-19T08:10
+updated: 2026-08-19T19:25
 ---
 
 - (decision by coach) Create Fast path: the G1 problem is rebuilding the weekly Sabbath Deck (~52 hours/year, one Operator, late changes fail), not a Go/SPA rewrite.
@@ -21,3 +21,4 @@ updated: 2026-08-19T08:10
 - (event by user) Owner held G1: brief is correct. gates_passed now includes G1.
 - (event by user) Owner held G2 for all three area PRDs. gates_passed is now G1, G2.
 - (change) Addendum wording: DEC-002 — each closed wave deletes the prior-knowledge slice it names. Promise unchanged.
+- (event) DEC-003: addendum technical constraints locked as binding. Problem unchanged; bmad-product-brief not re-run.

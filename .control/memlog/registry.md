@@ -1,7 +1,7 @@
 ---
 topic: Registry
 artifact: .what/registry/SRS-registry.md
-updated: 2026-08-19T15:00
+updated: 2026-08-19T19:25
 ---
 
 - (event) G4 guarded as-built: UC-14..16; LC-11. Snapshot AD-16 [MISSING] in the DDL.
@@ -18,3 +18,4 @@ updated: 2026-08-19T15:00
 - (event) wdi-review: Reset/GET 500 on corrupt JSON.parse; UC-16 corrupt live row omit-and-log when Sync ships (OQ-32). Stamp pending.
 - (event) Owner held G4. V13 stamped SRS+SDD at 02f8d3a. g4_passed true.
 - (event) G5 W1 opened: FR-21 UC-15 then UC-16. Create/add remains later. DEC-002 applied: prior-knowledge slices retire at wave close.
+- (event) DEC-003: Registry LC-11/15 on api; Admin UI on spa; AD-5/AD-9 quotes updated; AD-30 quoted.

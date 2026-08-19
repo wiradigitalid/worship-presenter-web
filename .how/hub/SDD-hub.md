@@ -5,7 +5,7 @@ status: draft
 created: 2026-08-18
 updated: 2026-08-19
 realizes: [UC-1, UC-2, UC-3, UC-4, UC-5, UC-6, UC-7, UC-8, UC-9, UC-10, UC-16, UC-17, UC-18, UC-19, UC-21, UC-22, UC-23]
-binds: [AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-7, AD-8, AD-9, AD-12, AD-16, AD-23, AD-24, AD-25, AD-26, AD-28]
+binds: [AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-7, AD-8, AD-9, AD-12, AD-16, AD-23, AD-24, AD-25, AD-26, AD-28, AD-30]
 reviewed:
   date: '2026-08-19'
   sha: 'a2bf8b0dbdda61810be611576e31ec120e54d96d'
@@ -14,13 +14,13 @@ reviewed:
 
 # SDD — Hub
 
-As-built in the `web` container. Not a Go+SPA design.
+Target: Hub UI on `spa`, APIs and plan on `api`, PPTX on `pptx-worker` (DEC-003 / AD-30). As-built until cutover still lives in Next.js `src/`.
 
 ## Decision Summary · [outline]
 
-Hub is the App Router Operator surface: Service list, form, Run-Sheet, generate/download PPTX, announcements, accounts, settings. This phase's intake is the Operator Hub form (`/services/new`, UC-2). `POST /api/webhook` / LC-8 remains in-process as last-phase CAP-11 intake (AD-3: JSON agnostic of picoclaw); it is as-built, not this phase's handover.
+Hub is the Operator SPA surface: Service list, form, Run-Sheet, generate/download PPTX, announcements, accounts, settings. This phase's intake is the Operator Hub form (`/services/new`, UC-2). `POST /api/webhook` / LC-8 remains on the Go API as last-phase CAP-11 intake (AD-3: JSON agnostic of picoclaw); it is as-built, not this phase's handover.
 
-Two expensive choices reversed: (1) one authorization gate in `src/proxy.ts` plus a SQLite check per request (AD-5); (2) PPTX as the Sabbath guarantee, not the slideshow (AD-1).
+Two expensive choices reversed: (1) one authorization gate on the Go API plus a SQLite check per request (AD-5); (2) PPTX as the Sabbath guarantee, not the slideshow (AD-1).
 
 ## Structure · [outline]
 
@@ -49,25 +49,26 @@ Quotes are the spine **Rule** sentences. Full text in `.how/_platform/ARCHITECTU
 | AD | Quoted rule | How it lands here |
 | --- | --- | --- |
 | AD-1 | Operators use a zero-install **Web Hub** for review/run-sheet. **Phase 1** presents on Sabbath from a downloadable offline **PPTX**. | PPTX download is the guarantee; the slideshow is a complementary link. |
-| AD-2 | The picoclaw skill integration logic, API backend, and App Router web UI must reside in a single repository and be deployable as a cohesive unit. | One repo, one `web` container. |
+| AD-2 | The picoclaw skill integration logic, the Go API, the React SPA, and the Node PPTX worker reside in a single repository and deploy as a cohesive unit. | One repo; Hub lives in `api` + `spa` + `pptx-worker`. |
+| AD-4 | Production is one Docker Compose unit on the home-PC LiveServer | Durable `DB_PATH` on the Go process. |
+| AD-5 | The Go API has one request gate, and its path matcher **is** the authorization boundary — anything it does not match is served with no session check at all | `/api/webhook` is `WEBHOOK_SECRET` only. Session expiry at save/delete is this gate's 401 before the handler (OQ-23). As-built until cutover: `src/proxy.ts`. |
 | AD-3 | The API must expose a standard JSON interface for service generation that is agnostic to the input mechanism (Telegram/picoclaw). | Hub form writes Service now; LC-8 writes the same Service later (CAP-11). |
-| AD-4 | Production is deployed as one Docker/standalone unit on the home-PC LiveServer (`presenter.example.org` via Cloudflare Tunnel). | `DB_PATH`, PPTX cache, `UPLOADS_DIR` durable. |
-| AD-5 | `src/proxy.ts` is the one request gate, and its `config.matcher` regex **is** the authorization boundary — anything it does not match is served with no session check at all, so a new exclusion ships together with its assertion in `tests/proxy-matcher.test.mjs` in the same change set. | `/api/webhook` is `WEBHOOK_SECRET` only. Session expiry at save/delete is this gate's 401 before the handler (OQ-23). |
 | AD-6 | every service mutation carries the client's `updated_at` as a precondition; a stale value is rejected with HTTP 409 and the client re-reads before retrying. | PUT Service (UC-5). POST sync-artifact (UC-16). GET pptx / POST preview are not mutations (OQ-20). Half of the agent paths are not yet closed (deferred-work). |
 | AD-7 | `buildSlidePlan` is the single source of slide order and content for every surface. | Preview and PPTX do not re-order from Service fields. |
 | AD-12 | `buildSlidePlan` outputs a fully hydrated AST (Fat Payload) with exact rendering coordinates, fonts, colors, and resolved text content. | Preview and PPTX consume the fat plan; they do not look up Registry. |
 | AD-8 | image references resolve only through the shared helpers in `src/lib` — allowlisted remote http(s) and hub-local `/api/uploads/<32-hex>.(jpg|jpeg|png|gif|webp)` for announcements, and registry `/assets/...` refs for Artifact templates. | LC-4 and announcements. |
-| AD-9 | schema changes go through the app's startup DDL on the `getDb` path. | No Prisma. `services.registry_snapshot_at` is Hub; the freeze table is Registry. |
+| AD-9 | schema changes go through the Go API's startup DDL when it opens SQLite. | No Prisma. `services.registry_snapshot_at` is Hub; the freeze table is Registry. |
 | AD-16 | Creating a worship service **clones** the ordered live registry … into a **service-bound snapshot** | Create clones in the same transaction. Sync is `POST /api/services/[id]/sync-artifact`, Admin-only. Preview stays live. |
 | AD-23 | transition style is **one app-wide value** in `settings` (`slide_transition`), and each style is described **exactly once**, in `src/lib/transitions.ts`, carrying both its PowerPoint element and its browser animation parameters. | LC-6 writes; PPTX reads. |
 | AD-24 | **application state reaches one of three homes and *who must agree on it* picks which.** | `ui_locale` in settings, not a chrome cookie. |
 | AD-25 | A **shipped reference corpus** — a committed data file the product carries so that a fresh clone resolves a verse and a hymn offline — is **developer-owned data with exactly one writer**, and the committed file is authoritative. | Hub Song Book. |
 | AD-26 | Every installed corpus is a **registered entity** — one row in `bible_translations` or `song_books`, carrying its code, display name, **locale**, licence and provenance. | Hymn picker / default book. |
 | AD-28 | there is **one matcher implementation and the scope is an argument to it, never a fork**. | Rundown: every installed translation. |
+| AD-30 | The Go API is the only always-on server: it owns SQLite, assembles the slide plan, and serves JSON (and, in production, the SPA files). | Hub APIs + LC-16 on `api`; UI on `spa`; LC-13 on `pptx-worker`. |
 
 ## Failure Behaviour · [guarded]
 
-Hub does not retry a failed call; the Operator (or picoclaw) must press again. Process timeout is the Node/Next default — [ASSUMED]: no `maxDuration` in Hub `route.ts` files (grep 2026-08-19). The one named timeout is `POST /api/upload/from-url`: `REMOTE_IMAGE_TIMEOUT_MS = 8000` in `src/lib/remote-image.ts`.
+Hub does not retry a failed call; the Operator (or picoclaw) must press again. Process timeout is the Go API default after cutover — [ASSUMED]: as-built has no `maxDuration` in Hub `route.ts` files (grep 2026-08-19). The one named timeout is `POST /api/upload/from-url`: `REMOTE_IMAGE_TIMEOUT_MS = 8000` in `src/lib/remote-image.ts`.
 
 This phase's create boundary is `/services/new` (UC-2). `POST /api/webhook` is as-built CAP-11 later; do not treat it as this phase's handover.
 
@@ -155,4 +156,4 @@ Every Hub-owned row from `inventory-api.md` (1–24, 30, 33) and `inventory-scre
 
 ## Open Items
 
-OQ-17 · OQ-2 · OQ-4 · OQ-6. OQ-1 is parked on CAP-11. Taken and encoded: OQ-20 · OQ-21 · OQ-22 · OQ-23. Parked on this SDD: OQ-27 (CAP-11 `[MISSING]` stay; not `BUG-` this wave) · OQ-33 (empty PUT announcements wipes master) · OQ-34 (announcement last-write-wins).
+OQ-17 · OQ-2 · OQ-4. OQ-6 answered (DEC-003). OQ-1 is parked on CAP-11. Taken and encoded: OQ-20 · OQ-21 · OQ-22 · OQ-23. Parked on this SDD: OQ-27 (CAP-11 `[MISSING]` stay; not `BUG-` this wave) · OQ-33 (empty PUT announcements wipes master) · OQ-34 (announcement last-write-wins).

@@ -12,8 +12,8 @@
 # Presenter displays PII but does not collect it — still medium because of verse overlay
 # and the live channel; not high (needs a DEC-).
 #
-# Container as-built: one Next.js process (`web`). The Go+SPA direction in the brief addendum
-# does not reverse AD-2 until a DEC- exists (OQ-6).
+# Containers (DEC-003 / AD-30): Go API, React SPA, on-demand Node PPTX worker.
+# Retired name `web` (Next.js one-process) is not a container.
 
 product_components:
   - id: hub
@@ -30,7 +30,9 @@ product_components:
     srs: .what/hub/SRS-hub.md
     sdd: .how/hub/SDD-hub.md
     containers:
-      - web
+      - api
+      - spa
+      - pptx-worker
 
   - id: presenter
     name: "Presenter"
@@ -45,7 +47,8 @@ product_components:
     srs: .what/presenter/SRS-presenter.md
     sdd: .how/presenter/SDD-presenter.md
     containers:
-      - web
+      - api
+      - spa
 
   - id: registry
     name: "Registry"
@@ -59,110 +62,119 @@ product_components:
     srs: .what/registry/SRS-registry.md
     sdd: .how/registry/SDD-registry.md
     containers:
-      - web
+      - api
+      - spa
 
 platform_owns: []
 
 containers:
-  - id: web
-    name: "Web (Next.js App Router)"
+  - id: api
+    name: "API (Go)"
     built: true
-    note: "One as-built process: Operator UI, API, PPTX generate, presenter. SQLite file in the same process (not a separate container)."
+    note: "Always-on process. Owns SQLite, assembles the slide plan, serves JSON. Production also serves SPA static files. DEC-003 / AD-30."
+  - id: spa
+    name: "SPA (React)"
+    built: true
+    note: "Operator UI and projector in the browser. MUST NOT open SQLite. Production files served by api; development MAY use a bundler. DEC-003 / AD-30."
+  - id: pptx-worker
+    name: "PPTX worker (Node / PptxGenJS)"
+    built: true
+    note: "On-demand child process. Draws a finished plan, then exits. MUST NOT stay up and MUST NOT open SQLite. DEC-003 / AD-30."
 
 logical_components:
   - id: LC-1
     name: "Hub auth API"
     type: gateway
     component: hub
-    container: web
+    container: api
     area: auth
   - id: LC-2
     name: "Hub services API"
     type: gateway
     component: hub
-    container: web
+    container: api
     area: services
   - id: LC-3
     name: "Hub announcements API"
     type: gateway
     component: hub
-    container: web
+    container: api
     area: announcements
   - id: LC-4
     name: "Hub upload API"
     type: gateway
     component: hub
-    container: web
+    container: api
     area: uploads
   - id: LC-5
     name: "Hub accounts API"
     type: gateway
     component: hub
-    container: web
+    container: api
     area: accounts
   - id: LC-6
     name: "Hub settings API"
     type: gateway
     component: hub
-    container: web
+    container: api
     area: settings
   - id: LC-7
     name: "Hub hymns API"
     type: gateway
     component: hub
-    container: web
+    container: api
     area: hymns
   - id: LC-8
     name: "Hub webhook API"
     type: gateway
     component: hub
-    container: web
+    container: api
     area: webhook
   - id: LC-9
     name: "Presenter scripture API"
     type: gateway
     component: presenter
-    container: web
+    container: api
     area: scripture
   - id: LC-10
     name: "Presenter sync channel"
     type: gateway
     component: presenter
-    container: web
+    container: spa
     area: present-channel
   - id: LC-11
     name: "Registry artifacts API"
     type: gateway
     component: registry
-    container: web
+    container: api
     area: artifacts
   - id: LC-12
     name: "Hub rundown parse and service write"
     type: service
     component: hub
-    container: web
+    container: api
     area: services
   - id: LC-13
     name: "Hub PPTX generate"
     type: job
     component: hub
-    container: web
+    container: pptx-worker
     area: pptx
   - id: LC-14
     name: "Presenter session"
     type: service
     component: presenter
-    container: web
+    container: spa
     area: present-channel
   - id: LC-15
     name: "Registry store"
     type: service
     component: registry
-    container: web
+    container: api
     area: artifacts
   - id: LC-16
     name: "Slide plan builder"
     type: service
     component: hub
-    container: web
+    container: api
     area: slide-plan

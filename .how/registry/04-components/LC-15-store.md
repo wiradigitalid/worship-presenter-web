@@ -3,7 +3,7 @@ type: lc
 id: LC-15
 name: Registry store
 lc_type: service
-container: web
+container: api
 component: registry
 created: 2026-08-18
 ---
@@ -16,7 +16,7 @@ Read/write `artifact_templates`, Reset, delete, whole-list reorder, `position` c
 
 ## Depends on
 
-SQLite in `web`. LC-11 calls this; this does not call LC-11.
+SQLite in `api`. LC-11 calls this; this does not call LC-11.
 
 ## Interface
 

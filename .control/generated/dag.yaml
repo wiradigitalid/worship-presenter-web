@@ -5,3 +5,11 @@ dag:
     - 1-1
   - parallel:
     - 1-2
+- wave: W2
+  order:
+  - parallel:
+    - 2-1
+  - parallel:
+    - 2-2
+  - parallel:
+    - 2-3

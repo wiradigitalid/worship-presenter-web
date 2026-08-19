@@ -1,0 +1,494 @@
+package plan
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"strings"
+)
+
+var intercessory = map[int]struct{}{671: {}, 684: {}}
+
+type request struct {
+	id         string
+	templateID string
+	layoutKey  string
+	values     map[string]interface{}
+	fade       *bool
+}
+
+type groupChild struct {
+	role string
+	req  request
+}
+
+type node struct {
+	kind     string // artifact | group
+	id       string
+	label    string
+	req      request
+	children []groupChild
+}
+
+type ctx struct {
+	serviceDate    string
+	flyers         []string
+	sermonGraphic  *string
+	familyPhoto    *string
+	youthPhoto     *string
+	bibleTalkHymns []HymnItem
+	dsOpening      *HymnItem
+	dsClosing      *HymnItem
+	dsMiddle       []HymnItem
+	specialSong    string
+	sermon         *ParsedSermon
+	closingPrayer  string
+	themeVerse     *ParsedScripture
+	verseReading   *ParsedScripture
+	familyPrayer   string
+	youthPrayer    string
+	legacyCombined string
+	familyBody     string
+}
+
+func trimPtr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return strings.TrimSpace(*s)
+}
+
+func hasScripture(s *ParsedScripture) bool {
+	if s == nil {
+		return false
+	}
+	return strings.TrimSpace(ptrStr(s.Reference)) != "" || strings.TrimSpace(s.Text) != ""
+}
+
+func ptrStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+func leaf(r request) []node {
+	return []node{{kind: "artifact", req: r}}
+}
+
+func songGroup(hymn HymnItem, idPrefix, templateID string) []node {
+	var children []groupChild
+	subtitle := fmt.Sprintf("SDAH %d", hymn.Number)
+	if hymn.Incomplete {
+		subtitle = fmt.Sprintf("SDAH %d (incomplete)", hymn.Number)
+	}
+	children = append(children, groupChild{
+		role: "title",
+		req: request{
+			id:         idPrefix + "-title",
+			templateID: templateID,
+			layoutKey:  "title",
+			values: map[string]interface{}{
+				"hymnNumber": subtitle,
+				"songTitle":  hymn.Title,
+			},
+		},
+	})
+	if !hymn.Incomplete && strings.TrimSpace(hymn.Lyrics) != "" {
+		for i, lyric := range SplitLyricsLabeled(hymn.Lyrics, 4) {
+			vals := map[string]interface{}{"lyrics": lyric.Text}
+			if lyric.Label != "" {
+				vals["label"] = lyric.Label
+			}
+			children = append(children, groupChild{
+				role: "lyric",
+				req: request{
+					id:         fmt.Sprintf("%s-lyric-%d", idPrefix, i+1),
+					templateID: templateID,
+					layoutKey:  "lyric",
+					values:     vals,
+				},
+			})
+		}
+	}
+	if len(children) == 0 {
+		return nil
+	}
+	return []node{{kind: "group", id: idPrefix, label: hymn.Title, children: children}}
+}
+
+func fixedLyric(id string) []node {
+	return leaf(request{id: id, templateID: id})
+}
+
+func computeCtx(serviceDate string, parsed ParsedRundown, media Media) ctx {
+	var flyers []string
+	for _, u := range media.Flyers {
+		if isAnnouncementImageURL(u) {
+			flyers = append(flyers, u)
+		}
+	}
+	var sermonGraphic, familyPhoto, youthPhoto *string
+	if media.SermonGraphicURL != nil && isSafeImageURL(*media.SermonGraphicURL) {
+		sermonGraphic = media.SermonGraphicURL
+	}
+	if media.FamilyPhotoURL != nil && isSafeImageURL(*media.FamilyPhotoURL) {
+		familyPhoto = media.FamilyPhotoURL
+	}
+	if media.YouthPhotoURL != nil && isSafeImageURL(*media.YouthPhotoURL) {
+		youthPhoto = media.YouthPhotoURL
+	}
+	bt, ds := bucketHymns(parsed.Items)
+	filter := func(in []HymnItem) []HymnItem {
+		var out []HymnItem
+		for _, h := range in {
+			if _, skip := intercessory[h.Number]; !skip {
+				out = append(out, h)
+			}
+		}
+		return out
+	}
+	bt = filter(bt)
+	ds = filter(ds)
+	c := ctx{
+		serviceDate:    serviceDate,
+		flyers:         flyers,
+		sermonGraphic:  sermonGraphic,
+		familyPhoto:    familyPhoto,
+		youthPhoto:     youthPhoto,
+		bibleTalkHymns: bt,
+		specialSong:    trimPtr(parsed.SpecialSong),
+		sermon:         parsed.Sermon,
+		closingPrayer:  trimPtr(parsed.ClosingPrayerPerson),
+		familyPrayer:   trimPtr(parsed.FamilyPrayerRequest),
+		youthPrayer:    trimPtr(parsed.YouthPrayerRequest),
+	}
+	if hasScripture(parsed.ThemeVerse) {
+		c.themeVerse = parsed.ThemeVerse
+	}
+	if hasScripture(parsed.VerseReading) {
+		c.verseReading = parsed.VerseReading
+	}
+	if c.familyPrayer == "" && c.youthPrayer == "" {
+		c.legacyCombined = trimPtr(parsed.FamilyYouth)
+	}
+	var parts []string
+	if c.familyPrayer != "" {
+		parts = append(parts, "Family: "+c.familyPrayer)
+	}
+	if c.youthPrayer != "" {
+		parts = append(parts, "Youth: "+c.youthPrayer)
+	}
+	if len(parts) > 0 {
+		c.familyBody = strings.Join(parts, "\n\n")
+	} else {
+		c.familyBody = c.legacyCombined
+	}
+	if len(ds) > 0 {
+		c.dsOpening = &ds[0]
+	}
+	if len(ds) > 1 {
+		c.dsClosing = &ds[len(ds)-1]
+	}
+	if len(ds) > 2 {
+		c.dsMiddle = ds[1 : len(ds)-1]
+	}
+	return c
+}
+
+func nodesFor(id string, c ctx) []node {
+	switch id {
+	case "welcome":
+		return leaf(request{
+			id: "welcome", templateID: "welcome",
+			values: map[string]interface{}{"date": c.serviceDate},
+		})
+	case "bible-talk-sequence":
+		return leaf(request{id: "bible-talk-sequence", templateID: "bible-talk-sequence"})
+	case "prayer-partners":
+		return leaf(request{id: "prayer-partners", templateID: "prayer-partners"})
+	case "bt-opening-song-cue":
+		if len(c.bibleTalkHymns) == 0 {
+			return nil
+		}
+		return leaf(request{id: "bt-opening-song-cue", templateID: "bt-opening-song-cue"})
+	case "bt-opening-song":
+		if len(c.bibleTalkHymns) == 0 {
+			return nil
+		}
+		return songGroup(c.bibleTalkHymns[0], "bt-opening", "bt-opening-song")
+	case "verse-reading":
+		if c.verseReading == nil {
+			return nil
+		}
+		return leaf(request{
+			id: "verse-reading", templateID: "verse-reading",
+			values: map[string]interface{}{
+				"reference": ptrStr(c.verseReading.Reference),
+				"text":      c.verseReading.Text,
+			},
+		})
+	case "opening-prayer":
+		return leaf(request{id: "bt-opening-prayer", templateID: "opening-prayer"})
+	case "bible-talk":
+		return leaf(request{id: "bible-talk", templateID: "bible-talk"})
+	case "bt-closing-song-cue":
+		if len(c.bibleTalkHymns) < 2 {
+			return nil
+		}
+		return leaf(request{id: "bt-closing-song-cue", templateID: "bt-closing-song-cue"})
+	case "bt-closing-song":
+		if len(c.bibleTalkHymns) < 2 {
+			return nil
+		}
+		return songGroup(c.bibleTalkHymns[1], "bt-closing", "bt-closing-song")
+	case "closing-prayer":
+		return leaf(request{id: "bt-closing-prayer", templateID: "closing-prayer"})
+	case "break-time":
+		return leaf(request{id: "break-time", templateID: "break-time"})
+	case "ds-sequence":
+		return leaf(request{id: "ds-sequence", templateID: "ds-sequence"})
+	case "bible-verse-contemplation":
+		vals := map[string]interface{}{}
+		if c.themeVerse != nil {
+			vals["reference"] = ptrStr(c.themeVerse.Reference)
+			vals["text"] = c.themeVerse.Text
+		}
+		return leaf(request{
+			id: "theme-verse", templateID: "bible-verse-contemplation", values: vals,
+		})
+	case "ds-opening-song-cue":
+		if c.dsOpening == nil {
+			return nil
+		}
+		return leaf(request{id: "ds-opening-song-cue", templateID: "ds-opening-song-cue"})
+	case "ds-opening-song":
+		if c.dsOpening == nil {
+			return nil
+		}
+		return songGroup(*c.dsOpening, "ds-opening", "ds-opening-song")
+	case "intercessory-prayer":
+		return leaf(request{id: "intercessory-prayer", templateID: "intercessory-prayer"})
+	case "intercessory-671-lyric-1":
+		return fixedLyric("intercessory-671-lyric-1")
+	case "intercessory-prayer-during":
+		return leaf(request{id: "intercessory-prayer-during", templateID: "intercessory-prayer-during"})
+	case "intercessory-684-lyric-1":
+		return fixedLyric("intercessory-684-lyric-1")
+	case "song-set":
+		var out []node
+		for i, h := range c.dsMiddle {
+			out = append(out, songGroup(h, fmt.Sprintf("ds-middle-%d", i), "song-set")...)
+		}
+		return out
+	case "special-song":
+		if c.specialSong == "" {
+			return nil
+		}
+		return leaf(request{
+			id: "special-song", templateID: "special-song",
+			values: map[string]interface{}{"performer": c.specialSong},
+		})
+	case "sermon":
+		if c.sermon == nil {
+			return nil
+		}
+		return leaf(request{
+			id: "sermon", templateID: "sermon",
+			values: map[string]interface{}{"title": c.sermon.Title, "speaker": c.sermon.Speaker},
+		})
+	case "sermon-flyer":
+		if c.sermonGraphic == nil {
+			return nil
+		}
+		fade := false
+		return leaf(request{
+			id: "sermon-graphic", templateID: "sermon-flyer",
+			values: map[string]interface{}{"imageUrl": *c.sermonGraphic},
+			fade:   &fade,
+		})
+	case "ds-closing-song-cue":
+		if c.dsClosing == nil {
+			return nil
+		}
+		return leaf(request{id: "ds-closing-song-cue", templateID: "ds-closing-song-cue"})
+	case "ds-closing-song":
+		if c.dsClosing == nil {
+			return nil
+		}
+		return songGroup(*c.dsClosing, "ds-closing", "ds-closing-song")
+	case "closing-prayer-ds":
+		if c.closingPrayer == "" {
+			return nil
+		}
+		return leaf(request{
+			id: "ds-closing-prayer", templateID: "closing-prayer-ds",
+			values: map[string]interface{}{"person": c.closingPrayer},
+		})
+	case "hope-lyric-1":
+		return fixedLyric("hope-lyric-1")
+	case "hope-lyric-2":
+		return fixedLyric("hope-lyric-2")
+	case "announcements-header":
+		if len(c.flyers) == 0 {
+			return nil
+		}
+		return leaf(request{id: "announcements", templateID: "announcements-header"})
+	case "welcome-repeat":
+		return leaf(request{id: "welcome-repeat", templateID: "welcome-repeat"})
+	case "offering-tithe":
+		return leaf(request{id: "offering-tithe", templateID: "offering-tithe"})
+	case "midweek-prayer":
+		return leaf(request{id: "midweek-prayer", templateID: "midweek-prayer"})
+	case "fellowship-etiquette":
+		return leaf(request{id: "fellowship-etiquette", templateID: "fellowship-etiquette"})
+	case "contact":
+		return leaf(request{id: "contact", templateID: "contact"})
+	case "family-youth":
+		if c.familyBody == "" && c.familyPhoto == nil && c.youthPhoto == nil {
+			return nil
+		}
+		vals := map[string]interface{}{}
+		famText := c.familyPrayer
+		if famText == "" {
+			famText = c.legacyCombined
+		}
+		if famText != "" {
+			vals["familyText"] = famText
+		}
+		if c.youthPrayer != "" {
+			vals["youthText"] = c.youthPrayer
+		}
+		if c.familyPhoto != nil {
+			vals["familyPhoto"] = *c.familyPhoto
+		}
+		if c.youthPhoto != nil {
+			vals["youthPhoto"] = *c.youthPhoto
+		}
+		fade := false
+		return leaf(request{
+			id: "family-youth", templateID: "family-youth", values: vals, fade: &fade,
+		})
+	case "announcement-flyer":
+		var out []node
+		fade := false
+		for i, u := range c.flyers {
+			out = append(out, node{
+				kind: "artifact",
+				req: request{
+					id:         fmt.Sprintf("flyer-%d", i),
+					templateID: "announcement-flyer",
+					values:     map[string]interface{}{"imageUrl": []string{u}},
+					fade:       &fade,
+				},
+			})
+		}
+		return out
+	case "thank-you":
+		return leaf(request{id: "thank-you", templateID: "thank-you"})
+	default:
+		return nil
+	}
+}
+
+func hydrateOne(snap Snapshot, r request, group *GroupRef) (*DrawItem, error) {
+	tmpl, ok := snap.ByID[r.templateID]
+	if !ok {
+		return nil, nil
+	}
+	inst, err := hydrateArtifact(tmpl, r.id, r.layoutKey, r.values, group)
+	if err != nil {
+		return nil, err
+	}
+	item := DrawItem{Artifact: inst, Fade: r.fade}
+	return &item, nil
+}
+
+func BuildSlidePlan(serviceDate string, parsed ParsedRundown, media Media, snap Snapshot) ([]DrawItem, error) {
+	c := computeCtx(serviceDate, parsed, media)
+	var items []DrawItem
+	for _, id := range snap.Order {
+		for _, n := range nodesFor(id, c) {
+			if n.kind == "group" {
+				g := &GroupRef{ID: n.id, Label: n.label}
+				for _, ch := range n.children {
+					gg := *g
+					gg.Role = ch.role
+					item, err := hydrateOne(snap, ch.req, &gg)
+					if err != nil {
+						return nil, err
+					}
+					if item != nil {
+						items = append(items, *item)
+					}
+				}
+				continue
+			}
+			item, err := hydrateOne(snap, n.req, nil)
+			if err != nil {
+				return nil, err
+			}
+			if item != nil {
+				items = append(items, *item)
+			}
+		}
+	}
+	return items, nil
+}
+
+type ServiceRow struct {
+	ID            int
+	Date          string
+	ParsedData    sql.NullString
+	ImagesPayload sql.NullString
+}
+
+func LoadService(db *sql.DB, id int) (*ServiceRow, error) {
+	row := db.QueryRow(
+		`SELECT id, date, parsed_data, images_payload FROM services WHERE id = ?`,
+		id,
+	)
+	var s ServiceRow
+	if err := row.Scan(&s.ID, &s.Date, &s.ParsedData, &s.ImagesPayload); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &s, nil
+}
+
+func ParseRundownJSON(s string) (ParsedRundown, error) {
+	var parsed ParsedRundown
+	if err := json.Unmarshal([]byte(s), &parsed); err != nil {
+		return parsed, err
+	}
+	if parsed.Items == nil {
+		return parsed, fmt.Errorf("items missing")
+	}
+	return parsed, nil
+}
+
+func PlanForService(db *sql.DB, serviceID int) (date string, items []DrawItem, transition string, err error) {
+	svc, err := LoadService(db, serviceID)
+	if err != nil {
+		return "", nil, "", err
+	}
+	if svc == nil || !svc.ParsedData.Valid || svc.ParsedData.String == "" {
+		return "", nil, "", sql.ErrNoRows
+	}
+	parsed, err := ParseRundownJSON(svc.ParsedData.String)
+	if err != nil {
+		return "", nil, "", err
+	}
+	snap, err := LoadSnapshot(db, serviceID)
+	if err != nil {
+		return "", nil, "", err
+	}
+	media := LoadMedia(db, serviceID, svc.ImagesPayload)
+	items, planErr := BuildSlidePlan(svc.Date, parsed, media, snap)
+	if planErr != nil {
+		return "", nil, "", planErr
+	}
+	return svc.Date, items, LoadTransition(db), nil
+}

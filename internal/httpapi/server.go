@@ -1,0 +1,173 @@
+package httpapi
+
+import (
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+
+	"github.com/wiradigitalid/worship-presenter-web/internal/auth"
+	"github.com/wiradigitalid/worship-presenter-web/internal/gate"
+	"github.com/wiradigitalid/worship-presenter-web/internal/plan"
+	"github.com/wiradigitalid/worship-presenter-web/internal/pptx"
+)
+
+type Server struct {
+	DB   *sql.DB
+	Root string
+}
+
+func (s *Server) Handler() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/services/{id}/pptx", s.getPptx)
+	mux.HandleFunc("/", s.fallback)
+	return s.gate(mux)
+}
+
+func (s *Server) gate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if !gate.IsGated(path) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		setNoStore(w)
+		cookie, _ := r.Cookie(auth.CookieName)
+		token := ""
+		if cookie != nil {
+			token = cookie.Value
+		}
+		sess := auth.Verify(token)
+		if sess == nil {
+			unauthorized(w, r)
+			return
+		}
+		current, err := auth.ValidateAgainstDB(s.DB, sess)
+		if err != nil {
+			log.Printf("Session re-check failed: %v", err)
+			unauthorized(w, r)
+			return
+		}
+		if current == nil {
+			unauthorized(w, r)
+			return
+		}
+		if gate.IsAdminPath(path) && current.Role != "admin" {
+			forbidden(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func setNoStore(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "private, no-store")
+	w.Header().Set("Vary", "Cookie")
+}
+
+func unauthorized(w http.ResponseWriter, r *http.Request) {
+	setNoStore(w)
+	if gate.WantsJSON(r.URL.Path, r.Header.Get("Accept")) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"error":"Unauthorized"}`))
+		return
+	}
+	http.Redirect(w, r, "/login", http.StatusFound)
+}
+
+func forbidden(w http.ResponseWriter, r *http.Request) {
+	setNoStore(w)
+	if strings.HasPrefix(r.URL.Path, "/api/") {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte(`{"error":"Forbidden"}`))
+		return
+	}
+	http.Error(w, "Forbidden", http.StatusForbidden)
+}
+
+func (s *Server) getPptx(w http.ResponseWriter, r *http.Request) {
+	setNoStore(w)
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil || id <= 0 {
+		http.Error(w, "Invalid Service ID", http.StatusBadRequest)
+		return
+	}
+	date, items, transition, err := plan.PlanForService(s.DB, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, "Service not found or not parsed", http.StatusNotFound)
+			return
+		}
+		log.Printf("Error generating PPTX: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	payload, err := json.Marshal(map[string]interface{}{
+		"serviceDate": date,
+		"transition":  transition,
+		"plan":        items,
+	})
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	buf, err := pptx.Draw(s.Root, payload)
+	if err != nil {
+		log.Printf("Error generating PPTX: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.presentationml.presentation")
+	w.Header().Set("Content-Disposition", `attachment; filename="Service-`+date+`.pptx"`)
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(buf)
+}
+
+func (s *Server) fallback(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.URL.Path, "/api/") {
+		if r.URL.Path == "/api/auth/login" || r.URL.Path == "/api/auth/logout" ||
+			strings.HasPrefix(r.URL.Path, "/api/webhook") {
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+	rel := strings.TrimPrefix(r.URL.Path, "/")
+	candidates := []string{
+		filepath.Join(s.Root, "public", rel),
+		filepath.Join(s.Root, "spa", rel),
+	}
+	if rel == "" || rel == "login" || strings.HasSuffix(rel, "/") {
+		candidates = append([]string{
+			filepath.Join(s.Root, "spa", "index.html"),
+			filepath.Join(s.Root, "public", "index.html"),
+		}, candidates...)
+	}
+	for _, p := range candidates {
+		if !strings.HasPrefix(filepath.Clean(p), filepath.Clean(s.Root)) {
+			continue
+		}
+		st, err := os.Stat(p)
+		if err != nil || st.IsDir() {
+			continue
+		}
+		http.ServeFile(w, r, p)
+		return
+	}
+	index := filepath.Join(s.Root, "spa", "index.html")
+	if _, err := os.Stat(index); err == nil {
+		http.ServeFile(w, r, index)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	_, _ = io.WriteString(w, "Worship Presenter Web API\n")
+}

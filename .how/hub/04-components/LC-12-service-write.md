@@ -3,7 +3,7 @@ type: lc
 id: LC-12
 name: Hub rundown parse and service write
 lc_type: service
-container: web
+container: api
 component: hub
 created: 2026-08-18
 ---

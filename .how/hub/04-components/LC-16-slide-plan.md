@@ -3,7 +3,7 @@ type: lc
 id: LC-16
 name: Slide plan builder
 lc_type: service
-container: web
+container: api
 component: hub
 created: 2026-08-18
 ---

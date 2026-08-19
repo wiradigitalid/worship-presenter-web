@@ -1,0 +1,109 @@
+CREATE TABLE IF NOT EXISTS services (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date TEXT NOT NULL,
+  raw_payload TEXT NOT NULL,
+  parsed_data TEXT,
+  images_payload TEXT,
+  participants_payload TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  registry_snapshot_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS hymns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_code TEXT NOT NULL DEFAULT 'SDAH',
+  number INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  lyrics TEXT NOT NULL,
+  UNIQUE(book_code, number)
+);
+
+CREATE TABLE IF NOT EXISTS announcement_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  image_url TEXT NOT NULL,
+  service_id INTEGER,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS accounts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL CHECK(role IN ('admin', 'operator')),
+  token_version INTEGER NOT NULL DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+  id INTEGER PRIMARY KEY,
+  scope TEXT NOT NULL,
+  key TEXT NOT NULL,
+  attempted_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_scope_key_time
+  ON login_attempts (scope, key, attempted_at);
+
+CREATE TABLE IF NOT EXISTS revoked_sessions (
+  sid TEXT PRIMARY KEY,
+  expires_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_revoked_sessions_expires_at
+  ON revoked_sessions (expires_at);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bible_translations (
+  code TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  locale TEXT NOT NULL,
+  licence TEXT NOT NULL,
+  provenance TEXT NOT NULL,
+  content_hash TEXT
+);
+
+CREATE TABLE IF NOT EXISTS bible_books (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  short_name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bible_verses (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_id INTEGER NOT NULL,
+  chapter INTEGER NOT NULL,
+  verse INTEGER NOT NULL,
+  verse_text TEXT NOT NULL,
+  translation_code TEXT NOT NULL DEFAULT 'KJV',
+  UNIQUE(book_id, chapter, verse, translation_code),
+  FOREIGN KEY (book_id) REFERENCES bible_books(id)
+);
+
+CREATE TABLE IF NOT EXISTS artifact_templates (
+  id TEXT PRIMARY KEY,
+  label TEXT NOT NULL,
+  base_type TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  seed_hash TEXT,
+  position INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS service_registry_snapshots (
+  service_id INTEGER NOT NULL,
+  template_id TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  label TEXT NOT NULL,
+  base_type TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (service_id, template_id),
+  FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+);

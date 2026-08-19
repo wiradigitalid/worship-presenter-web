@@ -1,11 +1,13 @@
 """inventory readers — how THIS product's code is read. Owned by the product, not the method.
 
-Stack confirmed on disk (wdi-init intent `readers`, 2026-08-19):
+Stack confirmed on disk (wdi-init intent `readers`, 2026-08-19; Host/Screen containers
+amended DEC-003 — still derived from Next.js as-built until the cutover wave):
 
     db      SQLite DDL inside `src/lib/db/index.ts` (`CREATE TABLE IF NOT EXISTS`, better-sqlite3)
     api     Next.js App Router `src/app/api/**/route.ts` (`export async function GET|POST|…`)
+            Host cell is container `api` (Go target), not the as-built process name
     screen  Next.js App Router `src/app/**/page.tsx` (route groups `(operator)` / `(projected)`
-            are not in the URL)
+            are not in the URL). Screen identity prefix is container `spa`
 
 The whole file is yours. `wdi-method update` never writes over it and `promote` never publishes it.
 
@@ -37,8 +39,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-# One as-built container (`components.yaml` `built: true`). Host / spa identity.
-HOST = "web"
+# API Host / SPA screen prefix: C4 containers after DEC-003 (not the as-built Next process).
+API_HOST = "api"
+SPA_HOST = "spa"
 
 DEFAULT_API_DESC = {
     "POST /api/auth/login": "Log in",
@@ -281,8 +284,8 @@ def derive_api(root: Path) -> "Derived":  # noqa: F821
             if desc in ("", "—"):
                 desc = DEFAULT_API_DESC.get(f"{method} {path}", "—")
             rows.append(Row(
-                key=f"{HOST} {method} {path}",
-                cells=[HOST, method, f"`{path}`", owner, desc, "published"],
+                key=f"{API_HOST} {method} {path}",
+                cells=[API_HOST, method, f"`{path}`", owner, desc, "published"],
                 source=rel,
             ))
 
@@ -361,8 +364,8 @@ def derive_screen(root: Path) -> "Derived":  # noqa: F821
         elif route == "/services/[id]" and "UC-16" not in uc:
             uc = "UC-4, UC-5, UC-6, UC-7, UC-16, UC-18"
         rows.append(Row(
-            key=f"{HOST}:{route}",
-            cells=[f"{HOST}/{name}", f"`{route}`", states, owner, uc],
+            key=f"{SPA_HOST}:{route}",
+            cells=[f"{SPA_HOST}/{name}", f"`{route}`", states, owner, uc],
             source=rel,
         ))
 

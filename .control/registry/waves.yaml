@@ -34,3 +34,36 @@ waves:
             tests:
               - tests/registry-sync-artifact.test.mjs
             touches: [artifacts, services, slide-plan]
+  - id: W2
+    status: open
+    release: go-spa-cutover
+    prd: [operator-turn, offline-deck]
+    fr: [FR-14]
+    size: L
+    depends_on: [W1]
+    spec_folder: _bmad-output/specs/spec-w2-hub/
+    # Owner held G3/G4 on the DEC-003 delta 2026-08-19 ("oke, kerjakan aja semua otomatis saya setuju").
+    # Isolation: this checkout is main (same override as W1).
+    epics:
+      - id: go-spa-cutover
+        stories:
+          - id: "2-1"
+            spec_folder: _bmad-output/specs/spec-w2-hub/
+            satisfies: [UC-18]
+            tests:
+              - tests/go-http-gate.test.mjs
+            touches: [api]
+          - id: "2-2"
+            spec_folder: _bmad-output/specs/spec-w2-hub/
+            satisfies: [UC-18]
+            depends_on: ["2-1"]
+            tests:
+              - tests/pptx-worker.test.mjs
+            touches: [pptx]
+          - id: "2-3"
+            spec_folder: _bmad-output/specs/spec-w2-hub/
+            satisfies: [UC-18]
+            depends_on: ["2-2"]
+            tests:
+              - tests/pptx-go-http.test.mjs
+            touches: [api, pptx, slide-plan]

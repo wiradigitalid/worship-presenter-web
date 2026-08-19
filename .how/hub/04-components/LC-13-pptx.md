@@ -3,7 +3,7 @@ type: lc
 id: LC-13
 name: Hub PPTX generate
 lc_type: job
-container: web
+container: pptx-worker
 component: hub
 created: 2026-08-18
 ---
@@ -24,4 +24,4 @@ GET pptx → OpenXML file.
 
 ## Notes
 
-As-built: `src/lib/pptx.ts` in the `web` process. A separate Node worker = brief addendum, not this LC.
+As-built until cutover: `src/lib/pptx.ts` in the Next.js process. Target (DEC-003 / AD-30): Node child that receives a finished plan from the Go API, draws PPTX, exits. MUST NOT open SQLite.

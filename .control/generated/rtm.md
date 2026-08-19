@@ -74,14 +74,43 @@ rtm:
   FR: FR-14
   DEC: []
   UC: UC-18
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: 2-1
+  wave: W2
+  release: go-spa-cutover
+  test:
+  - tests/go-http-gate.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
+- BG: BG-3
+  CAP: CAP-5
+  FR: FR-14
+  DEC: []
+  UC: UC-18
+  story: 2-2
+  wave: W2
+  release: go-spa-cutover
+  test:
+  - tests/pptx-worker.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-3
+  CAP: CAP-5
+  FR: FR-14
+  DEC: []
+  UC: UC-18
+  story: 2-3
+  wave: W2
+  release: go-spa-cutover
+  test:
+  - tests/pptx-go-http.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-6
   FR: FR-15

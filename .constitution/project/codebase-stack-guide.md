@@ -15,17 +15,17 @@ Every version below is `package.json` as read at distillation. **Read `package.j
 
 | Thing | Value | Where it is fixed |
 |---|---|---|
-| Framework | Next.js `16.2.10`, App Router | `package.json`, `next.config.ts` |
+| Framework | Go API (target, DEC-003) + React SPA. As-built still Next.js `16.2.10` App Router until the cutover wave | `go.mod` once landed; today `package.json`, `next.config.ts` |
 | React | `19.2.4` | `package.json` |
-| Language | TypeScript `^5`, `strict: true`, `noEmit` | `tsconfig.json` |
-| Import alias | `@/*` → `./src/*` | `tsconfig.json` `paths` |
-| Database | SQLite via `better-sqlite3` `^12.11.1`, synchronous API | `src/lib/db/index.ts` |
-| Deck output | `pptxgenjs` `^4.0.1`; `jszip` for asset packing | `package.json` |
+| Language | Go for `api`; TypeScript `^5` for `spa` / worker | `go.mod` / `tsconfig.json` |
+| Import alias | `@/*` → `./src/*` while as-built Next remains | `tsconfig.json` `paths` |
+| Database | SQLite; as-built `better-sqlite3` `^12.11.1`; target Go driver on the API process | AD-9, AD-30 |
+| Deck output | `pptxgenjs` `^4.0.1` in `pptx-worker` only | AD-30 |
 | Canvas editor | `fabric` `^6.6.1` | `AD-13` uncontrolled wrapper |
-| UI | Tailwind `^4` via `@tailwindcss/postcss`, `shadcn`, `@base-ui/react`, `lucide-react`, `sonner`, `next-themes` | `package.json`, `postcss.config.mjs` |
-| Node — CI | `22` | `.github/workflows/test.yml` |
+| UI | Tailwind `^4`, `shadcn`, `@base-ui/react` on the SPA | `package.json` |
+| Node — CI / worker | `22` in image only to exec PPTX child; not a 24/7 app server | AD-30, `.github/workflows/test.yml` |
 
-**This is not the Next.js in your training data.** `AGENTS.md` requires reading the relevant guide under `node_modules/next/dist/docs/` before writing code against a framework API, and heeding its deprecation notices.
+**This is not the Next.js in your training data** for as-built `src/` until cutover. After DEC-003 the live API is Go; do not add Next.js route handlers as the target.
 
 ## Commands, and the directory each runs from
 
@@ -61,7 +61,7 @@ A test asserting something is **absent** is worth nothing until it has been seen
 
 | Concern | Path |
 |---|---|
-| Request gate and the authorization matcher | `src/proxy.ts` |
+| Request gate and the authorization matcher | Go API (AD-5). As-built: `src/proxy.ts` + `tests/proxy-matcher.test.mjs` until cutover |
 | Admin session re-check in a route | `requireAdminSession` from `@/lib/auth/require` |
 | Startup DDL, `data_version`, AD-17 bootstrap, AD-16 table | `src/lib/db/index.ts` |
 | Registry store (`LC-15`) | `src/lib/registry/store.ts` |

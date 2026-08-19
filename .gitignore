@@ -97,4 +97,8 @@ data.db.bak-*
 #
 # `*.patch` is deliberately NOT added here: `!.yarn/patches` above un-ignores
 # that directory, and a blanket `*.patch` would silently re-ignore its contents.
+# Go build output
+*.exe
+/cmd/api/api
+
 *.diff

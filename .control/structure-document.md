@@ -2,7 +2,7 @@
 type: structure
 scope: document
 verified: 2026-08-19
-commit: bfa1dad
+commit: 7030c26
 ---
 
 # Document Structure
@@ -12,7 +12,7 @@ Written and refreshed only by `wdi-init` intent `structure`, never by hand. Rule
 
 ## Verified
 
-2026-08-19, commit `bfa1dad` plus unpublished working tree (0.5.3 two-folder constitution, `public-repository.md` in `project/`), honouring `.gitignore`.
+2026-08-19, commit `7030c26` plus unpublished working tree (DEC-003), honouring `.gitignore`.
 
 ## Top level
 
@@ -50,7 +50,7 @@ _bmad-output/                 # BMad workspace — deferred-work register
 .control/
 ├── registry/
 │   ├── index.yaml            # ★ product.name, mode, gates_passed
-│   ├── components.yaml       # ★ PC · container web · LC
+│   ├── components.yaml       # ★ PC · containers api/spa/pptx-worker · LC
 │   ├── requirements.yaml
 │   ├── usecases.yaml
 │   └── decisions.yaml        # DEC-001 applied
@@ -86,7 +86,8 @@ _bmad-output/                 # BMad workspace — deferred-work register
 │   ├── design-system.md
 │   ├── c4-l1-system-context.md
 │   ├── c4-l2-containers.md
-│   ├── c4-l3-web.md
+│   ├── c4-l3-api.md
+│   ├── c4-l3-spa.md
 │   └── inventory-*.md
 ├── hub/
 ├── presenter/
@@ -109,20 +110,20 @@ Live BMad workspace. Open implementation debt: `implementation-artifacts/deferre
 
 | File | State |
 | --- | --- |
-| `registry/index.yaml` | product.name Worship Presenter Web; `mode: deep`; `gates_passed: [G1, G2, G3]` |
-| `registry/components.yaml` | 3 PC `mode: deep`, container `web`, LC-1…LC-16 |
+| `registry/index.yaml` | product.name Worship Presenter Web; `mode: deep`; `gates_passed: [G1, G2, G3, G4]` |
+| `registry/components.yaml` | 3 PC `mode: deep`, containers `api` `spa` `pptx-worker`, LC-1…LC-16 |
 | `registry/requirements.yaml` | BG · CAP · FR-1…28 · NFR · UJ |
 | `registry/usecases.yaml` | UC-1…UC-23 |
-| `registry/decisions.yaml` | DEC-001 applied — pre-method archive retired |
-| `registry/waves.yaml` | empty |
+| `registry/decisions.yaml` | DEC-001, DEC-002 applied; DEC-003 course-correction |
+| `registry/waves.yaml` | W1 closed |
 | `generated/` | filled by `validate.py --generate` |
 
 ## Findings
 
 - `.work/` exists at the repo root (committed scratch) and is not one of the five corpus roots. Purpose is stated in `AGENTS.md`; not unclaimed.
 - `01-ux/` is absent on all three PCs; operator chrome tokens live in `.how/_platform/design-system.md` (DEC-001).
-- `inventory.py` does not derive a Next.js inventory — inventories in `.how/_platform/` were written from `src/`.
-- `g4_passed: false` on all three PCs; `wdi-review` has not stamped a `reviewed:` trace (V13).
+- `inventory.py` still reads Next.js `src/` (as-built); Host/Screen cells name DEC-003 containers.
+- DEC-003 retired container `web`; former `c4-l3-web.md` annotations live in `c4-l3-api.md` and `c4-l3-spa.md`.
 - The `weekly-sabbath` PRD folder was withdrawn; history: `.control/memlog/prd-weekly-sabbath.md`.
 
 ---

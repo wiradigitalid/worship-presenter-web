@@ -5,7 +5,7 @@ status: draft
 created: 2026-08-18
 updated: 2026-08-19
 realizes: [UC-11, UC-12, UC-13]
-binds: [AD-1, AD-5, AD-7, AD-10, AD-12, AD-23, AD-24, AD-25, AD-26, AD-27, AD-28, AD-29]
+binds: [AD-1, AD-5, AD-7, AD-10, AD-12, AD-23, AD-24, AD-25, AD-26, AD-27, AD-28, AD-29, AD-30]
 reviewed:
   date: '2026-08-19'
   sha: 'a2bf8b0dbdda61810be611576e31ec120e54d96d'
@@ -18,7 +18,7 @@ As-built. Offline guarantee is not this component's responsibility (AD-1).
 
 ## Decision Summary · [outline]
 
-Presenter is three URLs: slideshow and projector at the `(projected)` root, plus presenter controls under `(operator)`. Presenter↔projector sync is client `BroadcastChannel`, no WebSocket (AD-10); slideshow does not join the channel. On-demand verses use the local corpus.
+Presenter is three URLs: slideshow and projector on the projected SPA shell, plus presenter controls on the operator shell. Presenter↔projector sync is client `BroadcastChannel`, no WebSocket (AD-10); slideshow does not join the channel. On-demand verses use the local corpus via the Go API.
 
 Expensive choice: one channel module `@/lib/present-channel`; Operator chrome does not paint the room screen (AD-24).
 
@@ -37,21 +37,22 @@ Direction: Operator controls → LC-14 → LC-10 → projector. Slideshow is a s
 | AD | Quoted rule | How it lands here |
 | --- | --- | --- |
 | AD-1 | In-browser Web Slideshow / Presenter Mode are **shipped** (FR-15 / FR-16) but are **not** the hard offline Sabbath guarantee; PPTX download remains primary for venue reliability. | Slideshow is best-effort (OQ-5). |
-| AD-5 | `src/proxy.ts` is the one request gate, and its `config.matcher` regex **is** the authorization boundary — anything it does not match is served with no session check at all | Scripture GET and the three screens are inside the matcher; no session → 401 / login, Deck unchanged. |
+| AD-5 | The Go API has one request gate, and its path matcher **is** the authorization boundary — anything it does not match is served with no session check at all | Scripture GET and the three screens are inside the matcher; no session → 401 / login, Deck unchanged. As-built until cutover: `src/proxy.ts`. |
 | AD-7 | `buildSlidePlan` is the single source of slide order and content for every surface. | Slideshow and projector do not order themselves. |
 | AD-10 | presenter↔projector sync goes through the single `@/lib/present-channel` `BroadcastChannel` module; no surface opens its own channel name or message shape. | LC-10. Plan-identity clause not yet built (OQ-26, deferred-work). |
 | AD-12 | `buildSlidePlan` outputs a fully hydrated AST (Fat Payload) with exact rendering coordinates, fonts, colors, and resolved text content. | Dumb renderer. |
 | AD-23 | transition style is **one app-wide value** in `settings` (`slide_transition`), and each style is described **exactly once**, in `src/lib/transitions.ts` | Live-session override may travel on the channel; PPTX does not follow. |
-| AD-24 | The room-facing surface is closed to operator chrome, in any form, under any setting: the projector, the web slideshow and the PPTX never read it. | `(projected)` root. |
+| AD-24 | The room-facing surface is closed to operator chrome, in any form, under any setting: the projector, the web slideshow and the PPTX never read it. | Projected SPA shell. |
 | AD-25 | A **shipped reference corpus** … is **developer-owned data with exactly one writer**, and the committed file is authoritative. | Verse tables. |
 | AD-26 | **The corpus code is globally unique across locales, and it is the cross-boundary key** | Verse lookup. |
 | AD-27 | A book has **one canonical identity, stable across every translation, carrying no display text at all.** | [PARTIAL] — the AD names book-name debt. |
 | AD-28 | On an **operator surface** the scope is the **chosen translation alone** | Verse overlay. |
 | AD-29 | a projector→presenter message may report **the sender's own condition and nothing else, ever** | Liveness. |
+| AD-30 | The Operator UI and projector are a React SPA that MUST NOT open SQLite. | Screens and LC-10/LC-14 on `spa`; LC-9 on `api`. |
 
 ## Failure Behaviour · [guarded]
 
-Process timeout: Next/Node default. Presenter does not retry to the client; the Operator presses again. No numeric per-route timeout was read [ASSUMED].
+Process timeout: Go API after cutover. As-built Next/Node default. Presenter does not retry to the client; the Operator presses again. No numeric per-route timeout was read [ASSUMED].
 
 | Boundary | Slow | Absent | Lying | User | Logged |
 | --- | --- | --- | --- | --- | --- |
