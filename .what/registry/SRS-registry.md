@@ -87,4 +87,4 @@ A Registry edit that makes lyrics unreadable (NFR-3).
 
 ## Open Items
 
-OQ-24 · OQ-15 · OQ-14.
+OQ-24 · OQ-15 · OQ-14 · OQ-32.

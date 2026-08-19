@@ -22,7 +22,7 @@ Admin is signed in.
 1. Admin selects one entry.
 2. Admin changes the layout within that kind's authority.
 3. Admin saves.
-4. The next generate for a new Service (or after Sync) uses the new layout.
+4. The next generated Deck for a new Service (or after Sync) uses the new layout.
 
 ## Alternate Flows
 

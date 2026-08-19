@@ -1,7 +1,7 @@
 ---
 topic: Hub
 artifact: .what/hub/SRS-hub.md
-updated: 2026-08-19T12:48
+updated: 2026-08-19T14:16
 ---
 
 - (event) G4 guarded as-built: UC-1, UC-5, UC-7; LC-1..LC-8; picoclaw integration.
@@ -17,3 +17,4 @@ updated: 2026-08-19T12:48
 - (event) wdi-component deep as-built amendment (behaviour+design): OQ-20 BR-4 is UC-5 field save not generate; OQ-21 no-date no row and named-date miss does not fall back to nearest Sabbath; OQ-22 Hub partial save with date and Telegram images attach-or-fail-visibly; OQ-23 gone-on-re-read is UC-7 and session expiry rejects with no partial write. Failure Behaviour filled per Hub inventory rows. Five lanes confirmed. Evidence: webhook localIsoDate and coerceImageUrls [MISSING] disposition BUG. 01-ux unwritten. g4_passed unchanged. wdi-review not run.
 - (event) wdi-review SDD: hymns Evidence aligned to 200 empty array; settings keys as-built; LC-12 callers vs depends; webhook action else rundown-or-400; CAP-11 mismatches disposition OQ-27 not BUG. Not stamped (g4_passed false).
 - (event) G4: form-fields.md from CreateForm/EditForm; BR-6 lyric join on LC-16; create/edit share field set; /services/[id] chrome listed on SDD screens. No 01-ux.
+- (event) wdi-review Hub SRS+SDD at 33a047b then as-built encodes: overlay-adjacent announcements PUT empty/LWW (OQ-33/34); picoclaw BUG->OQ-27; form-fields Resolve miss. Stamp pending content commit.

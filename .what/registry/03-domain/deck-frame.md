@@ -35,7 +35,7 @@ The shipped seed follows one congregation's order. Admin may reorder (UC-15); th
 
 ## Four SongSet slots
 
-Opening and closing of Bible Talk, opening and closing of Divine Service. Slot identity belongs to the system (glossary), not to a positional `song1` field. Each hymn is one title slide plus N lyric slides. Verse lines join into continuous prose; refrain repeats after each verse; a long verse still splits on the plan's character budget (FR-5, BR-6, LC-16).
+Opening and closing of Bible Talk, opening and closing of Divine Service. Slot identity belongs to the system (glossary), not to a positional `song1` field. Each hymn is one title slide plus N lyric slides. How those lyric pages join and split is Hub LC-16 (FR-5, BR-6).
 
 ## What this is not
 

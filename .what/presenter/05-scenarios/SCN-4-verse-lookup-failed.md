@@ -22,7 +22,7 @@ Empty is a fail-closed miss here. It is not a silent success and not a no-op on 
 ## Flow
 
 1. The system does not pick a guess.
-2. The overlay does not display a verse.
+2. No new overlay verse is sent. If an overlay is already showing, it stays; a failed lookup does not clear it.
 3. The Deck slide at the original position remains; the Service payload does not change.
 4. The Operator sees that lookup failed, then corrects the typing, chooses another translation, or waits and retries.
 

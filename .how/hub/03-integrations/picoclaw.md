@@ -32,7 +32,7 @@ The surface we publish: `POST /api/webhook`. Call shape is in the picoclaw skill
 | --- | --- | --- | --- |
 | inbound | POST rundown / correction | Rundown text, image URLs, structured fields | yes — names, prayer requests, photos |
 
-Specified (OQ-22): Telegram images attach or fail visibly; they are not dropped. As-built `coerceImageUrls` still filters silently — SDD Evidence BUG.
+Specified (OQ-22): Telegram images attach or fail visibly; they are not dropped. As-built `coerceImageUrls` still filters silently — SDD Evidence `[MISSING]`, OQ-27.
 
 ## When it changes without telling us
 

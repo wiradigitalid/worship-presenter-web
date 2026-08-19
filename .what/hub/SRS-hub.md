@@ -15,7 +15,7 @@ reviewed:
 
 ## Decision Summary · [G3]
 
-Hub is the Operator's door: log in, create a Service from this week's Rundown, list, Run-Sheet, edit, generate, download PPTX, announcements, accounts, language settings. Telegram via picoclaw (UC-1, UC-17) is last-phase intake, not this phase's handover.
+Hub is the Operator's door: sign in, create a Service from this week's Rundown, list, Run-Sheet, edit, generate, download PPTX, announcements, accounts, language settings. Telegram via picoclaw (UC-1, UC-17) is last-phase intake, not this phase's handover.
 
 ## Why · [G3]
 
@@ -56,7 +56,7 @@ UC-1 and UC-17 realise CAP-11 (Telegram, last phase). This phase's create path i
 
 - Hub is not public — brief Constraints. Source: brief.
 - Congregation data does not enter git — brief. Source: `.constitution/project/public-repository.md`.
-- Create (`/services/new`) and edit (`/services/[id]`) share one field set and card order. Weekly values (hymn numbers, names, verses, flyers) are entered here, not on the Artifact Registry. Source: as-built forms; FR-27 · FR-11.
+- Create and edit share one field set and card order. Weekly values (hymn numbers, names, verses, flyers) are entered in Hub, not on the Artifact Registry. Source: as-built forms; FR-27 · FR-11.
 
 ## Non-Goals · [G3]
 

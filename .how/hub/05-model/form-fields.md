@@ -22,7 +22,7 @@ Bible Talk → Divine Worship → Sermon → Family of the Week → Youth of the
 | --- | --- | --- |
 | Raw Rundown Text | `payload` | `services.raw_payload` |
 | Opening / closing songs (Bible Talk) | `song1Number`, `song2Number` | first two hymn overlays |
-| Verse reading | `verseReference`, `verseText` | `parsed_data` verse reading; Resolve calls `GET /api/scripture` |
+| Verse reading | `verseReference`, `verseText` | `parsed_data` verse reading. Resolve calls `GET /api/scripture`. On miss: form error; `verseText` unchanged; save still allowed |
 | Opening / closing songs (Divine Worship) | `song3Number`, `song4Number` | next two hymn overlays |
 | Special Song | `specialSong` | `parsed_data`; empty or `-` → null |
 | Sermon speaker / closing prayer | `sermonSpeaker`, `closingPrayerPerson` | `parsed_data`; closing auto-fills from speaker until edited |
@@ -35,4 +35,4 @@ Bible Talk → Divine Worship → Sermon → Family of the Week → Youth of the
 
 Kept: Preview (slideshow), Present, Delete Service, Download PPTX, Live Slide Preview, read-only announcement strip with **Manage list**. There is no separate Order of Service card.
 
-Create has Live Slide Preview and no those service actions.
+Create has Live Slide Preview and does not include those service actions.

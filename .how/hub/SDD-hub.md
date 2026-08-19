@@ -85,7 +85,7 @@ Every Hub-owned row from `inventory-api.md` (1–24, 30) and `inventory-screen.m
 | POST `/api/services/preview` | Plan build waits; no Service write (OQ-20) | 500 | No date / empty `raw_payload` → 400. Bad image URL → 400 | Preview pane empty or last good preview; form not saved | `Error generating preview:` (`src/app/api/services/preview/route.ts`) |
 | GET `/api/announcements` | List delayed | 500 | — (read-only list) | Announcements page empty or spinner; not a fabricated empty master list | `Error listing announcements:` (`src/app/api/announcements/route.ts`) |
 | POST `/api/announcements` | Timeout; retry may insert a second item | 500 | Bad JSON / URL → 400; item not added | Form error; list unchanged | `Error adding announcement:` on 500 |
-| PUT `/api/announcements` | Timeout; replace may already have committed | 500 | `items` not an array / bad URL → 400; previous order kept | List stays as last successful order | `Error replacing announcements:` on 500 |
+| PUT `/api/announcements` | Timeout; replace may already have committed | 500 | `items` not an array / bad URL → 400; previous order kept. Empty array is 200 and deletes every row including recurring (OQ-33). Concurrent PUT last-write-wins (OQ-34) | List stays as last successful order; empty PUT leaves an empty list | `Error replacing announcements:` on 500 |
 | PATCH `/api/announcements/[id]` | Timeout | 404 `Announcement not found` | Bad id → 400; bad URL → 400; item unchanged | Item stays as last saved | `Error updating announcement:` on 500 (`src/app/api/announcements/[id]/route.ts`) |
 | DELETE `/api/announcements/[id]` | Timeout; retry after success → 404 | 404 | Bad id → 400 | Item remains if 400/500; gone if 200 | `Error deleting announcement:` on 500 |
 | POST `/api/upload` | Large file waits | Disk fail → 500 `Failed to upload image` | No file / not an image / bad ext → 400 | Upload widget shows failed; no new ref | `Upload error:` (`src/app/api/upload/route.ts`) |
@@ -151,4 +151,4 @@ Every Hub-owned row from `inventory-api.md` (1–24, 30) and `inventory-screen.m
 
 ## Open Items
 
-OQ-17 · OQ-2 · OQ-4 · OQ-6. OQ-1 is parked on CAP-11. Taken and encoded: OQ-20 · OQ-21 · OQ-22 · OQ-23. Parked on this SDD: OQ-27 (CAP-11 `[MISSING]` stay; not `BUG-` this wave) · OQ-28 (AD-16 not on Inherited Constraints).
+OQ-17 · OQ-2 · OQ-4 · OQ-6. OQ-1 is parked on CAP-11. Taken and encoded: OQ-20 · OQ-21 · OQ-22 · OQ-23. Parked on this SDD: OQ-27 (CAP-11 `[MISSING]` stay; not `BUG-` this wave) · OQ-28 (AD-16 not on Inherited Constraints) · OQ-33 (empty PUT announcements wipes master) · OQ-34 (announcement last-write-wins).

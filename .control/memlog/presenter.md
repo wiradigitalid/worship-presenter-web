@@ -1,7 +1,7 @@
 ---
 topic: Presenter
 artifact: .what/presenter/SRS-presenter.md
-updated: 2026-08-19T12:14
+updated: 2026-08-19T14:16
 ---
 
 - (event) G4 guarded as-built: UC-11..13; LC-9, LC-10. Plan identity AD-10 still [MISSING].
@@ -14,3 +14,4 @@ updated: 2026-08-19T12:14
 - (event) wdi-review structure+prose+edge-case-hunter at 9ab0996. Overlay-under-blank, reload resend, plan identity/AD-10, SCN-4 fail-closed, no-projector refuse (OQ-25, OQ-26). Trace stamped.
 - (event) wdi-component deep/medium as-built amendment, both intents. OQ-25: session unblank reveals overlay if open; UC-12 reload resends index+overlay+blank. OQ-26: SCN-4 empty+timeout only home; no-projector refuse lookup; missing Service/plan → Hub as UC-11. PresentMessage plan identity [MISSING] kept planned. Failure Behaviour five boundaries. Contracts five lanes. No extra UC, no 01-ux/06-flows/_platform, no g4_passed, no status raise, no wdi-review.
 - (event) wdi-review SDD: slideshow off channel; UC-11 control is the page not LC-14; LC-14 Interface Required vs As-built; PresentMessage transition/clear-scripture; AD-29 no-evidence-yet. OQ-28/29. Not stamped.
+- (event) wdi-review: UC-13 replace overlay on second lookup; SCN-4 failed lookup does not clear a showing overlay (PresenterOperator). Stamp pending.

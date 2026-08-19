@@ -35,7 +35,7 @@ UC-21, FR-3.
 | Validation | Image URL through AD-8 helpers; `service_id` nullable = recurring |
 | Error handling | Shared envelope. 400 URL; 404 id |
 | Rate limiting | `none` — not a public surface |
-| Idempotency | DELETE again 404. POST always a new item |
+| Idempotency | DELETE again 404. POST always a new item. PUT replaces the whole table (empty `items` deletes every row, including recurring). PATCH/PUT are last-write-wins; AD-6 does not apply (OQ-34) |
 
 ## Error behaviour
 
@@ -43,6 +43,7 @@ UC-21, FR-3.
 | --- | --- | --- |
 | URL outside allowlist | 400 | Switch to a Hub upload or an allowlisted host |
 | Item missing | 404 | Refresh the list |
+| PUT `items: []` | 200; every `announcement_items` row gone | As-built total replace (OQ-33). Confirm UI is a later story |
 
 ## Compatibility
 

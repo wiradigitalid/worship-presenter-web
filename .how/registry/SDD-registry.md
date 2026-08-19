@@ -68,7 +68,7 @@ Boundaries = inventory-api rows 25–28 plus inventory-screen row 7 (`/admin/art
 | GET /api/admin/artifacts | List fetch until browser timeout | No session / not Admin → 403; store throw → 500 | Summaries do not parse payload; a corrupt row still appears as a label | Labels of every row, including a corrupt one. 403: `{ error: 'Forbidden' }` (not an empty list) | console.error on 500 (`Error listing artifact templates`) |
 | GET /api/admin/artifacts/[id] | Fetch until browser timeout | 403; missing id → 404 | Payload JSON/validate fail → 500; no seed substitute | Editor does not open a lying layout; last successful canvas stays mounted | console.error (`Error reading artifact template`) |
 | PUT /api/admin/artifacts/[id] | Save until browser timeout | 403; missing id → 404 | Invalid JSON / AD-15 → 400; stale `updatedAt` → 409; read-only kind → 400 | Previous layout; 409 reloads the server copy and discards unsaved canvas | console.error on 500 (`Error updating artifact template`) |
-| POST /api/admin/artifacts/[id]/reset | Reset until browser timeout | 403; gone id → 404 `Template not found` (does not undelete, OQ-24); live row with no seed → 404 `Unknown template` | Stale `updatedAt` → 409; seed id mismatch → 400 | Success: layout returns to seed; override record remains (AD-22). Gone / no-seed: Reset failed, membership unchanged | console.error on 500 (`Error resetting artifact template`) |
+| POST /api/admin/artifacts/[id]/reset | Reset until browser timeout | 403; gone id → 404 `Template not found` (does not undelete, OQ-24); live row with no seed → 404 `Unknown template` | Stale `updatedAt` → 409; seed id mismatch → 400; `JSON.parse` of a corrupt live payload throws → 500 (same as GET; Reset does not skip parse) | Success: layout returns to seed; override record remains (AD-22). Gone / no-seed: Reset failed, membership unchanged. Corrupt: 500, row unchanged | console.error on 500 (`Error resetting artifact template`) |
 | /admin/artifacts | Heavy canvas / list fetch until browser timeout | Proxy 403; the page still renders the editor shell if the cookie died after the gate | List has no delete or reorder control (HTTP [MISSING], FR-21). Reset button is always shown; API refuses gone / no-seed. A corrupt list row is still labelled | Editor does not open a 500 layout; last saved layout remains; Reset/Save errors in the on-page message | page: none. API 500s as the rows above |
 
 Plan read (`loadRegistrySnapshot`): a corrupt row is omitted from the Deck and logged with id + reason; it is not silently re-seeded (AD-17). Sync Artifact (UC-16) is a Hub surface, Admin-only. Do not invent a Registry route. [MISSING] — Evidence.
@@ -103,4 +103,4 @@ UC-14 and UC-16 are not `critical`. UC-20 is Operator-facing plan consume (Hub/P
 
 ## Open Items
 
-OQ-24 · OQ-15 · OQ-14 · OQ-30 · OQ-31.
+OQ-24 · OQ-15 · OQ-14 · OQ-30 · OQ-31 · OQ-32.

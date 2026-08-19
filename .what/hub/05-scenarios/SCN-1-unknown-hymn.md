@@ -11,7 +11,7 @@ updated: 2026-08-19
 
 ## Where it branches
 
-UC-2 step 3 (this phase). UC-1 step 3 (CAP-11 later).
+UC-2 step 4 (this phase). UC-1 step 3 (CAP-11 later).
 
 ## Condition
 

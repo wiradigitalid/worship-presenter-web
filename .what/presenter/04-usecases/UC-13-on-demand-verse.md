@@ -30,6 +30,7 @@ UC-12 is running and the projector is live. A translation is selected.
 | From step | Condition | What happens |
 | --- | --- | --- |
 | 1 | Operator chooses another translation for this lookup | Verse from that translation; the default setting need not change |
+| 2 | Operator looks up another verse while an overlay is already open | New text replaces the open overlay (as-built `scripture` broadcast) |
 | 2 | Operator advances the Deck while overlay is open | Overlay stays; index may move underneath; closing overlay shows the current Deck slide |
 | 2 | Operator blanks while overlay is open | Blank covers the overlay; overlay remains until cleared (BR-6, OQ-25) |
 
@@ -38,7 +39,7 @@ UC-12 is running and the projector is live. A translation is selected.
 | From step | Failure | What the system does | What the user is left with |
 | --- | --- | --- | --- |
 | 1 | Projector is not open, or liveness is not live | Lookup is refused; no request is sent | Overlay unchanged; Operator opens the projector first (OQ-26) |
-| 1–2 | Empty reference, unclear, missing, translation not installed, or lookup times out | SCN-4 — fail closed, visible | Overlay does not show a wrong verse; Deck unchanged |
+| 1–2 | Empty reference, unclear, missing, translation not installed, or lookup times out | SCN-4 — fail closed, visible. If an overlay is already showing, it stays; a failed lookup does not clear it | Overlay does not show a wrong verse; Deck unchanged |
 | 2 | Session expired | Gate refuses the lookup | Overlay fails visible; Deck unchanged |
 
 ## Outcome

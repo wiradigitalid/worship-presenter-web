@@ -23,8 +23,8 @@ LC-8 → LC-12 → SQLite. Read-back to picoclaw.
 
 1. picoclaw POST LC-8 with the secret.
 2. LC-8 refuses 503/401 if the secret fails.
-3. LC-12 parse + resolve hymns. Specified: no readable date → no insert (OQ-21). As-built rundown still uses `localIsoDate()` — SDD Evidence BUG.
-4. LC-12 upserts `services` by date, or corrects an existing row. Correction with a named date and no Service does not create and does not fall back to nearest Sabbath (OQ-21, SCN-3). Images: specified attach or fail visibly (OQ-22); as-built `coerceImageUrls` filters — SDD Evidence BUG.
+3. LC-12 parse + resolve hymns. Specified: no readable date → no insert (OQ-21). As-built rundown still uses `localIsoDate()` — SDD Evidence `[MISSING]`, OQ-27.
+4. LC-12 upserts `services` by date, or corrects an existing row. Correction with a named date and no Service does not create and does not fall back to nearest Sabbath (OQ-21, SCN-3). Images: specified attach or fail visibly (OQ-22); as-built `coerceImageUrls` filters — SDD Evidence `[MISSING]`, OQ-27.
 5. JSON read-back (titles, `failedHymnNumbers`).
 
 ## Sequence diagram

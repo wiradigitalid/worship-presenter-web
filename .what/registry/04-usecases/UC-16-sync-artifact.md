@@ -30,6 +30,7 @@ Admin is signed in. The Service exists. Operator cannot run Sync.
 | --- | --- | --- |
 | 1 | Service was created before the Snapshot model | The first Sync is the on-ramp into that model (AD-16) |
 | 3 | Live Registry dropped or added entries | Entered fields remain; unused ones stay stored and inert; new slots start empty. Announcement membership stays the Service's live list, not cloned from Registry (AD-16). Each Announcement row still expands that whole list (BR-11) |
+| 3 | Live Registry holds a row whose payload will not parse | Omit-and-log like plan read; do not freeze an unrenderable snapshot (OQ-32). Sync HTTP is still [MISSING] |
 
 ## Failure Flows
 
