@@ -74,7 +74,7 @@ check(
 );
 
 const editSrc = fs.readFileSync(
-  path.join(root, 'src', 'app', '(operator)', 'services', '[id]', 'EditForm.tsx'),
+  path.join(root, 'src', 'operator', 'EditForm.tsx'),
   'utf8'
 );
 // Epic 14 renamed themeReference → theme fields, familyYouth → split

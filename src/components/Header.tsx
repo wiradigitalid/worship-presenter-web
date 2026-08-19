@@ -1,5 +1,3 @@
-'use client';
-
 import { usePathname } from '@/lib/navigation';
 import { useState } from 'react';
 import LogoutButton from './LogoutButton';

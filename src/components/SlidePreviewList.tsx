@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Live Slide Preview list, shared verbatim by the create and edit forms.
  *

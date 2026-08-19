@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Operator console, arranged the way PowerPoint's presenter view is: the
  * current slide top-left, the next slide top-right, a thumbnail filmstrip and

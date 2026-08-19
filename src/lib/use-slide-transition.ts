@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * The browser half of a slide transition, shared by the projector and the
  * slideshow so the two surfaces cannot drift from each other or from the deck.

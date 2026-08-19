@@ -1,5 +1,3 @@
-'use client';
-
 import { useRouter } from '@/lib/navigation';
 import { useState } from 'react';
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
-import CreateForm from '@/app/(operator)/services/new/CreateForm';
+import CreateForm from '@/operator/CreateForm';
 
 export default function CreateServicePage() {
   const navigate = useNavigate();

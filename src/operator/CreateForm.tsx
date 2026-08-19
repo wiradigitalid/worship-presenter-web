@@ -1,9 +1,5 @@
-'use client';
-
 import { useRouter } from '@/lib/navigation';
-import Link from '@/components/Link';
 import { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -11,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import type { ParsedRundown } from '@/lib/parser';
+import Link from '@/components/Link';
 import {
   flushPendingHymnCommits,
   HymnNumberAutocomplete,
@@ -25,7 +21,7 @@ import type { PreviewEntry } from '@/lib/artifacts/preview-model';
 import {
   buildFieldsPayload,
   coerceHydrateFields,
-  fieldsFromParsed,
+  EMPTY_WORSHIP_FORM_FIELDS,
   type HymnIndexEntry,
   type WorshipFormFields,
 } from '@/lib/worship-form-fields';
@@ -42,111 +38,55 @@ type AnnouncementSeed = {
   service_id?: number | null;
 };
 
-function mapAnnouncements(
-  list: AnnouncementSeed[]
-): AnnouncementItemInput[] {
-  return list.map((ann, idx) => ({
-    id: `init-${idx}-${ann.id ?? idx}`,
-    image_url: ann.image_url,
-    is_recurring: ann.service_id == null,
-  }));
-}
-
 /** Module-level so the default keeps a stable identity across renders. */
 const EMPTY_HYMN_INDEX: HymnIndexEntry[] = [];
 
-export default function EditForm({
-  id,
-  initialPayload,
-  initialParsed = null,
-  initialSermonGraphicUrl = '',
-  initialFamilyPhotoUrl = '',
-  initialYouthPhotoUrl = '',
+export default function CreateForm({
   initialAnnouncements = [],
-  flyerImages = [],
-  usingLegacyFallback = false,
-  initialUpdatedAt,
   hymnIndex = EMPTY_HYMN_INDEX,
 }: {
-  id: number;
-  initialPayload: string;
-  initialParsed?: ParsedRundown | null;
-  initialSermonGraphicUrl?: string;
-  initialFamilyPhotoUrl?: string;
-  initialYouthPhotoUrl?: string;
-  initialAnnouncements?: AnnouncementSeed[];
-  /** Server-resolved URLs for legacy fallback when the editable list is empty. */
-  flyerImages?: string[];
-  usingLegacyFallback?: boolean;
-  /** Accepted for page compat; edit no longer mutates participants_payload. */
-  initialParticipantsRaw?: string;
-  initialUpdatedAt: string;
+  initialAnnouncements: AnnouncementSeed[];
   hymnIndex: HymnIndexEntry[];
 }) {
   const router = useRouter();
-  const [payload, setPayload] = useState(initialPayload);
-  const [sermonGraphicUrl, setSermonGraphicUrl] = useState(
-    initialSermonGraphicUrl
-  );
-  const [familyPhotoUrl, setFamilyPhotoUrl] = useState(initialFamilyPhotoUrl);
-  const [youthPhotoUrl, setYouthPhotoUrl] = useState(initialYouthPhotoUrl);
-  const [announcements, setAnnouncements] = useState<AnnouncementItemInput[]>(
-    () => mapAnnouncements(initialAnnouncements)
+  const [payload, setPayload] = useState('');
+  const [sermonGraphicUrl, setSermonGraphicUrl] = useState('');
+  const [familyPhotoUrl, setFamilyPhotoUrl] = useState('');
+  const [youthPhotoUrl, setYouthPhotoUrl] = useState('');
+  const [announcements, setAnnouncements] = useState<AnnouncementItemInput[]>(() =>
+    initialAnnouncements.map((ann, idx) => ({
+      id: `init-${idx}-${ann.id ?? idx}`,
+      image_url: ann.image_url,
+      is_recurring: ann.service_id == null,
+    }))
   );
 
-  const [fields, setFields] = useState<WorshipFormFields>(() =>
-    fieldsFromParsed(initialParsed)
+  const [fields, setFields] = useState<WorshipFormFields>(
+    EMPTY_WORSHIP_FORM_FIELDS
   );
-  const [updatedAt, setUpdatedAt] = useState(initialUpdatedAt);
+
   const [isSaving, setIsSaving] = useState(false);
   const [parseLoading, setParseLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warningCollision, setWarningCollision] = useState<{
+    date: string;
+    id: number;
+  } | null>(null);
 
   const [detectedDate, setDetectedDate] = useState<string | null>(null);
   const [slidePlan, setSlidePlan] = useState<SlidePreviewItem[]>([]);
   const [previewEntries, setPreviewEntries] = useState<PreviewEntry[]>([]);
-  const [failedHymnNumbers, setFailedHymnNumbers] = useState<number[]>(
-    () => initialParsed?.failedHymnNumbers ?? []
-  );
+  const [failedHymnNumbers, setFailedHymnNumbers] = useState<number[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
   const previewSeqRef = useRef(0);
 
-  // Sync server props into local state (CAP-5 409 refresh path)
-  useEffect(() => {
-    setUpdatedAt(initialUpdatedAt);
-  }, [initialUpdatedAt]);
-
-  useEffect(() => {
-    setPayload(initialPayload);
-  }, [initialPayload]);
-
-  useEffect(() => {
-    setSermonGraphicUrl(initialSermonGraphicUrl);
-  }, [initialSermonGraphicUrl]);
-
-  useEffect(() => {
-    setFamilyPhotoUrl(initialFamilyPhotoUrl);
-  }, [initialFamilyPhotoUrl]);
-
-  useEffect(() => {
-    setYouthPhotoUrl(initialYouthPhotoUrl);
-  }, [initialYouthPhotoUrl]);
-
-  useEffect(() => {
-    setAnnouncements(mapAnnouncements(initialAnnouncements));
-  }, [initialAnnouncements]);
-
-  useEffect(() => {
-    setFields(fieldsFromParsed(initialParsed));
-  }, [initialParsed]);
-
-  // CAP-5 live preview whenever payload is non-empty (create-parity; not gated)
   useEffect(() => {
     if (!payload.trim()) {
       setDetectedDate(null);
       setSlidePlan([]);
       setPreviewEntries([]);
       setFailedHymnNumbers([]);
+      setWarningCollision(null);
       setPreviewLoading(false);
       return;
     }
@@ -155,6 +95,7 @@ export default function EditForm({
     const seq = ++previewSeqRef.current;
     const timer = setTimeout(async () => {
       setPreviewLoading(true);
+      setError(null);
       try {
         const res = await fetch('/api/services/preview', {
           method: 'POST',
@@ -192,6 +133,28 @@ export default function EditForm({
         setFailedHymnNumbers(
           Array.isArray(data.failedHymnNumbers) ? data.failedHymnNumbers : []
         );
+
+        if (data.date) {
+          const collisionRes = await fetch(`/api/services?q=${data.date}`, {
+            signal: controller.signal,
+          });
+          if (seq !== previewSeqRef.current) return;
+          if (collisionRes.ok) {
+            const collData = (await collisionRes.json()) as {
+              services?: Array<{ id: number; date: string }>;
+            };
+            const exactMatch = collData.services?.find(
+              (r) => r.date === data.date
+            );
+            if (exactMatch) {
+              setWarningCollision({ date: data.date, id: exactMatch.id });
+            } else {
+              setWarningCollision(null);
+            }
+          }
+        } else {
+          setWarningCollision(null);
+        }
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
         console.error('Preview error:', err);
@@ -199,6 +162,7 @@ export default function EditForm({
           setSlidePlan([]);
           setPreviewEntries([]);
           setDetectedDate(null);
+          setWarningCollision(null);
           setFailedHymnNumbers([]);
         }
       } finally {
@@ -281,6 +245,24 @@ export default function EditForm({
       setFailedHymnNumbers(
         Array.isArray(data.failedHymnNumbers) ? data.failedHymnNumbers : []
       );
+      if (data.date) {
+        const collisionRes = await fetch(`/api/services?q=${data.date}`);
+        if (collisionRes.ok) {
+          const collData = (await collisionRes.json()) as {
+            services?: Array<{ id: number; date: string }>;
+          };
+          const exactMatch = collData.services?.find(
+            (r) => r.date === data.date
+          );
+          if (exactMatch) {
+            setWarningCollision({ date: data.date, id: exactMatch.id });
+          } else {
+            setWarningCollision(null);
+          }
+        }
+      } else {
+        setWarningCollision(null);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Parse failed');
     } finally {
@@ -330,8 +312,8 @@ export default function EditForm({
     setAnnouncements(next);
   };
 
-  const removeAnnouncement = (annId: string) => {
-    setAnnouncements(announcements.filter((ann) => ann.id !== annId));
+  const removeAnnouncement = (id: string) => {
+    setAnnouncements(announcements.filter((ann) => ann.id !== id));
   };
 
   const addAnnouncementUrl = (url: string) => {
@@ -372,27 +354,12 @@ export default function EditForm({
     }
   };
 
-  const resetFromProps = () => {
-    setPayload(initialPayload);
-    setSermonGraphicUrl(initialSermonGraphicUrl);
-    setFamilyPhotoUrl(initialFamilyPhotoUrl);
-    setYouthPhotoUrl(initialYouthPhotoUrl);
-    setAnnouncements(mapAnnouncements(initialAnnouncements));
-    setFields(fieldsFromParsed(initialParsed));
-    setUpdatedAt(initialUpdatedAt);
-    setError(null);
-  };
+  const handleSave = async (allowSecond = false) => {
+    if (!payload.trim()) {
+      setError('Raw Rundown Text is required');
+      return;
+    }
 
-  // Live carousel from form state (avoids stale flyerImages after edit/save).
-  // Legacy-only services: empty editable list + server-resolved flyerImages.
-  const carouselImages =
-    announcements.length > 0 || !usingLegacyFallback
-      ? announcements
-          .map((a) => a.image_url)
-          .filter((url) => Boolean(url.trim()))
-      : flyerImages;
-
-  const handleSave = async () => {
     // A hymn input blurred by this very click may still be resolving its title
     // against /api/hymns; let it land before the payload is built.
     await flushPendingHymnCommits();
@@ -404,53 +371,66 @@ export default function EditForm({
     let clearMaster = false;
     if (recurringCount === 0 && initialMasterCount > 0) {
       const ok = window.confirm(
-        'You removed all Master-list flyers. Clear the GLOBAL master announcement list? This affects every service. Click Cancel to keep the existing master and only update one-offs for this service.'
+        'You removed all Master-list flyers. Clear the GLOBAL master announcement list? This affects every service. Click Cancel to keep the existing master and only save one-offs for this service.'
       );
       if (ok) clearMaster = true;
     }
 
     setIsSaving(true);
     setError(null);
+
     try {
-      const res = await fetch(`/api/services/${id}`, {
-        method: 'PUT',
+      const bodyPayload: Record<string, unknown> = {
+        raw_payload: payload,
+        sermonGraphicUrl: sermonGraphicUrl.trim() || null,
+        familyPhotoUrl: familyPhotoUrl.trim() || null,
+        youthPhotoUrl: youthPhotoUrl.trim() || null,
+        announcements: announcements.map((a) => ({
+          image_url: a.image_url,
+          is_recurring: a.is_recurring,
+        })),
+        fields: buildFieldsPayload(fieldsRef.current),
+      };
+      if (allowSecond) bodyPayload.allowSecond = true;
+      if (clearMaster) bodyPayload.clearMaster = true;
+
+      const res = await fetch('/api/services', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          updated_at: updatedAt,
-          raw_payload: payload,
-          sermonGraphicUrl: sermonGraphicUrl.trim() || null,
-          familyPhotoUrl: familyPhotoUrl.trim() || null,
-          youthPhotoUrl: youthPhotoUrl.trim() || null,
-          clearMaster: clearMaster || undefined,
-          announcements: announcements.map((a) => ({
-            image_url: a.image_url,
-            is_recurring: a.is_recurring,
-          })),
-          fields: buildFieldsPayload(fieldsRef.current),
-        }),
+        body: JSON.stringify(bodyPayload),
       });
 
+      const data = (await res.json()) as {
+        error?: string;
+        date?: string;
+        existingId?: number;
+        id?: number;
+        failedHymnNumbers?: number[];
+      };
+
       if (res.status === 409) {
-        alert(
-          'This service was changed elsewhere. Refreshing form from the server.'
+        if (data.date && data.existingId != null) {
+          setWarningCollision({ date: data.date, id: data.existingId });
+        }
+        setError(
+          data.error ||
+            'A service already exists for this date. Open it, or create a second service anyway.'
         );
-        router.refresh();
         return;
       }
 
       if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        throw new Error(data.error || 'Failed to update');
+        throw new Error(data.error || 'Failed to create service');
       }
 
-      const data = (await res.json()) as { updated_at?: string };
-      if (data.updated_at) setUpdatedAt(data.updated_at);
+      if (Array.isArray(data.failedHymnNumbers)) {
+        setFailedHymnNumbers(data.failedHymnNumbers);
+      }
+
+      router.push(`/services/${data.id}`);
       router.refresh();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Error updating service');
-      console.error(e);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error occurred');
     } finally {
       setIsSaving(false);
     }
@@ -458,6 +438,34 @@ export default function EditForm({
 
   return (
     <div className="space-y-6 font-sans">
+      {warningCollision && (
+        <div className="border border-amber-500/30 bg-amber-500/10 text-amber-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <p className="text-sm font-bold">Date Collision Warning</p>
+            <p className="text-xs text-amber-300 mt-1">
+              A worship service for date{' '}
+              <strong>{warningCollision.date}</strong> already exists.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/services/${warningCollision.id}`}
+              className="text-xs px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/20 hover:bg-amber-500/30 font-semibold transition-all"
+            >
+              Go to Existing Service
+            </Link>
+            <button
+              type="button"
+              disabled={isSaving || !payload.trim()}
+              onClick={() => handleSave(true)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/20 hover:bg-amber-500/30 font-semibold transition-all disabled:opacity-50 cursor-pointer"
+            >
+              Create second service anyway
+            </button>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div
           className="p-4 bg-red-500/10 border border-red-500/20 text-red-200 rounded-xl text-sm font-medium"
@@ -481,53 +489,12 @@ export default function EditForm({
         <div className="lg:col-span-7 space-y-6">
           <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
             <CardHeader>
-              <CardTitle>Announcement flyers</CardTitle>
-              <CardDescription>
-                {carouselImages.length === 0
-                  ? 'No flyer slides for this service (empty Announcement List).'
-                  : usingLegacyFallback && announcements.length === 0
-                    ? 'Using legacy per-service images (Announcement List is empty).'
-                    : `${carouselImages.length} flyer${carouselImages.length === 1 ? '' : 's'} from the Announcement List.`}{' '}
-                <Link
-                  href="/announcements"
-                  className="text-primary hover:underline"
-                >
-                  Manage list
-                </Link>
-              </CardDescription>
-            </CardHeader>
-            {carouselImages.length > 0 && (
-              <CardContent>
-                <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth">
-                  {carouselImages.map((img, i) => (
-                    <a
-                      key={`${img}-${i}`}
-                      href={img}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="shrink-0 snap-start group relative block h-32 w-auto max-w-[200px] border rounded overflow-hidden"
-                    >
-                      <img
-                        src={img}
-                        alt={`Flyer ${i + 1}`}
-                        className="h-full w-auto object-cover group-hover:scale-105 transition-transform"
-                      />
-                    </a>
-                  ))}
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
-          <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
-            <CardHeader>
               <CardTitle className="text-xl font-bold">
-                Edit Worship Service
+                Create Worship Service
               </CardTitle>
               <CardDescription>
-                Edit the plain text rundown, then click Parse to refill
-                structured overlays. Live preview updates as you edit. Save to
-                regenerate slides.
+                Paste the plain text rundown, then click Parse to fill structured
+                overlays. Live preview updates as you edit.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -540,6 +507,7 @@ export default function EditForm({
                   value={payload}
                   onChange={(e) => setPayload(e.target.value)}
                   placeholder="Paste rundown text here..."
+                  required
                   disabled={isSaving}
                 />
                 <div className="mt-2 flex items-center justify-between gap-3">
@@ -937,7 +905,7 @@ export default function EditForm({
                   </label>
                   <input
                     type="text"
-                    id="edit-flyer-url-input"
+                    id="new-flyer-url-input"
                     className="w-full p-2 text-xs bg-background border border-border/80 rounded-lg outline-none focus:border-primary text-foreground"
                     placeholder="https://example.com/flyer.png"
                   />
@@ -947,7 +915,7 @@ export default function EditForm({
                     type="button"
                     onClick={() => {
                       const input = document.getElementById(
-                        'edit-flyer-url-input'
+                        'new-flyer-url-input'
                       ) as HTMLInputElement | null;
                       if (input && input.value.trim()) {
                         addAnnouncementUrl(input.value);
@@ -961,7 +929,7 @@ export default function EditForm({
                   <input
                     type="file"
                     accept="image/*"
-                    id="flyer-upload-edit-btn"
+                    id="flyer-upload-btn"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
@@ -970,7 +938,7 @@ export default function EditForm({
                     }}
                   />
                   <label
-                    htmlFor="flyer-upload-edit-btn"
+                    htmlFor="flyer-upload-btn"
                     className="flex-1 flex items-center justify-center cursor-pointer text-center py-2 text-xs font-semibold bg-primary/10 border border-primary/20 text-primary rounded-lg hover:bg-primary/20 transition-all"
                   >
                     Upload File
@@ -1017,12 +985,19 @@ export default function EditForm({
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t border-border/80">
-        <Button variant="outline" onClick={resetFromProps} disabled={isSaving}>
+        <Link
+          href="/"
+          className="px-5 py-2.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-sm font-semibold transition-all cursor-pointer"
+        >
           Cancel
-        </Button>
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? 'Saving & Parsing...' : 'Save & Regenerate'}
-        </Button>
+        </Link>
+        <button
+          onClick={() => handleSave(false)}
+          disabled={isSaving || !payload.trim()}
+          className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground text-sm font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center justify-center"
+        >
+          {isSaving ? 'Saving Service...' : 'Create Service'}
+        </button>
       </div>
     </div>
   );

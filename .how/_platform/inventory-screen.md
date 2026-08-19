@@ -35,4 +35,4 @@ Derived by `inventory.py` from `<Route>` in `spa/src/App.tsx`. Screen identity i
 - States are not declared on these pages; the `states:` map in frontmatter is empty, so the column is `—`. Empty and error states demanded by the UX guide are not yet named here.
 - UC served is a judgement the reader cannot derive from `App.tsx`; values are the prior catalogue mapping, kept in this file, except where that mapping names a UC the page does not run.
 - UC-16 (Sync Artifact) is on row 4 (`/services/[id]`), Admin-only control. It is not on row 7.
-- Plan vs code (DEC-003): Screen identity prefix is `spa`. Operator and projected shells live under `spa/src/pages`; client trees remain in `src/app/(operator)` and `src/app/(projected)`.
+- Plan vs code (DEC-003): Screen identity prefix is `spa`. Operator and projected shells live under `spa/src/pages`; client trees remain in `src/operator` and `src/projected`.

@@ -11,6 +11,9 @@
  *   themes>` in `src/`, `spa/src/`, `tests/`, `scripts/` (untyped `.mjs`
  *   included; tsc only covers `.ts`/`.tsx`)
  * - `node_modules/next/` spawn paths in `scripts/`
+ * - App Router special basenames under `src/` and `spa/src/` (`page`,
+ *   `layout`, `loading`, `template`, `default`, `not-found`, `error`, `route`)
+ * - repo-root `next.config.*` and `next-env.d.ts`
  *
  * It does NOT cover `next-themes` (a separate theme library AD-24 rests on),
  * historical `_bmad-output/` prose, or TypeScript's `esnext` lib name.
@@ -31,6 +34,12 @@
  * 8. mjs dynamic import: `import('next/headers')` in scripts/dev.mjs → same.
  * 9. spawn path: `node_modules/next/dist/bin/next` in scripts/dev.mjs →
  *    "scripts must not spawn the Next.js binary" fails.
+ * 10. App Router page: `src/operator/page.tsx` →
+ *    "source must not contain App Router special files" fails.
+ * 11. App Router layout: `spa/src/layout.tsx` → same.
+ * 12. App Router API route: `src/lib/route.ts` → same.
+ * 13. App Router fallback: `spa/src/pages/not-found.tsx` → same.
+ * 14. Config: `next.config.ts` at repo root → same.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -120,4 +129,44 @@ test('scripts must not spawn the Next.js binary', () => {
     }
   }
   assert.deepEqual(hits, [], `scripts still spawn node_modules/next: ${hits.join(', ')}`);
+});
+
+const APP_ROUTER_BASENAMES = new Set([
+  'page.tsx',
+  'page.ts',
+  'page.jsx',
+  'page.js',
+  'layout.tsx',
+  'layout.ts',
+  'layout.jsx',
+  'layout.js',
+  'loading.tsx',
+  'loading.ts',
+  'template.tsx',
+  'template.ts',
+  'default.tsx',
+  'default.ts',
+  'not-found.tsx',
+  'not-found.ts',
+  'error.tsx',
+  'error.ts',
+  'route.ts',
+  'route.js',
+]);
+
+const APP_ROUTER_CONFIG = ['next.config.ts', 'next.config.js', 'next.config.mjs', 'next-env.d.ts'];
+
+test('source must not contain App Router special files', () => {
+  const hits = [];
+  for (const rel of ['src', path.join('spa', 'src')]) {
+    for (const file of walk(path.join(root, rel))) {
+      if (APP_ROUTER_BASENAMES.has(path.basename(file))) {
+        hits.push(path.relative(root, file).replaceAll('\\', '/'));
+      }
+    }
+  }
+  for (const name of APP_ROUTER_CONFIG) {
+    if (fs.existsSync(path.join(root, name))) hits.push(name);
+  }
+  assert.deepEqual(hits, [], `App Router special file returned: ${hits.join(', ')}`);
 });

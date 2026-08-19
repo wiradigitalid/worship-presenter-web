@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '@/components/Header';
-import EditForm from '@/app/(operator)/services/[id]/EditForm';
+import EditForm from '@/operator/EditForm';
 
 export default function RunSheetPage() {
   const { id } = useParams();

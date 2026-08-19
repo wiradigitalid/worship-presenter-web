@@ -34,7 +34,7 @@ const {
   moveGridSelection,
   rowContainsIndex,
 } = await import(
-  srcUrl('app', '(operator)', 'services', '[id]', 'present', 'presenter-model.ts')
+  srcUrl('operator', 'present', 'presenter-model.ts')
 );
 const { buildPreviewEntries, previewBadgeTone } = await import(
   srcUrl('lib', 'artifacts', 'preview-model.ts')

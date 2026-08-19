@@ -1,5 +1,3 @@
-'use client';
-
 import { useSyncExternalStore } from 'react';
 import { useTheme } from 'next-themes';
 import { SunIcon, MoonIcon, MonitorIcon, SunMoonIcon } from 'lucide-react';

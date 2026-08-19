@@ -27,7 +27,3 @@ export function useSearchParams() {
 export function useParams<T extends Record<string, string>>() {
   return rrUseParams() as T;
 }
-
-export function notFound(): never {
-  throw new Response('Not Found', { status: 404 });
-}

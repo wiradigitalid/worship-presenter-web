@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * "All slides" jump grid — the Presenter's equivalent of PowerPoint's slide
  * sorter. Every slide in the deck is drawn at thumbnail size with the same

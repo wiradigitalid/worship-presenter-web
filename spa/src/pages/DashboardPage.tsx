@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
-import ServicesList from '@/app/(operator)/ServicesList';
+import ServicesList from '@/operator/ServicesList';
 
 type Session = { username: string; role: string };
 

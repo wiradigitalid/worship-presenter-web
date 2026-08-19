@@ -15,9 +15,9 @@
  * registry-resolved inline styles; and *where* — the projected output, not the
  * operator's own preview of it (`SlidePreviewList` is hub chrome and follows the
  * theme deliberately). Story 17.7 extended this same net to the *shell behind*
- * a projected route — `layout.tsx`, framework fallbacks, and server first paint.
+ * a projected route — SPA fallbacks and `spa/projected.html` first paint.
  * `FULL_SCREEN` still covers the client hook defence; structural discovery from
- * `src/app/(projected)` covers the room-facing React clients.
+ * `src/projected` covers the room-facing React clients.
  *
  * The projected surface is two routes, and each is a route shell plus a client
  * tree. Both halves are guarded, because the shell is reached at the same URL
@@ -508,7 +508,7 @@ function enclosingTag(source, needle) {
 
 // --- the palette, read from its source of truth, parsed once ----------------
 
-const GLOBALS_CSS = 'src/app/globals.css';
+const GLOBALS_CSS = 'src/globals.css';
 
 /**
  * Every `--color-*` name exposed by the `@theme inline` block, longest first so
@@ -638,7 +638,7 @@ test('Story 17.7: the projected route group owns both unchanged public URLs', ()
 });
 
 test('Story 17.7: every projected framework fallback is discovered structurally', () => {
-  for (const name of ['not-found.tsx', 'error.tsx']) {
+  for (const name of ['ProjectedNotFound.tsx', 'ProjectedError.tsx']) {
     assert.ok(
       projectedRoutes.specialFiles.includes(`spa/src/projected/${name}`),
       `${name} must live inside the projected SPA fallbacks`
@@ -812,7 +812,7 @@ for (const forbidden of ['ThemeProvider', 'getUiLocale', 'suppressHydrationWarni
 }
 
 test('Story 17.7: projected not-found and error fallbacks are literal and generic', () => {
-  for (const name of ['not-found.tsx', 'error.tsx']) {
+  for (const name of ['ProjectedNotFound.tsx', 'ProjectedError.tsx']) {
     const file = `spa/src/projected/${name}`;
     const source = read(file);
     const { root, sourceFile } = defaultReturnedRoot(source, file);
@@ -1190,8 +1190,8 @@ test('AC-4: every projected focusable states a literal outline colour', () => {
 
 /** The two room-facing fallbacks when a service cannot be shown. */
 const ROUTE_SHELLS = [
-  'spa/src/projected/not-found.tsx',
-  'spa/src/projected/error.tsx',
+  'spa/src/projected/ProjectedNotFound.tsx',
+  'spa/src/projected/ProjectedError.tsx',
 ];
 
 test('the room-facing failure branches can both be scrolled', () => {
@@ -1847,7 +1847,8 @@ function firstClientBoundaries(page) {
     const file = queue.shift();
     if (seen.has(file)) continue;
     seen.add(file);
-    if (/^\s*['\"]use client['\"]/m.test(read(file))) {
+    const posix = file.replaceAll('\\', '/');
+    if (/\/(?:Slideshow|Projector)Client\.tsx$/.test(posix)) {
       boundaries.push(file);
       continue;
     }
@@ -2208,8 +2209,8 @@ function jsxReturnBranches(source) {
 }
 
 for (const file of [
-  'src/app/(operator)/services/[id]/present/PresenterOperator.tsx',
-  'src/app/(operator)/services/[id]/present/SlideGridDialog.tsx',
+  'src/operator/present/PresenterOperator.tsx',
+  'src/operator/present/SlideGridDialog.tsx',
 ]) {
   test(`AC-3: ${file} pins its own dark surface on every branch it renders`, () => {
     const branches = jsxReturnBranches(read(file));
@@ -2241,8 +2242,8 @@ test('AC-1/AC-2: the operator shell mounts the theme provider', () => {
   );
   assert.match(
     read('src/components/ThemeProvider.tsx'),
-    /^'use client';/m,
-    'next-themes writes the class onto <html> before React hydrates; the provider is the client boundary'
+    /from 'next-themes'/,
+    'next-themes writes the class onto <html>; the provider is the theme boundary'
   );
   assert.doesNotMatch(
     read('spa/src/main.tsx'),
@@ -2276,7 +2277,7 @@ test('Story 17.3: root metadata names Worship Presenter Web, not create-next-app
 test('AC-1/AC-2: the provider is a client component with system default', () => {
   const provider = read('src/components/ThemeProvider.tsx');
 
-  assert.match(provider, /^'use client';/m, 'next-themes needs the client');
+  assert.match(provider, /from 'next-themes'/, 'next-themes is the theme library');
   assert.match(provider, /attribute="class"/, 'the palette is keyed on `.dark`');
   assert.match(provider, /defaultTheme="system"/, 'AC-2: first visit follows the OS');
   assert.match(provider, /enableSystem/, 'AC-2: first visit follows the OS');
@@ -2943,32 +2944,32 @@ const UNPAIRED_CHROMATIC_TEXT = [
   // decision for untokenized hues lives in deferred-work.md (theme closure; no story
   // owner yet). Cited so a reader can check the claim rather than take the
   // file's word for it.
-  'src/app/(operator)/services/[id]/EditForm.tsx: text-amber-200 [:471, DESIGN.md Open Item 4]',
-  'src/app/(operator)/services/[id]/EditForm.tsx: text-amber-300 [:473, DESIGN.md Open Item 4]',
-  'src/app/(operator)/services/[id]/EditForm.tsx: text-red-200 [:463, DESIGN.md Open Item 4]',
-  'src/app/(operator)/services/[id]/EditForm.tsx: text-red-500 [:911, DESIGN.md Open Item 4]',
-  'src/app/(operator)/services/new/CreateForm.tsx: text-amber-200 [:444, DESIGN.md Open Item 4]',
-  'src/app/(operator)/services/new/CreateForm.tsx: text-amber-200 [:481, DESIGN.md Open Item 4]',
-  'src/app/(operator)/services/new/CreateForm.tsx: text-amber-300 [:447, DESIGN.md Open Item 4]',
-  'src/app/(operator)/services/new/CreateForm.tsx: text-amber-300 [:483, DESIGN.md Open Item 4]',
-  'src/app/(operator)/services/new/CreateForm.tsx: text-red-200 [:473, DESIGN.md Open Item 4]',
-  'src/app/(operator)/services/new/CreateForm.tsx: text-red-500 [:880, DESIGN.md Open Item 4]',
+  'src/operator/EditForm.tsx: text-amber-200 [:471, DESIGN.md Open Item 4]',
+  'src/operator/EditForm.tsx: text-amber-300 [:473, DESIGN.md Open Item 4]',
+  'src/operator/EditForm.tsx: text-red-200 [:463, DESIGN.md Open Item 4]',
+  'src/operator/EditForm.tsx: text-red-500 [:911, DESIGN.md Open Item 4]',
+  'src/operator/CreateForm.tsx: text-amber-200 [:444, DESIGN.md Open Item 4]',
+  'src/operator/CreateForm.tsx: text-amber-200 [:481, DESIGN.md Open Item 4]',
+  'src/operator/CreateForm.tsx: text-amber-300 [:447, DESIGN.md Open Item 4]',
+  'src/operator/CreateForm.tsx: text-amber-300 [:483, DESIGN.md Open Item 4]',
+  'src/operator/CreateForm.tsx: text-red-200 [:473, DESIGN.md Open Item 4]',
+  'src/operator/CreateForm.tsx: text-red-500 [:880, DESIGN.md Open Item 4]',
   // Pinned dark, so it cannot express itself in `dark:` variants at all: the
   // Presenter renders dark under either theme (AC-3), which is why
   // `presenter-model.ts:48-54` keeps a second tone table instead of adding dark
   // halves to the first. Not a defect and not deferred — the opposite surface.
-  'src/app/(operator)/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:583, pinned dark, AC-3]',
-  'src/app/(operator)/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:627, pinned dark, AC-3]',
-  'src/app/(operator)/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:709, pinned dark, AC-3]',
-  'src/app/(operator)/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:829, pinned dark, AC-3]',
+  'src/operator/present/PresenterOperator.tsx: text-amber-300 [:583, pinned dark, AC-3]',
+  'src/operator/present/PresenterOperator.tsx: text-amber-300 [:627, pinned dark, AC-3]',
+  'src/operator/present/PresenterOperator.tsx: text-amber-300 [:709, pinned dark, AC-3]',
+  'src/operator/present/PresenterOperator.tsx: text-amber-300 [:829, pinned dark, AC-3]',
   // The lost-sync line (Story 17.5, AC-5/AC-7): reuses the same pinned-dark
   // amber treatment as the four sites above rather than adding a new hue, so
   // this is the fifth site sharing one already-filed exception, not a new one.
-  'src/app/(operator)/services/[id]/present/PresenterOperator.tsx: text-amber-300 [:604, pinned dark, AC-3/Story 17.5 AC-5]',
-  'src/app/(operator)/services/[id]/present/presenter-model.ts: text-amber-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
-  'src/app/(operator)/services/[id]/present/presenter-model.ts: text-emerald-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
-  'src/app/(operator)/services/[id]/present/presenter-model.ts: text-indigo-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
-  'src/app/(operator)/services/[id]/present/presenter-model.ts: text-sky-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
+  'src/operator/present/PresenterOperator.tsx: text-amber-300 [:604, pinned dark, AC-3/Story 17.5 AC-5]',
+  'src/operator/present/presenter-model.ts: text-amber-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
+  'src/operator/present/presenter-model.ts: text-emerald-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
+  'src/operator/present/presenter-model.ts: text-indigo-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
+  'src/operator/present/presenter-model.ts: text-sky-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
 ];
 
 test('AC-6: every chromatic text shade states both halves, or is a filed exception', () => {
@@ -3015,7 +3016,7 @@ test('AC-6: the hand-rolled red pair is the destructive token, so it says so', (
   // from it the moment the identity is retuned.
   for (const file of [
     'src/components/LogoutButton.tsx',
-    'src/app/(operator)/announcements/AnnouncementsManager.tsx',
+    'src/operator/AnnouncementsManager.tsx',
   ]) {
     const source = read(file);
     assert.doesNotMatch(

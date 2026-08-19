@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const PROJECTED_ROUTE_GROUP = 'src/app/(projected)';
+export const PROJECTED_ROUTE_GROUP = 'src/projected';
 
 const SPA_PROJECTED_PAGES = [
   'spa/src/pages/SlideshowPage.tsx',
@@ -9,8 +9,8 @@ const SPA_PROJECTED_PAGES = [
 ];
 
 const SPA_PROJECTED_FALLBACKS = [
-  'spa/src/projected/not-found.tsx',
-  'spa/src/projected/error.tsx',
+  'spa/src/projected/ProjectedNotFound.tsx',
+  'spa/src/projected/ProjectedError.tsx',
 ];
 
 const ROUTE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx']);

@@ -158,17 +158,6 @@ function importedNames(root, moduleSpecifier) {
   return out;
 }
 
-/** Whether the file opens with the `'use client'` directive. */
-function hasUseClient(sourceFile) {
-  const first = sourceFile.statements[0];
-  return Boolean(
-    first &&
-      ts.isExpressionStatement(first) &&
-      ts.isStringLiteral(first.expression) &&
-      first.expression.text === 'use client'
-  );
-}
-
 // --- AC-1/AC-2: the transition rules, called rather than matched ------------
 
 test('AC-1: a canvas mutation is the only event that sets the flag', () => {
@@ -621,9 +610,8 @@ test('AC-1: the indicator renders only for a dirty, editable canvas', () => {
 
 // --- AC-4: leaving the route, scoped to this page ---------------------------
 
-test('AC-4: the blocker is a client context with a working default', () => {
+test('AC-4: the blocker is a React context with a working default', () => {
   const blocker = ast('src/components/navigation-blocker.tsx');
-  assert.ok(hasUseClient(blocker), 'context and window.confirm both need the client');
 
   const created = callsNamed(blocker, 'createContext');
   assert.equal(created.length, 1, 'one context, created once');

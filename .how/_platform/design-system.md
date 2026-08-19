@@ -14,7 +14,7 @@ Tokens and base components for Hub and Presenter **operator** surfaces. The Cong
 
 As-built: shadcn/ui (base-nova) + Tailwind 4. Target UI is the React SPA (DEC-003); tokens stay here. Zero brand hue in `globals.css` tokens. `wdi-ux` was not run; this file is extracted so the archive can retire (DEC-001).
 
-## Tokens (from `src/app/globals.css`)
+## Tokens (from `src/globals.css`)
 
 Light: background `oklch(1 0 0)`, foreground `oklch(0.145 0 0)`, primary `oklch(0.205 0 0)`, primary-foreground `oklch(0.985 0 0)`, muted `oklch(0.97 0 0)`, muted-foreground `oklch(0.543 0 0)`, border `oklch(0.922 0 0)`, ring `oklch(0.708 0 0)`, destructive `oklch(0.577 0.245 27.325)`.
 

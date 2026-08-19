@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
-import AnnouncementsManager from '@/app/(operator)/announcements/AnnouncementsManager';
+import AnnouncementsManager from '@/operator/AnnouncementsManager';
 
 export default function AnnouncementsPage() {
   const navigate = useNavigate();

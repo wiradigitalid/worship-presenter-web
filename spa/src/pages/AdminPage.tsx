@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
-import AccountsManager from '@/app/(operator)/admin/AccountsManager';
-import RetentionSettings from '@/app/(operator)/admin/RetentionSettings';
-import TransitionSettings from '@/app/(operator)/admin/TransitionSettings';
-import UiLocaleSettings from '@/app/(operator)/admin/UiLocaleSettings';
+import AccountsManager from '@/operator/admin/AccountsManager';
+import RetentionSettings from '@/operator/admin/RetentionSettings';
+import TransitionSettings from '@/operator/admin/TransitionSettings';
+import UiLocaleSettings from '@/operator/admin/UiLocaleSettings';
 
 export default function AdminPage() {
   const navigate = useNavigate();

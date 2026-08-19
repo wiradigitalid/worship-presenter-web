@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import PresenterOperator from '@/app/(operator)/services/[id]/present/PresenterOperator';
+import PresenterOperator from '@/operator/present/PresenterOperator';
 
 export default function PresentPage() {
   const { id } = useParams();

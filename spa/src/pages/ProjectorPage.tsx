@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ProjectorClient from '@/app/(projected)/services/[id]/present/projector/ProjectorClient';
-import ProjectedNotFound from '../projected/not-found';
-import ProjectedError from '../projected/error';
+import ProjectorClient from '@/projected/ProjectorClient';
+import ProjectedNotFound from '../projected/ProjectedNotFound';
+import ProjectedError from '../projected/ProjectedError';
 
 export default function ProjectorPage() {
   const { id } = useParams();

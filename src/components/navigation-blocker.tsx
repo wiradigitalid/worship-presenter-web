@@ -1,5 +1,3 @@
-'use client';
-
 import Link from '@/components/Link';
 import { createContext, useContext, useMemo, useState } from 'react';
 import {

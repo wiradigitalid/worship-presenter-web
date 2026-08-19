@@ -1,5 +1,3 @@
-'use client';
-
 import { useId, useRef, useState } from 'react';
 import { ImageFieldPreview } from '@/components/ImageFieldPreview';
 

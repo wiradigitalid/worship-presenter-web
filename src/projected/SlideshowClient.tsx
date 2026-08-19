@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { SlidePlanItem } from '@/lib/slide-plan';
@@ -7,7 +5,7 @@ import SlideView from '@/components/SlideView';
 import { transitionLayerStyle, type SlideTransition } from '@/lib/transitions';
 import { useProjectedShell } from '@/lib/use-projected-shell';
 import { useSlideTransition } from '@/lib/use-slide-transition';
-import '@/app/(projected)/projected.css';
+import '@/projected/projected.css';
 
 export default function SlideshowClient({
   serviceId,

@@ -1,5 +1,3 @@
-'use client';
-
 import ArtifactSlide from '@/components/artifacts/ArtifactSlide';
 import type { SlidePlanItem } from '@/lib/slide-plan';
 

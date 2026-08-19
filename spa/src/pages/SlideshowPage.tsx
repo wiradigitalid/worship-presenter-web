@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import SlideshowClient from '@/app/(projected)/services/[id]/slideshow/SlideshowClient';
-import ProjectedNotFound from '../projected/not-found';
-import ProjectedError from '../projected/error';
+import SlideshowClient from '@/projected/SlideshowClient';
+import ProjectedNotFound from '../projected/ProjectedNotFound';
+import ProjectedError from '../projected/ProjectedError';
 
 export default function SlideshowPage() {
   const { id } = useParams();
