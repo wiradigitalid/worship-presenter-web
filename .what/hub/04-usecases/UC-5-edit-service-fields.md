@@ -22,7 +22,7 @@ The Operator is signed in. That Service exists.
 1. The Operator opens the Service fields.
 2. The Operator changes one or more values.
 3. The Operator saves.
-4. The system accepts the save because the fields are still the last ones the Operator knew.
+4. The system accepts the save because the fields are still the last ones the Operator knew (BR-4). Generate (UC-6) is not this step (OQ-20).
 5. The next generate uses the new values.
 
 ## Alternate Flows
@@ -35,7 +35,9 @@ The Operator is signed in. That Service exists.
 
 | From step | Failure | What the system does | What the user is left with |
 | --- | --- | --- | --- |
-| 3 | Someone else already saved first | Rejects; Operator must re-read | On-screen fields do not overwrite silently (FR-28, BR-4) |
+| 3 | Someone else already saved first | Rejects; Operator must re-read (SCN-2) | On-screen fields do not overwrite silently (FR-28, BR-4) |
+| 3 | After that reject, the Service is gone on re-read | Treats as UC-7 not-found; does not create a replacement (OQ-23, SCN-2) | List already lacks that row |
+| 3 | Session expired | Rejects; no partial write (OQ-23) | Operator signs in again; on-screen fields are not stored |
 | 1 | Session expired or account deleted | No fields shown | Operator signs in again; server data intact |
 
 ## Outcome

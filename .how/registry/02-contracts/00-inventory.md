@@ -24,3 +24,4 @@ verified: '84db8e7'
 
 - Sync Artifact (UC-16) is not an HTTP row. Checked: no route. SDD `[MISSING]` AD-16 / FR-21; Hub surface — do not invent a Registry path.
 - Admin delete and reorder HTTP are [MISSING] on LC-11. AD-17 non-revival is verified by SQL delete in `tests/registry-reseed.test.mjs`. Planned FR-21 / UC-15; not inventory rows until they exist.
+- POST reset is live→live only. A gone id is 404 `Template not found` and does not undelete (OQ-24). Not a fifth published row.

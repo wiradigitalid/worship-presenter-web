@@ -24,4 +24,4 @@ SQLite in `web`. LC-11 calls this; this does not call LC-11.
 
 ## Notes
 
-Seed is bootstrap + Reset only (AD-17). `position` is persisted and asserted contiguous. Admin delete and reorder functions are [MISSING] (FR-21 / UC-15).
+Seed is bootstrap + Reset only (AD-17). `position` is persisted and asserted contiguous. Admin delete and reorder functions are [MISSING] (FR-21 / UC-15). Reset updates a still-live row; it is not undelete (OQ-24).

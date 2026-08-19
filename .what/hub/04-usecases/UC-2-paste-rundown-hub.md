@@ -36,9 +36,9 @@ This is **this phase's** create path. The Operator is signed in. Song Book is sh
 
 | From step | Failure | What the system does | What the user is left with |
 | --- | --- | --- | --- |
-| 2 | Text is not parseable | Failure is visible (NFR-5) | Form does not claim silent success |
-| 2 | Empty or whitespace-only paste, or no date can be read | Rejects; no row | Form shows the miss; no Service |
-| 1 | Session expired | Rejects | Operator signs in again; no new Service |
+| 2 | Empty or whitespace-only paste, or no date can be read | Rejects; no row (OQ-21) | Form shows the miss; no Service |
+| 2 | Text is not parseable, but a date was read | Saves what was readable; the miss is visible (NFR-5, OQ-22) | Operator sees an incomplete Service, not silence |
+| 1 | Session expired | Rejects; no row | Operator signs in again; no new Service |
 
 ## Outcome
 

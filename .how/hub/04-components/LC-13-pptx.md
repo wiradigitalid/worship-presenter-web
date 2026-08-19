@@ -12,7 +12,7 @@ created: 2026-08-18
 
 ## Responsibility
 
-Draw the plan into PPTX on-demand at download. Does not invent order itself.
+Draw the plan into PPTX on-demand at download (UC-6 / UC-18). Does not invent order itself. Does not edit the Service payload and does not take `updated_at` (OQ-20, BR-4).
 
 ## Depends on
 

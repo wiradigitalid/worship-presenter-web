@@ -4,7 +4,7 @@ kind: endpoint
 scope: presenter
 status: draft
 created: '2026-08-18'
-updated: '2026-08-18'
+updated: '2026-08-19'
 derived_from: code
 verified: '84db8e7'
 ---

@@ -101,4 +101,4 @@ OQ-4 — When will the production host set `AUTH_SECRET`, `WEBHOOK_SECRET`, and 
 
 ## Open Items
 
-OQ-17 · OQ-2 · OQ-4 · OQ-6. OQ-1 is parked on CAP-11.
+OQ-17 · OQ-2 · OQ-4 · OQ-6. OQ-1 is parked on CAP-11. Taken and encoded here: OQ-20 (generate is not a payload edit; BR-4 is UC-5) · OQ-21 (no readable date → no row; named date with no Service rejects, no nearest-Sabbath fallback) · OQ-22 (unparseable Hub body with a date still saves what was readable; Telegram images attach or fail visibly) · OQ-23 (gone on re-read is UC-7 not-found; session expiry at save/delete rejects with no partial write).

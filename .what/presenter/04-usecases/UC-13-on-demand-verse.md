@@ -5,6 +5,7 @@ component: presenter
 satisfies: [FR-19, FR-22]
 critical: false
 created: 2026-08-18
+updated: 2026-08-19
 ---
 
 # UC-13 — I display an on-demand verse on the projector
@@ -15,7 +16,7 @@ The speaker asks for a verse outside what is already on the slides; the Operator
 
 ## Precondition
 
-UC-12 is running or the projector screen is open. A translation is selected.
+UC-12 is running and the projector is live. A translation is selected.
 
 ## Main Flow
 
@@ -29,15 +30,15 @@ UC-12 is running or the projector screen is open. A translation is selected.
 | From step | Condition | What happens |
 | --- | --- | --- |
 | 1 | Operator chooses another translation for this lookup | Verse from that translation; the default setting need not change |
-| 1 | Empty reference | Lookup does not run; overlay does not change |
 | 2 | Operator advances the Deck while overlay is open | Overlay stays; index may move underneath; closing overlay shows the current Deck slide |
-| 2 | Operator blanks while overlay is open | Blank covers the overlay; overlay remains until cleared (BR-6) |
+| 2 | Operator blanks while overlay is open | Blank covers the overlay; overlay remains until cleared (BR-6, OQ-25) |
 
 ## Failure Flows
 
 | From step | Failure | What the system does | What the user is left with |
 | --- | --- | --- | --- |
-| 2 | Reference is unclear, missing, empty, or the translation is not installed | Does not guess (SCN-4); failure is visible | Overlay does not show a wrong verse; Deck is unchanged |
+| 1 | Projector is not open, or liveness is not live | Lookup is refused; no request is sent | Overlay unchanged; Operator opens the projector first (OQ-26) |
+| 1–2 | Empty reference, unclear, missing, translation not installed, or lookup times out | SCN-4 — fail closed, visible | Overlay does not show a wrong verse; Deck unchanged |
 | 2 | Session expired | Gate refuses the lookup | Overlay fails visible; Deck unchanged |
 
 ## Outcome

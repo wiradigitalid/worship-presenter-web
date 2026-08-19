@@ -32,6 +32,8 @@ The surface we publish: `POST /api/webhook`. Call shape is in the picoclaw skill
 | --- | --- | --- | --- |
 | inbound | POST rundown / correction | Rundown text, image URLs, structured fields | yes — names, prayer requests, photos |
 
+Specified (OQ-22): Telegram images attach or fail visibly; they are not dropped. As-built `coerceImageUrls` still filters silently — SDD Evidence BUG.
+
 ## When it changes without telling us
 
 | Change | How we notice | Blast radius | What we do |
@@ -49,6 +51,7 @@ No dedicated watchdog beyond the Operator opening Friday's list. [PARTIAL]
 | Slow | HTTP timeout on the caller side (we are not the one retried) | No retry on Hub | Events do not get a timely read-back | Request error in the process log |
 | Absent | — | — | No new Service | Silent on our side |
 | Lying (other JSON) | — | no | Parse failure visible, or 400 | Console / route log |
+| Lying (image URLs) | — | no | Specified: fail visibly (OQ-22). As-built: URLs filtered, read-back `imagesCount` on the survivors only | `coerceImageUrls` has no miss log |
 | Wrong secret | — | no | 401 to the caller | does not log the secret |
 | Secret unset | — | no | 503 to the caller | AD-5 |
 

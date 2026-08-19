@@ -21,14 +21,12 @@ Admin is signed in.
 
 1. Admin deletes or moves an entry's position.
 2. The system saves the new order and membership.
-3. Restart does not revive a deleted entry.
-4. A new Service's Deck follows that order; an old Service does not, until Sync.
 
 ## Alternate Flows
 
 | From step | Condition | What happens |
 | --- | --- | --- |
-| 1 | Reset one entry that still has a seed | That entry's layout returns to seed; other entries unchanged. Override record (backgrounds, fonts) remains; Reset does not clear it (AD-22) |
+| 1 | Reset one still-live entry that still has a seed | That entry's layout returns to seed; other entries unchanged. Override record (backgrounds, fonts) remains; Reset does not clear it (AD-22). Reset does not undelete (OQ-15, OQ-24) |
 | 1 | Delete a SongSet slot row | Delete is allowed; Hub hymn binding for that slot stays stored and is inert (AD-19) |
 | 1 | Delete every remaining live entry | Allowed; a new Service's Deck has no slides from Registry (AD-17: N rows, including zero) |
 
@@ -37,11 +35,12 @@ Admin is signed in.
 | From step | Failure | What the system does | What the user is left with |
 | --- | --- | --- | --- |
 | 2 | Save fails | Does not claim the new order | Old order remains after restart |
-| 3 | Seeder fills the gap | Forbidden (AD-17) | If it happens, that is a defect, not behaviour |
+| 1 | Reset an id that is gone | Rejects; does not revive | Entry stays gone |
+| 1 | Reset a live row with no seed | Rejects; Reset is not available (OQ-15) | Authored row unchanged |
 
 ## Outcome
 
-Live Registry = what Admin left in place. Delete is irreversible except Reset per entry that still has a seed.
+Live Registry = what Admin left in place. Delete is terminal (`gone`). Reset is live→live only on a still-live seed row; it does not undelete (OQ-15, OQ-24). Restart does not revive a deleted entry (BR-9). A new Service's Deck follows that order; an existing Service does not, until Sync (BR-8).
 
 ## Business Rules
 

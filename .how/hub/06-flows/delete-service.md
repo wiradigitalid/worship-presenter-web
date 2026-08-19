@@ -18,7 +18,7 @@ LC-2 → LC-12 → SQLite (cascade one-off announcements) → unlink `UPLOADS_DI
 
 ## Happy path
 
-1. Operator DELETE `/api/services/[id]` (session).
+1. Operator DELETE `/api/services/[id]` (session). Gate 401 if the session is expired — no unlink, no row delete (OQ-23).
 2. LC-12 collects `/api/uploads/…` refs belonging to this Service.
 3. LC-12 deletes the Service row.
 4. FK cascades items with that `service_id`.
@@ -46,6 +46,7 @@ sequenceDiagram
 
 | Hop | Failure | System does | Safe to retry |
 | --- | --- | --- | --- |
+| session | expired | 401 from `src/proxy.ts`; no partial write (OQ-23) | yes after sign-in |
 | id | missing | 404 | yes (idempotent after success) |
 | DB | 500 mid-way | does not claim success | yes |
 | File unlink | fs failed | row already gone; error in log | no via DELETE (404) |

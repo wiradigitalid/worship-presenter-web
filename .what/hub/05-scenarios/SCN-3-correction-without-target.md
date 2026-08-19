@@ -17,13 +17,13 @@ UC-17 step 2 (CAP-11 later).
 
 ## Condition
 
-No matching date and no nearest Sabbath Service.
+No readable date, or a named date with no Service. The system does not fall back to nearest Sabbath (OQ-12, OQ-21).
 
 ## Flow
 
 1. The system does not create a new Service from a correction command.
 2. The caller gets a visible failure.
-3. This phase: the Operator creates or edits in Hub (UC-2 / UC-5). Later (CAP-11): Events send a full Rundown (UC-1).
+3. This phase: the Operator creates or edits in Hub (UC-2 / UC-5). Later (CAP-11): Events send a full Rundown (UC-1) for that date.
 
 ## Outcome
 

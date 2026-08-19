@@ -36,8 +36,10 @@ Ephemeral on the channel, not a persisted entity. Blank is not a liveness transi
 | blanked | Black cover; index and any verse overlay stay underneath |
 | overlay | Verse text on the Congregation screen; payload unchanged (BR-7) |
 
-Blank covers overlay. Advance may change index under blank or overlay. Closing overlay or releasing blank shows the current index.
+Blank covers overlay; it does not clear it (OQ-25). Advance may change index under blank or overlay.
+
+Unblank reveals the overlay if it is still open; otherwise the Congregation sees the current index. Closing overlay reveals the current index (BR-7).
 
 ### What is deliberately not modelled
 
-Slide index is not stored state; it is ephemeral on the channel (AD-10). Plan identity in the message is **not yet** present.
+Slide index is not stored state; it is ephemeral on the channel (AD-10). Plan identity in the message is **not yet** present (OQ-26).

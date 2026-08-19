@@ -17,12 +17,12 @@ Events send a correction to the same channel (for example, change the opening so
 
 This use case realises **CAP-11 (last phase)**. This phase's create path is UC-2; Hub edit is UC-5.
 
-Webhook is ready. There is a nearest Sabbath Service, or a named date.
+Webhook is ready. Events name a date (or name the existing Service).
 
 ## Main Flow
 
-1. Events send a correction command.
-2. The system finds the target Service (named date, or nearest Sabbath).
+1. Events send a correction command naming a date.
+2. The system finds the Service for that named date.
 3. The system applies the change to the existing payload.
 4. The system returns a read-back.
 5. The Operator sees the new fields in Hub.
@@ -37,7 +37,7 @@ Webhook is ready. There is a nearest Sabbath Service, or a named date.
 
 | From step | Failure | What the system does | What the user is left with |
 | --- | --- | --- | --- |
-| 2 | Service not found | Rejects; not a new Service | Events must send a full Rundown or name a date |
+| 2 | No readable date, or named date with no Service | Rejects; not a new Service; does not fall back to nearest Sabbath (OQ-21, SCN-3) | Events must send a full Rundown (UC-1) or name a date that already has a Service |
 | 1 | Secret is wrong | Rejects the send | Correction does not enter |
 | 3 | Fails mid-write | Does not claim success | Resend is safe if the payload is the same |
 
@@ -47,4 +47,4 @@ The existing Service changes on one field, not a new row.
 
 ## Business Rules
 
-BR-3 · BR-4
+BR-3

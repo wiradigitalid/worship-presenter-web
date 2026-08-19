@@ -59,7 +59,9 @@ A deleted entry stays deleted after restart. An old Service does not change unti
 
 ### Assumptions
 
-—
+- OQ-24 — Registry `gone` is terminal. Reset is live→live only and does not undelete. Wrong: Admin ships undelete, or Reset on a gone id is undefined.
+- OQ-15 — Reset restores the shipped label (including a rename), and an authored row exposes no Reset; that as-built pair stands until Story 20.3. Wrong: two rows in one list keep offering different verbs.
+- OQ-14 — Until AD-16 ships, a stale snapshot has no extra operator affordance. Wrong: Story 20.8 must add a badge.
 
 ### Risks
 
@@ -83,4 +85,4 @@ A Registry edit that makes lyrics unreadable (NFR-3).
 
 ## Open Items
 
-—
+OQ-24 · OQ-15 · OQ-14.

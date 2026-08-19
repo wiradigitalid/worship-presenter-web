@@ -20,7 +20,9 @@ As-built: global templates in SQLite. Per-Service snapshot (AD-16) **not yet** a
 
 Registry is `/admin/artifacts` plus its API: layout, Reset to seed, ordered list. Admin reorder and delete HTTP are [MISSING] (FR-21 / UC-15). The plan reads `artifact_templates` rows (or the map assembled at build), not a JSON file after bootstrap.
 
-Expensive choice: seed is bootstrap + Reset only (AD-17); a deleted row is not revived by restart (verified; Admin verb still [MISSING]).
+Expensive choice: seed is bootstrap + Reset only (AD-17); a deleted row is not revived by restart or by Reset (OQ-24; restart verified; Admin delete verb still [MISSING]). Reset is live→live on a still-live seed row.
+
+Screens (`inventory-screen` 7) are not an `LC` `ui-screen`: that is a `wdi-ux` slot, skipped.
 
 ## Structure · [outline]
 
@@ -49,21 +51,23 @@ Direction: Admin screen → LC-11 → LC-15 → `artifact_templates`. Hub/Presen
 | AD-17 | The seeder initialises data **from zero only** — first install, first run — and is gated by a marker in `settings`. | Delete stays deleted. |
 | AD-18 | A shipped change that must reach rows already persisted travels as an **explicit, one-time migration** on the startup path, versioned per AD-21. | Not a re-seed. |
 | AD-19 | a key referenced across a boundary is **server-owned vocabulary, enforced on every write path**, and it is never administrator configuration. | SongSet slots. |
-| AD-20 | every slide in the deck originates from an ordered registry entry. | Planner does not inject liturgy slides. Half of *Prevents* is still debt (handler ids). |
+| AD-20 | every slide in the deck originates from an ordered registry entry. | Planner does not inject liturgy slides. AD-20 *Prevents* first half is still debt (handlers still pick the hymn). |
 | AD-21 | All persisted data shares **one monotonic version number** in `settings` | `data_version`. |
 | AD-22 | authoring authority is fixed per kind, and no surface widens it. | General vs SongSet vs Announcement. |
 
+AD-1, AD-2, AD-4, AD-10, AD-24 are not quoted here (OQ-30): they bind the container / chrome, not Registry rows.
+
 ## Failure Behaviour · [guarded]
+
+Boundaries = inventory-api rows 25–28 plus inventory-screen row 7 (`/admin/artifacts`). Process timeout: Next/Node default. Registry does not retry to the client; Admin presses again.
 
 | Boundary | Slow | Absent | Lying | What the user sees | What is logged |
 | --- | --- | --- | --- | --- | --- |
-| GET /api/admin/artifacts | Slow list | 403/500 | Summaries do not parse payload; a corrupt row still appears | Full list of labels | console.error on 500 |
-| GET /api/admin/artifacts/[id] | Slow | 404 | Payload does not parse → 500; no seed substitute | Editor does not open a lying layout | console.error: id + reason |
-| PUT /api/admin/artifacts/[id] | Slow | 404 | AD-15 validation failed → 400; stale → AD-6 shape in the store | Previous layout | console.error: id + reason |
-| POST /api/admin/artifacts/[id]/reset | Slow | 404 | Id without seed → 404 `Template not found`; Reset is not available | Layout returns to seed; override record remains (AD-22). Without seed: show that Reset failed | console.error: id + reason |
-| /admin/artifacts | Heavy canvas | 403 | — | Editor does not open; last saved layout remains | — |
-
-Process timeout: Next/Node default. Registry does not retry to the client; Admin presses again.
+| GET /api/admin/artifacts | List fetch until browser timeout | No session / not Admin → 403; store throw → 500 | Summaries do not parse payload; a corrupt row still appears as a label | Labels of every row, including a corrupt one. 403: `{ error: 'Forbidden' }` (not an empty list) | console.error on 500 (`Error listing artifact templates`) |
+| GET /api/admin/artifacts/[id] | Fetch until browser timeout | 403; missing id → 404 | Payload JSON/validate fail → 500; no seed substitute | Editor does not open a lying layout; last successful canvas stays mounted | console.error (`Error reading artifact template`) |
+| PUT /api/admin/artifacts/[id] | Save until browser timeout | 403; missing id → 404 | Invalid JSON / AD-15 → 400; stale `updatedAt` → 409; read-only kind → 400 | Previous layout; 409 reloads the server copy and discards unsaved canvas | console.error on 500 (`Error updating artifact template`) |
+| POST /api/admin/artifacts/[id]/reset | Reset until browser timeout | 403; gone id → 404 `Template not found` (does not undelete, OQ-24); live row with no seed → 404 `Unknown template` | Stale `updatedAt` → 409; seed id mismatch → 400 | Success: layout returns to seed; override record remains (AD-22). Gone / no-seed: Reset failed, membership unchanged | console.error on 500 (`Error resetting artifact template`) |
+| /admin/artifacts | Heavy canvas / list fetch until browser timeout | Proxy 403; the page still renders the editor shell if the cookie died after the gate | List has no delete or reorder control (HTTP [MISSING], FR-21). Reset button is always shown; API refuses gone / no-seed. A corrupt list row is still labelled | Editor does not open a 500 layout; last saved layout remains; Reset/Save errors in the on-page message | page: none. API 500s as the rows above |
 
 Plan read (`loadRegistrySnapshot`): a corrupt row is omitted from the Deck and logged with id + reason; it is not silently re-seeded (AD-17). Sync Artifact (UC-16) is a Hub surface, Admin-only. Do not invent a Registry route. [MISSING] — Evidence.
 
@@ -73,7 +77,7 @@ Plan read (`loadRegistrySnapshot`): a corrupt row is omitted from the Deck and l
 | --- | --- | --- | --- | --- |
 | UC-15 | `/admin/artifacts` + LC-11 | LC-15 | ArtifactTemplate | ordered list; gone survives boot |
 
-UC-14 and UC-16 are not `critical`. UC-16 is a Hub surface once AD-16 ships; do not invent a Registry Sync route. Delete flow: `06-flows/delete-template.md`. `01-ux/` canvas belongs to `wdi-ux` (skipped).
+UC-14 and UC-16 are not `critical`. UC-20 is Operator-facing plan consume (Hub/Presenter); Registry supplies entries only (AD-7, AD-12). UC-16 is a Hub surface once AD-16 ships; do not invent a Registry Sync route. Delete flow: `06-flows/delete-template.md`. `01-ux/` canvas belongs to `wdi-ux` (skipped).
 
 ## Evidence
 
@@ -85,7 +89,9 @@ UC-14 and UC-16 are not `critical`. UC-16 is a Hub surface once AD-16 ships; do 
 | Admin delete / reorder verb | [MISSING] | `store.ts` exports list/get/update/reset/insertIfMissing; no DELETE or reorder on LC-11 | planned: FR-21 / UC-15. AD-17 non-revival is verified by SQL delete in `tests/registry-reseed.test.mjs` |
 | `RegistrySnapshot` in code | [PARTIAL] | `src/lib/artifacts/registry-snapshot.ts` = live map per plan, not an AD-16 freeze | do not mix the names |
 | Seed does not substitute a missing row at plan time | verified | spine AD-11 closed Story 20.1 | — |
+| Reset on a gone id does not revive | verified | `src/app/api/admin/artifacts/[id]/reset/route.ts` returns 404 before seed lookup when `getArtifactTemplate` is null | OQ-24 |
 | LC-15 store | verified | `src/lib/registry/store.ts` | — |
+| Numeric timeout per route | [ASSUMED] | did not read `maxDuration` | platform default |
 
 ---
 
@@ -95,4 +101,4 @@ UC-14 and UC-16 are not `critical`. UC-16 is a Hub surface once AD-16 ships; do 
 
 ## Open Items
 
-—
+OQ-24 · OQ-15 · OQ-14 · OQ-30 · OQ-31.

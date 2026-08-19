@@ -18,10 +18,10 @@ entities: [Service, Account]
 | From | To | Trigger | Who may | Guard | Side effect |
 | --- | --- | --- | --- | --- | --- |
 | absent | present | Hub form (this phase); Telegram Rundown received (CAP-11 later) | Operator now; Events later | date parseable | weekly payload + images |
-| present | present | Hub edit / generate (this phase); Telegram correction (CAP-11 later) | Operator now; Events later | BR-4 on Hub edit | `updated_at` advances |
-| present | absent | Delete | Operator | — | that week's assets go too, including `UPLOADS_DIR` files no longer referenced; recurring announcements remain (BR-5) |
+| present | present | Hub field save (this phase); Telegram correction (CAP-11 later) | Operator now; Events later | BR-4 on Hub field save only — not generate / UC-6 (OQ-20) | payload write time advances |
+| present | absent | Delete | Operator | — | that week's assets go too, including local image files no longer referenced; recurring announcements remain (BR-5) |
 
-There is no `draft` state. What is saved is what is shown.
+There is no `draft` state. What is saved is what is shown. Generate / UC-6 reads the present Service and produces a Deck; it is not a payload edit and does not move this machine (OQ-20).
 
 ### What is deliberately not modelled
 

@@ -15,7 +15,7 @@ updated: 2026-08-18
 
 ## Purpose
 
-UC-10, UC-19, UC-22. Transition (AD-23), `ui_locale` (AD-24, FR-25), default corpus (AD-26).
+UC-10, UC-19. Transition (AD-23), `ui_locale` (AD-24, FR-25), PPTX cache days. Default corpus is not a key on this route (AD-26 inert lives on the hymn picker, not here).
 
 ## Operations
 
@@ -29,7 +29,7 @@ UC-10, UC-19, UC-22. Transition (AD-23), `ui_locale` (AD-24, FR-25), default cor
 | Lane | Answer |
 | --- | --- |
 | Authentication | Admin only |
-| Validation | Known keys; `slide_transition` only a `transitions.ts` row |
+| Validation | Known keys: `pptx_retention_days` (non-negative integer), `slide_transition` (a `transitions.ts` row), `ui_locale` |
 | Error handling | 400 key/value; 403 |
 | Rate limiting | `none` — Admin-only on one host. |
 | Idempotency | PUT same value is safe |
@@ -39,7 +39,7 @@ UC-10, UC-19, UC-22. Transition (AD-23), `ui_locale` (AD-24, FR-25), default cor
 | Condition | Response | Caller should |
 | --- | --- | --- |
 | Transition not in the table | 400 | Pick a shipped style |
-| Default corpus not installed | inert, not a write error (AD-26) | Do not rewrite silently |
+| `pptx_retention_days` present and not a non-negative integer | 400 | Send an integer ≥ 0 |
 
 ## Compatibility
 

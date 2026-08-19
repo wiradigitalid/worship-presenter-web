@@ -11,7 +11,7 @@ updated: 2026-08-19
 
 ## Realizes
 
-UC-15 delete. Irreversible except Reset only for a row that is still `live` and has a seed — delete is not Reset.
+UC-15 delete. Delete is terminal (`gone`). Reset is live→live only on a still-live seed row; it does not undelete (OQ-24).
 
 ## Participants
 
@@ -44,6 +44,10 @@ sequenceDiagram
 | --- | --- | --- | --- |
 | LC-11 hop | no DELETE route | does not write; Admin has no HTTP verb | n/a — [MISSING] planned FR-21 |
 | id | 404 | does not write | yes |
+| last live row deleted | list empty; seeder must not refill (AD-17, UC-15 N=0) | yes — empty Deck is allowed |
+| songset-* row deleted | Registry row gone; Hub hymn field stays stored and inert (AD-19) | yes |
+| SQL-delete proof path | may leave `position` gaps; list still `ORDER BY position` (OQ-31) | n/a until FR-21 compact |
+| Reset while live payload will not parse | `getArtifactTemplate` throw → 500 before gone/no-seed 404 | no — fix the row or wait |
 | Boot | seeder fills the gap | **defect** AD-17 | not a user retry |
 
 ## Guarantees
