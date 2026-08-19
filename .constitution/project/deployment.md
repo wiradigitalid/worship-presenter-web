@@ -24,6 +24,7 @@ SQLite, the PPTX cache, and uploads must sit on host storage that survives a con
 | `PPTX_RETENTION_DAYS` | Cache retention; default 60. `0` keeps forever |
 | `IMAGE_URL_ALLOWLIST` | Hostnames allowed for remote image fetch (AD-8) |
 | `PORT` | Go API listen port (as-built Next: 3000 until cutover) |
+| `LISTEN_HOST` | Go API bind host. Unset = `127.0.0.1` (AD-4; avoids a Windows Firewall prompt on `api.exe`). Inside Docker set `0.0.0.0`; compose still publishes `127.0.0.1:3000` on the host |
 
 `docker-compose.yml` and `Dockerfile` at the repo root are the as-built packaging. A Cloudflare Tunnel in front of `localhost:3000` is the published pattern; there is no public inbound port on the venue router.
 

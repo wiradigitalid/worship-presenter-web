@@ -11,10 +11,6 @@ import (
 )
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3000"
-	}
 	root, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
@@ -31,8 +27,11 @@ func main() {
 		log.Fatal(err)
 	}
 	defer handle.Close()
+	if err := db.Bootstrap(handle, root); err != nil {
+		log.Fatal(err)
+	}
 	srv := &httpapi.Server{DB: handle, Root: root}
-	addr := ":" + port
-	log.Printf("api listening on %s", addr)
+	addr := listenAddr()
+	log.Printf("api listening on http://%s", addr)
 	log.Fatal(http.ListenAndServe(addr, srv.Handler()))
 }

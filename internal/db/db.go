@@ -50,3 +50,12 @@ func Open(dbPath string) (*sql.DB, error) {
 	}
 	return handle, nil
 }
+
+// Bootstrap seeds admin, corpora, and the artifact registry on a fresh DB.
+// root is the repository root (data/ corpora and default-registry.json).
+func Bootstrap(handle *sql.DB, root string) error {
+	if err := authBootstrap(handle); err != nil {
+		return err
+	}
+	return seedHub(handle, root)
+}

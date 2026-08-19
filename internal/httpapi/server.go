@@ -25,7 +25,41 @@ type Server struct {
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/auth/login", s.postLogin)
+	mux.HandleFunc("POST /api/auth/logout", s.postLogout)
+	mux.HandleFunc("POST /api/auth/change-password", s.postChangePassword)
+	mux.HandleFunc("GET /api/session", s.getSession)
+	mux.HandleFunc("GET /api/services", s.listServices)
+	mux.HandleFunc("POST /api/services", s.createService)
+	mux.HandleFunc("POST /api/services/preview", s.previewService)
 	mux.HandleFunc("GET /api/services/{id}/pptx", s.getPptx)
+	mux.HandleFunc("POST /api/services/{id}/sync-artifact", s.syncArtifact)
+	mux.HandleFunc("GET /api/services/{id}", s.getService)
+	mux.HandleFunc("PUT /api/services/{id}", s.updateService)
+	mux.HandleFunc("DELETE /api/services/{id}", s.deleteService)
+	mux.HandleFunc("GET /api/announcements", s.listAnnouncements)
+	mux.HandleFunc("POST /api/announcements", s.addAnnouncement)
+	mux.HandleFunc("PUT /api/announcements", s.replaceAnnouncements)
+	mux.HandleFunc("PATCH /api/announcements/{id}", s.patchAnnouncement)
+	mux.HandleFunc("DELETE /api/announcements/{id}", s.deleteAnnouncement)
+	mux.HandleFunc("POST /api/upload", s.postUpload)
+	mux.HandleFunc("POST /api/upload/from-url", s.postUploadFromURL)
+	mux.HandleFunc("GET /api/uploads/{filename}", s.getUpload)
+	mux.HandleFunc("GET /api/admin/accounts", s.listAccounts)
+	mux.HandleFunc("POST /api/admin/accounts", s.createAccount)
+	mux.HandleFunc("PATCH /api/admin/accounts/{id}", s.patchAccount)
+	mux.HandleFunc("DELETE /api/admin/accounts/{id}", s.deleteAccount)
+	mux.HandleFunc("GET /api/admin/settings", s.getSettings)
+	mux.HandleFunc("PUT /api/admin/settings", s.putSettings)
+	mux.HandleFunc("GET /api/admin/artifacts", s.listArtifacts)
+	mux.HandleFunc("GET /api/admin/artifacts/{id}", s.getArtifact)
+	mux.HandleFunc("PUT /api/admin/artifacts/{id}", s.putArtifact)
+	mux.HandleFunc("DELETE /api/admin/artifacts/{id}", s.deleteArtifact)
+	mux.HandleFunc("POST /api/admin/artifacts/{id}/reset", s.resetArtifact)
+	mux.HandleFunc("PUT /api/admin/artifacts/order", s.reorderArtifacts)
+	mux.HandleFunc("GET /api/hymns", s.getHymns)
+	mux.HandleFunc("GET /api/scripture", s.getScripture)
+	mux.HandleFunc("POST /api/webhook", s.postWebhook)
 	mux.HandleFunc("/", s.fallback)
 	return s.gate(mux)
 }
@@ -62,7 +96,7 @@ func (s *Server) gate(next http.Handler) http.Handler {
 			forbidden(w, r)
 			return
 		}
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, withSession(r, current))
 	})
 }
 
@@ -143,11 +177,14 @@ func (s *Server) fallback(w http.ResponseWriter, r *http.Request) {
 	}
 	rel := strings.TrimPrefix(r.URL.Path, "/")
 	candidates := []string{
+		filepath.Join(s.Root, "spa", "dist", rel),
 		filepath.Join(s.Root, "public", rel),
 		filepath.Join(s.Root, "spa", rel),
 	}
-	if rel == "" || rel == "login" || strings.HasSuffix(rel, "/") {
+	if rel == "" || rel == "login" || strings.HasPrefix(rel, "services") ||
+		rel == "announcements" || strings.HasPrefix(rel, "admin") || strings.HasSuffix(rel, "/") {
 		candidates = append([]string{
+			filepath.Join(s.Root, "spa", "dist", "index.html"),
 			filepath.Join(s.Root, "spa", "index.html"),
 			filepath.Join(s.Root, "public", "index.html"),
 		}, candidates...)
@@ -163,7 +200,10 @@ func (s *Server) fallback(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, p)
 		return
 	}
-	index := filepath.Join(s.Root, "spa", "index.html")
+	index := filepath.Join(s.Root, "spa", "dist", "index.html")
+	if _, err := os.Stat(index); err != nil {
+		index = filepath.Join(s.Root, "spa", "index.html")
+	}
 	if _, err := os.Stat(index); err == nil {
 		http.ServeFile(w, r, index)
 		return

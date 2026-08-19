@@ -30,7 +30,7 @@ Expensive choice: one channel module `@/lib/present-channel`; Operator chrome do
 | LC-10 | gateway | presenter↔projector `BroadcastChannel` |
 | LC-14 | service | index / blank / overlay / liveness session |
 
-Direction: Operator controls → LC-14 → LC-10 → projector. Slideshow is a separate projected page; it does not join LC-10 and must not ack. LC-9 from the controls. Plan from LC-16 (Hub), which for a persisted Service reads the AD-16 snapshot. Does not write Registry.
+Direction: Operator controls → LC-14 → LC-10 → projector. Slideshow is a separate projected page; it does not join LC-10 and must not ack. LC-9 from the controls. Plan from LC-16 (Hub), which for a persisted Service reads the AD-16 snapshot and is served to both shells on `GET /api/services/[id]` (inventory row 35). Does not write Registry.
 
 ## Inherited Constraints · [guarded]
 

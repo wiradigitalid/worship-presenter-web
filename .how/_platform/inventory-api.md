@@ -12,7 +12,7 @@ platform_rows: []
 
 # Inventory — endpoints
 
-Derived by `inventory.py` from `export async function GET|POST|PUT|PATCH|DELETE` in `src/app/api/**/route.ts` (as-built until cutover). Host `api` is the Go container (DEC-003). Numbers are stable; new rows take the next number.
+Derived by `inventory.py` from `export async function GET|POST|PUT|PATCH|DELETE` in `src/app/api/**/route.ts` plus Go-only verbs in `internal/httpapi/server.go`. Host `api` is the Go container (DEC-003). Numbers are stable; new rows take the next number.
 
 ## Rows
 
@@ -40,8 +40,10 @@ Derived by `inventory.py` from `export async function GET|POST|PUT|PATCH|DELETE`
 | 2 | api | POST | `/api/auth/logout` | hub | Log out | published |
 | 18 | api | GET | `/api/hymns` | hub | Search hymns | published |
 | 29 | api | GET | `/api/scripture` | presenter | Verse lookup | published |
+| 34 | api | GET | `/api/session` | hub | Current session | published |
 | 8 | api | GET | `/api/services/[id]/pptx` | hub | Download PPTX | published |
 | 33 | api | POST | `/api/services/[id]/sync-artifact` | hub | Sync Artifact (AD-16) | published |
+| 35 | api | GET | `/api/services/[id]` | hub | One Service plus assembled plan | published |
 | 7 | api | DELETE | `/api/services/[id]` | hub | Delete Service | published |
 | 6 | api | PUT | `/api/services/[id]` | hub | Update Service (AD-6) | published |
 | 9 | api | POST | `/api/services/preview` | hub | Preview | published |
@@ -54,7 +56,7 @@ Derived by `inventory.py` from `export async function GET|POST|PUT|PATCH|DELETE`
 
 ## Findings
 
-- There is no `GET /api/services/[id]`. The Run-Sheet reads the Service through the SPA page `/services/[id]` (inventory-screen row 4); after cutover that page calls the Go API rather than a Server Component.
+- `GET /api/session` (34) and `GET /api/services/[id]` (35) exist on the Go API so the SPA can read the httpOnly session and consume the assembled plan. They are not App Router routes.
 - Plan vs code: `POST /api/webhook` is published in `src/` (FR-1 / FR-12), while this phase's intake promise is Hub form (FR-27). The row stays — as-built — and CAP-11 is the later product phase. Do not treat the shipped webhook as this phase's handover.
-- Plan vs code (DEC-003): Host is `api` (Go target). Routes are still implemented in Next.js `src/app/api` until the cutover wave. Do not treat Host `api` as proof the Go server exists.
+- Plan vs code (DEC-003): Host is `api` (Go). Inventory rows 1–33 remain in Next `src/app/api` until that process is deleted; Go already serves them. Rows 34–35 are Go-only.
 - W1 added 31 `DELETE /api/admin/artifacts/[id]`, 32 `PUT /api/admin/artifacts/order`, 33 `POST /api/services/[id]/sync-artifact`. Numbers kept; Host renamed `web` → `api` without renumbering.

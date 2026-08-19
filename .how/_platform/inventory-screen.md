@@ -35,4 +35,4 @@ Derived by `inventory.py` from `export default function` in `src/app/**/page.tsx
 - States are not declared on these pages; the `states:` map in frontmatter is empty, so the column is `—`. Empty and error states demanded by the UX guide are not yet named here.
 - UC served is a judgement the reader cannot derive from `page.tsx`; values are the prior catalogue mapping, kept in this file, except where that mapping names a UC the page does not run.
 - UC-16 (Sync Artifact) is on row 4 (`/services/[id]`), Admin-only control. It is not on row 7.
-- Plan vs code (DEC-003): Screen identity prefix is `spa`. Pages are still Next.js `src/app/**/page.tsx` until the cutover wave.
+- Plan vs code (DEC-003): Screen identity prefix is `spa`. Operator and projected shells live under `spa/`; Next.js `src/app/**/page.tsx` remains until the App Router UI is deleted.

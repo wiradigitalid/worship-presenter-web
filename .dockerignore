@@ -9,3 +9,10 @@ _bmad
 Dockerfile
 .dockerignore
 docker-compose*.yml
+data/local
+data/uploads
+.env
+.env.*
+*.pptx
+*.potx
+spa/dist

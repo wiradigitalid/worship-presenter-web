@@ -2,6 +2,7 @@ package plan
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -179,4 +180,57 @@ func bucketHymns(items []ParsedItem) (bt, ds []HymnItem) {
 		}
 	}
 	return bt, ds
+}
+
+func IsSafeImageURL(ref string) bool { return isSafeImageURL(ref) }
+
+func IsVideoURL(ref string) bool { return isVideoURL(ref) }
+
+func IsAnnouncementImageURL(ref string) bool { return isAnnouncementImageURL(ref) }
+
+func AssertAnnouncementImageURL(ref string) (string, error) {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return "", fmt.Errorf("image_url must be a non-empty string")
+	}
+	if !isSafeImageURL(ref) {
+		return "", fmt.Errorf("image_url must be an http(s) URL or a local /api/uploads/... path")
+	}
+	if isVideoURL(ref) {
+		return "", fmt.Errorf("Video/MP4 URLs are not allowed")
+	}
+	if !isAnnouncementImageURL(ref) {
+		return "", fmt.Errorf("image_url must end with an image extension (.jpg, .jpeg, .png, .gif, or .webp)")
+	}
+	return ref, nil
+}
+
+func CoerceOptionalSafeImageURL(value interface{}, field string) (present bool, out *string, err error) {
+	if value == nil {
+		return true, nil, nil
+	}
+	s, ok := value.(string)
+	if !ok {
+		return true, nil, fmt.Errorf("%s must be a string or null", field)
+	}
+	trimmed := strings.TrimSpace(s)
+	if trimmed == "" {
+		return true, nil, nil
+	}
+	if !isSafeImageURL(trimmed) {
+		return true, nil, fmt.Errorf("%s is not a safe image URL", field)
+	}
+	path := trimmed
+	if strings.HasPrefix(trimmed, "/") {
+		path = strings.SplitN(trimmed, "?", 2)[0]
+		path = strings.SplitN(path, "#", 2)[0]
+	} else if u, e := url.Parse(trimmed); e == nil {
+		path = u.Path
+	} else {
+		return true, nil, fmt.Errorf("%s is not a valid URL", field)
+	}
+	if !imageExt.MatchString(path) {
+		return true, nil, fmt.Errorf("%s must end with an image extension (.jpg, .jpeg, .png, .gif, or .webp)", field)
+	}
+	return true, &trimmed, nil
 }

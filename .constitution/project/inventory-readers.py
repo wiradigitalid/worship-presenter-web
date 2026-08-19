@@ -76,6 +76,8 @@ DEFAULT_API_DESC = {
     "DELETE /api/admin/artifacts/[id]": "Delete template",
     "PUT /api/admin/artifacts/order": "Reorder templates",
     "GET /api/scripture": "Verse lookup",
+    "GET /api/session": "Current session",
+    "GET /api/services/[id]": "One Service plus assembled plan",
     "POST /api/webhook": "picoclaw intake / correction",
 }
 
@@ -290,7 +292,34 @@ def derive_api(root: Path) -> "Derived":  # noqa: F821
             ))
 
     rows.sort(key=lambda r: (r.cells[2], r.cells[1]))
+    seen = {r.key for r in rows}
+    go_src = root / "internal" / "httpapi" / "server.go"
+    go_text = read(go_src)
+    if go_text:
+        rel = _posix(root, go_src)
+        for m in GO_HANDLE_RE.finditer(go_text):
+            method, raw_path = m.group(1), m.group(2)
+            path = re.sub(r"\{(\w+)\}", r"[\1]", raw_path)
+            key = f"{API_HOST} {method} {path}"
+            if key in seen:
+                continue
+            desc = by_endpoint.get(f"{method} {path}", "—")
+            if desc in ("", "—"):
+                desc = DEFAULT_API_DESC.get(f"{method} {path}", "—")
+            rows.append(Row(
+                key=key,
+                cells=[API_HOST, method, f"`{path}`", _api_owner(path), desc, "published"],
+                source=rel,
+            ))
+            seen.add(key)
+        rows.sort(key=lambda r: (r.cells[2], r.cells[1]))
+
     return Derived(rows=rows, unread=unread)
+
+
+GO_HANDLE_RE = re.compile(
+    r'mux\.HandleFunc\("(GET|POST|PUT|PATCH|DELETE) (/api/[^"]+)"'
+)
 
 
 PAGE_FN_RE = re.compile(
