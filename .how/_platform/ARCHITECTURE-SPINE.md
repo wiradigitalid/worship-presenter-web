@@ -19,14 +19,14 @@ reviewed:
 
 # Architecture Spine — Worship Presenter Web
 
-Welded from the as-built spine 2026-07-10…2026-08-09. AD-n numbers are **not renumbered**. DEC-003 (2026-08-19) made Go API + React SPA + on-demand Node PPTX worker binding; AD-30 is the process split; AD-2 / AD-4 / AD-5 / AD-9 / AD-24 were amended in the same apply. As-built code in `src/` remains Next.js until the cutover wave ships.
+Welded from the as-built spine 2026-07-10…2026-08-09. AD-n numbers are **not renumbered**. DEC-003 (2026-08-19) made Go API + React SPA + on-demand Node PPTX worker binding; AD-30 is the process split; AD-2 / AD-4 / AD-5 / AD-9 / AD-24 were amended in the same apply. As-built: Go (`cmd/api`) is the always-on API; the operator UI is the Vite SPA in `spa/`; shared React and the PPTX worker live in `src/`.
 
 **One spine per project.** The Epic 16 child spine was folded in on 2026-07-30 — see *AD map* below. Rationale for AD-11..AD-19 lives in that fold-in's run record (DEC-001 retired the archive that held it).
 
 ## Design Paradigm
 
 **Single-repository Go API + React SPA (AD-2, AD-30)**
-One cohesive unit: a Go process is the always-on API (SQLite, slide plan, JSON); a React SPA is the Operator Hub and projector; PptxGenJS runs only as an on-demand Node child that draws a finished plan (AD-30). The SPA has sibling operator and projected shells: the operator shell carries theme, the projected shell is a literal black room-facing surface with no operator chrome (AD-24). Operators enter this week's Rundown in Hub (FR-27). The picoclaw skill remains the later Telegram caller of `POST /api/webhook` (CAP-11, skill docs, not an in-process runtime). **Offline PPTX remains the primary Sabbath path**; in-browser slideshow / presenter are also shipped (FR-15 / FR-16). Until the cutover wave, `src/` still runs this as Next.js App Router — that is as-built, not the rule.
+One cohesive unit: a Go process is the always-on API (SQLite, slide plan, JSON); a React SPA is the Operator Hub and projector; PptxGenJS runs only as an on-demand Node child that draws a finished plan (AD-30). The SPA has sibling operator and projected shells: the operator shell carries theme, the projected shell is a literal black room-facing surface with no operator chrome (AD-24). Operators enter this week's Rundown in Hub (FR-27). The picoclaw skill remains the later Telegram caller of `POST /api/webhook` (CAP-11, skill docs, not an in-process runtime). **Offline PPTX remains the primary Sabbath path**; in-browser slideshow / presenter are also shipped (FR-15 / FR-16).
 
 **Within it: data-driven presentation rendering with a decoupled editor** (AD-11..AD-23). Slide layout is a JSON layout AST rather than hardcoded switch-statements; an uncontrolled canvas editor owns the design, and both renderers (React web, PptxGenJS) are dumb consumers of pre-hydrated ASTs. Epic 20 turns that registry from a template catalog into the **ordered** surface where the deck itself is authored.
 
@@ -264,9 +264,9 @@ Seed, not an invariant. `package.json` wins on versions.
 
 | Name | Version |
 | --- | --- |
-| Go | always-on API (DEC-003 / AD-30). Version is a seed; `go.mod` wins once the cutover wave lands it. |
-| Node.js | **22.x** in the image **only** to exec the PPTX worker — not a 24/7 application server (AD-30). CI still uses 22 while Next.js as-built remains. |
-| Next.js | 16.2.10 (App Router, `output: "standalone"`) — **as-built until the cutover wave**; not the live-API rule. |
+| Go | always-on API (DEC-003 / AD-30). `go.mod` wins on version. |
+| Node.js | **22.x** in the image **only** to exec the PPTX worker — not a 24/7 application server (AD-30). CI uses 22 for the same reason. |
+| Vite | ^6.3.5 — SPA bundler (`spa/vite.config.ts`) |
 | React / React DOM | 19.2.4 — remains the SPA UI |
 | TypeScript | ^5 (strict) |
 | Tailwind CSS | ^4 |
@@ -277,7 +277,7 @@ Seed, not an invariant. `package.json` wins on versions.
 | @base-ui/react (the primitive library under shadcn base-nova) | ^1.6.0 |
 | shadcn | ^4.13.0 — a **runtime** dependency, not just a generator: `globals.css:3` does `@import "shadcn/tailwind.css"`, so it feeds the same palette file AD-24 cites. Listed on its own row because the `@base-ui/react` row above used to name shadcn while pinning a different package's version, which made an auditor read this as already covered |
 | next-themes | ^0.4.6 (resolved `0.4.6`) — earns a row because AD-24 rests on it: it owns the `localStorage` key *and* the `attribute="class"` contract the `.dark` palette is keyed on. Web-verified 2026-07-31: `0.4.6` **is** the latest release (2025-03-11), so this row is both undrifted and at head — see *Deferred*, because that is not the same as active |
-| ESLint / eslint-config-next | ^9 / 16.2.10 |
+| ESLint | ^9 |
 | fast-xml-parser | ^5.10.1 (dev — the parser inside the enforced privacy filter, `scripts/extract-pptx-assets.mjs`) |
 | Test runner | `node:test` + `--experimental-strip-types` (no vitest/jest — see *Testing* above) |
 
@@ -339,10 +339,10 @@ graph TD
 
 ```text
 worship-presenter-web/
-  cmd/api/           # ★ Go always-on API (AD-5 gate, SQLite, plan). Target of the cutover wave
-  spa/               # ★ React SPA — operator + projected shells (AD-24). Target
-  workers/pptx/      # ★ Node child: PptxGenJS draws a finished plan (AD-30)
-  src/               # as-built Next.js until cutover; not the live-API rule
+  cmd/api/           # Go always-on API (AD-5 gate, SQLite, plan)
+  spa/               # React SPA — operator + projected shells (AD-24)
+  workers/pptx/      # Node child: PptxGenJS draws a finished plan (AD-30)
+  src/               # shared React UI + PPTX worker TypeScript (not an HTTP server)
   public/            # bundled registry assets: the /assets/... resolution root (AD-8)
   data/              # default-registry.json seed; asset-map.json; SQLite via DB_PATH
   data/bible/ song-book/  # the two committed corpora (AD-25). Shipped flat today; FR-24 moves both

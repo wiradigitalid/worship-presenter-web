@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -320,7 +320,6 @@ export default function AnnouncementsManager({
                       rel="noreferrer"
                       className="shrink-0 block h-20 w-28 border border-border/80 rounded-xl overflow-hidden shadow-sm hover:border-primary/50 transition-colors"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={item.image_url}
                         alt={`Announcement ${index + 1}`}

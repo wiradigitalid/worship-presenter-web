@@ -13,7 +13,7 @@
 # testing
 /coverage
 
-# next.js
+# leftover Next.js cache (must not return as a runtime)
 /.next/
 /out/
 

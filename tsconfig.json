@@ -14,11 +14,7 @@
     "jsx": "react-jsx",
     "incremental": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "next/link": ["./spa/src/shims/next-link.tsx"],
-      "next/navigation": ["./spa/src/shims/next-navigation.ts"],
-      "next/headers": ["./spa/src/shims/next-headers.ts"],
-      "server-only": ["./spa/src/shims/server-only.ts"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.mts"],

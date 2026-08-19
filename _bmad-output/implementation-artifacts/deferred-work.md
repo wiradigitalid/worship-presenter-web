@@ -39,7 +39,7 @@ the owner and the reason it can wait live.
 | A distributed attacker gets 5 attempts per source address against one username rather than 5 in total, because the lockout is scoped to the `(username, address)` pair. | — accepted trade | Deliberate, made during review. The global per-username counter it replaced let any single host deny the admin account permanently at one request per 2.5 minutes — the worse outcome for a hub that must work at a fixed hour on Sabbath morning. Cloudflare is the volumetric layer in front. |
 | Reaching a 429 is a weak activity oracle: an attacker parked at the threshold infers from an early 401 that the real owner just signed in and cleared the ledger. | — accepted | Inherent to any lockout that clears on success, and much narrower after pair scoping, since an attacker can only observe pairs on their own address. |
 | A rotating-key flood (fresh username *and* fresh forwarded address per request) trips neither threshold, so each request still runs a synchronous scrypt plus several SQLite statements on the single Node thread. | unassigned | Not a regression in reachability — the login route was entirely unthrottled before. `login_attempts` is capped at 5000 rows so the table cannot grow without bound. |
-| Concurrent first-boot hymn seed UNIQUE race. | unassigned | Rare under single-process Next.js; harden if a multi-instance deploy ever happens. |
+| Concurrent first-boot hymn seed UNIQUE race. | unassigned | Rare under a single Go API process; harden if a multi-instance deploy ever happens. |
 
 ---
 

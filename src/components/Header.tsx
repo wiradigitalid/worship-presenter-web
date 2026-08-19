@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/lib/navigation';
 import { useState } from 'react';
 import LogoutButton from './LogoutButton';
 import ThemeToggle from './ThemeToggle';

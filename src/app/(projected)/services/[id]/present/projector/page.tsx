@@ -5,7 +5,7 @@ import { resolveSlideMediaForService } from '@/lib/announcements';
 import { buildSlidePlan, type SlidePlanItem } from '@/lib/slide-plan';
 import { ArtifactHydrationError } from '@/lib/artifacts/runtime-contract';
 import { getSlideTransition } from '@/lib/settings';
-import { notFound } from 'next/navigation';
+import { notFound } from '@/lib/navigation';
 import ProjectorClient from './ProjectorClient';
 
 /**
@@ -19,13 +19,6 @@ function slidePlanFailureDetail(error: unknown): string {
   if (error instanceof ArtifactHydrationError) return error.message;
   return 'The slide registry could not be read.';
 }
-
-/**
- * This page reads no cookies and no headers, so without this it is a static
- * render candidate — and a rendered deck sitting in an edge cache is a deck
- * that can be served without the proxy gate ever running. Matches `/admin`.
- */
-export const dynamic = 'force-dynamic';
 
 export default async function ProjectorPage({
   params,

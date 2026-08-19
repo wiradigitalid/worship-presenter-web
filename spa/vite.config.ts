@@ -12,10 +12,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(dir, '../src'),
-      'next/link': path.resolve(dir, 'src/shims/next-link.tsx'),
-      'next/navigation': path.resolve(dir, 'src/shims/next-navigation.ts'),
-      'next/headers': path.resolve(dir, 'src/shims/next-headers.ts'),
-      'server-only': path.resolve(dir, 'src/shims/server-only.ts'),
     },
   },
   server: {

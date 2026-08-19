@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useRouter } from '@/lib/navigation';
+import Link from '@/components/Link';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -507,7 +507,6 @@ export default function EditForm({
                       rel="noreferrer"
                       className="shrink-0 snap-start group relative block h-32 w-auto max-w-[200px] border rounded overflow-hidden"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={img}
                         alt={`Flyer ${i + 1}`}
@@ -829,7 +828,6 @@ export default function EditForm({
                           rel="noreferrer"
                           className="shrink-0 block h-12 w-16 border border-border/80 rounded-lg overflow-hidden bg-background"
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={ann.image_url}
                             alt=""

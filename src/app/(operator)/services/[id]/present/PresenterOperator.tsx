@@ -30,7 +30,7 @@ import {
   type CSSProperties,
   type RefObject,
 } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import type { SlidePlanItem } from '@/lib/slide-plan';
 import type { ParsedItem } from '@/lib/parser';
 import SlideView from '@/components/SlideView';

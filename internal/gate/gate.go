@@ -2,16 +2,12 @@ package gate
 
 import "strings"
 
-// Exempt prefixes use the same (?:/|$) anchoring as src/proxy.ts.
-// A path that only *starts* like an exempt prefix stays gated.
 var exemptPrefixes = []string{
 	"/api/webhook",
 	"/api/auth/login",
 	"/api/auth/logout",
 	"/login",
 	"/assets",
-	"/_next/static",
-	"/_next/image",
 }
 
 // IsGated reports whether the request path must pass the session check.

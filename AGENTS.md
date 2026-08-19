@@ -229,15 +229,10 @@ MUST anything in `.constitution/method/why/`; `status: Reference` forbids it. A 
   excluded when searching for code.
 <!-- END:wdi-method -->
 
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
-
 ## Code
 
-Next.js app in `src/`. Package versions: `package.json`. The three
+Go API in `cmd/` and `internal/`. React SPA in `spa/` (Vite). Shared UI modules
+and the PPTX worker live in `src/`. Package versions: `package.json`. The three
 `.constitution/project/codebase-*-guide.md` files are protected at every `status:`.
 While `Draft`, they MAY be read as guidance and MUST NOT reject a change.
 

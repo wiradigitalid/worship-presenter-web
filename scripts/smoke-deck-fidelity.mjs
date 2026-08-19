@@ -1,9 +1,9 @@
 /**
  * Smoke: theme/verse/family mapping, We Have This Hope lyrics, Special Song omit,
  * structured field PUT. KJV/bible tables are Presenter-only (never in slide-plan/pptx).
- * Requires `npm run build` first. Uses temp SQLite (does not touch data.db).
+ * Spins up the Go API against a temp SQLite DB (does not touch data.db).
  */
-import { spawn } from 'child_process';
+import { spawn, execFileSync } from 'child_process';
 import { createHash } from 'crypto';
 import fs from 'fs';
 import http from 'http';
@@ -74,7 +74,7 @@ check(
 );
 
 const editSrc = fs.readFileSync(
-  path.join(root, 'src', 'app', 'services', '[id]', 'EditForm.tsx'),
+  path.join(root, 'src', 'app', '(operator)', 'services', '[id]', 'EditForm.tsx'),
   'utf8'
 );
 // Epic 14 renamed themeReference → theme fields, familyYouth → split
@@ -199,8 +199,7 @@ Closing Prayer: The Speaker
 Family & Youth of the Week: The Wicaksana family — pray for health
 `;
 
-const nextBin = path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
-const child = spawn(process.execPath, [nextBin, 'start', '-p', String(port)], {
+const child = spawn('go', ['run', './cmd/api'], {
   cwd: root,
   env: {
     ...process.env,
@@ -211,7 +210,7 @@ const child = spawn(process.execPath, [nextBin, 'start', '-p', String(port)], {
     AUTH_BOOTSTRAP_PASSWORD: BOOTSTRAP_PASSWORD,
     WEBHOOK_SECRET,
     NODE_ENV: 'production',
-    // Assert against the committed public seed, not data/local/.
+    REPO_ROOT: root,
     WPW_USE_SHIPPED_REGISTRY: '1',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -392,7 +391,21 @@ try {
   console.error(serverLog.slice(-2000));
   failed += 1;
 } finally {
-  child.kill('SIGTERM');
+  if (process.platform === 'win32' && child.pid != null) {
+    try {
+      execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
+        stdio: 'ignore',
+      });
+    } catch {
+      /* already gone */
+    }
+  } else {
+    try {
+      child.kill('SIGTERM');
+    } catch {
+      /* ignore */
+    }
+  }
   try {
     fs.rmSync(tmp, { recursive: true, force: true });
   } catch {

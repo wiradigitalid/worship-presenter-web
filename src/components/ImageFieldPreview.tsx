@@ -43,9 +43,6 @@ function Thumbnail({ src, alt }: { src: string; alt: string }) {
           Couldn&apos;t load this image
         </p>
       ) : (
-        // next/image cannot be used: sources are hub-local `/api/uploads/*`
-        // routes and allow-listed remote URLs resolved at request time.
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={alt}

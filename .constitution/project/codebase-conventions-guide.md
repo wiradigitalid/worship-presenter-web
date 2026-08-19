@@ -9,14 +9,14 @@ ratified_by: null
 
 Filled at W1 close from `_bmad-output/specs/spec-w1-registry/conventions.md` plus as-built Sync/delete routes. While `draft`, MAY be read as guidance and MUST NOT reject a change.
 
-## API route shape
+## API handler shape
 
-Every route under `src/app/api/**/route.ts` follows one order. `src/app/api/admin/artifacts/[id]/route.ts` is the Registry specimen; `src/app/api/services/[id]/sync-artifact/route.ts` is the Hub specimen.
+Go handlers in `internal/httpapi` own the live HTTP surface. Specimens: registry writes in `internal/httpapi/registry.go`; Sync Artifact on `POST /api/services/{id}/sync-artifact`.
 
-1. Session check first (`requireAdminSession` or the proxy gate). No session / not Admin → 403.
-2. `const { id } = await context.params` — params is a `Promise`.
+1. Session check first (`requireAdmin` / `requireSession` or the AD-5 gate). No session / not Admin → 401/403.
+2. Path ids parsed from the mux; invalid → 404.
 3. Body validated shape-first: non-object or array → `400 Invalid JSON`.
-4. Work inside `try`; map known error classes to status; generic `500` last.
+4. Work inside the handler; map known error classes to status; generic `500` last.
 
 Registry write tokens are camelCase `updatedAt`. Hub Service tokens are snake_case `updated_at`. Do not mix them on one resource.
 

@@ -18,7 +18,7 @@ Every version below is `package.json` as read at distillation. **Read `package.j
 | Framework | Go API + React SPA (Vite). Next.js App Router is removed | `go.mod`, `package.json`, `spa/vite.config.ts` |
 | React | `19.2.4` | `package.json` |
 | Language | Go for `api`; TypeScript `^5` for `spa` / worker | `go.mod` / `tsconfig.json` |
-| Import alias | `@/*` → `./src/*` while as-built Next remains | `tsconfig.json` `paths` |
+| Import alias | `@/*` → `./src/*` | `tsconfig.json` `paths` |
 | Database | SQLite; as-built `better-sqlite3` `^12.11.1`; target Go driver on the API process | AD-9, AD-30 |
 | Deck output | `pptxgenjs` `^4.0.1` in `pptx-worker` only | AD-30 |
 | Canvas editor | `fabric` `^6.6.1` | `AD-13` uncontrolled wrapper |
@@ -41,7 +41,7 @@ All of these run from the repository root.
 | Public-repo guard alone | `node --import ./tests/register-ts-resolve.mjs --test --experimental-strip-types tests/public-repo-guard.test.mjs` |
 | Dev server | `npm run dev` |
 
-`npm test` does **not** glob `tests/`. It names every file explicitly in the `test` script, so **a new test file is not run until it is added to that list**. `.github/workflows/test.yml` runs `npm ci`, then `npm run build`, then `npm test`, in that order; `tests/auth-http.test.mjs` throws without `.next`.
+`npm test` does **not** glob `tests/`. It names every file explicitly in the `test` script, so **a new test file is not run until it is added to that list**. `.github/workflows/test.yml` runs `go test ./cmd/... ./internal/...`, `npm ci`, then `npm run spa:build`, then `npm test`, in that order.
 
 ## How a test is written here
 
@@ -61,14 +61,14 @@ A test asserting something is **absent** is worth nothing until it has been seen
 
 | Concern | Path |
 |---|---|
-| Request gate and the authorization matcher | Go API (AD-5). As-built: `src/proxy.ts` + `tests/proxy-matcher.test.mjs` until cutover |
-| Admin session re-check in a route | `requireAdminSession` from `@/lib/auth/require` |
-| Startup DDL, `data_version`, AD-17 bootstrap, AD-16 table | `src/lib/db/index.ts` |
-| Registry store (`LC-15`) | `src/lib/registry/store.ts` |
-| Service-bound freeze clone / Sync | `src/lib/registry/service-snapshot.ts` |
+| Request gate and the authorization matcher | Go API (AD-5): `internal/gate` |
+| Admin session re-check in a route | Go `requireAdmin` / `requireSession` |
+| Startup DDL, `data_version`, AD-17 bootstrap, AD-16 table | Go `internal/db` on API boot; Node `src/lib/db/index.ts` remains for tests and the worker's non-SQLite helpers |
+| Registry store (`LC-15`) | Go registry handlers; Node `src/lib/registry/store.ts` remains for worker/tests |
+| Service-bound freeze clone / Sync | Go `internal/httpapi` + `src/lib/registry/service-snapshot.ts` |
 | Live-registry map per plan build | `src/lib/artifacts/registry-snapshot.ts` |
-| Registry HTTP (`LC-11`) | `src/app/api/admin/artifacts/**/route.ts` |
-| Sync Artifact (`LC-2`) | `src/app/api/services/[id]/sync-artifact/route.ts` |
+| Registry HTTP (`LC-11`) | Go `/api/admin/artifacts/**` |
+| Sync Artifact (`LC-2`) | Go `/api/services/{id}/sync-artifact` |
 | Admin Registry screen | `/admin/artifacts` |
 | Admin Sync control | `/services/[id]` (`SyncArtifactButton.tsx`) |
 

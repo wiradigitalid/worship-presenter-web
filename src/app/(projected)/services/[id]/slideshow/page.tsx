@@ -5,8 +5,8 @@ import { resolveSlideMediaForService } from '@/lib/announcements';
 import { buildSlidePlan, type SlidePlanItem } from '@/lib/slide-plan';
 import { ArtifactHydrationError } from '@/lib/artifacts/runtime-contract';
 import { getSlideTransition } from '@/lib/settings';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { Link } from 'react-router-dom';
+import { notFound } from '@/lib/navigation';
 import SlideshowClient from './SlideshowClient';
 
 /**
@@ -20,13 +20,6 @@ function slidePlanFailureDetail(error: unknown): string {
   if (error instanceof ArtifactHydrationError) return error.message;
   return 'The slide registry could not be read.';
 }
-
-/**
- * This page reads no cookies and no headers, so without this it is a static
- * render candidate — and a rendered deck sitting in an edge cache is a deck
- * that can be served without the proxy gate ever running. Matches `/admin`.
- */
-export const dynamic = 'force-dynamic';
 
 export default async function SlideshowPage({
   params,
@@ -100,13 +93,13 @@ export default async function SlideshowPage({
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-8 text-base text-white/70">
             <Link
-              href={`/services/${serviceId}`}
+              to={`/services/${serviceId}`}
               className="underline hover:text-white focus-visible:outline-white"
             >
               Back to run-sheet
             </Link>
             <Link
-              href="/admin/artifacts"
+              to="/admin/artifacts"
               className="underline hover:text-white focus-visible:outline-white"
             >
               Admin &rarr; Artifacts

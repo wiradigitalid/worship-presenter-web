@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/navigation';
 import { useEffect, useRef, useState } from 'react';
 import {
   Card,
@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import {
   flushPendingHymnCommits,
   HymnNumberAutocomplete,
@@ -798,7 +798,6 @@ export default function CreateForm({
                           rel="noreferrer"
                           className="shrink-0 block h-12 w-16 border border-border/80 rounded-lg overflow-hidden bg-background"
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={ann.image_url}
                             alt=""

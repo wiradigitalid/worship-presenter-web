@@ -156,9 +156,8 @@ function ImageElement({ element }: { element: ResolvedElement }) {
 
   return (
     <div style={boxStyle(element)}>
-      {/* next/image cannot be used: sources are remote allow-listed URLs and
-          hub-local `/api/uploads/*` routes resolved at request time. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {/* Sources are remote allow-listed URLs and hub-local `/api/uploads/*`
+          routes resolved at request time. */}
       <img
         src={imageUrl}
         alt=""

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import type { SlidePlanItem } from '@/lib/slide-plan';
 import SlideView from '@/components/SlideView';
 import { transitionLayerStyle, type SlideTransition } from '@/lib/transitions';
@@ -65,7 +65,7 @@ export default function SlideshowClient({
             choice. A literal colour is the sanctioned way out of the AC-4 edge
             guard; a width utility here would trip it, and correctly. */}
         <Link
-          href={`/services/${serviceId}`}
+          to={`/services/${serviceId}`}
           className="hover:text-white focus-visible:outline-white"
         >
           Exit

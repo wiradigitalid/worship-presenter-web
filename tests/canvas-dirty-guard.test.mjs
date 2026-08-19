@@ -651,13 +651,13 @@ test('AC-4: the blocker is a client context with a working default', () => {
 test('AC-4: CustomLink blocks through the framework hook, and cannot be overridden', () => {
   const blocker = ast('src/components/navigation-blocker.tsx');
   const link = jsxTags(declarationOf(blocker, 'CustomLink'), 'Link');
-  assert.equal(link.length, 1, 'CustomLink wraps exactly one next/link Link');
+  assert.equal(link.length, 1, 'CustomLink wraps exactly one Link');
 
   const props = link[0].attributes.properties;
   const names = props.map((prop) =>
     ts.isJsxAttribute(prop) ? prop.name.getText() : '{...spread}'
   );
-  assert.ok(names.includes('onNavigate'), 'Next 16 ships onNavigate for exactly this');
+  assert.ok(names.includes('onNavigate'), 'Link ships onNavigate for exactly this');
 
   // The documented snippet writes `onNavigate` before the spread, which lets a
   // caller pass their own and silently switch the guard off. The spread goes
@@ -689,7 +689,7 @@ test('AC-4: every Header link routes through the guard', () => {
   assert.equal(
     jsxTags(header, 'Link').length,
     0,
-    'a bare next/link Link is an unguarded way off the editor'
+    'a bare Link is an unguarded way off the editor'
   );
   assert.equal(
     jsxTags(header, 'CustomLink').length,
@@ -697,7 +697,7 @@ test('AC-4: every Header link routes through the guard', () => {
     'logo, Dashboard, Announcements, Artifacts, Settings'
   );
   assert.ok(
-    !importSpecifiers(header).includes('next/link'),
+    !importSpecifiers(header).includes('@/components/Link'),
     'Header reaches Link only through CustomLink now'
   );
   assert.ok(
