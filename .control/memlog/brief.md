@@ -20,3 +20,4 @@ updated: 2026-08-19T08:10
 - (event) Polish structure+prose on brief.md and addendum.md. Separate Telegram PRD refused: FR-N must not move; reader of Rundown-to-Service still opens this area.
 - (event by user) Owner held G1: brief is correct. gates_passed now includes G1.
 - (event by user) Owner held G2 for all three area PRDs. gates_passed is now G1, G2.
+- (change) Addendum wording: DEC-002 — each closed wave deletes the prior-knowledge slice it names. Promise unchanged.

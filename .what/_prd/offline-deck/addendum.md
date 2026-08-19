@@ -3,7 +3,7 @@ title: "Addendum: Offline Deck"
 initiative: offline-deck
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 ---
 
 # Addendum
@@ -23,4 +23,4 @@ PPTX generate: Node child process + PptxGenJS, then exit. The slide plan is asse
 
 ## Source material
 
-DEC-001. Old PRD §4.2, §4.5, §4.10 — mapped, not copied. ADs live in `.how/_platform/ARCHITECTURE-SPINE.md`.
+DEC-001. Old PRD §4.2, §4.5, §4.10 — mapped, not copied. ADs live in `.how/_platform/ARCHITECTURE-SPINE.md`. DEC-002: W1 `registry-order` retires its prior-knowledge slice at wave close.

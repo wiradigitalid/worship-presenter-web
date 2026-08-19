@@ -1,5 +1,32 @@
 # waves.yaml — work plan.
 #
 # `release` MUST be named on every wave. STORY STATUS MUST NOT BE COPIED HERE.
+# Story rows land after bmad-spec writes `{spec_folder}/stories/`. Empty `epics`
+# keeps V18/V13 green until that folder exists.
 
-waves: []
+waves:
+  - id: W1
+    status: open
+    release: registry-order
+    prd: [offline-deck]
+    fr: [FR-21]
+    size: S
+    depends_on: []
+    spec_folder: _bmad-output/specs/w1-registry-order/
+    retires:
+      - _bmad-output/prior-knowledge/_bmad-output/specs/spec-artifact-registry-authoring/authoring-boundaries.md
+    retires_fastpath:
+      - _bmad-output/prior-knowledge/_bmad-output/specs/spec-worship-web-input
+      - _bmad-output/prior-knowledge/_bmad-output/specs/spec-lyrics-and-flow
+      - _bmad-output/prior-knowledge/_bmad-output/specs/spec-slide-artifact-model
+      - _bmad-output/prior-knowledge/docs
+      - _bmad-output/prior-knowledge/_bmad-output/planning-artifacts
+      - _bmad-output/prior-knowledge/_bmad-output/brainstorming
+    # After bmad-spec, fill epics (do not copy story status here):
+    #   1-1  registry  satisfies: [UC-15]  tests: [tests/registry-reorder-delete-http.test.mjs]
+    #   1-2  registry  satisfies: [UC-16]  depends_on: [1-1]  tests: [tests/registry-sync-artifact.test.mjs]
+    # Create/add of a new Artifact Template stays a later wave (SRS Non-Goal until the create verb;
+    # AD-17 origin must ship in the same change set as create).
+    # 20-3 / 20-6 / 20-8 never had story files — only sprint-status.yaml keys.
+    # Fastpath: also delete done stories 1.*–17.* except any still-backlog key, plus 20-1 and 20-2.
+    epics: []

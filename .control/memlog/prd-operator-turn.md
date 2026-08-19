@@ -9,3 +9,4 @@ updated: 2026-08-19T08:18
 - (event) Link repair after English slug migration: source-material paths expanded to prior-knowledge/; deferred-work citations now the archive file; Artifact reset route written in full; BMad custom config pins document_output_language English.
 - (event by user) Owner held G2 for this PRD: operator-turn still stands.
 - (event) wdi-product verify: promises unchanged after Hub-first recut. No bmad-prd update. Create stays in rundown-to-service; this PRD remains Friday review and present.
+- (change) Addendum wording: DEC-002 — prior-knowledge slices leave at wave close. Promise unchanged.

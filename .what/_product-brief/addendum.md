@@ -10,7 +10,7 @@ note: "Detail that does not fit the 1–2 page brief. Technical constraints and 
 
 ## Source material
 
-DEC-001 retired the pre-method archive as live authority. Owner direction 2026-08-19 recut intake: Hub first, Telegram+picoclaw last. Live promises sit in the area PRDs and `requirements.yaml`. Deck frame: `.what/registry/03-domain/deck-frame.md`. Spine: `.how/_platform/ARCHITECTURE-SPINE.md`. Old → new IDs: `.what/_prd/operator-turn/addendum.md`. Feeding archive (temporary): `_bmad-output/prior-knowledge/`.
+DEC-001 retired the pre-method archive as live authority. DEC-002: each closed G5 wave deletes the `_bmad-output/prior-knowledge/` slice it names. Owner direction 2026-08-19 recut intake: Hub first, Telegram+picoclaw last. Live promises sit in the area PRDs and `requirements.yaml`. Deck frame: `.what/registry/03-domain/deck-frame.md`. Spine: `.how/_platform/ARCHITECTURE-SPINE.md`. Old → new IDs: `.what/_prd/operator-turn/addendum.md`.
 
 ## Intake phasing (owner, 2026-08-19)
 

@@ -34,3 +34,15 @@ decisions:
       - tests/doc-citations.test.mjs
       - tests/theme-chrome.test.mjs
       - tests/canvas-dirty-guard.test.mjs
+  - id: DEC-002
+    status: applied
+    title: Each G5 wave deletes the prior-knowledge slice it consumed
+    file: .control/decisions/DEC-002-retire-prior-knowledge-by-wave.md
+    touches:
+      - .control/decisions/DEC-002-retire-prior-knowledge-by-wave.md
+      - .control/registry/decisions.yaml
+      - .control/registry/waves.yaml
+      - .what/_product-brief/addendum.md
+      - .what/_prd/operator-turn/addendum.md
+      - .what/_prd/offline-deck/addendum.md
+      - _bmad-output/prior-knowledge/README.md

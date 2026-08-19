@@ -3,15 +3,18 @@ rtm_rows:
   green: 0
   counted: 29
   excluded_no_uc: 1
-work_progress: []
+work_progress:
+- wave: W1
+  status: open
+  stories_done: 0
+  stories_total: 0
+  work_progress: n/a
 gate_readiness: 100%
 validators_red: []
 validators_skipped:
   V14: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
     but its presence in generated/report is not checked
   V19: only the RTR- line item is checked mechanically; the rest of the distillation is guarded by wdi-build
-  V3: no wave yet, so no story yet — every unscheduled UC is the correct state. Full catalogue coverage
-    is checked at G5
 open_questions:
   blocking: 0
   assumptions: 29

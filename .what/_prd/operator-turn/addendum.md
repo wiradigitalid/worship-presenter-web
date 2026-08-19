@@ -29,7 +29,7 @@ Condition 1 for retiring the pre-method archive (DEC-001). Old PRD numbers are n
 
 ## Source material
 
-DEC-001. Old PRD §4.3–4.9, §4.11–4.12 — mapped, not copied. Operator chrome: `.how/_platform/design-system.md`. Screens: `.how/_platform/inventory-screen.md`. `wdi-ux` was not run.
+DEC-001. Old PRD §4.3–4.9, §4.11–4.12 — mapped, not copied. Operator chrome: `.how/_platform/design-system.md`. Screens: `.how/_platform/inventory-screen.md`. `wdi-ux` was not run. DEC-002: slices of `_bmad-output/prior-knowledge/` leave the tree at wave close, not as a single delete.
 
 ## `weekly-sabbath` folder
 

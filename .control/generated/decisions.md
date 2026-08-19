@@ -4,8 +4,9 @@
 
 Decisions are no longer looked up through the memlog — the memlog goes back to being just a pass log.
 
-**1 decisions** — applied: 1.
+**2 decisions** — applied: 2.
 
 | id | Title | Status | Type | Touches | File |
 | --- | --- | --- | --- | --- | --- |
 | `DEC-001` | The pre-method archive is retired; live facts live in corpus rooms | `applied` | — | `_bmad-output/implementation-artifacts/deferred-work.md`, `.constitution/project/deployment.md`, `.constitution/project/private-data.md`, `.constitution/public-repository.md`, `.control/questions/assumptions.md`, `.control/structure-codebase.md`, `.control/structure-document.md`, `.how/_platform/ARCHITECTURE-SPINE.md`, `.how/_platform/design-system.md`, `.how/hub/SDD-hub.md`, `.what/_prd/offline-deck/addendum.md`, `.what/_prd/offline-deck/prd.md`, `.what/_prd/operator-turn/addendum.md`, `.what/_prd/operator-turn/prd.md`, `.what/_prd/rundown-to-service/addendum.md`, `.what/_prd/rundown-to-service/prd.md`, `.what/_product-brief/addendum.md`, `.what/registry/03-domain/deck-frame.md`, `.what/registry/SRS-registry.md`, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `tests/doc-citations.test.mjs`, `tests/theme-chrome.test.mjs`, `tests/canvas-dirty-guard.test.mjs` | `.control/decisions/DEC-001-retire-prior-knowledge.md` |
+| `DEC-002` | Each G5 wave deletes the prior-knowledge slice it consumed | `applied` | — | `.control/decisions/DEC-002-retire-prior-knowledge-by-wave.md`, `.control/registry/decisions.yaml`, `.control/registry/waves.yaml`, `.what/_product-brief/addendum.md`, `.what/_prd/operator-turn/addendum.md`, `.what/_prd/offline-deck/addendum.md`, `_bmad-output/prior-knowledge/README.md` | `.control/decisions/DEC-002-retire-prior-knowledge-by-wave.md` |

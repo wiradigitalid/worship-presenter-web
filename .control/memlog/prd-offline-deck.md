@@ -10,3 +10,4 @@ updated: 2026-08-19T12:48
 - (event by user) Owner held G2 for this PRD: offline-deck still stands.
 - (event) wdi-product verify: promises unchanged after Hub-first recut. No bmad-prd update.
 - (event) Landed lyric join/chorus (FR-5) and Announcement whole-list expansion (FR-21) from as-built code + owner-ratified spec CAP-7. No new FR ids.
+- (change) Addendum wording: DEC-002 — W1 retires its prior-knowledge slice at close. Promise unchanged.
