@@ -13,7 +13,7 @@ sources: []
 companions: []
 reviewed:
   date: '2026-08-19'
-  sha: '9ab09960cff59de97da9214a24d3c9d5c39db050'
+  sha: 'a2bf8b0dbdda61810be611576e31ec120e54d96d'
   lenses: [structure, prose]
 ---
 
