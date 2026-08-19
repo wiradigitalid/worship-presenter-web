@@ -6,9 +6,9 @@ created: 2026-08-18
 updated: 2026-08-19
 satisfies: [FR-4, FR-5, FR-6, FR-20, FR-21]
 reviewed:
-  date: ''
-  sha: ''
-  lenses: []
+  date: '2026-08-19'
+  sha: '9ab09960cff59de97da9214a24d3c9d5c39db050'
+  lenses: [structure, prose, edge-case-hunter]
 ---
 
 # SRS — Registry

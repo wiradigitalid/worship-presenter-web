@@ -6,9 +6,9 @@ created: 2026-08-18
 updated: 2026-08-19
 satisfies: [FR-1, FR-2, FR-3, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-17, FR-18, FR-23, FR-24, FR-25, FR-27, FR-28]
 reviewed:
-  date: ''
-  sha: ''
-  lenses: []
+  date: '2026-08-19'
+  sha: '9ab09960cff59de97da9214a24d3c9d5c39db050'
+  lenses: [structure, prose, edge-case-hunter]
 ---
 
 # SRS — Hub

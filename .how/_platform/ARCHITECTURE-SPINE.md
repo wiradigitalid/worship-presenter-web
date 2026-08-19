@@ -12,9 +12,9 @@ binds: ['FR-1..FR-28', 'NFR-1..NFR-9']
 sources: []
 companions: []
 reviewed:
-  date: ''
-  sha: ''
-  lenses: []
+  date: '2026-08-19'
+  sha: '9ab09960cff59de97da9214a24d3c9d5c39db050'
+  lenses: [structure, prose]
 ---
 
 # Architecture Spine — Worship Presenter Web
