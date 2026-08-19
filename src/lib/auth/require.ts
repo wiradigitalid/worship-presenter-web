@@ -1,16 +1,15 @@
-import { NextRequest } from 'next/server';
 import { getAccountById } from '@/lib/auth/accounts';
 import { isSessionRevoked } from '@/lib/auth/revocation';
 import {
-  SESSION_COOKIE,
   verifySession,
   type Role,
   type SessionPayload,
 } from '@/lib/auth/session';
 
 /**
- * The server-side half of session validation, shared by `requireSession` and
- * the request gate in `src/proxy.ts` so a revoked cookie dies in both places.
+ * The server-side half of session validation, shared by cookie checks so a
+ * revoked cookie dies at the Go gate and in any Node helper that still reads
+ * SQLite.
  *
  * Rejects, in order: a deleted account, a role that no longer matches the
  * cookie (demotion), a `tv` older than `accounts.token_version` (password
@@ -38,11 +37,10 @@ export function validateSessionAgainstDb(
 /**
  * Verify a raw cookie value and then re-check it against the DB.
  *
- * Server Components read the cookie through `next/headers` rather than a
- * `NextRequest`, so they hand the token in directly. Use this instead of bare
- * `verifySession` anywhere a page decides what to show: a signature proves only
- * that the cookie was once issued, not that it is still live, and the returned
- * `role` comes from the account row rather than the cookie's claim.
+ * Use this instead of bare `verifySession` anywhere a helper decides what to
+ * show: a signature proves only that the cookie was once issued, not that it
+ * is still live, and the returned `role` comes from the account row rather
+ * than the cookie's claim.
  */
 export async function validateSessionToken(
   token: string | undefined | null,
@@ -53,16 +51,15 @@ export async function validateSessionToken(
   return validateSessionAgainstDb(session, role);
 }
 
-/** Re-check role from DB (cookie role alone is not enough after demotion). */
 export async function requireSession(
-  request: NextRequest,
+  token: string | undefined | null,
   role?: Role
 ): Promise<SessionPayload | null> {
-  return validateSessionToken(request.cookies.get(SESSION_COOKIE)?.value, role);
+  return validateSessionToken(token, role);
 }
 
 export async function requireAdminSession(
-  request: NextRequest
+  token: string | undefined | null
 ): Promise<SessionPayload | null> {
-  return requireSession(request, 'admin');
+  return validateSessionToken(token, 'admin');
 }

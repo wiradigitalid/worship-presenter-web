@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -113,7 +114,12 @@ func unauthorized(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"error":"Unauthorized"}`))
 		return
 	}
-	http.Redirect(w, r, "/login", http.StatusFound)
+	login := "/login"
+	next := auth.SafeNextPath(r.URL.RequestURI())
+	if next != "/" {
+		login += "?next=" + url.QueryEscape(next)
+	}
+	http.Redirect(w, r, login, http.StatusTemporaryRedirect)
 }
 
 func forbidden(w http.ResponseWriter, r *http.Request) {

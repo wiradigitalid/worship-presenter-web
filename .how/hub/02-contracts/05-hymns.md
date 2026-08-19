@@ -11,7 +11,7 @@ updated: 2026-08-18
 
 ## Source of truth
 
-`none`. `src/app/api/hymns/route.ts`. Corpus = files in `data/song-book/` (AD-25).
+`none`. `internal/httpapi`. Corpus = files in `data/song-book/` (AD-25).
 
 ## Purpose
 

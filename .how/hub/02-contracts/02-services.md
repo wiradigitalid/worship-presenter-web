@@ -11,7 +11,7 @@ updated: 2026-08-19
 
 ## Source of truth
 
-`none`. `src/app/api/services/**/route.ts`, `src/lib/services/*`.
+`none`. `internal/httpapi`, `src/lib/services/*`.
 
 ## Purpose
 
@@ -51,7 +51,7 @@ UC-2, UC-3, UC-5, UC-6, UC-7, UC-8, UC-16, UC-18, UC-23.
 | Date already exists, no override | 409 + `existingId` | Open the existing Service, or confirm a second row |
 | No date / empty Rundown | 400 | Fix the paste; no row (OQ-21) |
 | Unparseable body with a date | 201 + `failedHymnNumbers` | Show the miss; Service exists (NFR-5, OQ-22) |
-| Session expired on PUT/DELETE | 401 from `src/proxy.ts` | Sign in; no partial write (OQ-23) |
+| Session expired on PUT/DELETE | 401 from `internal/gate` | Sign in; no partial write (OQ-23) |
 | Not found | 404 | Refresh the list |
 | Plan/PPTX failed | 500 | Retry; Sabbath uses the old file if one exists |
 

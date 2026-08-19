@@ -1,52 +1,63 @@
 /**
  * GET /api/hymns query contract: `all`, `numbers`, `q`, `limit`, malformed params.
- * Imports the route handler directly against a temp SQLite DB.
+ * Proven against the Go API on a bootstrapped SQLite DB.
  */
-import { test } from 'node:test';
+import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { register } from 'node:module';
+import { createHash } from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
-
-// Next ships `next/server.js` without an ESM exports map; node needs the
-// extension. Chained ahead of the repo's ts-resolve hook.
-register(
-  'data:text/javascript,' +
-    encodeURIComponent(
-      `export async function resolve(specifier, context, nextResolve) {
-         if (specifier === 'next/server') {
-           return nextResolve('next/server.js', context);
-         }
-         return nextResolve(specifier, context);
-       }`
-    )
-);
+import { fileURLToPath } from 'url';
+import { json, parseCookie, spawnGoApi, stopProcess } from './helpers/go-api.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
-
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'hymns-api-test-'));
-const previousDbPath = process.env.DB_PATH;
-process.env.DB_PATH = path.join(tmp, 'test.db');
-
-const { GET } = await import(
-  pathToFileURL(path.join(root, 'src', 'app', 'api', 'hymns', 'route.ts')).href
-);
-const { getDb } = await import(
-  pathToFileURL(path.join(root, 'src', 'lib', 'db', 'index.ts')).href
-);
-const { NextRequest } = await import('next/server');
+const dbPath = path.join(tmp, 'test.db');
+const AUTH_SECRET = createHash('sha256').update('hymns-go-http-secret').digest('hex');
+const BOOTSTRAP_USER = 'admin';
+const BOOTSTRAP_PASS = 'bootstrap-pass-99';
 
 const DEFAULT_LIMIT = 15;
 const MAX_LIMIT = 40;
 
-/** Hymns actually present in the seeded corpus. */
-const seededHymns = getDb()
-  .prepare('SELECT number, title FROM hymns ORDER BY number ASC')
-  .all();
-const seededNumbers = seededHymns.map((row) => row.number);
+let child;
+let base;
+let cookie;
+let seededHymns = [];
+let seededNumbers = [];
+
+before(async () => {
+  ({ child, base } = await spawnGoApi({
+    dbPath,
+    root,
+    env: {
+      AUTH_SECRET,
+      AUTH_BOOTSTRAP_USER: BOOTSTRAP_USER,
+      AUTH_BOOTSTRAP_PASSWORD: BOOTSTRAP_PASS,
+    },
+  }));
+  const login = await json(`${base}/api/auth/login`, 'POST', {
+    username: BOOTSTRAP_USER,
+    password: BOOTSTRAP_PASS,
+  });
+  assert.equal(login.status, 200, JSON.stringify(login.body));
+  cookie = parseCookie(login.headers['set-cookie']);
+  const all = await json(`${base}/api/hymns?all=1`, 'GET', undefined, { cookie });
+  assert.equal(all.status, 200);
+  seededHymns = all.body.hymns;
+  seededNumbers = seededHymns.map((h) => h.number);
+});
+
+after(() => {
+  stopProcess(child);
+  try {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  } catch {
+    /* ignore */
+  }
+});
 
 /** Rows whose number or title literally contains `needle` (client semantics). */
 function literalMatches(needle) {
@@ -57,11 +68,10 @@ function literalMatches(needle) {
 }
 
 async function call(search) {
-  const res = await GET(new NextRequest(`http://localhost/api/hymns${search}`));
-  assert.equal(res.status, 200);
-  const body = await res.json();
-  assert.ok(Array.isArray(body.hymns), 'body.hymns must be an array');
-  return body.hymns;
+  const res = await json(`${base}/api/hymns${search}`, 'GET', undefined, { cookie });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok(Array.isArray(res.body.hymns), 'body.hymns must be an array');
+  return res.body.hymns;
 }
 
 function assertSortedByNumber(hymns) {
@@ -111,9 +121,6 @@ test('q matches number or title substrings, capped at the default limit', async 
 });
 
 test('q escapes LIKE wildcards: % and _ are literals, not patterns', async () => {
-  // Unescaped, `%...%` around `%` matches every row and `_` matches any single
-  // character, so the server answered rows the client then filtered away with
-  // `String.includes` and reported "No hymns found".
   for (const raw of ['%', '_', '%%', 'a%b', '_a_']) {
     const hymns = await call(`?q=${encodeURIComponent(raw)}`);
     const expected = literalMatches(raw);
@@ -131,8 +138,6 @@ test('q escapes LIKE wildcards: % and _ are literals, not patterns', async () =>
     }
   }
 
-  // Same needle with and without a `_`: the plain one matches a real title, the
-  // wildcarded one must not (it would if `_` still meant "any character").
   const sample = seededHymns.find((h) => h.title.length >= 8);
   assert.ok(sample, 'need a title long enough to slice');
   const slice = sample.title.slice(1, 6);
@@ -222,10 +227,4 @@ test('all=1 still returns the whole index, unaffected by limit', async () => {
 test('all=0 is not a truthy flag and falls through to the default page', async () => {
   const hymns = await call('?all=0');
   assert.equal(hymns.length, DEFAULT_LIMIT);
-});
-
-test('DB_PATH env mutation is restored', () => {
-  if (previousDbPath === undefined) delete process.env.DB_PATH;
-  else process.env.DB_PATH = previousDbPath;
-  assert.equal(process.env.DB_PATH, previousDbPath);
 });

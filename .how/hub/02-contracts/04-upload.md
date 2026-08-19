@@ -11,7 +11,7 @@ updated: 2026-08-18
 
 ## Source of truth
 
-`none`. `src/app/api/upload/**/route.ts`, `src/lib` image helpers.
+`none`. `internal/httpapi`, `src/lib` image helpers.
 
 ## Purpose
 

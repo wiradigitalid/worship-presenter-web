@@ -56,12 +56,12 @@ function sourceIndex() {
       else files.push(p);
     }
   };
-  ['src', 'tests', 'scripts', 'data'].forEach((d) => walk(path.join(ROOT, d)));
+  ['src', 'tests', 'scripts', 'data', 'internal'].forEach((d) => walk(path.join(ROOT, d)));
   const text = files
     // This file names every retired symbol in ALLOWED. Indexing it would make
     // each one "exist" in the source and silently disarm the guard.
     .filter((f) => path.basename(f) !== 'doc-citations.test.mjs')
-    .filter((f) => /\.(ts|tsx|mjs|js|json)$/.test(f))
+    .filter((f) => /\.(ts|tsx|mjs|js|json|go)$/.test(f))
     .map((f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } })
     .join('\n');
   return { files, text };

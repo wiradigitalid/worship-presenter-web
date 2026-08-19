@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/wiradigitalid/worship-presenter-web/internal/auth"
+	"github.com/wiradigitalid/worship-presenter-web/internal/plan"
 )
 
 const (
@@ -498,6 +499,9 @@ func cloneLiveToService(tx *sql.Tx, serviceID int) error {
 		var id, label, baseType, payload, updatedAt string
 		if err := rows.Scan(&id, &label, &baseType, &payload, &updatedAt); err != nil {
 			return err
+		}
+		if !plan.AcceptLivePayload(id, payload) {
+			continue
 		}
 		if _, err := tx.Exec(
 			`INSERT INTO service_registry_snapshots

@@ -2,24 +2,17 @@
  * UC-16: Sync Artifact freezes a service-bound AD-16 snapshot. Live registry
  * edits do not shift an already-reviewed Service until Admin syncs; entered
  * weekly fields survive; corrupt live rows are omitted and logged (OQ-32).
+ *
+ * Domain cases use src/lib against SQLite. HTTP cases hit the Go API.
  */
-import { after, describe, test } from 'node:test';
+import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { register } from 'node:module';
+import { createHash } from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-
-register(
-  'data:text/javascript,' +
-    encodeURIComponent(
-      `export async function resolve(specifier, context, nextResolve) {
-         if (specifier === 'next/server') return nextResolve('next/server.js', context);
-         return nextResolve(specifier, context);
-       }`
-    )
-);
+import { json, parseCookie, spawnGoApi, stopProcess } from './helpers/go-api.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -27,17 +20,12 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'registry-sync-artifact-'));
 const dbPath = path.join(tmp, 'test.db');
 const previousDbPath = process.env.DB_PATH;
 const previousAuthSecret = process.env.AUTH_SECRET;
+const AUTH_SECRET = createHash('sha256').update('registry-sync-artifact-secret').digest('hex');
 process.env.DB_PATH = dbPath;
-process.env.AUTH_SECRET = 'registry-sync-artifact-test-secret';
+process.env.AUTH_SECRET = AUTH_SECRET;
 
 const srcUrl = (...parts) => pathToFileURL(path.join(root, 'src', ...parts)).href;
-const { NextRequest } = await import('next/server');
 const { createAccount } = await import(srcUrl('lib', 'auth', 'accounts.ts'));
-const { POST: loginRoute } = await import(srcUrl('app', 'api', 'auth', 'login', 'route.ts'));
-const { SESSION_COOKIE } = await import(srcUrl('lib', 'auth', 'session.ts'));
-const { POST: syncRoute } = await import(
-  srcUrl('app', 'api', 'services', '[id]', 'sync-artifact', 'route.ts')
-);
 const { getDb } = await import(srcUrl('lib', 'db', 'index.ts'));
 const { createService } = await import(srcUrl('lib', 'services', 'create-service.ts'));
 const { narrowCreateBody } = await import(srcUrl('lib', 'services', 'body.ts'));
@@ -51,7 +39,34 @@ const {
 } = await import(srcUrl('lib', 'registry', 'service-snapshot.ts'));
 const { DATA_VERSION_KEY } = await import(srcUrl('lib', 'registry', 'seed.ts'));
 
+const ADMIN = { username: 'sync-admin', password: 'pw-admin-99', role: 'admin' };
+const OPERATOR = { username: 'sync-operator', password: 'pw-operator-99', role: 'operator' };
+const BOOTSTRAP_USER = 'admin';
+const BOOTSTRAP_PASS = 'bootstrap-pass-99';
+
+let child;
+let base;
+let output = [];
+let accountsCreated = false;
+let serviceSeq = 0;
+
+before(async () => {
+  const spawned = await spawnGoApi({
+    dbPath,
+    root,
+    env: {
+      AUTH_SECRET,
+      AUTH_BOOTSTRAP_USER: BOOTSTRAP_USER,
+      AUTH_BOOTSTRAP_PASSWORD: BOOTSTRAP_PASS,
+    },
+  });
+  child = spawned.child;
+  base = spawned.base;
+  output = spawned.output;
+});
+
 after(() => {
+  stopProcess(child);
   if (previousDbPath === undefined) delete process.env.DB_PATH;
   else process.env.DB_PATH = previousDbPath;
   if (previousAuthSecret === undefined) delete process.env.AUTH_SECRET;
@@ -62,12 +77,6 @@ after(() => {
     // better-sqlite3 may still hold the process-local test database on Windows.
   }
 });
-
-const ADMIN = { username: 'sync-admin', password: 'pw-admin-99', role: 'admin' };
-const OPERATOR = { username: 'sync-operator', password: 'pw-operator-99', role: 'operator' };
-let accountsCreated = false;
-
-let serviceSeq = 0;
 
 function createReviewedService() {
   serviceSeq += 1;
@@ -90,31 +99,23 @@ async function tokenFor(account) {
     createAccount(OPERATOR);
     accountsCreated = true;
   }
-  const response = await loginRoute(
-    new NextRequest('http://localhost/api/auth/login', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: account.username, password: account.password }),
-    })
-  );
-  assert.equal(response.status, 200);
-  const token = response.cookies.get(SESSION_COOKIE)?.value;
+  const response = await json(`${base}/api/auth/login`, 'POST', {
+    username: account.username,
+    password: account.password,
+  });
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const token = parseCookie(response.headers['set-cookie']);
   assert.ok(token);
   return token;
 }
 
 async function syncRequest(serviceId, body, account = ADMIN) {
   const token = await tokenFor(account);
-  return syncRoute(
-    new NextRequest(`http://localhost/api/services/${serviceId}/sync-artifact`, {
-      method: 'POST',
-      headers: {
-        cookie: `${SESSION_COOKIE}=${token}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    }),
-    { params: Promise.resolve({ id: String(serviceId) }) }
+  return json(
+    `${base}/api/services/${serviceId}/sync-artifact`,
+    'POST',
+    body,
+    { cookie: token }
   );
 }
 
@@ -170,9 +171,8 @@ test('a live delete does not shift a Service until Admin syncs; entered fields s
   );
 
   const res = await syncRequest(id, { updated_at: serviceRow(id).updated_at });
-  assert.equal(res.status, 200);
-  const body = await res.json();
-  assert.equal(typeof body.updated_at, 'string');
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(typeof res.body.updated_at, 'string');
   assert.equal(snapshotIds(id).includes('welcome'), false);
   assert.equal(planIds(id).includes('welcome'), false);
   assert.equal(serviceRow(id).parsed_data, beforeParsed);
@@ -188,8 +188,7 @@ test('Operator cannot Sync; Admin with a stale token is 409', async () => {
 
   const stale = await syncRequest(id, { updated_at: '1999-01-01 00:00:00' });
   assert.equal(stale.status, 409);
-  const payload = await stale.json();
-  assert.equal(payload.updated_at, current);
+  assert.equal(stale.body.updated_at, current);
 });
 
 test('a corrupt live row is omitted from Sync and logged (OQ-32)', async () => {
@@ -197,21 +196,14 @@ test('a corrupt live row is omitted from Sync and logged (OQ-32)', async () => {
   getDb()
     .prepare(`UPDATE artifact_templates SET payload = ? WHERE id = ?`)
     .run('{not-json', 'sermon');
-  const logs = [];
-  const original = console.error;
-  console.error = (...args) => {
-    logs.push(args.map(String).join(' '));
-  };
-  try {
-    const res = await syncRequest(id, { updated_at: serviceRow(id).updated_at });
-    assert.equal(res.status, 200);
-  } finally {
-    console.error = original;
-  }
+  const before = output.length;
+  const res = await syncRequest(id, { updated_at: serviceRow(id).updated_at });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(snapshotIds(id).includes('sermon'), false);
+  const logs = output.slice(before).join(' ');
   assert.ok(
-    logs.some((line) => line.includes('sermon') && /rejected/i.test(line)),
-    `expected omit-and-log for sermon, got: ${logs.join('\n')}`
+    /sermon/.test(logs) && /rejected/i.test(logs),
+    `expected omit-and-log for sermon, got: ${logs}`
   );
 });
 

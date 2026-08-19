@@ -9,7 +9,7 @@ updated: 2026-08-19
 
 # Flow — Webhook intake and correction
 
-Later **CAP-11**. As-built in `src/app/api/webhook/route.ts`. Not this phase's handover (that is UC-2 / `/services/new`). Do not delete this flow.
+Later **CAP-11**. As-built in `internal/httpapi`. Not this phase's handover (that is UC-2 / `/services/new`). Do not delete this flow.
 
 ## Realizes
 

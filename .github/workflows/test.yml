@@ -28,4 +28,6 @@ jobs:
 
     - run: npm ci
 
+    - run: npm run spa:build
+
     - run: npm test

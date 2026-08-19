@@ -21,7 +21,7 @@ There is no shared JSON schema beyond `{ error: string }` plus HTTP status. [PAR
 | 500 | Server failure; generic message to the client |
 | 503 | `WEBHOOK_SECRET` not set (webhook path only) |
 
-Session: the Go API gate fails closed if the SQLite lookup throws (AD-5). Gate responses: `Cache-Control: private, no-store`. As-built until cutover: `src/proxy.ts`.
+Session: the Go API gate fails closed if the SQLite lookup throws (AD-5). Gate responses: `Cache-Control: private, no-store`. As-built: `internal/gate` + `internal/httpapi`.
 
 ## Platform-owned
 

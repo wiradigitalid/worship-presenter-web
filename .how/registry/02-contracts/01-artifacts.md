@@ -11,7 +11,7 @@ updated: 2026-08-19
 
 ## Source of truth
 
-No separate OpenAPI file. As-built: `src/app/api/admin/artifacts/**/route.ts`, `src/lib/registry/store.ts`.
+No separate OpenAPI file. As-built: `internal/httpapi`, `src/lib/registry/store.ts`.
 
 ## Purpose
 

@@ -33,7 +33,7 @@ Hymn lyrics come from a local corpus, looked up by number. Layouts come from a r
 
 ## Requirements
 
-Node.js 20 or newer. Everything else installs with `npm install`. Storage is SQLite; there is no separate database server.
+Go 1.24 and Node.js 22 or newer. `npm install` installs the SPA, PPTX worker, and tests. Storage is SQLite; there is no separate database server.
 
 ## Quickstart
 
@@ -45,7 +45,7 @@ npm run setup
 npm run dev
 ```
 
-`npm run setup` generates `.env` with fresh secrets, creates the database, seeds the slide registry, and prints the admin password it generated for you. Then open <http://localhost:3000> and sign in as `admin`. Re-running setup is safe: it never overwrites an existing `.env` or database.
+`npm run setup` generates `.env` with fresh secrets, creates the database, seeds the slide registry, and prints the admin password it generated for you. `npm run dev` starts the Go API on <http://localhost:3000> and the React SPA on <http://localhost:5173> (Vite proxies `/api` to Go). Sign in as `admin` on the SPA. For a single origin, `npm run spa:build && npm start` and open port 3000. Re-running setup is safe: it never overwrites an existing `.env` or database.
 
 See [`.constitution/project/private-data.md`](.constitution/project/private-data.md) before you put your own congregation's details in.
 

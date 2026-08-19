@@ -48,4 +48,4 @@ Add the file to `package.json` `test` or it never runs.
 
 ## The Go API is the authorization boundary (AD-5)
 
-A new exclusion ships with its assertion test in the same change set. As-built until cutover: `src/proxy.ts` + `tests/proxy-matcher.test.mjs`. Sync Artifact is on a Service path gated for any signed-in account, so the route re-checks Admin with `requireAdminSession`.
+A new exclusion ships with its assertion test in the same change set. As-built: `internal/gate` + `tests/go-http-gate.test.mjs`. Sync Artifact is on a Service path gated for any signed-in account, so the route re-checks Admin.

@@ -11,7 +11,7 @@ updated: 2026-08-19
 
 ## Source of truth
 
-No separate OpenAPI file. As-built: `src/app/api/scripture/route.ts`, `src/lib/scripture.ts`.
+No separate OpenAPI file. As-built: `internal/httpapi`, `src/lib/scripture.ts`.
 
 ## Purpose
 

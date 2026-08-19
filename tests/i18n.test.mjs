@@ -1,8 +1,8 @@
 /**
  * Story 24.1 — UI string catalogue, `ui_locale` setting, and room-facing closure.
  *
- * The resolver and settings coercion are pure/server logic. The admin settings
- * route is exercised for validate-before-write. The projected-tree walk reuses
+ * The resolver and settings coercion are pure/server logic. HTTP validate-before-write
+ * for settings lives in `tests/hub-go-http.test.mjs`. The projected-tree walk reuses
  * the same roots as `tests/theme-chrome.test.mjs` and asserts no module in that
  * tree imports the catalogue or reads `ui_locale` / `getUiLocale`.
  *
@@ -11,7 +11,6 @@
  */
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { register } from 'node:module';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -21,18 +20,6 @@ import {
   discoverModuleGraph,
   discoverProjectedRoutes,
 } from './helpers/projected-routes.mjs';
-
-register(
-  'data:text/javascript,' +
-    encodeURIComponent(
-      `export async function resolve(specifier, context, nextResolve) {
-         if (specifier === 'next/server') {
-           return nextResolve('next/server.js', context);
-         }
-         return nextResolve(specifier, context);
-       }`
-    )
-);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -58,19 +45,7 @@ const {
   setSetting,
   getUiLocale,
   setUiLocale,
-  getSlideTransition,
-  setSlideTransition,
-  getPptxRetentionDays,
-  setPptxRetentionDays,
 } = await import(srcUrl('lib', 'settings.ts'));
-const { GET, PUT } = await import(
-  srcUrl('app', 'api', 'admin', 'settings', 'route.ts')
-);
-const { createAccount } = await import(srcUrl('lib', 'auth', 'accounts.ts'));
-const { POST: loginRoute } = await import(
-  srcUrl('app', 'api', 'auth', 'login', 'route.ts')
-);
-const { SESSION_COOKIE } = await import(srcUrl('lib', 'auth', 'session.ts'));
 
 after(() => {
   if (previousDbPath === undefined) delete process.env.DB_PATH;
@@ -83,42 +58,6 @@ after(() => {
     // ignore
   }
 });
-
-const SETTINGS_URL = 'http://localhost/api/admin/settings';
-
-const { NextRequest } = await import('next/server');
-
-const ADMIN_PASSWORD = 'pw-ok-99';
-let adminToken = null;
-
-async function ensureAdminToken() {
-  if (adminToken) return adminToken;
-  createAccount({
-    username: 'i18n-admin',
-    password: ADMIN_PASSWORD,
-    role: 'admin',
-  });
-  const res = await loginRoute(
-    new NextRequest('http://localhost/api/auth/login', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: 'i18n-admin', password: ADMIN_PASSWORD }),
-    })
-  );
-  assert.equal(res.status, 200);
-  adminToken = res.cookies.get(SESSION_COOKIE)?.value;
-  assert.ok(adminToken);
-  return adminToken;
-}
-
-async function adminRequest(init = {}) {
-  const token = await ensureAdminToken();
-  const headers = {
-    cookie: `${SESSION_COOKIE}=${token}`,
-    ...(init.headers ?? {}),
-  };
-  return new NextRequest(SETTINGS_URL, { ...init, headers });
-}
 
 const read = (rel) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
 
@@ -241,90 +180,6 @@ test('missing key is a visible defect, not blank and not English', () => {
 
 test('setUiLocale rejects unknown locales', () => {
   assert.throws(() => setUiLocale('fr'), /ui_locale must be one of/);
-});
-
-test('GET /api/admin/settings includes ui_locale', async () => {
-  setUiLocale('id');
-  const res = await GET(await adminRequest());
-  assert.equal(res.status, 200);
-  const body = await res.json();
-  assert.equal(body.ui_locale, 'id');
-});
-
-test('PUT rejects a body with only unknown fields', async () => {
-  const before = getSlideTransition();
-  const res = await PUT(
-    await adminRequest({
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({}),
-    })
-  );
-  assert.equal(res.status, 400);
-  assert.equal(getSlideTransition(), before);
-});
-
-test('PUT accepts ui_locale alone', async () => {
-  const res = await PUT(
-    await adminRequest({
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ui_locale: 'id' }),
-    })
-  );
-  assert.equal(res.status, 200);
-  const body = await res.json();
-  assert.equal(body.ui_locale, 'id');
-  assert.equal(getUiLocale(), 'id');
-});
-
-test('PUT rejects an unknown ui_locale before writing anything', async () => {
-  setUiLocale('en');
-  setSlideTransition('fade');
-  const res = await PUT(
-    await adminRequest({
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        ui_locale: 'fr',
-        slide_transition: 'push',
-      }),
-    })
-  );
-  assert.equal(res.status, 400);
-  assert.equal(getUiLocale(), 'en');
-  assert.equal(getSlideTransition(), 'fade');
-});
-
-test('PUT rejects invalid pptx_retention_days before writing ui_locale', async () => {
-  setUiLocale('en');
-  setPptxRetentionDays(30);
-  const res = await PUT(
-    await adminRequest({
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        pptx_retention_days: -1,
-        ui_locale: 'id',
-      }),
-    })
-  );
-  assert.equal(res.status, 400);
-  assert.equal(getUiLocale(), 'en');
-  assert.equal(getPptxRetentionDays(), 30);
-});
-
-test('PUT error names the accepted ui_locale set', async () => {
-  const res = await PUT(
-    await adminRequest({
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ui_locale: 'de' }),
-    })
-  );
-  assert.equal(res.status, 400);
-  const body = await res.json();
-  assert.match(body.error, new RegExp(UI_LOCALE_ORDER.join('|')));
 });
 
 test('the projected tree does not reach catalogue text or call getUiLocale', () => {

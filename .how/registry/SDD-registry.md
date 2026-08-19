@@ -39,7 +39,7 @@ Direction: Admin screen → LC-11 → LC-15 → `artifact_templates`. Hub/Presen
 
 | AD | Quoted rule | How it lands here |
 | --- | --- | --- |
-| AD-5 | The Go API has one request gate, and its path matcher **is** the authorization boundary — anything it does not match is served with no session check at all, so a new exclusion ships together with its assertion test in the same change set. | `/admin/artifacts` and `/api/admin/artifacts/**` sit inside the matcher (AD-14). As-built until cutover: `src/proxy.ts`. |
+| AD-5 | The Go API has one request gate, and its path matcher **is** the authorization boundary — anything it does not match is served with no session check at all, so a new exclusion ships together with its assertion test in the same change set. | `/admin/artifacts` and `/api/admin/artifacts/**` sit inside the matcher (AD-14). As-built until cutover: `internal/gate`. |
 | AD-6 | every service mutation carries the client's `updated_at` as a precondition; a stale value is rejected with HTTP 409 and the client re-reads before retrying. No write path may bypass the precondition. | PUT/DELETE/order artifacts: `updatedAt` / `RegistryStaleError`. Sync Artifact is Hub LC-2 (`updated_at` / `ServiceStaleError`). |
 | AD-7 | `buildSlidePlan` is the single source of slide order and content for every surface. | Registry supplies entries; the plan orders. |
 | AD-8 | image references resolve only through the shared helpers in `src/lib` | Save canvas. |
@@ -90,11 +90,11 @@ UC-14 and UC-16 are not `critical`. UC-20 is Operator-facing plan consume (Hub/P
 | --- | --- | --- | --- |
 | `artifact_templates` table exists | verified | `src/lib/db/index.ts` ±500 | — |
 | Per-Service snapshot table | verified | `service_registry_snapshots` in `src/lib/db/index.ts`; clone in `src/lib/registry/service-snapshot.ts` | W1 / AD-16 |
-| Sync Artifact HTTP route | verified | `src/app/api/services/[id]/sync-artifact/route.ts` | Hub surface; not a Registry inventory row |
+| Sync Artifact HTTP route | verified | `internal/httpapi` | Hub surface; not a Registry inventory row |
 | Admin delete / reorder verb | verified | `DELETE /api/admin/artifacts/[id]`; `PUT /api/admin/artifacts/order`; `deleteArtifactTemplate` / `reorderArtifactTemplates` | UC-15. AD-17 non-revival still holds after HTTP delete |
 | `RegistrySnapshot` in code | [PARTIAL] | `src/lib/artifacts/registry-snapshot.ts` = live map per plan, not the AD-16 freeze | do not mix the names |
 | Seed does not substitute a missing row at plan time | verified | spine AD-11 closed Story 20.1 | — |
-| Reset on a gone id does not revive | verified | `src/app/api/admin/artifacts/[id]/reset/route.ts` returns 404 before seed lookup when `getArtifactTemplate` is null | OQ-24 |
+| Reset on a gone id does not revive | verified | `internal/httpapi` returns 404 before seed lookup when `getArtifactTemplate` is null | OQ-24 |
 | LC-15 store | verified | `src/lib/registry/store.ts` | — |
 | Numeric timeout per route | [ASSUMED] | did not read `maxDuration` | platform default |
 

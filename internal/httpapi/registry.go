@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/wiradigitalid/worship-presenter-web/internal/plan"
 )
 
 type artifactSummary struct {
@@ -390,7 +392,19 @@ func loadSeedTemplate(root, id string) (map[string]any, error) {
 	return nil, fmt.Errorf("missing")
 }
 
+func requireAdmin(w http.ResponseWriter, r *http.Request) bool {
+	sess := sessionFrom(r)
+	if sess == nil || sess.Role != "admin" {
+		writeError(w, http.StatusForbidden, "Forbidden")
+		return false
+	}
+	return true
+}
+
 func (s *Server) syncArtifact(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
 	id, ok := parsePositiveID(r.PathValue("id"))
 	if !ok {
 		writeError(w, http.StatusBadRequest, "Invalid Service ID")
@@ -446,6 +460,9 @@ func (s *Server) syncArtifact(w http.ResponseWriter, r *http.Request) {
 			rows.Close()
 			writeError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
+		}
+		if !plan.AcceptLivePayload(tid, payload) {
+			continue
 		}
 		if _, err := tx.Exec(
 			`INSERT INTO service_registry_snapshots

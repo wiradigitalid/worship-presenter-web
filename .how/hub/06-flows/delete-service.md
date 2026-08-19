@@ -46,7 +46,7 @@ sequenceDiagram
 
 | Hop | Failure | System does | Safe to retry |
 | --- | --- | --- | --- |
-| session | expired | 401 from `src/proxy.ts`; no partial write (OQ-23) | yes after sign-in |
+| session | expired | 401 from `internal/gate`; no partial write (OQ-23) | yes after sign-in |
 | id | missing | 404 | yes (idempotent after success) |
 | DB | 500 mid-way | does not claim success | yes |
 | File unlink | fs failed | row already gone; error in log | no via DELETE (404) |

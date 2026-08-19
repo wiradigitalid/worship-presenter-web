@@ -11,7 +11,7 @@ updated: 2026-08-19
 
 ## Source of truth
 
-`none` — prose. `src/app/api/auth/*/route.ts`, `src/lib/auth/rate-limit.ts`.
+`none` — prose. `internal/httpapi`, `src/lib/auth/rate-limit.ts`.
 
 ## Purpose
 

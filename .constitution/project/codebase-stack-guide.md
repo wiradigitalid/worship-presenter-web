@@ -15,7 +15,7 @@ Every version below is `package.json` as read at distillation. **Read `package.j
 
 | Thing | Value | Where it is fixed |
 |---|---|---|
-| Framework | Go API (target, DEC-003) + React SPA. As-built still Next.js `16.2.10` App Router until the cutover wave | `go.mod` once landed; today `package.json`, `next.config.ts` |
+| Framework | Go API + React SPA (Vite). Next.js App Router is removed | `go.mod`, `package.json`, `spa/vite.config.ts` |
 | React | `19.2.4` | `package.json` |
 | Language | Go for `api`; TypeScript `^5` for `spa` / worker | `go.mod` / `tsconfig.json` |
 | Import alias | `@/*` → `./src/*` while as-built Next remains | `tsconfig.json` `paths` |
@@ -25,7 +25,7 @@ Every version below is `package.json` as read at distillation. **Read `package.j
 | UI | Tailwind `^4`, `shadcn`, `@base-ui/react` on the SPA | `package.json` |
 | Node — CI / worker | `22` in image only to exec PPTX child; not a 24/7 app server | AD-30, `.github/workflows/test.yml` |
 
-**This is not the Next.js in your training data** for as-built `src/` until cutover. After DEC-003 the live API is Go; do not add Next.js route handlers as the target.
+**This is not the Next.js in your training data.** After DEC-003 the live API is Go and the operator UI is the Vite SPA. Do not add Next.js route handlers.
 
 ## Commands, and the directory each runs from
 

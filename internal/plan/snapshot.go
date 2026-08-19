@@ -6,6 +6,26 @@ import (
 	"log"
 )
 
+// AcceptLivePayload reports whether a live registry row may be cloned into a
+// service snapshot. Corrupt JSON is omitted and logged (OQ-32), matching the
+// TypeScript cloneValidLiveRows contract.
+func AcceptLivePayload(id, payload string) bool {
+	var tmpl Template
+	if err := json.Unmarshal([]byte(payload), &tmpl); err != nil {
+		log.Printf("[registry] template %q: persisted row rejected (not valid JSON); no layout is available: %v", id, err)
+		return false
+	}
+	if tmpl.ID != id {
+		log.Printf("[registry] template %q: persisted row rejected (payload id mismatch); no layout is available", id)
+		return false
+	}
+	if tmpl.Layouts == nil {
+		log.Printf("[registry] template %q: persisted row rejected (no layouts); no layout is available", id)
+		return false
+	}
+	return true
+}
+
 func loadTemplates(rows *sql.Rows) Snapshot {
 	snap := Snapshot{ByID: map[string]Template{}}
 	for rows.Next() {
@@ -14,19 +34,11 @@ func loadTemplates(rows *sql.Rows) Snapshot {
 			log.Printf("[registry] scan failed: %v", err)
 			continue
 		}
+		if !AcceptLivePayload(id, payload) {
+			continue
+		}
 		var tmpl Template
-		if err := json.Unmarshal([]byte(payload), &tmpl); err != nil {
-			log.Printf("[registry] template %q: persisted row rejected (not valid JSON); no layout is available: %v", id, err)
-			continue
-		}
-		if tmpl.ID != id {
-			log.Printf("[registry] template %q: persisted row rejected (payload id mismatch); no layout is available", id)
-			continue
-		}
-		if tmpl.Layouts == nil {
-			log.Printf("[registry] template %q: persisted row rejected (no layouts); no layout is available", id)
-			continue
-		}
+		_ = json.Unmarshal([]byte(payload), &tmpl)
 		snap.Order = append(snap.Order, id)
 		snap.ByID[id] = tmpl
 	}

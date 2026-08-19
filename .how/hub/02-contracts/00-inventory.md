@@ -46,5 +46,5 @@ Numbers match `.how/_platform/inventory-api.md` for Hub-owned rows. Spec per res
 ## Findings
 
 - Numbers 25–29 and 31–32 belong to Registry/Presenter in the platform inventory; not used here. 33 is Hub Sync Artifact (UC-16).
-- No OpenAPI; prose contracts. Source: `src/app/api/**/route.ts`.
+- No OpenAPI; prose contracts. Source: `internal/httpapi`.
 - POST `/api/webhook` (30) is as-built CAP-11 later; this phase's create path is POST `/api/services` (UC-2).

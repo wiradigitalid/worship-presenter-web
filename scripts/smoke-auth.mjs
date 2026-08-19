@@ -1,7 +1,7 @@
 /**
  * Smoke: unauth redirect / operator 403 on admin / last-admin delete /
  * deck surfaces never import KJV (Presenter scripture API is allowed).
- * Spins up `next start` against a temp SQLite DB (does not touch data.db).
+ * Spins up the Go API against a temp SQLite DB (does not touch data.db).
  */
 import { spawn } from 'child_process';
 import { createHash, randomBytes, scryptSync } from 'crypto';
@@ -45,14 +45,13 @@ for (const file of deckFiles) {
 check('deck plan/pptx never import KJV scripture lookup', bibleHit === null);
 if (bibleHit) console.error('  found in', path.relative(root, bibleHit));
 
-// Next 16 renamed the middleware convention to `proxy` (Node.js runtime).
-const mw = fs.readFileSync(path.join(root, 'src', 'proxy.ts'), 'utf8');
+const mw = fs.readFileSync(path.join(root, 'internal', 'gate', 'gate.go'), 'utf8');
 check(
-  'proxy does not use AUTH_PASSWORD / Basic Auth',
+  'gate does not use AUTH_PASSWORD / Basic Auth',
   !/AUTH_PASSWORD/.test(mw) && !/WWW-Authenticate/.test(mw) && !/basicAuth/.test(mw)
 );
 check(
-  'proxy matcher excludes api/webhook',
+  'gate matcher excludes api/webhook',
   /api\/webhook/.test(mw)
 );
 
@@ -121,7 +120,7 @@ check(
 );
 unitDb.close();
 
-// --- HTTP smoke against next start ---
+// --- HTTP smoke against the Go API ---
 const port = 3457 + Math.floor(Math.random() * 200);
 const dbPath = path.join(tmp, 'http.db');
 const AUTH_SECRET = createHash('sha256').update(`smoke-${Date.now()}`).digest('hex');
@@ -181,15 +180,7 @@ async function waitForServer(base, attempts = 60) {
   throw new Error('Server did not become ready');
 }
 
-const nextBin = path.join(
-  root,
-  'node_modules',
-  'next',
-  'dist',
-  'bin',
-  'next'
-);
-const child = spawn(process.execPath, [nextBin, 'start', '-p', String(port)], {
+const child = spawn('go', ['run', './cmd/api'], {
   cwd: root,
   env: {
     ...process.env,
@@ -200,6 +191,7 @@ const child = spawn(process.execPath, [nextBin, 'start', '-p', String(port)], {
     AUTH_BOOTSTRAP_PASSWORD: BOOTSTRAP_PASSWORD,
     WEBHOOK_SECRET,
     NODE_ENV: 'production',
+    REPO_ROOT: root,
     WPW_USE_SHIPPED_REGISTRY: '1',
   },
   stdio: ['ignore', 'pipe', 'pipe'],

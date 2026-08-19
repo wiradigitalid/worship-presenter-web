@@ -1,15 +1,15 @@
 """inventory readers — how THIS product's code is read. Owned by the product, not the method.
 
 Stack confirmed on disk (wdi-init intent `readers`, 2026-08-19; Host/Screen containers
-amended DEC-003 — still derived from Next.js as-built until the cutover wave):
+amended DEC-003 — Go API mux + React SPA routes):
 
     db      SQLite DDL inside `src/lib/db/index.ts` (`CREATE TABLE IF NOT EXISTS`, better-sqlite3)
-    api     Next.js App Router `src/app/api/**/route.ts` (`export async function GET|POST|…`)
-            Host cell is container `api` (Go target), not the as-built process name
-    screen  Next.js App Router `src/app/**/page.tsx` (route groups `(operator)` / `(projected)`
-            are not in the URL). Screen identity prefix is container `spa`
+    api     Go `mux.HandleFunc` in `internal/httpapi/server.go`
+            Host cell is container `api`
+    screen  React Router `<Route>` in `spa/src/App.tsx`. Screen identity prefix is container `spa`
 
 The whole file is yours. `wdi-method update` never writes over it and `promote` never publishes it.
+
 
 WHAT THE ENGINE EXPECTS. Three functions, each taking the repo root and returning a `Derived`:
 
@@ -245,12 +245,6 @@ METHOD_RE = re.compile(
 )
 
 
-def _api_path(root: Path, route_file: Path) -> str:
-    rel = route_file.relative_to(root / "src" / "app").as_posix()
-    parts = [p for p in rel.split("/") if p != "route.ts"]
-    return "/" + "/".join(parts)
-
-
 def _api_owner(path: str) -> str:
     if path.startswith("/api/admin/artifacts"):
         return "registry"
@@ -260,60 +254,38 @@ def _api_owner(path: str) -> str:
 
 
 def derive_api(root: Path) -> "Derived":  # noqa: F821
-    """Endpoints from App Router `route.ts` HTTP exports."""
-    api_root = root / "src" / "app" / "api"
+    """Endpoints from Go `mux.HandleFunc` in `internal/httpapi/server.go`."""
     unread: list[str] = []
     rows: list = []
-    if not api_root.is_dir():
-        return Derived(unread=["src/app/api/ is missing"])
+    go_src = root / "internal" / "httpapi" / "server.go"
+    go_text = read(go_src)
+    if not go_text:
+        return Derived(unread=["internal/httpapi/server.go could not be read"])
 
     by_endpoint: dict[str, str] = {}
     for cells in _recorded_cell_lists(root / ".how" / "_platform" / "inventory-api.md"):
         if len(cells) >= 5:
             by_endpoint[f"{cells[1]} {cells[2].strip('`')}"] = cells[4]
 
-    for route_file in sorted(api_root.rglob("route.ts")):
-        rel = _posix(root, route_file)
-        text = read(route_file)
-        methods = METHOD_RE.findall(text)
-        if not methods:
-            unread.append(f"{rel}: no export async function GET|POST|PUT|PATCH|DELETE")
+    rel = _posix(root, go_src)
+    seen: set[str] = set()
+    for m in GO_HANDLE_RE.finditer(go_text):
+        method, raw_path = m.group(1), m.group(2)
+        path = re.sub(r"\{(\w+)\}", r"[\1]", raw_path)
+        key = f"{API_HOST} {method} {path}"
+        if key in seen:
             continue
-        path = _api_path(root, route_file)
-        owner = _api_owner(path)
-        for method in sorted(set(methods)):
-            desc = by_endpoint.get(f"{method} {path}", "—")
-            if desc in ("", "—"):
-                desc = DEFAULT_API_DESC.get(f"{method} {path}", "—")
-            rows.append(Row(
-                key=f"{API_HOST} {method} {path}",
-                cells=[API_HOST, method, f"`{path}`", owner, desc, "published"],
-                source=rel,
-            ))
+        desc = by_endpoint.get(f"{method} {path}", "—")
+        if desc in ("", "—"):
+            desc = DEFAULT_API_DESC.get(f"{method} {path}", "—")
+        rows.append(Row(
+            key=key,
+            cells=[API_HOST, method, f"`{path}`", _api_owner(path), desc, "published"],
+            source=rel,
+        ))
+        seen.add(key)
 
     rows.sort(key=lambda r: (r.cells[2], r.cells[1]))
-    seen = {r.key for r in rows}
-    go_src = root / "internal" / "httpapi" / "server.go"
-    go_text = read(go_src)
-    if go_text:
-        rel = _posix(root, go_src)
-        for m in GO_HANDLE_RE.finditer(go_text):
-            method, raw_path = m.group(1), m.group(2)
-            path = re.sub(r"\{(\w+)\}", r"[\1]", raw_path)
-            key = f"{API_HOST} {method} {path}"
-            if key in seen:
-                continue
-            desc = by_endpoint.get(f"{method} {path}", "—")
-            if desc in ("", "—"):
-                desc = DEFAULT_API_DESC.get(f"{method} {path}", "—")
-            rows.append(Row(
-                key=key,
-                cells=[API_HOST, method, f"`{path}`", _api_owner(path), desc, "published"],
-                source=rel,
-            ))
-            seen.add(key)
-        rows.sort(key=lambda r: (r.cells[2], r.cells[1]))
-
     return Derived(rows=rows, unread=unread)
 
 
@@ -322,18 +294,63 @@ GO_HANDLE_RE = re.compile(
 )
 
 
-PAGE_FN_RE = re.compile(
-    r"^export default (?:async )?function (\w+)\b", re.M
+SPA_ROUTE_RE = re.compile(
+    r'<Route\s+path="([^"]+)"\s+element=\{<(\w+)'
 )
-GROUP_RE = re.compile(r"^\([^/]+\)$")
 
 
-def _screen_route(root: Path, page: Path) -> str:
-    rel = page.relative_to(root / "src" / "app").as_posix()
-    parts = [p for p in rel.split("/") if p != "page.tsx" and not GROUP_RE.match(p)]
-    if not parts:
-        return "/"
-    return "/" + "/".join(parts)
+def _spa_route(path: str) -> str:
+    return path.replace("/:id", "/[id]")
+
+
+def derive_screen(root: Path) -> "Derived":  # noqa: F821
+    """Screens from React Router routes in `spa/src/App.tsx`."""
+    app = root / "spa" / "src" / "App.tsx"
+    unread: list[str] = []
+    text = read(app)
+    if not text:
+        return Derived(unread=["spa/src/App.tsx could not be read"])
+
+    inv = root / ".how" / "_platform" / "inventory-screen.md"
+    state_of, _plat = decisions(inv)
+    by_parent: dict[str, list[str]] = {}
+    for state_route, parent in sorted(state_of.items()):
+        by_parent.setdefault(parent, []).append(state_route)
+
+    recorded_screen: dict[str, str] = {}
+    recorded_uc: dict[str, str] = {}
+    for cells in _recorded_cell_lists(inv):
+        if len(cells) >= 5:
+            route = cells[1].strip("`")
+            recorded_screen[route] = cells[0]
+            recorded_uc[route] = cells[4]
+
+    rel = _posix(root, app)
+    rows = []
+    for m in SPA_ROUTE_RE.finditer(text):
+        raw_path, component = m.group(1), m.group(2)
+        if raw_path == "*":
+            continue
+        route = _spa_route(raw_path)
+        states = ", ".join(f"`{s}`" for s in by_parent.get(route, [])) or "—"
+        owner = _screen_owner(route)
+        uc = recorded_uc.get(route) or DEFAULT_SCREEN_UC.get(route, "—")
+        if uc in ("", "—"):
+            uc = DEFAULT_SCREEN_UC.get(route, "—")
+        elif route == "/services/[id]" and "UC-16" not in uc:
+            uc = "UC-4, UC-5, UC-6, UC-7, UC-16, UC-18"
+        name = recorded_screen.get(route) or f"{SPA_HOST}/{component}"
+        rows.append(Row(
+            key=f"{SPA_HOST}:{route}",
+            cells=[name, f"`{route}`", states, owner, uc],
+            source=rel,
+        ))
+
+    unread.append(
+        "UC served is not declared in App.tsx — values are kept from this inventory file"
+    )
+    rows.sort(key=lambda r: r.cells[1])
+    return Derived(rows=rows, unread=unread)
 
 
 DEFAULT_SCREEN_UC = {
@@ -357,49 +374,3 @@ def _screen_owner(route: str) -> str:
         return "presenter"
     return "hub"
 
-
-def derive_screen(root: Path) -> "Derived":  # noqa: F821
-    """Screens from App Router `page.tsx`. Route groups do not appear in the URL."""
-    app = root / "src" / "app"
-    unread: list[str] = []
-    if not app.is_dir():
-        return Derived(unread=["src/app/ is missing"])
-
-    inv = root / ".how" / "_platform" / "inventory-screen.md"
-    state_of, _plat = decisions(inv)
-    by_parent: dict[str, list[str]] = {}
-    for state_route, parent in sorted(state_of.items()):
-        by_parent.setdefault(parent, []).append(state_route)
-
-    rows = []
-    for page in sorted(app.rglob("page.tsx")):
-        rel = _posix(root, page)
-        text = read(page)
-        fns = PAGE_FN_RE.findall(text)
-        if not fns:
-            unread.append(f"{rel}: no `export default function`")
-            continue
-        name = fns[-1]
-        route = _screen_route(root, page)
-        states = ", ".join(f"`{s}`" for s in by_parent.get(route, [])) or "—"
-        owner = _screen_owner(route)
-        uc = "—"
-        for cells in _recorded_cell_lists(inv):
-            if len(cells) >= 5 and cells[1].strip("`") == route:
-                uc = cells[4]
-                break
-        if uc in ("", "—"):
-            uc = DEFAULT_SCREEN_UC.get(route, "—")
-        elif route == "/services/[id]" and "UC-16" not in uc:
-            uc = "UC-4, UC-5, UC-6, UC-7, UC-16, UC-18"
-        rows.append(Row(
-            key=f"{SPA_HOST}:{route}",
-            cells=[f"{SPA_HOST}/{name}", f"`{route}`", states, owner, uc],
-            source=rel,
-        ))
-
-    unread.append(
-        "UC served is not declared in page.tsx — values are kept from this inventory file"
-    )
-    rows.sort(key=lambda r: r.cells[1])
-    return Derived(rows=rows, unread=unread)

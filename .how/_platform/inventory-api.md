@@ -12,7 +12,7 @@ platform_rows: []
 
 # Inventory — endpoints
 
-Derived by `inventory.py` from `export async function GET|POST|PUT|PATCH|DELETE` in `src/app/api/**/route.ts` plus Go-only verbs in `internal/httpapi/server.go`. Host `api` is the Go container (DEC-003). Numbers are stable; new rows take the next number.
+Derived by `inventory.py` from `mux.HandleFunc` in `internal/httpapi/server.go`. Host `api` is the Go container (DEC-003). Numbers are stable; new rows take the next number.
 
 ## Rows
 
@@ -56,7 +56,7 @@ Derived by `inventory.py` from `export async function GET|POST|PUT|PATCH|DELETE`
 
 ## Findings
 
-- `GET /api/session` (34) and `GET /api/services/[id]` (35) exist on the Go API so the SPA can read the httpOnly session and consume the assembled plan. They are not App Router routes.
-- Plan vs code: `POST /api/webhook` is published in `src/` (FR-1 / FR-12), while this phase's intake promise is Hub form (FR-27). The row stays — as-built — and CAP-11 is the later product phase. Do not treat the shipped webhook as this phase's handover.
-- Plan vs code (DEC-003): Host is `api` (Go). Inventory rows 1–33 remain in Next `src/app/api` until that process is deleted; Go already serves them. Rows 34–35 are Go-only.
+- `GET /api/session` (34) and `GET /api/services/[id]` (35) exist on the Go API so the SPA can read the httpOnly session and consume the assembled plan.
+- Plan vs code: `POST /api/webhook` is published (FR-1 / FR-12), while this phase's intake promise is Hub form (FR-27). The row stays — as-built — and CAP-11 is the later product phase. Do not treat the shipped webhook as this phase's handover.
+- Plan vs code (DEC-003): Host is `api` (Go). Rows 1–35 are served by `internal/httpapi`.
 - W1 added 31 `DELETE /api/admin/artifacts/[id]`, 32 `PUT /api/admin/artifacts/order`, 33 `POST /api/services/[id]/sync-artifact`. Numbers kept; Host renamed `web` → `api` without renumbering.

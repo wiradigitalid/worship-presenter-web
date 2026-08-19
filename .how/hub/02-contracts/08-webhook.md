@@ -11,7 +11,7 @@ updated: 2026-08-19
 
 ## Source of truth
 
-`none`. `src/app/api/webhook/route.ts`. Call shape: picoclaw skill (not copied here).
+`none`. `internal/httpapi`. Call shape: picoclaw skill (not copied here).
 
 ## Purpose
 

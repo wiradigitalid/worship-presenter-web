@@ -2,37 +2,17 @@
  * Login throttling contract for `POST /api/auth/login` and the current-password
  * check in `POST /api/auth/change-password`.
  *
- * The refusal decision is scoped to the (username, client address) pair, never
- * to a username on its own, so the tests below assert both halves of that:
- * an attacker grinding one account from one address gets locked out, and the
- * same account signing in from a different address is untouched. The shared
- * `unknown` address bucket is never throttled at all, because it is also the
- * direct-to-box recovery path.
- *
- * Every case uses its own `cf-connecting-ip` so one case's failures cannot
- * bleed into another's address counter.
+ * HTTP cases hit the Go API. Domain helpers (`pruneLoginAttempts`, IP parsing)
+ * still run against `src/lib`.
  */
-import { test, after } from 'node:test';
+import { test, after, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { register } from 'node:module';
+import { createHash } from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-
-// Next ships `next/server.js` without an ESM exports map; node needs the
-// extension. Chained ahead of the repo's ts-resolve hook.
-register(
-  'data:text/javascript,' +
-    encodeURIComponent(
-      `export async function resolve(specifier, context, nextResolve) {
-         if (specifier === 'next/server') {
-           return nextResolve('next/server.js', context);
-         }
-         return nextResolve(specifier, context);
-       }`
-    )
-);
+import { fetchRaw, spawnGoApi, stopProcess } from './helpers/go-api.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -40,15 +20,12 @@ const root = path.resolve(__dirname, '..');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'auth-rate-limit-test-'));
 const previousDbPath = process.env.DB_PATH;
 const previousAuthSecret = process.env.AUTH_SECRET;
+const AUTH_SECRET = createHash('sha256').update('rate-limit-test-secret-0123456789').digest('hex');
 process.env.DB_PATH = path.join(tmp, 'test.db');
-process.env.AUTH_SECRET = 'rate-limit-test-secret-0123456789';
+process.env.AUTH_SECRET = AUTH_SECRET;
 
 const srcUrl = (...parts) => pathToFileURL(path.join(root, 'src', ...parts)).href;
 
-const { POST } = await import(srcUrl('app', 'api', 'auth', 'login', 'route.ts'));
-const { POST: changePassword } = await import(
-  srcUrl('app', 'api', 'auth', 'change-password', 'route.ts')
-);
 const { getDb } = await import(srcUrl('lib', 'db', 'index.ts'));
 const { createAccount, getAccountByUsername } = await import(
   srcUrl('lib', 'auth', 'accounts.ts')
@@ -66,9 +43,27 @@ const {
 const { SESSION_COOKIE, signSession } = await import(
   srcUrl('lib', 'auth', 'session.ts')
 );
-const { NextRequest } = await import('next/server');
+
+const BOOTSTRAP_USER = 'admin';
+const BOOTSTRAP_PASS = 'bootstrap-pass-99';
+
+let child;
+let base;
+
+before(async () => {
+  ({ child, base } = await spawnGoApi({
+    dbPath: process.env.DB_PATH,
+    root,
+    env: {
+      AUTH_SECRET,
+      AUTH_BOOTSTRAP_USER: BOOTSTRAP_USER,
+      AUTH_BOOTSTRAP_PASSWORD: BOOTSTRAP_PASS,
+    },
+  }));
+});
 
 after(() => {
+  stopProcess(child);
   if (previousDbPath === undefined) delete process.env.DB_PATH;
   else process.env.DB_PATH = previousDbPath;
   if (previousAuthSecret === undefined) delete process.env.AUTH_SECRET;
@@ -96,25 +91,30 @@ function account(username) {
 }
 
 function toResult(res) {
-  return res.json().then((body) => ({
+  let body;
+  try {
+    body = JSON.parse(res.body);
+  } catch {
+    body = res.body;
+  }
+  const retryAfter = res.headers['retry-after'];
+  return {
     status: res.status,
     body,
-    retryAfter: res.headers.get('retry-after'),
-  }));
+    retryAfter: Array.isArray(retryAfter) ? retryAfter[0] : retryAfter ?? null,
+  };
 }
 
 /** One login attempt; returns status, parsed body and the Retry-After header. */
 async function attempt(username, password, ip) {
-  const headers = { 'content-type': 'application/json' };
+  const headers = { 'Content-Type': 'application/json' };
   if (ip !== undefined) headers['cf-connecting-ip'] = ip;
   return toResult(
-    await POST(
-      new NextRequest(LOGIN_URL, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ username, password }),
-      })
-    )
+    await fetchRaw(`${base}/api/auth/login`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ username, password }),
+    })
   );
 }
 
@@ -123,17 +123,15 @@ const fail = (username, ip) => attempt(username, 'wrong-password', ip);
 /** One current-password guess against `/api/auth/change-password`. */
 async function guessCurrentPassword(token, currentPassword, ip) {
   return toResult(
-    await changePassword(
-      new NextRequest(CHANGE_URL, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'cf-connecting-ip': ip,
-          cookie: `${SESSION_COOKIE}=${token}`,
-        },
-        body: JSON.stringify({ currentPassword, newPassword: 'brand-new-pw-1' }),
-      })
-    )
+    await fetchRaw(`${base}/api/auth/change-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'cf-connecting-ip': ip,
+        cookie: `${SESSION_COOKIE}=${token}`,
+      },
+      body: JSON.stringify({ currentPassword, newPassword: 'brand-new-pw-1' }),
+    })
   );
 }
 

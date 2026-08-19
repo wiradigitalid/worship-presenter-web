@@ -37,7 +37,7 @@ Direction: Operator controls → LC-14 → LC-10 → projector. Slideshow is a s
 | AD | Quoted rule | How it lands here |
 | --- | --- | --- |
 | AD-1 | In-browser Web Slideshow / Presenter Mode are **shipped** (FR-15 / FR-16) but are **not** the hard offline Sabbath guarantee; PPTX download remains primary for venue reliability. | Slideshow is best-effort (OQ-5). |
-| AD-5 | The Go API has one request gate, and its path matcher **is** the authorization boundary — anything it does not match is served with no session check at all | Scripture GET and the three screens are inside the matcher; no session → 401 / login, Deck unchanged. As-built until cutover: `src/proxy.ts`. |
+| AD-5 | The Go API has one request gate, and its path matcher **is** the authorization boundary — anything it does not match is served with no session check at all | Scripture GET and the three screens are inside the matcher; no session → 401 / login, Deck unchanged. As-built until cutover: `internal/gate`. |
 | AD-7 | `buildSlidePlan` is the single source of slide order and content for every surface. | Slideshow and projector do not order themselves. |
 | AD-10 | presenter↔projector sync goes through the single `@/lib/present-channel` `BroadcastChannel` module; no surface opens its own channel name or message shape. | LC-10. Plan-identity clause not yet built (OQ-26, deferred-work). |
 | AD-12 | `buildSlidePlan` outputs a fully hydrated AST (Fat Payload) with exact rendering coordinates, fonts, colors, and resolved text content. | Dumb renderer. |
@@ -56,7 +56,7 @@ Process timeout: Go API after cutover. As-built Next/Node default. Presenter doe
 
 | Boundary | Slow | Absent | Lying | User | Logged |
 | --- | --- | --- | --- | --- | --- |
-| GET /api/scripture | Overlay waits. After timeout, fail closed (SCN-4); no retry | 500; empty corpus → 503 reported as absent (FR-22) | Ambiguous / not found → no guess (NFR-5, SCN-4). Empty `ref` → 400 (SCN-4, not a silent no-op). No session → 401. Unknown translation → 400 | Verse does not appear; Deck stays; Operator sees lookup failed | `console.error` on 500 (`src/app/api/scripture/route.ts`) |
+| GET /api/scripture | Overlay waits. After timeout, fail closed (SCN-4); no retry | 500; empty corpus → 503 reported as absent (FR-22) | Ambiguous / not found → no guess (NFR-5, SCN-4). Empty `ref` → 400 (SCN-4, not a silent no-op). No session → 401. Unknown translation → 400 | Verse does not appear; Deck stays; Operator sees lookup failed | `console.error` on 500 (`internal/httpapi`) |
 | LC-10 channel | Delayed message; no spinner on the room screen | Projector `lost` (AD-29). `BroadcastChannel` missing → no sync | Another tab on the same name; plan identity not on the wire [MISSING] on `PresentMessage` (AD-10, OQ-26) | Control: `lost` verdict. Congregation: may show a slide the control cannot vouch for until identity ships | — |
 | /services/[id]/slideshow | Slow RSC. After load, in-memory show may continue (OQ-5) | Required: missing Service → Hub, slideshow does not open (UC-11). As-built: `notFound()` → projected "Slides unavailable" [PARTIAL] | Plan failed | Required: Hub; PPTX remains the guarantee (OQ-26). As-built: black failure copy on this URL with run-sheet links [PARTIAL] | `console.error` on plan fail (`slideshow/page.tsx`) |
 | /services/[id]/present | Slow RSC | Required: missing Service or plan → Hub as UC-11; presenter does not open (OQ-26). As-built: missing Service → `notFound()` [PARTIAL] | Plan failed | Required: Hub. As-built: error card on this URL (run-sheet / PPTX); `PresenterOperator` does not mount [PARTIAL] | `console.error` on plan fail (`present/page.tsx`) |
@@ -80,7 +80,7 @@ Contracts: `02-contracts/`. No `06-flows/` — not money, not delete, not a thir
 
 | Claim | Label | Read to decide | Disposition |
 | --- | --- | --- | --- |
-| One GET scripture | verified | `src/app/api/scripture/route.ts` | empty `ref` → 400; 401 is the gate, not this file |
+| One GET scripture | verified | `internal/httpapi` scripture handler | empty `ref` → 400; 401 is the gate, not this file |
 | Plan identity on PresentMessage | [MISSING] | spine AD-10 *Not yet closed*; `src/lib/present-channel.ts` `PresentMessage` union has no identity field | planned: AD-10 / OQ-26 / deferred-work; not a BUG until a wave closes it |
 | Overlay on `sync` / request-sync resend of overlay | [MISSING] | `PresentMessage` `sync` is `index`, `blank`, `transition` only; `PresenterOperator` `currentState()` matches; `ProjectorClient` `setOverlay(null)` on `sync` | planned: OQ-25; not a BUG until a wave closes it |
 | Unblank reveals overlay if still open | verified | `ProjectorClient.tsx` blank is a covering `z-50` layer; overlay state is not cleared by blank | matches OQ-25 / BR-6 |

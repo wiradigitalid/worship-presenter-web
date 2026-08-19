@@ -707,7 +707,7 @@ test('AC-4: every Header link routes through the guard', () => {
 });
 
 test('AC-4: the provider mounts on the page, never on the root layout', () => {
-  const page = ast('src/app/(operator)/admin/artifacts/page.tsx');
+  const page = ast('spa/src/pages/AdminArtifactsPage.tsx');
   const provider = nodes(
     page,
     (node) =>

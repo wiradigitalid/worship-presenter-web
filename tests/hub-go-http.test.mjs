@@ -12,6 +12,7 @@ import net from 'net';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Database from 'better-sqlite3';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -224,4 +225,43 @@ test('POST /api/webhook with secret creates a service', async () => {
   assert.ok(res.body.id > 0);
   assert.equal(res.body.date, '2026-06-06');
   assert.equal(res.body.imagesCount, 1);
+});
+
+test('GET /api/scripture returns 400 for an unknown translation', async () => {
+  const res = await json(`${base}/api/scripture?ref=John+3:16&translation=NIV`);
+  assert.equal(res.status, 400);
+  assert.match(res.body.error, /Unknown bible translation "NIV"/);
+});
+
+test('PUT /api/admin/settings accepts ui_locale and rejects unknown values', async () => {
+  const ok = await json(`${base}/api/admin/settings`, 'PUT', { ui_locale: 'id' });
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  assert.equal(ok.body.ui_locale, 'id');
+
+  const empty = await json(`${base}/api/admin/settings`, 'PUT', {});
+  assert.equal(empty.status, 400);
+
+  const bad = await json(`${base}/api/admin/settings`, 'PUT', {
+    ui_locale: 'fr',
+    slide_transition: 'push',
+  });
+  assert.equal(bad.status, 400);
+  assert.match(String(bad.body.error), /en|id/);
+
+  const got = await json(`${base}/api/admin/settings`);
+  assert.equal(got.body.ui_locale, 'id');
+  assert.notEqual(got.body.slide_transition, 'push');
+});
+
+test('GET /api/scripture returns 503 when the translation table is empty', async () => {
+  const database = new Database(dbPath);
+  try {
+    database.prepare('DELETE FROM bible_verses WHERE translation_code = ?').run('KJV');
+  } finally {
+    database.close();
+  }
+  const res = await json(`${base}/api/scripture?ref=John+3:16&translation=KJV`);
+  assert.equal(res.status, 503);
+  assert.match(res.body.error, /KJV corpus is empty/);
+  assert.match(res.body.error, /reconciled from that file on boot/);
 });

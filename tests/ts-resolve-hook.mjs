@@ -19,11 +19,16 @@ function tryFile(base) {
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export async function resolve(specifier, context, nextResolve) {
-  if (specifier === 'next/server') {
-    return nextResolve('next/server.js', context);
-  }
-
   const isAlias = specifier.startsWith('@/');
+  const shims = {
+    'next/link': path.join(projectRoot, 'spa', 'src', 'shims', 'next-link.tsx'),
+    'next/navigation': path.join(projectRoot, 'spa', 'src', 'shims', 'next-navigation.ts'),
+    'next/headers': path.join(projectRoot, 'spa', 'src', 'shims', 'next-headers.ts'),
+    'server-only': path.join(projectRoot, 'spa', 'src', 'shims', 'server-only.ts'),
+  };
+  if (specifier in shims) {
+    return nextResolve(pathToFileURL(shims[specifier]).href, context);
+  }
 
   if (
     !isAlias &&

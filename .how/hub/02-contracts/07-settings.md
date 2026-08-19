@@ -11,7 +11,7 @@ updated: 2026-08-18
 
 ## Source of truth
 
-`none`. `src/app/api/admin/settings/route.ts`. Keys in the `settings` table.
+`none`. `internal/httpapi`. Keys in the `settings` table.
 
 ## Purpose
 
