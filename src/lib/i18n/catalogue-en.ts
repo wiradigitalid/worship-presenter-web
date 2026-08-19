@@ -105,6 +105,17 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'admin.transition.saved':
     'Saved. New decks and the projector now use {label}.',
   'admin.transition.failed': 'Failed to save the transition setting.',
+  'admin.bibleTranslation.title': 'Default bible translation',
+  'admin.bibleTranslation.description':
+    'Used when a scripture lookup does not name a translation. An uninstalled code is kept and lookups fall back until that corpus is installed again.',
+  'admin.bibleTranslation.label': 'Translation',
+  'admin.bibleTranslation.save': 'Save',
+  'admin.bibleTranslation.saving': 'Saving…',
+  'admin.bibleTranslation.saved':
+    'Saved. Lookups that omit a translation now use {code}.',
+  'admin.bibleTranslation.failed': 'Failed to save the bible translation setting.',
+  'admin.bibleTranslation.notInstalled':
+    '{code} is not installed. Lookups fall back to the shipped default; this choice is kept so re-installing restores it.',
   'admin.accounts.createTitle': 'Create account',
   'admin.accounts.createDescription':
     'Roles are admin (full) or operator (hub only).',
@@ -228,4 +239,64 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'presenter.scripture.lookingUp': 'Looking up…',
   'presenter.scripture.notFound': 'Not found',
   'presenter.scripture.lookupFailed': 'Lookup failed',
+  'presenter.scripture.translation': 'Translation',
+  'presenter.scripture.defaultMissing':
+    'The configured default is not installed; this session is using the shipped fallback.',
+  'admin.artifacts.loadFailed': 'Failed to load templates',
+  'admin.artifacts.loadOneFailed': 'Failed to load template',
+  'admin.artifacts.canvasFailed': 'Canvas failed to load',
+  'admin.artifacts.selectElementFirst': 'Select an element on the canvas first.',
+  'admin.artifacts.saved': 'Template saved',
+  'admin.artifacts.saveFailed': 'Save failed',
+  'admin.artifacts.modifiedElsewhere': 'Template was modified elsewhere',
+  'admin.artifacts.conflictSaved':
+    '{error}. Nothing was saved: the editor reloaded the version that is on the server, so any elements you added or deleted in this session — and any unsaved moves — have been discarded. Re-apply them on the reloaded template.',
+  'admin.artifacts.confirmReset': 'Reset "{label}" to shipped seed?',
+  'admin.artifacts.resetFailed': 'Reset failed',
+  'admin.artifacts.resetConflict':
+    '{error}. Nothing was reset: the editor reloaded the version that is on the server, so unsaved canvas changes were discarded.',
+  'admin.artifacts.resetDone': 'Template reset from seed',
+  'admin.artifacts.confirmDelete': 'Delete "{label}" permanently?',
+  'admin.artifacts.confirmDeleteDirty':
+    'Delete "{label}" permanently? Unsaved canvas changes will be discarded.',
+  'admin.artifacts.deleteFailed': 'Delete failed',
+  'admin.artifacts.deleteConflict':
+    '{error}. Nothing was deleted; the server list was reloaded.',
+  'admin.artifacts.deleteMissing':
+    '{error}. Nothing was deleted; the server list was reloaded.',
+  'admin.artifacts.reorderFailed': 'Reorder failed',
+  'admin.artifacts.reorderConflict':
+    '{error}. Nothing was reordered; the server list was reloaded.',
+  'admin.artifacts.reorderSaved': 'Template order saved',
+  'admin.artifacts.moveUp': 'Move up',
+  'admin.artifacts.moveDown': 'Move down',
+  'admin.artifacts.delete': 'Delete',
+  'admin.artifacts.readOnly': 'read-only',
+  'admin.artifacts.selectHint': 'Select a template to edit.',
+  'admin.artifacts.save': 'Save',
+  'admin.artifacts.reset': 'Reset',
+  'admin.artifacts.readOnlyBody':
+    'This template is read-only ({kind}). Its layout cannot be edited and elements cannot be added or deleted; use Reset to restore the shipped seed.',
+  'admin.artifacts.elements': 'Elements',
+  'admin.artifacts.addText': 'Add text',
+  'admin.artifacts.addRect': 'Add rectangle',
+  'admin.artifacts.deleteSelected': 'Delete selected',
+  'admin.artifacts.deleteHintNone': 'Select an element you added on the canvas',
+  'admin.artifacts.deleteHintOk': 'Delete the selected element(s)',
+  'admin.artifacts.deleteHintShipped':
+    'Shipped and required elements cannot be deleted',
+  'admin.artifacts.deleteOnlyAuthored':
+    'Only elements you add here can be deleted. Save to persist.',
+  'admin.artifacts.text': 'Text',
+  'admin.artifacts.textPlaceholder': 'Text shown on the slide',
+  'admin.artifacts.textPlaceholderIdle': 'Select one text element',
+  'admin.artifacts.textTitle':
+    'Applies to the selected text element as you type. Save to persist.',
+  'admin.artifacts.textTitleIdle':
+    'Select exactly one text element on the canvas to edit its words',
+  'admin.artifacts.fontColor': 'Font color',
+  'admin.artifacts.fontSize': 'Font size',
+  'admin.artifacts.applyStyle': 'Apply to selection',
+  'admin.artifacts.styleHint':
+    'Colour and size need “Apply to selection”; text applies as you type. Nothing is stored until you Save.',
 };

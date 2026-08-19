@@ -80,6 +80,7 @@ test('buildFieldsPayload empty songs are null; empty sermon is null', () => {
     song4Number: '',
     verseReference: '',
     verseText: '',
+    verseTranslation: '',
     sermonSpeaker: '',
     specialSong: '',
     closingPrayerPerson: '',
@@ -90,6 +91,27 @@ test('buildFieldsPayload empty songs are null; empty sermon is null', () => {
   assert.equal(payload.song2Number, null);
   assert.equal(payload.song3Number, '12');
   assert.equal(payload.sermon, null);
+});
+
+test('buildFieldsPayload persists the translation beside a resolved passage', () => {
+  const payload = buildFieldsPayload({
+    ...{
+      song1Number: '',
+      song2Number: '',
+      song3Number: '',
+      song4Number: '',
+      verseReference: 'John 3:16',
+      verseText: 'For God so loved the world',
+      verseTranslation: 'kjv',
+      sermonSpeaker: '',
+      specialSong: '',
+      closingPrayerPerson: '',
+      familyPrayerRequest: '',
+      youthPrayerRequest: '',
+    },
+  });
+  assert.equal(payload.verseReading.reference, 'John 3:16');
+  assert.equal(payload.verseReading.translation, 'KJV');
 });
 
 test('empty song overlays do not remove hymns from raw parse', () => {

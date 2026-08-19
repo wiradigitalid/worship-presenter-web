@@ -36,7 +36,12 @@ function coerceScripture(value: unknown): ParsedScripture | null | undefined {
   const text = typeof textRaw === 'string' ? textRaw.trim() : '';
 
   if (!reference && !text) return null;
-  return { reference, text };
+  const translationRaw = (value as { translation?: unknown }).translation;
+  const translation =
+    typeof translationRaw === 'string' && translationRaw.trim()
+      ? translationRaw.trim().toUpperCase()
+      : undefined;
+  return translation ? { reference, text, translation } : { reference, text };
 }
 
 function coerceSpecialSong(value: unknown): string | null | undefined {

@@ -9,6 +9,7 @@ export type WorshipFormFields = {
   song4Number: string;
   verseReference: string;
   verseText: string;
+  verseTranslation: string;
   sermonSpeaker: string;
   specialSong: string;
   closingPrayerPerson: string;
@@ -25,6 +26,7 @@ export const EMPTY_WORSHIP_FORM_FIELDS: WorshipFormFields = {
   song4Number: '',
   verseReference: '',
   verseText: '',
+  verseTranslation: '',
   sermonSpeaker: '',
   specialSong: '',
   closingPrayerPerson: '',
@@ -76,6 +78,7 @@ export function fieldsFromParsed(
     ...songs,
     verseReference: parsed?.verseReading?.reference ?? '',
     verseText: parsed?.verseReading?.text ?? '',
+    verseTranslation: parsed?.verseReading?.translation ?? '',
     sermonSpeaker: parsed?.sermon?.speaker ?? '',
     specialSong: parsed?.specialSong ?? '',
     closingPrayerPerson: parsed?.closingPrayerPerson ?? '',
@@ -89,10 +92,15 @@ export function fieldsFromParsed(
 export function buildFieldsPayload(fields: WorshipFormFields) {
   const verseRef = fields.verseReference.trim();
   const verseBody = fields.verseText.trim();
+  const verseTranslation = (fields.verseTranslation ?? '').trim().toUpperCase();
   return {
     verseReading:
       verseRef || verseBody
-        ? { reference: verseRef || null, text: verseBody }
+        ? {
+            reference: verseRef || null,
+            text: verseBody,
+            ...(verseTranslation ? { translation: verseTranslation } : {}),
+          }
         : null,
     familyPrayerRequest: fields.familyPrayerRequest.trim() || null,
     youthPrayerRequest: fields.youthPrayerRequest.trim() || null,
@@ -279,6 +287,7 @@ export function coerceHydrateFields(raw: unknown): WorshipFormFields | null {
     song4Number: str(o.song4Number),
     verseReference: str(o.verseReference),
     verseText: str(o.verseText),
+    verseTranslation: str(o.verseTranslation),
     sermonSpeaker: str(o.sermonSpeaker),
     specialSong: str(o.specialSong),
     closingPrayerPerson: str(o.closingPrayerPerson),

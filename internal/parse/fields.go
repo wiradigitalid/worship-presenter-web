@@ -122,7 +122,11 @@ func coerceScripture(v any) *Scripture {
 	if ref == nil && text == "" {
 		return nil
 	}
-	return &Scripture{Reference: ref, Text: text}
+	translation := ""
+	if t, ok := m["translation"].(string); ok {
+		translation = strings.ToUpper(strings.TrimSpace(t))
+	}
+	return &Scripture{Reference: ref, Text: text, Translation: translation}
 }
 
 func coerceNullableString(v any) *string {
@@ -428,4 +432,3 @@ func appendUniqueInt(xs []int, n int) []int {
 	}
 	return append(xs, n)
 }
-

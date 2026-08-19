@@ -9,8 +9,9 @@ import (
 )
 
 type Scripture struct {
-	Reference *string `json:"reference"`
-	Text      string  `json:"text"`
+	Reference   *string `json:"reference"`
+	Text        string  `json:"text"`
+	Translation string  `json:"translation,omitempty"`
 }
 
 type Sermon struct {
@@ -45,18 +46,18 @@ type Rundown struct {
 }
 
 var (
-	timingRange   = regexp.MustCompile(`(?i)\(\s*\d{1,2}[.:]\d{2}\s*[-–]\s*\d{1,2}[.:]\d{2}\s*/?\s*\d*\s*min?\s*\)`)
-	timingMinutes = regexp.MustCompile(`(?i)\(\s*\d+\s*min(?:ute)?s?\s*\)`)
-	timingM       = regexp.MustCompile(`(?i)\(\s*\d+\s*m\s*\)`)
-	dateRE        = regexp.MustCompile(`(?i)(?:20\d{2}-\d{2}-\d{2})|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},?\s+20\d{2}`)
-	hymnRE        = regexp.MustCompile(`(?i)(?:SDAH|Hymn|#)\s*(\d+)`)
-	sectionRE     = regexp.MustCompile(`(?i)^(BIBLE\s+TALK|DIVINE\s+SERVICE|BREAK)\b`)
-	sermonRE      = regexp.MustCompile(`(?i)^Sermon\s*[:\-]\s*(.+?)(?:\s+"([^"]+)"|\s+[“"]([^”"]+)[”"])?\s*$`)
-	specialRE     = regexp.MustCompile(`(?i)^Special\s+Song\s*[:\-]\s*(.*)$`)
-	themeRE       = regexp.MustCompile(`(?i)^Theme(?:\s+Verse)?\s*[:\-]\s*(.*)$`)
-	verseRE       = regexp.MustCompile(`(?i)^(?:Verse\s+Reading|Memory\s+(?:Verse|Text)|Ayat\s+Bacaan)\s*[:\-]\s*(.*)$`)
-	familyRE      = regexp.MustCompile(`(?i)^(?:Family(?:\s*&\s*|\s+and\s+|/\s*)Youth(?:\s+of\s+the\s+Week)?|Family\s+of\s+the\s+Week|Youth\s+of\s+the\s+Week|Keluarga(?:\s*&\s*|\s+dan\s+)Pemuda)\s*[:\-]\s*(.*)$`)
-	hymnHintRE    = regexp.MustCompile(`(?i)(?:SDAH|Hymn|#)\s*\d+`)
+	timingRange    = regexp.MustCompile(`(?i)\(\s*\d{1,2}[.:]\d{2}\s*[-–]\s*\d{1,2}[.:]\d{2}\s*/?\s*\d*\s*min?\s*\)`)
+	timingMinutes  = regexp.MustCompile(`(?i)\(\s*\d+\s*min(?:ute)?s?\s*\)`)
+	timingM        = regexp.MustCompile(`(?i)\(\s*\d+\s*m\s*\)`)
+	dateRE         = regexp.MustCompile(`(?i)(?:20\d{2}-\d{2}-\d{2})|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},?\s+20\d{2}`)
+	hymnRE         = regexp.MustCompile(`(?i)(?:SDAH|Hymn|#)\s*(\d+)`)
+	sectionRE      = regexp.MustCompile(`(?i)^(BIBLE\s+TALK|DIVINE\s+SERVICE|BREAK)\b`)
+	sermonRE       = regexp.MustCompile(`(?i)^Sermon\s*[:\-]\s*(.+?)(?:\s+"([^"]+)"|\s+[“"]([^”"]+)[”"])?\s*$`)
+	specialRE      = regexp.MustCompile(`(?i)^Special\s+Song\s*[:\-]\s*(.*)$`)
+	themeRE        = regexp.MustCompile(`(?i)^Theme(?:\s+Verse)?\s*[:\-]\s*(.*)$`)
+	verseRE        = regexp.MustCompile(`(?i)^(?:Verse\s+Reading|Memory\s+(?:Verse|Text)|Ayat\s+Bacaan)\s*[:\-]\s*(.*)$`)
+	familyRE       = regexp.MustCompile(`(?i)^(?:Family(?:\s*&\s*|\s+and\s+|/\s*)Youth(?:\s+of\s+the\s+Week)?|Family\s+of\s+the\s+Week|Youth\s+of\s+the\s+Week|Keluarga(?:\s*&\s*|\s+dan\s+)Pemuda)\s*[:\-]\s*(.*)$`)
+	hymnHintRE     = regexp.MustCompile(`(?i)(?:SDAH|Hymn|#)\s*\d+`)
 	scriptureSplit = regexp.MustCompile(`^(.+?)\s+(\d+:[\d,\-–]+)(?:\s*[—–\-:]\s*|\s+)(.+)$`)
 	scriptureRef   = regexp.MustCompile(`^(.+?)\s+(\d+:[\d,\-–]+)\s*$`)
 	bracketRole    = regexp.MustCompile(`^\[([^\]]+)\]\s*(.+)$`)

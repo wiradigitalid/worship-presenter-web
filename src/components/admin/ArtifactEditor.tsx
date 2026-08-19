@@ -16,6 +16,7 @@ import {
   UNSAVED_INDICATOR_LABEL,
 } from '@/lib/canvas-dirty-guard';
 import { useNavigationBlocker } from '@/components/navigation-blocker';
+import { useT } from '@/lib/i18n/operator';
 
 const CANVAS_WIDTH = 960;
 const CANVAS_HEIGHT = 540;
@@ -356,6 +357,7 @@ function serializeCanvas(
 }
 
 export default function ArtifactEditor() {
+  const { t } = useT();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fabricCanvasRef = useRef<import('fabric').Canvas | null>(null);
   const [templates, setTemplates] = useState<ArtifactTemplateSummary[]>([]);
@@ -413,7 +415,7 @@ export default function ArtifactEditor() {
   const loadList = useCallback(async () => {
     const res = await fetch('/api/admin/artifacts');
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to load templates');
+    if (!res.ok) throw new Error(data.error || t('admin.artifacts.loadFailed'));
     const summaries = data.templates ?? [];
     setTemplates(summaries);
     return summaries as ArtifactTemplateSummary[];
@@ -424,7 +426,7 @@ export default function ArtifactEditor() {
     setMessage(null);
     const res = await fetch(`/api/admin/artifacts/${id}`);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to load template');
+    if (!res.ok) throw new Error(data.error || t('admin.artifacts.loadOneFailed'));
     setTemplate(data);
     // A new server copy remounts the canvas, and a freshly mounted canvas is
     // never dirty. This is the one place every remount comes through — the
@@ -439,7 +441,7 @@ export default function ArtifactEditor() {
   useEffect(() => {
     loadList().catch((err) => {
       setStatus('error');
-      setMessage(err instanceof Error ? err.message : 'Failed to load');
+      setMessage(err instanceof Error ? err.message : t('admin.artifacts.loadFailed'));
     });
   }, [loadList]);
 
@@ -447,7 +449,7 @@ export default function ArtifactEditor() {
     if (!selectedId) return;
     loadTemplate(selectedId).catch((err) => {
       setStatus('error');
-      setMessage(err instanceof Error ? err.message : 'Failed to load template');
+      setMessage(err instanceof Error ? err.message : t('admin.artifacts.loadOneFailed'));
     });
   }, [selectedId, loadTemplate]);
 
@@ -549,7 +551,7 @@ export default function ArtifactEditor() {
     mountCanvas().catch((err) => {
       if (disposed) return;
       setStatus('error');
-      setMessage(err instanceof Error ? err.message : 'Canvas failed to load');
+      setMessage(err instanceof Error ? err.message : t('admin.artifacts.canvasFailed'));
     });
 
     return () => {
@@ -651,7 +653,7 @@ export default function ArtifactEditor() {
     const active = canvas.getActiveObjects();
     if (active.length === 0) {
       setStatus('error');
-      setMessage('Select an element on the canvas first.');
+      setMessage(t('admin.artifacts.selectElementFirst'));
       return;
     }
 
@@ -793,26 +795,34 @@ export default function ArtifactEditor() {
         // every element added or deleted since the last successful save. Say so
         // plainly instead of leaving the admin to discover it.
         setMessage(
-          `${data.error || 'Template was modified elsewhere'}. Nothing was saved: the editor reloaded the version that is on the server, so any elements you added or deleted in this session — and any unsaved moves — have been discarded. Re-apply them on the reloaded template.`
+          t('admin.artifacts.conflictSaved').replace(
+            '{error}',
+            data.error || t('admin.artifacts.modifiedElsewhere')
+          )
         );
         return;
       }
-      if (!res.ok) throw new Error(data.error || 'Save failed');
+      if (!res.ok) throw new Error(data.error || t('admin.artifacts.saveFailed'));
       setTemplate(data);
       setIsDirty((current) => nextDirtyState(current, 'saved'));
       setStatus('success');
-      setMessage('Template saved');
-      toast('Template saved');
+      setMessage(t('admin.artifacts.saved'));
+      toast(t('admin.artifacts.saved'));
       await loadList();
     } catch (err) {
       setStatus('error');
-      setMessage(err instanceof Error ? err.message : 'Save failed');
+      setMessage(err instanceof Error ? err.message : t('admin.artifacts.saveFailed'));
     }
   };
 
   const handleReset = async () => {
     if (!template) return;
-    if (!window.confirm(`Reset "${template.label}" to shipped seed?`)) return;
+    if (
+      !window.confirm(
+        t('admin.artifacts.confirmReset').replace('{label}', template.label)
+      )
+    )
+      return;
 
     setStatus('resetting');
     setMessage(null);
@@ -827,20 +837,23 @@ export default function ArtifactEditor() {
         await loadTemplate(template.id);
         setStatus('conflict');
         setMessage(
-          `${data.error || 'Template was modified elsewhere'}. Nothing was reset: the editor reloaded the version that is on the server, so unsaved canvas changes were discarded.`
+          t('admin.artifacts.resetConflict').replace(
+            '{error}',
+            data.error || t('admin.artifacts.modifiedElsewhere')
+          )
         );
         return;
       }
-      if (!res.ok) throw new Error(data.error || 'Reset failed');
+      if (!res.ok) throw new Error(data.error || t('admin.artifacts.resetFailed'));
       setTemplate(data);
       setIsDirty((current) => nextDirtyState(current, 'reset'));
       setStatus('success');
-      setMessage('Template reset from seed');
-      toast('Template reset from seed');
+      setMessage(t('admin.artifacts.resetDone'));
+      toast(t('admin.artifacts.resetDone'));
       await loadList();
     } catch (err) {
       setStatus('error');
-      setMessage(err instanceof Error ? err.message : 'Reset failed');
+      setMessage(err instanceof Error ? err.message : t('admin.artifacts.resetFailed'));
     }
   };
 
@@ -869,9 +882,10 @@ export default function ArtifactEditor() {
 
   const handleDeleteTemplate = async (item: ArtifactTemplateSummary) => {
     const deletingSelected = item.id === selectedId;
-    const warning = deletingSelected && isDirty && isEditable
-      ? `Delete "${item.label}" permanently? Unsaved canvas changes will be discarded.`
-      : `Delete "${item.label}" permanently?`;
+    const warning =
+      deletingSelected && isDirty && isEditable
+        ? t('admin.artifacts.confirmDeleteDirty').replace('{label}', item.label)
+        : t('admin.artifacts.confirmDelete').replace('{label}', item.label);
     if (!window.confirm(warning)) return;
 
     setStatus('deleting');
@@ -888,7 +902,10 @@ export default function ArtifactEditor() {
         await reconcileSelectedTemplate(summaries);
         setStatus('conflict');
         setMessage(
-          `${data.error || 'Template was modified elsewhere'}. Nothing was deleted; the server list was reloaded.`
+          t('admin.artifacts.deleteConflict').replace(
+            '{error}',
+            data.error || t('admin.artifacts.modifiedElsewhere')
+          )
         );
         return;
       }
@@ -897,11 +914,14 @@ export default function ArtifactEditor() {
         await reconcileSelectedTemplate(summaries);
         setStatus('conflict');
         setMessage(
-          `${data.error || 'Template no longer exists'}. Nothing was deleted; the server list was reloaded.`
+          t('admin.artifacts.deleteMissing').replace(
+            '{error}',
+            data.error || t('admin.artifacts.loadOneFailed')
+          )
         );
         return;
       }
-      if (!res.ok) throw new Error(data.error || 'Delete failed');
+      if (!res.ok) throw new Error(data.error || t('admin.artifacts.deleteFailed'));
       const summaries = data.templates ?? [];
       setTemplates(summaries);
       if (deletingSelected) {
@@ -916,7 +936,7 @@ export default function ArtifactEditor() {
       toast(`Deleted ${item.label}`);
     } catch (err) {
       setStatus('error');
-      setMessage(err instanceof Error ? err.message : 'Delete failed');
+      setMessage(err instanceof Error ? err.message : t('admin.artifacts.deleteFailed'));
     }
   };
 
@@ -943,20 +963,23 @@ export default function ArtifactEditor() {
         await reconcileSelectedTemplate(summaries);
         setStatus('conflict');
         setMessage(
-          `${data.error || 'Template order was modified elsewhere'}. Nothing was reordered; the server list was reloaded.`
+          t('admin.artifacts.reorderConflict').replace(
+            '{error}',
+            data.error || t('admin.artifacts.modifiedElsewhere')
+          )
         );
         return;
       }
-      if (!res.ok) throw new Error(data.error || 'Reorder failed');
+      if (!res.ok) throw new Error(data.error || t('admin.artifacts.reorderFailed'));
       const summaries = data.templates ?? [];
       setTemplates(summaries);
       await reconcileSelectedTemplate(summaries);
       setStatus('success');
-      setMessage('Template order saved');
-      toast('Template order saved');
+      setMessage(t('admin.artifacts.reorderSaved'));
+      toast(t('admin.artifacts.reorderSaved'));
     } catch (err) {
       setStatus('error');
-      setMessage(err instanceof Error ? err.message : 'Reorder failed');
+      setMessage(err instanceof Error ? err.message : t('admin.artifacts.reorderFailed'));
     }
   };
 
@@ -1062,38 +1085,38 @@ export default function ArtifactEditor() {
                   <div className="font-medium">{item.label}</div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs opacity-80">
                     <span className={kindChipClass}>[{kindChipLabel(item.baseType)}]</span>
-                    {!item.editable ? <span>read-only</span> : null}
+                    {!item.editable ? <span>{t('admin.artifacts.readOnly')}</span> : null}
                   </div>
                 </button>
                 <div className="flex flex-col gap-1 py-1">
                   <button
                     type="button"
-                    aria-label={`Move ${item.label} up`}
-                    title="Move up"
+                    aria-label={`${t('admin.artifacts.moveUp')} ${item.label}`}
+                    title={t('admin.artifacts.moveUp')}
                     onClick={() => void handleMoveTemplate(item, -1)}
                     disabled={busy || templates[0]?.id === item.id}
                     className="rounded border border-border px-1 text-xs disabled:opacity-50"
                   >
-                    Up
+                    {t('admin.artifacts.moveUp')}
                   </button>
                   <button
                     type="button"
-                    aria-label={`Move ${item.label} down`}
-                    title="Move down"
+                    aria-label={`${t('admin.artifacts.moveDown')} ${item.label}`}
+                    title={t('admin.artifacts.moveDown')}
                     onClick={() => void handleMoveTemplate(item, 1)}
                     disabled={busy || templates.at(-1)?.id === item.id}
                     className="rounded border border-border px-1 text-xs disabled:opacity-50"
                   >
-                    Down
+                    {t('admin.artifacts.moveDown')}
                   </button>
                   <button
                     type="button"
-                    aria-label={`Delete ${item.label}`}
+                    aria-label={`${t('admin.artifacts.delete')} ${item.label}`}
                     onClick={() => void handleDeleteTemplate(item)}
                     disabled={busy}
                     className="rounded border border-destructive px-1 text-xs text-destructive disabled:opacity-50"
                   >
-                    Delete
+                    {t('admin.artifacts.delete')}
                   </button>
                 </div>
               </div>
@@ -1117,7 +1140,7 @@ export default function ArtifactEditor() {
                 {message}
               </p>
             ) : null}
-            <p className="text-sm text-muted-foreground">Select a template to edit.</p>
+            <p className="text-sm text-muted-foreground">{t('admin.artifacts.selectHint')}</p>
           </>
         ) : (
           <>
@@ -1143,7 +1166,7 @@ export default function ArtifactEditor() {
                   disabled={!isEditable || busy}
                   className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
                 >
-                  Save
+                  {t('admin.artifacts.save')}
                 </button>
                 <button
                   type="button"
@@ -1151,7 +1174,7 @@ export default function ArtifactEditor() {
                   disabled={busy}
                   className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
                 >
-                  Reset
+                  {t('admin.artifacts.reset')}
                 </button>
               </div>
             </div>
@@ -1171,15 +1194,15 @@ export default function ArtifactEditor() {
 
             {!isEditable ? (
               <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-                This template is read-only (
-                <span className={kindChipClass}>[{kindChipLabel(template.baseType)}]</span>
-                ). Its layout cannot be edited and elements cannot be added or deleted; use
-                Reset to restore the shipped seed.
+                {t('admin.artifacts.readOnlyBody').replace(
+                  '{kind}',
+                  `[${kindChipLabel(template.baseType)}]`
+                )}
               </div>
             ) : (
               <>
                 <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/40 p-4">
-                  <span className="mr-1 text-sm font-medium">Elements</span>
+                  <span className="mr-1 text-sm font-medium">{t('admin.artifacts.elements')}</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -1188,7 +1211,7 @@ export default function ArtifactEditor() {
                     disabled={busy}
                     className="rounded-lg border border-border px-3 py-1.5 text-sm disabled:opacity-50"
                   >
-                    Add text
+                    {t('admin.artifacts.addText')}
                   </button>
                   <button
                     type="button"
@@ -1198,7 +1221,7 @@ export default function ArtifactEditor() {
                     disabled={busy}
                     className="rounded-lg border border-border px-3 py-1.5 text-sm disabled:opacity-50"
                   >
-                    Add rectangle
+                    {t('admin.artifacts.addRect')}
                   </button>
                   <button
                     type="button"
@@ -1206,22 +1229,22 @@ export default function ArtifactEditor() {
                     disabled={busy || !canDeleteSelection}
                     title={
                       selectedElementIds.length === 0
-                        ? 'Select an element you added on the canvas'
+                        ? t('admin.artifacts.deleteHintNone')
                         : canDeleteSelection
-                          ? 'Delete the selected element(s)'
-                          : 'Shipped and required elements cannot be deleted'
+                          ? t('admin.artifacts.deleteHintOk')
+                          : t('admin.artifacts.deleteHintShipped')
                     }
                     className="rounded-lg border border-destructive/60 px-3 py-1.5 text-sm text-destructive disabled:opacity-50"
                   >
-                    Delete selected
+                    {t('admin.artifacts.deleteSelected')}
                   </button>
                   <span className="text-xs text-muted-foreground">
-                    Only elements you add here can be deleted. Save to persist.
+                    {t('admin.artifacts.deleteOnlyAuthored')}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card/40 p-4">
                   <label className="text-sm">
-                    Text
+                    {t('admin.artifacts.text')}
                     <input
                       type="text"
                       value={textContent}
@@ -1229,19 +1252,19 @@ export default function ArtifactEditor() {
                       onChange={(e) => handleTextContentChange(e.target.value)}
                       placeholder={
                         selectedTextCount === 1
-                          ? 'Text shown on the slide'
-                          : 'Select one text element'
+                          ? t('admin.artifacts.textPlaceholder')
+                          : t('admin.artifacts.textPlaceholderIdle')
                       }
                       title={
                         selectedTextCount === 1
-                          ? 'Applies to the selected text element as you type. Save to persist.'
-                          : 'Select exactly one text element on the canvas to edit its words'
+                          ? t('admin.artifacts.textTitle')
+                          : t('admin.artifacts.textTitleIdle')
                       }
                       className="ml-2 w-64 rounded border border-border px-2 py-1 disabled:opacity-50"
                     />
                   </label>
                   <label className="text-sm">
-                    Font color
+                    {t('admin.artifacts.fontColor')}
                     <input
                       type="color"
                       value={fontColor}
@@ -1250,7 +1273,7 @@ export default function ArtifactEditor() {
                     />
                   </label>
                   <label className="text-sm">
-                    Font size
+                    {t('admin.artifacts.fontSize')}
                     <input
                       type="number"
                       min={MIN_FONT_SIZE}
@@ -1266,11 +1289,10 @@ export default function ArtifactEditor() {
                     onClick={applyTextStyle}
                     className="rounded-lg border border-border px-3 py-1.5 text-sm"
                   >
-                    Apply to selection
+                    {t('admin.artifacts.applyStyle')}
                   </button>
                   <span className="text-xs text-muted-foreground">
-                    Colour and size need “Apply to selection”; text applies as
-                    you type. Nothing is stored until you Save.
+                    {t('admin.artifacts.styleHint')}
                   </span>
                 </div>
                 <div className="overflow-auto rounded-2xl border border-border bg-black/90 p-4">

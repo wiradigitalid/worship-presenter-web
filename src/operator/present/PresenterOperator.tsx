@@ -276,6 +276,11 @@ export default function PresenterOperator({
   const [scriptureRef, setScriptureRef] = useState('');
   const [scriptureBusy, setScriptureBusy] = useState(false);
   const [scriptureError, setScriptureError] = useState<string | null>(null);
+  const [scriptureTranslation, setScriptureTranslation] = useState('');
+  const [bibleTranslations, setBibleTranslations] = useState<
+    Array<{ code: string; name: string }>
+  >([]);
+  const [bibleDefaultMissing, setBibleDefaultMissing] = useState(false);
   const [projectorBlocked, setProjectorBlocked] = useState(false);
   // The liveness verdict (`AD-29`): whether the projector is answering. Never
   // a second flag alongside it — the whole point of `nextLivenessState` is
@@ -297,6 +302,34 @@ export default function PresenterOperator({
   const livenessRef = useRef<LivenessState>(INITIAL_LIVENESS_STATE);
 
   const projectorUrl = `/services/${serviceId}/present/projector`;
+
+  useEffect(() => {
+    let active = true;
+    void fetch('/api/bible-translations', { credentials: 'same-origin' })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        return (await res.json()) as {
+          translations?: Array<{ code: string; name: string }>;
+          default_bible_translation_resolved?: string;
+          default_bible_translation_installed?: boolean;
+        };
+      })
+      .then((body) => {
+        if (!active || !body) return;
+        const rows = Array.isArray(body.translations) ? body.translations : [];
+        setBibleTranslations(rows);
+        const resolved = body.default_bible_translation_resolved?.trim();
+        if (resolved) setScriptureTranslation(resolved);
+        else if (rows[0]?.code) setScriptureTranslation(rows[0].code);
+        setBibleDefaultMissing(body.default_bible_translation_installed === false);
+      })
+      .catch(() => {
+        /* lookup still works via the server default */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const entries = useMemo(() => buildPresenterEntries(slides), [slides]);
   const rows = useMemo(() => buildPresenterRows(entries), [entries]);
@@ -541,9 +574,9 @@ export default function PresenterOperator({
     setScriptureBusy(true);
     setScriptureError(null);
     try {
-      const res = await fetch(
-        `/api/scripture?ref=${encodeURIComponent(scriptureRef.trim())}`
-      );
+      const params = new URLSearchParams({ ref: scriptureRef.trim() });
+      if (scriptureTranslation) params.set('translation', scriptureTranslation);
+      const res = await fetch(`/api/scripture?${params.toString()}`);
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
         reference?: string;
@@ -843,10 +876,38 @@ export default function PresenterOperator({
             <p className="mb-2 text-xs text-muted-foreground">
               {t('presenter.scripture.hint')}
             </p>
+            {bibleTranslations.length > 0 ? (
+              <div className="mb-2">
+                <label
+                  className="mb-1 block text-xs font-medium text-muted-foreground"
+                  htmlFor="presenter-bible-translation"
+                >
+                  {t('presenter.scripture.translation')}
+                </label>
+                <select
+                  id="presenter-bible-translation"
+                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground"
+                  value={scriptureTranslation}
+                  onChange={(e) => setScriptureTranslation(e.target.value)}
+                >
+                  {bibleTranslations.map((row) => (
+                    <option key={row.code} value={row.code}>
+                      {row.name ? `${row.name} (${row.code})` : row.code}
+                    </option>
+                  ))}
+                </select>
+                {bibleDefaultMissing ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t('presenter.scripture.defaultMissing')}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="mb-2">
               <ScriptureRefAutocomplete
                 value={scriptureRef}
                 onChange={setScriptureRef}
+                translation={scriptureTranslation || undefined}
                 placeholder={t('presenter.scripture.placeholder')}
                 inputClassName="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none"
                 onKeyDown={(e) => {

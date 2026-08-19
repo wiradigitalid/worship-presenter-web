@@ -45,6 +45,9 @@ const {
   setSetting,
   getUiLocale,
   setUiLocale,
+  getDefaultBibleTranslation,
+  setDefaultBibleTranslation,
+  getSetting,
 } = await import(srcUrl('lib', 'settings.ts'));
 
 after(() => {
@@ -180,6 +183,22 @@ test('missing key is a visible defect, not blank and not English', () => {
 
 test('setUiLocale rejects unknown locales', () => {
   assert.throws(() => setUiLocale('fr'), /ui_locale must be one of/);
+});
+
+test('getDefaultBibleTranslation falls back without rewriting an uninstalled code', () => {
+  setDefaultBibleTranslation('NIV');
+  const errors = [];
+  const original = console.error;
+  console.error = (...args) => errors.push(args.join(' '));
+  try {
+    assert.equal(getSetting('default_bible_translation'), 'NIV');
+    assert.equal(getDefaultBibleTranslation(), 'KJV');
+    assert.ok(errors.some((line) => line.includes('default_bible_translation')));
+    assert.equal(getSetting('default_bible_translation'), 'NIV');
+  } finally {
+    console.error = original;
+    setDefaultBibleTranslation('KJV');
+  }
 });
 
 test('the operator SPA shell applies ui_locale without mounting on projected routes', () => {

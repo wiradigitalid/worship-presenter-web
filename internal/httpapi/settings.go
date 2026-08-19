@@ -15,11 +15,20 @@ var slideTransitions = map[string]struct{}{
 }
 var uiLocales = map[string]struct{}{"en": {}, "id": {}}
 
+// shippedDefaultTranslation is the corpus default when no setting is stored, or
+// when the stored code is not installed (AD-26: inert, not rewritten).
+// Keep in lockstep with src/lib/corpus.ts DEFAULT_TRANSLATION.
+const shippedDefaultTranslation = "KJV"
+
 func (s *Server) getSettings(w http.ResponseWriter, r *http.Request) {
+	bible := s.bibleTranslationSettings()
 	writeJSON(w, http.StatusOK, map[string]any{
-		"pptx_retention_days": s.pptxRetentionDays(),
-		"slide_transition":    s.slideTransition(),
-		"ui_locale":           s.uiLocale(),
+		"pptx_retention_days":                 s.pptxRetentionDays(),
+		"slide_transition":                    s.slideTransition(),
+		"ui_locale":                           s.uiLocale(),
+		"default_bible_translation":           bible.configured,
+		"default_bible_translation_resolved":  bible.resolved,
+		"default_bible_translation_installed": bible.configuredInstalled,
 	})
 }
 
@@ -32,7 +41,8 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 	_, hasDays := body["pptx_retention_days"]
 	_, hasTransition := body["slide_transition"]
 	_, hasLocale := body["ui_locale"]
-	if !hasDays && !hasTransition && !hasLocale {
+	_, hasBible := body["default_bible_translation"]
+	if !hasDays && !hasTransition && !hasLocale && !hasBible {
 		writeError(w, http.StatusBadRequest, "Invalid body")
 		return
 	}
@@ -63,6 +73,16 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		locale = &v
 	}
+	var bibleCode *string
+	if hasBible {
+		v, _ := body["default_bible_translation"].(string)
+		code, ok := normalizeBibleTranslationCode(v)
+		if !ok {
+			writeError(w, http.StatusBadRequest, "default_bible_translation must be a bible translation code")
+			return
+		}
+		bibleCode = &code
+	}
 	removed := 0
 	if days != nil {
 		s.setSetting("pptx_retention_days", strconv.Itoa(*days))
@@ -74,12 +94,88 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 	if locale != nil {
 		s.setSetting("ui_locale", *locale)
 	}
+	if bibleCode != nil {
+		// Uninstalled codes are stored as-is (AD-26): inert on read, not an error,
+		// and not rewritten — re-installing restores the choice.
+		s.setSetting("default_bible_translation", *bibleCode)
+	}
+	bible := s.bibleTranslationSettings()
 	writeJSON(w, http.StatusOK, map[string]any{
-		"pptx_retention_days": s.pptxRetentionDays(),
-		"slide_transition":    s.slideTransition(),
-		"ui_locale":           s.uiLocale(),
-		"cache_files_removed": removed,
+		"pptx_retention_days":                 s.pptxRetentionDays(),
+		"slide_transition":                    s.slideTransition(),
+		"ui_locale":                           s.uiLocale(),
+		"default_bible_translation":           bible.configured,
+		"default_bible_translation_resolved":  bible.resolved,
+		"default_bible_translation_installed": bible.configuredInstalled,
+		"cache_files_removed":                 removed,
 	})
+}
+
+type bibleTranslationSettings struct {
+	resolved            string
+	stored              string
+	configured          string
+	configuredInstalled bool
+}
+
+func normalizeBibleTranslationCode(raw string) (string, bool) {
+	v := strings.ToUpper(strings.TrimSpace(raw))
+	if v == "" || len(v) > 32 {
+		return "", false
+	}
+	for _, r := range v {
+		if (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
+			continue
+		}
+		return "", false
+	}
+	return v, true
+}
+
+func (s *Server) bibleTranslationSettings() bibleTranslationSettings {
+	installed, err := s.listTranslationCodes()
+	if err != nil {
+		log.Printf("Error listing bible translations: %v", err)
+		installed = nil
+	}
+	return s.resolveDefaultBibleTranslation(installed)
+}
+
+func (s *Server) resolveDefaultBibleTranslation(installed []string) bibleTranslationSettings {
+	stored := strings.ToUpper(strings.TrimSpace(s.setting("default_bible_translation")))
+	known := make(map[string]struct{}, len(installed))
+	for _, c := range installed {
+		known[c] = struct{}{}
+	}
+	configured := stored
+	if configured == "" {
+		configured = shippedDefaultTranslation
+	}
+	_, configuredInstalled := known[configured]
+	if configuredInstalled {
+		return bibleTranslationSettings{
+			resolved:            configured,
+			stored:              stored,
+			configured:          configured,
+			configuredInstalled: true,
+		}
+	}
+	if stored != "" {
+		log.Printf(
+			`[settings] ignoring uninstalled default_bible_translation %q; falling back to %q`,
+			stored, shippedDefaultTranslation,
+		)
+	}
+	resolved := shippedDefaultTranslation
+	if _, ok := known[shippedDefaultTranslation]; !ok && len(installed) > 0 {
+		resolved = installed[0]
+	}
+	return bibleTranslationSettings{
+		resolved:            resolved,
+		stored:              stored,
+		configured:          configured,
+		configuredInstalled: false,
+	}
 }
 
 func (s *Server) setting(key string) string {

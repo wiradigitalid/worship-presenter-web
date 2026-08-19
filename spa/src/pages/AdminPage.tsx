@@ -4,6 +4,7 @@ import Header from '@/components/Header';
 import AccountsManager from '@/operator/admin/AccountsManager';
 import RetentionSettings from '@/operator/admin/RetentionSettings';
 import TransitionSettings from '@/operator/admin/TransitionSettings';
+import BibleTranslationSettings from '@/operator/admin/BibleTranslationSettings';
 import UiLocaleSettings from '@/operator/admin/UiLocaleSettings';
 
 export default function AdminPage() {
@@ -38,6 +39,10 @@ export default function AdminPage() {
         <AccountsManager initialAccounts={accounts} />
         <RetentionSettings initialDays={settings.pptx_retention_days} />
         <TransitionSettings initialTransition={settings.slide_transition} />
+        <BibleTranslationSettings
+          initialCode={settings.default_bible_translation}
+          initialInstalled={Boolean(settings.default_bible_translation_installed)}
+        />
         <UiLocaleSettings initialLocale={settings.ui_locale} />
       </div>
     </div>

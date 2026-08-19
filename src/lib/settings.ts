@@ -1,3 +1,4 @@
+import { DEFAULT_TRANSLATION } from './corpus';
 import { getDb } from './db';
 import {
   asUiLocale,
@@ -18,6 +19,8 @@ const DEFAULT_RETENTION_DAYS = 60;
 
 const SLIDE_TRANSITION_KEY = 'slide_transition';
 const UI_LOCALE_KEY = 'ui_locale';
+const DEFAULT_BIBLE_TRANSLATION_KEY = 'default_bible_translation';
+const BIBLE_TRANSLATION_CODE_RE = /^[A-Z0-9][A-Z0-9_-]{0,31}$/;
 
 export function getSetting(key: string): string | null {
   const row = getDb()
@@ -114,4 +117,48 @@ export function setUiLocale(value: UiLocale): void {
     );
   }
   setSetting(UI_LOCALE_KEY, value);
+}
+
+function normalizeBibleTranslationCode(raw: string): string | null {
+  const v = raw.trim().toUpperCase();
+  if (!BIBLE_TRANSLATION_CODE_RE.test(v)) return null;
+  return v;
+}
+
+function isBibleTranslationInstalled(code: string): boolean {
+  const row = getDb()
+    .prepare(`SELECT 1 AS ok FROM bible_translations WHERE code = ?`)
+    .get(code) as { ok: number } | undefined;
+  return row != null;
+}
+
+/**
+ * Resolved default for lookups when the request omits `translation`.
+ * An uninstalled stored code is inert: we fall back to the shipped default
+ * and leave the row in place (AD-26).
+ */
+export function getDefaultBibleTranslation(): string {
+  const stored = getSetting(DEFAULT_BIBLE_TRANSLATION_KEY);
+  const candidate =
+    stored == null || stored.trim() === ''
+      ? DEFAULT_TRANSLATION
+      : stored.trim().toUpperCase();
+  if (isBibleTranslationInstalled(candidate)) return candidate;
+  if (stored != null && stored.trim() !== '') {
+    console.error(
+      `[settings] ignoring uninstalled ${DEFAULT_BIBLE_TRANSLATION_KEY} "${stored.trim()}"; ` +
+        `falling back to "${DEFAULT_TRANSLATION}"`
+    );
+  }
+  return DEFAULT_TRANSLATION;
+}
+
+export function setDefaultBibleTranslation(value: string): void {
+  const code = normalizeBibleTranslationCode(value);
+  if (!code) {
+    throw new Error(
+      `${DEFAULT_BIBLE_TRANSLATION_KEY} must be a bible translation code`
+    );
+  }
+  setSetting(DEFAULT_BIBLE_TRANSLATION_KEY, code);
 }

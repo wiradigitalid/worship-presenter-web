@@ -106,6 +106,18 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'admin.transition.saved':
     'Tersimpan. Deck baru dan proyektor sekarang memakai {label}.',
   'admin.transition.failed': 'Gagal menyimpan pengaturan transisi.',
+  'admin.bibleTranslation.title': 'Terjemahan Alkitab default',
+  'admin.bibleTranslation.description':
+    'Dipakai ketika pencarian ayat tidak menyebut terjemahan. Kode yang belum terpasang tetap disimpan; pencarian memakai cadangan sampai korpus itu dipasang lagi.',
+  'admin.bibleTranslation.label': 'Terjemahan',
+  'admin.bibleTranslation.save': 'Simpan',
+  'admin.bibleTranslation.saving': 'Menyimpan…',
+  'admin.bibleTranslation.saved':
+    'Tersimpan. Pencarian tanpa terjemahan sekarang memakai {code}.',
+  'admin.bibleTranslation.failed':
+    'Gagal menyimpan pengaturan terjemahan Alkitab.',
+  'admin.bibleTranslation.notInstalled':
+    '{code} belum terpasang. Pencarian memakai cadangan yang dikirim; pilihan ini disimpan agar pemasangan ulang mengembalikannya.',
   'admin.accounts.createTitle': 'Buat akun',
   'admin.accounts.createDescription':
     'Peran admin (penuh) atau operator (hanya hub).',
@@ -229,4 +241,64 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'presenter.scripture.lookingUp': 'Mencari…',
   'presenter.scripture.notFound': 'Tidak ditemukan',
   'presenter.scripture.lookupFailed': 'Pencarian gagal',
+  'presenter.scripture.translation': 'Terjemahan',
+  'presenter.scripture.defaultMissing':
+    'Default yang dikonfigurasi belum terpasang; sesi ini memakai cadangan yang dikirim.',
+  'admin.artifacts.loadFailed': 'Gagal memuat templat',
+  'admin.artifacts.loadOneFailed': 'Gagal memuat templat',
+  'admin.artifacts.canvasFailed': 'Kanvas gagal dimuat',
+  'admin.artifacts.selectElementFirst': 'Pilih elemen di kanvas terlebih dahulu.',
+  'admin.artifacts.saved': 'Templat tersimpan',
+  'admin.artifacts.saveFailed': 'Gagal menyimpan',
+  'admin.artifacts.modifiedElsewhere': 'Templat diubah di sesi lain',
+  'admin.artifacts.conflictSaved':
+    '{error}. Tidak ada yang disimpan: editor memuat ulang versi di server, jadi elemen yang Anda tambah atau hapus di sesi ini — dan setiap geseran yang belum disimpan — dibuang. Terapkan lagi pada templat yang dimuat ulang.',
+  'admin.artifacts.confirmReset': 'Reset "{label}" ke seed yang dikirim?',
+  'admin.artifacts.resetFailed': 'Reset gagal',
+  'admin.artifacts.resetConflict':
+    '{error}. Tidak di-reset: editor memuat ulang versi di server, jadi perubahan kanvas yang belum disimpan dibuang.',
+  'admin.artifacts.resetDone': 'Templat di-reset dari seed',
+  'admin.artifacts.confirmDelete': 'Hapus "{label}" secara permanen?',
+  'admin.artifacts.confirmDeleteDirty':
+    'Hapus "{label}" secara permanen? Perubahan kanvas yang belum disimpan akan dibuang.',
+  'admin.artifacts.deleteFailed': 'Gagal menghapus',
+  'admin.artifacts.deleteConflict':
+    '{error}. Tidak ada yang dihapus; daftar server dimuat ulang.',
+  'admin.artifacts.deleteMissing':
+    '{error}. Tidak ada yang dihapus; daftar server dimuat ulang.',
+  'admin.artifacts.reorderFailed': 'Gagal mengurutkan',
+  'admin.artifacts.reorderConflict':
+    '{error}. Urutan tidak diubah; daftar server dimuat ulang.',
+  'admin.artifacts.reorderSaved': 'Urutan templat tersimpan',
+  'admin.artifacts.moveUp': 'Naikkan',
+  'admin.artifacts.moveDown': 'Turunkan',
+  'admin.artifacts.delete': 'Hapus',
+  'admin.artifacts.readOnly': 'hanya baca',
+  'admin.artifacts.selectHint': 'Pilih templat untuk disunting.',
+  'admin.artifacts.save': 'Simpan',
+  'admin.artifacts.reset': 'Reset',
+  'admin.artifacts.readOnlyBody':
+    'Templat ini hanya baca ({kind}). Tata letaknya tidak dapat disunting dan elemen tidak dapat ditambah atau dihapus; gunakan Reset untuk mengembalikan seed yang dikirim.',
+  'admin.artifacts.elements': 'Elemen',
+  'admin.artifacts.addText': 'Tambah teks',
+  'admin.artifacts.addRect': 'Tambah persegi',
+  'admin.artifacts.deleteSelected': 'Hapus yang dipilih',
+  'admin.artifacts.deleteHintNone': 'Pilih elemen yang Anda tambahkan di kanvas',
+  'admin.artifacts.deleteHintOk': 'Hapus elemen yang dipilih',
+  'admin.artifacts.deleteHintShipped':
+    'Elemen bawaan dan wajib tidak dapat dihapus',
+  'admin.artifacts.deleteOnlyAuthored':
+    'Hanya elemen yang Anda tambahkan di sini yang dapat dihapus. Simpan untuk menyimpan.',
+  'admin.artifacts.text': 'Teks',
+  'admin.artifacts.textPlaceholder': 'Teks yang tampil di slide',
+  'admin.artifacts.textPlaceholderIdle': 'Pilih satu elemen teks',
+  'admin.artifacts.textTitle':
+    'Berlaku pada elemen teks yang dipilih saat Anda mengetik. Simpan untuk menyimpan.',
+  'admin.artifacts.textTitleIdle':
+    'Pilih tepat satu elemen teks di kanvas untuk menyunting katanya',
+  'admin.artifacts.fontColor': 'Warna font',
+  'admin.artifacts.fontSize': 'Ukuran font',
+  'admin.artifacts.applyStyle': 'Terapkan ke pilihan',
+  'admin.artifacts.styleHint':
+    'Warna dan ukuran perlu “Terapkan ke pilihan”; teks berlaku saat Anda mengetik. Tidak ada yang disimpan sampai Anda Simpan.',
 };

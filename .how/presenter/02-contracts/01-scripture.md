@@ -22,13 +22,14 @@ UC-13, FR-19, FR-22. Verse overlay. Matcher scoped to the chosen translation (AD
 | Operation | Purpose | Realizes |
 | --- | --- | --- |
 | GET `/api/scripture` | Reference lookup (`ref`) or book suggestions (`q`) | UC-13 |
+| GET `/api/bible-translations` | Every installed translation with locale; resolved default | UC-13 / FR-24 |
 
 ## Five lanes
 
 | Lane | Answer |
 | --- | --- |
 | Authentication | Operator session (AD-5). Without a session the gate returns 401 `{ error: Unauthorized }` before the route. Overlay fails visible; Deck unchanged. |
-| Validation | Translation code required, registry-validated; absent/unrecognised refused (AD-28). Empty `ref` and empty `q` → 400 (SCN-4). `q` returns `{ suggestions, translation }` and does not look up a verse. [PARTIAL] — `PresenterOperator` currently sends `ref` only on Push; autocomplete uses `q`. The route falls back to `DEFAULT_TRANSLATION` when `translation` is omitted. |
+| Validation | Translation code required when present, registry-validated; absent `translation` resolves to `default_bible_translation` (inert if that setting names an uninstalled corpus — AD-26). Empty `ref` and empty `q` → 400 (SCN-4). `q` returns `{ suggestions, translation }` and does not look up a verse. `PresenterOperator` sends `ref` on Push and `q` from autocomplete, both with the session translation. |
 | Error handling | Envelope in `.how/_platform/cross-cutting.md`. Ambiguous / not found → unmapped, not a guess (NFR-5, SCN-4). Absent corpus → 503. Timeout at the caller → fail closed (SCN-4); this route does not retry. |
 | Rate limiting | `none` — Operator session at the venue; local corpus lookup, not a public API. |
 | Idempotency | GET is safe; same `ref` + translation returns the same passage; does not write Service (BR-7). |
@@ -40,7 +41,7 @@ UC-13, FR-19, FR-22. Verse overlay. Matcher scoped to the chosen translation (AD
 | Empty `ref` and empty `q` | 400 | Fail closed (SCN-4). Do not push overlay. Not a silent no-op. |
 | No session | 401 | Sign in again; Deck unchanged |
 | Ambiguous / not found | 404, visible error, not a verse | Fix the typing |
-| Translation not installed | 400 unknown, or 503 empty corpus | Pick an installed one; do not rewrite the default |
+| Translation not installed | Request `?translation=` → 400 unknown, or 503 empty corpus. A `default_bible_translation` naming an uninstalled corpus is inert: lookup uses the shipped default and the setting is not rewritten. | Pick an installed one; do not rewrite the default |
 | Lookup timeout | Caller abort; no overlay | SCN-4; Operator retries |
 | Projector not live | Caller must not call this | UC-13 refuse (OQ-26) |
 

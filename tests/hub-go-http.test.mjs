@@ -247,6 +247,9 @@ test('GET /api/admin/settings and accounts and artifacts on a fresh hub', async 
   assert.equal(settings.status, 200);
   assert.equal(typeof settings.body.pptx_retention_days, 'number');
   assert.ok(['en', 'id'].includes(settings.body.ui_locale));
+  assert.equal(settings.body.default_bible_translation, 'KJV');
+  assert.equal(settings.body.default_bible_translation_resolved, 'KJV');
+  assert.equal(settings.body.default_bible_translation_installed, true);
 
   const accounts = await json(`${base}/api/admin/accounts`);
   assert.equal(accounts.status, 200);
@@ -347,6 +350,45 @@ test('GET /api/scripture returns 400 for an unknown translation', async () => {
   const res = await json(`${base}/api/scripture?ref=John+3:16&translation=NIV`);
   assert.equal(res.status, 400);
   assert.match(res.body.error, /Unknown bible translation "NIV"/);
+});
+
+test('GET /api/bible-translations lists installed corpora with locale and no filter', async () => {
+  const res = await json(`${base}/api/bible-translations`);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok(Array.isArray(res.body.translations));
+  const kjv = res.body.translations.find((row) => row.code === 'KJV');
+  assert.ok(kjv, JSON.stringify(res.body.translations));
+  assert.equal(kjv.locale, 'en');
+  assert.equal(typeof kjv.name, 'string');
+  assert.equal(typeof kjv.licence, 'string');
+  assert.equal(typeof kjv.provenance, 'string');
+  assert.equal(res.body.default_bible_translation_resolved, 'KJV');
+});
+
+test('an uninstalled default_bible_translation is inert and not rewritten', async () => {
+  const put = await json(`${base}/api/admin/settings`, 'PUT', {
+    default_bible_translation: 'NIV',
+  });
+  assert.equal(put.status, 200, JSON.stringify(put.body));
+  assert.equal(put.body.default_bible_translation, 'NIV');
+  assert.equal(put.body.default_bible_translation_installed, false);
+  assert.equal(put.body.default_bible_translation_resolved, 'KJV');
+
+  const lookup = await json(`${base}/api/scripture?ref=John+3:16`);
+  assert.equal(lookup.status, 200, JSON.stringify(lookup.body));
+  assert.equal(lookup.body.translation, 'KJV');
+
+  const listed = await json(`${base}/api/bible-translations`);
+  assert.equal(listed.body.default_bible_translation, 'NIV');
+  assert.equal(listed.body.default_bible_translation_installed, false);
+  assert.equal(listed.body.default_bible_translation_resolved, 'KJV');
+
+  const restore = await json(`${base}/api/admin/settings`, 'PUT', {
+    default_bible_translation: 'KJV',
+  });
+  assert.equal(restore.status, 200);
+  assert.equal(restore.body.default_bible_translation, 'KJV');
+  assert.equal(restore.body.default_bible_translation_installed, true);
 });
 
 test('PUT /api/admin/settings accepts ui_locale and rejects unknown values', async () => {

@@ -60,6 +60,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/admin/artifacts/order", s.reorderArtifacts)
 	mux.HandleFunc("GET /api/hymns", s.getHymns)
 	mux.HandleFunc("GET /api/scripture", s.getScripture)
+	mux.HandleFunc("GET /api/bible-translations", s.getBibleTranslations)
 	mux.HandleFunc("POST /api/webhook", s.postWebhook)
 	mux.HandleFunc("/", s.fallback)
 	return s.gate(mux)

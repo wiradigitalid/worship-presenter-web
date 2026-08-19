@@ -26,6 +26,7 @@ func TestGatedPaths(t *testing.T) {
 		"/api/uploads/0123456789abcdef0123456789abcdef.jpg",
 		"/api/hymns",
 		"/api/scripture",
+		"/api/bible-translations",
 		"/_next/staticfoo",
 		"/_next/imagefoo",
 		"/_next/static/x.js",

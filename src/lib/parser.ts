@@ -22,6 +22,8 @@ export interface ParsedSermon {
 export interface ParsedScripture {
   reference: string | null;
   text: string;
+  /** Corpus that produced `text` when the operator resolved the reference. */
+  translation?: string;
 }
 
 export interface ParsedRundown {

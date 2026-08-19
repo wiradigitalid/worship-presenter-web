@@ -45,6 +45,51 @@ func (s *Server) getScripture(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) getBibleTranslations(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.listBibleTranslationRows()
+	if err != nil {
+		log.Printf("Error listing bible translations: %v", err)
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	codes := make([]string, 0, len(rows))
+	for _, row := range rows {
+		codes = append(codes, row["code"])
+	}
+	bible := s.resolveDefaultBibleTranslation(codes)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"translations":                        rows,
+		"default_bible_translation":           bible.configured,
+		"default_bible_translation_resolved":  bible.resolved,
+		"default_bible_translation_installed": bible.configuredInstalled,
+	})
+}
+
+func (s *Server) listBibleTranslationRows() ([]map[string]string, error) {
+	q, err := s.DB.Query(
+		`SELECT code, name, locale, licence, provenance FROM bible_translations ORDER BY code`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer q.Close()
+	out := make([]map[string]string, 0)
+	for q.Next() {
+		var code, name, locale, licence, provenance string
+		if err := q.Scan(&code, &name, &locale, &licence, &provenance); err != nil {
+			return nil, err
+		}
+		out = append(out, map[string]string{
+			"code":       code,
+			"name":       name,
+			"locale":     locale,
+			"licence":    licence,
+			"provenance": provenance,
+		})
+	}
+	return out, q.Err()
+}
+
 func (s *Server) resolveTranslation(w http.ResponseWriter, r *http.Request) (string, bool) {
 	translationParam := strings.TrimSpace(r.URL.Query().Get("translation"))
 	installed, err := s.listTranslationCodes()
@@ -53,7 +98,7 @@ func (s *Server) resolveTranslation(w http.ResponseWriter, r *http.Request) (str
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return "", false
 	}
-	code := "KJV"
+	code := s.resolveDefaultBibleTranslation(installed).resolved
 	if translationParam != "" {
 		normalized := strings.ToUpper(translationParam)
 		known := false

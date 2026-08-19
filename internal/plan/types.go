@@ -23,19 +23,19 @@ type CanvasElement struct {
 }
 
 type Layout struct {
-	AspectRatio     string           `json:"aspectRatio"`
-	BackgroundColor string           `json:"backgroundColor"`
-	BackgroundImage *string          `json:"backgroundImage"`
-	Elements        []CanvasElement  `json:"elements"`
+	AspectRatio     string          `json:"aspectRatio"`
+	BackgroundColor string          `json:"backgroundColor"`
+	BackgroundImage *string         `json:"backgroundImage"`
+	Elements        []CanvasElement `json:"elements"`
 }
 
 type Template struct {
-	SchemaVersion int                `json:"schemaVersion"`
-	ID            string             `json:"id"`
-	Label         string             `json:"label"`
-	BaseType      string             `json:"baseType"`
-	Placeholders  []Placeholder      `json:"placeholders"`
-	Layouts       map[string]Layout  `json:"layouts"`
+	SchemaVersion int               `json:"schemaVersion"`
+	ID            string            `json:"id"`
+	Label         string            `json:"label"`
+	BaseType      string            `json:"baseType"`
+	Placeholders  []Placeholder     `json:"placeholders"`
+	Layouts       map[string]Layout `json:"layouts"`
 }
 
 type ResolvedElement struct {
@@ -53,10 +53,10 @@ type ResolvedElement struct {
 }
 
 type ResolvedLayout struct {
-	AspectRatio     string             `json:"aspectRatio"`
-	BackgroundColor string             `json:"backgroundColor"`
-	BackgroundImage *string            `json:"backgroundImage,omitempty"`
-	Elements        []ResolvedElement  `json:"elements"`
+	AspectRatio     string            `json:"aspectRatio"`
+	BackgroundColor string            `json:"backgroundColor"`
+	BackgroundImage *string           `json:"backgroundImage,omitempty"`
+	Elements        []ResolvedElement `json:"elements"`
 }
 
 type GroupRef struct {
@@ -82,8 +82,9 @@ type DrawItem struct {
 }
 
 type ParsedScripture struct {
-	Reference *string `json:"reference"`
-	Text      string  `json:"text"`
+	Reference   *string `json:"reference"`
+	Text        string  `json:"text"`
+	Translation string  `json:"translation,omitempty"`
 }
 
 type ParsedSermon struct {
@@ -92,26 +93,26 @@ type ParsedSermon struct {
 }
 
 type ParsedItem struct {
-	Type       string  `json:"type"`
-	Role       string  `json:"role"`
-	Name       string  `json:"name"`
-	Title      string  `json:"title"`
-	Number     int     `json:"number"`
-	Lyrics     string  `json:"lyrics"`
-	Incomplete bool    `json:"incomplete"`
+	Type       string `json:"type"`
+	Role       string `json:"role"`
+	Name       string `json:"name"`
+	Title      string `json:"title"`
+	Number     int    `json:"number"`
+	Lyrics     string `json:"lyrics"`
+	Incomplete bool   `json:"incomplete"`
 }
 
 type ParsedRundown struct {
-	Date                 *string          `json:"date"`
-	Items                []ParsedItem     `json:"items"`
-	Sermon               *ParsedSermon    `json:"sermon"`
-	SpecialSong          *string          `json:"specialSong"`
-	ClosingPrayerPerson  *string          `json:"closingPrayerPerson"`
-	ThemeVerse           *ParsedScripture `json:"themeVerse"`
-	VerseReading         *ParsedScripture `json:"verseReading"`
-	FamilyYouth          *string          `json:"familyYouth"`
-	FamilyPrayerRequest  *string          `json:"familyPrayerRequest"`
-	YouthPrayerRequest   *string          `json:"youthPrayerRequest"`
+	Date                *string          `json:"date"`
+	Items               []ParsedItem     `json:"items"`
+	Sermon              *ParsedSermon    `json:"sermon"`
+	SpecialSong         *string          `json:"specialSong"`
+	ClosingPrayerPerson *string          `json:"closingPrayerPerson"`
+	ThemeVerse          *ParsedScripture `json:"themeVerse"`
+	VerseReading        *ParsedScripture `json:"verseReading"`
+	FamilyYouth         *string          `json:"familyYouth"`
+	FamilyPrayerRequest *string          `json:"familyPrayerRequest"`
+	YouthPrayerRequest  *string          `json:"youthPrayerRequest"`
 }
 
 type Media struct {

@@ -40,6 +40,7 @@ Derived by `inventory.py` from `mux.HandleFunc` in `internal/httpapi/server.go`.
 | 2 | api | POST | `/api/auth/logout` | hub | Log out | published |
 | 18 | api | GET | `/api/hymns` | hub | Search hymns | published |
 | 29 | api | GET | `/api/scripture` | presenter | Verse lookup (`ref`) and book suggestions (`q`) | published |
+| 36 | api | GET | `/api/bible-translations` | presenter | Installed bible translations (code, name, locale, licence, provenance) plus resolved default | published |
 | 34 | api | GET | `/api/session` | hub | Current session | published |
 | 8 | api | GET | `/api/services/[id]/pptx` | hub | Download PPTX | published |
 | 33 | api | POST | `/api/services/[id]/sync-artifact` | hub | Sync Artifact (AD-16) | published |
@@ -58,6 +59,7 @@ Derived by `inventory.py` from `mux.HandleFunc` in `internal/httpapi/server.go`.
 
 - `GET /api/session` (34) and `GET /api/services/[id]` (35) exist on the Go API so the SPA can read the httpOnly session and consume the assembled plan.
 - Plan vs code: `POST /api/webhook` is published (FR-1 / FR-12), while this phase's intake promise is Hub form (FR-27). The row stays — as-built — and CAP-11 is the later product phase. Do not treat the shipped webhook as this phase's handover.
-- Plan vs code (DEC-003): Host is `api` (Go). Rows 1–35 are served by `internal/httpapi`.
+- Plan vs code (DEC-003): Host is `api` (Go). Rows 1–36 are served by `internal/httpapi`.
 - W1 added 31 `DELETE /api/admin/artifacts/[id]`, 32 `PUT /api/admin/artifacts/order`, 33 `POST /api/services/[id]/sync-artifact`. Numbers kept; Host renamed `web` → `api` without renumbering.
-- `GET /api/scripture` (29) accepts `ref` for lookup or `q` for book-name suggestions on the same path (Story 21.5). No new row.
+- `GET /api/bible-translations` (36) lists every installed bible translation with its locale and returns the resolved `default_bible_translation` (Story 21.3). No locale filter on the query (AD-26 / FR-24).
+- `GET /api/scripture` (29) accepts `ref` for lookup or `q` for book-name suggestions on the same path (Story 21.5). An omitted `translation` uses `default_bible_translation` (inert if uninstalled). No new row for that query shape.

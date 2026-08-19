@@ -156,3 +156,31 @@ test('every layout is 16:9 with at least one element', () => {
     }
   }
 });
+
+test('every seed template has a preview path and tone id lists name seed rows', async () => {
+  const { previewLabel, SCRIPTURE_TEMPLATE_IDS, IMAGE_TEMPLATE_IDS } =
+    await import(
+      pathToFileURL(path.join(root, 'src', 'lib', 'artifacts', 'preview-model.ts'))
+        .href
+    );
+  const seedIds = new Set(templates.map((t) => t.id));
+  for (const template of templates) {
+    const label = previewLabel({
+      instanceId: template.id,
+      templateId: template.id,
+      label: template.label,
+      baseType: template.baseType,
+      layoutKey: 'default',
+    });
+    assert.ok(
+      typeof label === 'string' && label.trim().length > 0,
+      `${template.id} has no preview label`
+    );
+  }
+  for (const id of SCRIPTURE_TEMPLATE_IDS) {
+    assert.ok(seedIds.has(id), `SCRIPTURE_TEMPLATE_IDS names unknown ${id}`);
+  }
+  for (const id of IMAGE_TEMPLATE_IDS) {
+    assert.ok(seedIds.has(id), `IMAGE_TEMPLATE_IDS names unknown ${id}`);
+  }
+});

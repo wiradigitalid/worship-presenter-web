@@ -16,6 +16,7 @@ export function ScriptureRefAutocomplete({
   onChange,
   placeholder,
   disabled,
+  translation,
   inputClassName = 'w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground',
   onKeyDown,
 }: {
@@ -23,6 +24,7 @@ export function ScriptureRefAutocomplete({
   onChange: (next: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  translation?: string;
   inputClassName?: string;
   onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
 }) {
@@ -47,10 +49,11 @@ export function ScriptureRefAutocomplete({
     let active = true;
     setStatus('searching');
     const timer = setTimeout(() => {
-      void fetch(
-        `/api/scripture?q=${encodeURIComponent(query)}`,
-        { headers: { Accept: 'application/json' } }
-      )
+      const params = new URLSearchParams({ q: query });
+      if (translation) params.set('translation', translation);
+      void fetch(`/api/scripture?${params.toString()}`, {
+        headers: { Accept: 'application/json' },
+      })
         .then(async (res) => {
           if (!res.ok) return null;
           const body = (await res.json()) as { suggestions?: Suggestion[] };
@@ -76,7 +79,7 @@ export function ScriptureRefAutocomplete({
       active = false;
       clearTimeout(timer);
     };
-  }, [query, showList]);
+  }, [query, showList, translation]);
 
   useLayoutEffect(() => {
     if (!showList || !inputRef.current) {

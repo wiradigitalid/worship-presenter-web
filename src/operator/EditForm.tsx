@@ -318,11 +318,19 @@ export default function EditForm({
       const res = await fetch(
         `/api/scripture?ref=${encodeURIComponent(ref.trim())}`
       );
-      const data = (await res.json()) as { error?: string; text?: string };
+      const data = (await res.json()) as {
+        error?: string;
+        text?: string;
+        translation?: string;
+      };
       if (!res.ok) {
         throw new Error(data.error || t('form.error.scripture'));
       }
-      setField('verseText', data.text || '');
+      setFields((prev) => ({
+        ...prev,
+        verseText: data.text || '',
+        verseTranslation: data.translation || prev.verseTranslation,
+      }));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : t('form.error.scripture'));
     }

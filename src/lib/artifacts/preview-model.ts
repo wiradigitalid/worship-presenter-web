@@ -49,7 +49,7 @@ const SONG_SET_LABELS: Readonly<Record<string, string>> = {
 };
 
 /** Templates whose content is scripture, regardless of their base type. */
-const SCRIPTURE_TEMPLATE_IDS: ReadonlySet<string> = new Set([
+export const SCRIPTURE_TEMPLATE_IDS: ReadonlySet<string> = new Set([
   'verse-reading',
   'bible-verse-contemplation',
 ]);
@@ -58,7 +58,7 @@ const SCRIPTURE_TEMPLATE_IDS: ReadonlySet<string> = new Set([
  * Templates whose slide is primarily a picture. Story 20.5 may replace this
  * id-list with a Placeholder Catalog key check.
  */
-const IMAGE_TEMPLATE_IDS: ReadonlySet<string> = new Set([
+export const IMAGE_TEMPLATE_IDS: ReadonlySet<string> = new Set([
   'sermon-flyer',
 ]);
 
