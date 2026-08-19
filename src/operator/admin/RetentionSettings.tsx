@@ -8,12 +8,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { useT } from '@/lib/i18n/operator';
 
 export default function RetentionSettings({
   initialDays,
 }: {
   initialDays: number;
 }) {
+  const { t } = useT();
   const [days, setDays] = useState(initialDays);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -33,11 +35,14 @@ export default function RetentionSettings({
         cache_files_removed: number;
       };
       setDays(data.pptx_retention_days);
-      const saved = `Saved. Removed ${data.cache_files_removed} expired cache file(s).`;
+      const saved = t('admin.retention.saved').replace(
+        '{n}',
+        String(data.cache_files_removed)
+      );
       setMessage(saved);
       toast(saved);
     } catch {
-      setMessage('Failed to save retention setting.');
+      setMessage(t('admin.retention.failed'));
     } finally {
       setSaving(false);
     }
@@ -46,17 +51,13 @@ export default function RetentionSettings({
   return (
     <Card className="mb-8">
       <CardHeader>
-        <CardTitle>PPTX retention</CardTitle>
-        <CardDescription>
-          Deletes only cached generated PPTX files under{' '}
-          <code className="text-xs">.cache/pptx/</code>. Service data is never
-          auto-deleted. Use 0 to keep cache forever.
-        </CardDescription>
+        <CardTitle>{t('admin.retention.title')}</CardTitle>
+        <CardDescription>{t('admin.retention.description')}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap items-end gap-3">
         <div>
           <label className="mb-1.5 block text-sm font-medium">
-            Retention days
+            {t('admin.retention.label')}
           </label>
           <input
             type="number"
@@ -68,7 +69,7 @@ export default function RetentionSettings({
           />
         </div>
         <Button onClick={() => void save()} disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('admin.retention.saving') : t('admin.retention.save')}
         </Button>
         {message && (
           <p className="w-full text-sm text-muted-foreground">{message}</p>

@@ -220,6 +220,28 @@ test('GET /api/scripture aliases ps to Psalms and does not echo the typed form',
   assert.equal(res.body.reference, 'Psalms 23:1');
 });
 
+test('GET /api/scripture?q= suggests John and not 1 John', async () => {
+  const res = await json(`${base}/api/scripture?q=jo&translation=KJV`);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.translation, 'KJV');
+  const names = (res.body.suggestions || []).map((s) => s.name);
+  assert.ok(names.includes('John'), JSON.stringify(names));
+  assert.ok(!names.includes('1 John'), JSON.stringify(names));
+});
+
+test('GET /api/scripture?q= stays empty for a complete reference', async () => {
+  const res = await json(
+    `${base}/api/scripture?q=${encodeURIComponent('John 3:16')}&translation=KJV`
+  );
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual(res.body.suggestions, []);
+});
+
+test('GET /api/scripture without ref or q is 400', async () => {
+  const res = await json(`${base}/api/scripture`);
+  assert.equal(res.status, 400);
+});
+
 test('GET /api/admin/settings and accounts and artifacts on a fresh hub', async () => {
   const settings = await json(`${base}/api/admin/settings`);
   assert.equal(settings.status, 200);

@@ -4,7 +4,7 @@ kind: api
 scope: _platform
 status: draft
 created: '2026-08-18'
-updated: '2026-08-19'
+updated: '2026-08-20'
 derived_from: code
 verified: '96dfd61'
 platform_rows: []
@@ -39,7 +39,7 @@ Derived by `inventory.py` from `mux.HandleFunc` in `internal/httpapi/server.go`.
 | 1 | api | POST | `/api/auth/login` | hub | Log in | published |
 | 2 | api | POST | `/api/auth/logout` | hub | Log out | published |
 | 18 | api | GET | `/api/hymns` | hub | Search hymns | published |
-| 29 | api | GET | `/api/scripture` | presenter | Verse lookup | published |
+| 29 | api | GET | `/api/scripture` | presenter | Verse lookup (`ref`) and book suggestions (`q`) | published |
 | 34 | api | GET | `/api/session` | hub | Current session | published |
 | 8 | api | GET | `/api/services/[id]/pptx` | hub | Download PPTX | published |
 | 33 | api | POST | `/api/services/[id]/sync-artifact` | hub | Sync Artifact (AD-16) | published |
@@ -60,3 +60,4 @@ Derived by `inventory.py` from `mux.HandleFunc` in `internal/httpapi/server.go`.
 - Plan vs code: `POST /api/webhook` is published (FR-1 / FR-12), while this phase's intake promise is Hub form (FR-27). The row stays — as-built — and CAP-11 is the later product phase. Do not treat the shipped webhook as this phase's handover.
 - Plan vs code (DEC-003): Host is `api` (Go). Rows 1–35 are served by `internal/httpapi`.
 - W1 added 31 `DELETE /api/admin/artifacts/[id]`, 32 `PUT /api/admin/artifacts/order`, 33 `POST /api/services/[id]/sync-artifact`. Numbers kept; Host renamed `web` → `api` without renumbering.
+- `GET /api/scripture` (29) accepts `ref` for lookup or `q` for book-name suggestions on the same path (Story 21.5). No new row.

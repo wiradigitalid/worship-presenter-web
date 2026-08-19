@@ -1,6 +1,36 @@
 /**
- * AD-25's closure: corpus tables are written only on the boot path, and no
- * corpus read path filters by locale in SQL.
+ * AD-25 / AD-26 / AD-28 structural guards.
+ *
+ * Surfaces this guard actually protects (and only these):
+ * - Corpus table names derived from `internal/db/schema.sql` CREATE TABLE
+ *   rows named `hymns`, `bible_*`, or `song_*` (the live Go DDL). A new
+ *   table matching that pattern is watched the moment it is added — the
+ *   allowlist that used to sit here could not fail when DDL grew.
+ * - Operator/admin write paths: `INSERT` / `UPDATE` / `DELETE FROM` those
+ *   tables in `internal/httpapi/` (the live API) and in `src/` except the
+ *   Node boot module `src/lib/db/index.ts`.
+ * - AD-26 never-filter: `WHERE locale =|LIKE|IN|<>|!=` in `internal/httpapi/`
+ *   and the Node corpus readers (`src/lib/corpus.ts`, `src/lib/scripture.ts`,
+ *   `src/lib/db/index.ts`).
+ * - AD-28: an `aliases` field on any JSON under `data/`; an unkeyed alias
+ *   identifier (`BOOK_ALIASES`, `bookAliases`) or a file-level `const/var
+ *   aliases` in `src/`, `internal/`, `spa/src/`. Matcher-owned
+ *   `AliasesFor(translation)` / `aliasesFor(translation)` are keyed and
+ *   allowed.
+ *
+ * Proof (re-runnable; inject, watch fail, revert — 2026-08-20):
+ * 1. Go write: `INSERT INTO hymns` in `internal/httpapi/hymns.go` →
+ *    "no operator or administrator write path into a corpus table" fails.
+ * 2. TS write: `db.exec('UPDATE bible_verses SET verse_text = 1')` in
+ *    `src/lib/scripture.ts` → same assertion fails.
+ * 3. Locale predicate: `WHERE locale = ?` in `internal/httpapi/hymns.go` →
+ *    "listing endpoints never filter corpus rows by locale" fails.
+ * 4. JSON aliases: `"aliases": {}` on `data/en/bible-translation/kjv.json`
+ *    translation object → "corpus files must not carry an aliases field" fails.
+ * 5. Unkeyed identifier: `const BOOK_ALIASES = {}` in `src/lib/scripture.ts` →
+ *    "no unkeyed alias list survives" fails.
+ * 6. File-level aliases: `const aliases = []` at module top of
+ *    `src/lib/scripture.ts` → same assertion fails.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,37 +40,35 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const dbIndexPath = path.join(repoRoot, 'src', 'lib', 'db', 'index.ts');
+const schemaPath = path.join(repoRoot, 'internal', 'db', 'schema.sql');
 const dbIndexRel = 'src/lib/db/index.ts';
 
-const CORPUS_TABLE_ALLOWLIST = new Set([
-  'bible_translations',
-  'bible_books',
-  'bible_book_names',
-  'bible_verses',
-  'hymns',
-]);
+function isCorpusTable(name) {
+  return name === 'hymns' || name.startsWith('bible_') || name.startsWith('song_');
+}
 
-const ddlText = fs.readFileSync(dbIndexPath, 'utf8');
-const ddlTables = [
+const ddlText = fs.readFileSync(schemaPath, 'utf8');
+const corpusTables = [
   ...ddlText.matchAll(/CREATE TABLE IF NOT EXISTS (\w+)/g),
-].map((m) => m[1]);
+].map((m) => m[1]).filter(isCorpusTable);
 
-const corpusTables = ddlTables.filter((name) => CORPUS_TABLE_ALLOWLIST.has(name));
-
-test('startup DDL names every corpus table this guard watches', () => {
-  assert.deepEqual(corpusTables.sort(), [...CORPUS_TABLE_ALLOWLIST].sort());
+test('Go startup DDL yields at least the shipped bible and hymn tables', () => {
+  assert.ok(corpusTables.includes('hymns'));
+  assert.ok(corpusTables.includes('bible_verses'));
+  assert.ok(corpusTables.includes('bible_translations'));
+  assert.ok(corpusTables.includes('bible_book_names'));
 });
 
-const readPaths = [
-  'src/lib/corpus.ts',
-  'src/lib/scripture.ts',
-  'src/lib/db/index.ts',
-];
+function stripComments(text) {
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+}
 
-function walkSrcFiles() {
+function walkFiles(relDir, extRe) {
   const files = [];
   const walk = (absDir) => {
+    if (!fs.existsSync(absDir)) return;
     for (const entry of fs.readdirSync(absDir)) {
       const abs = path.join(absDir, entry);
       const stat = fs.statSync(abs);
@@ -48,55 +76,114 @@ function walkSrcFiles() {
         walk(abs);
         continue;
       }
-      if (/\.(ts|tsx)$/.test(entry)) files.push(abs);
+      if (extRe.test(entry)) files.push(abs);
     }
   };
-  walk(path.join(repoRoot, 'src'));
+  walk(path.join(repoRoot, relDir));
   return files;
 }
 
-/**
- * The block-comment arm needs its closing `\/`: without it the pattern compiles
- * as `\/\*[\s\S]*?\*`, which eats `/**` and leaves the comment body behind — so a
- * JSDoc line describing a corpus write read as a corpus write.
- */
-function stripComments(text) {
-  return text
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+function writePattern(table) {
+  return new RegExp(
+    `\\b(?:INSERT\\s+(?:OR\\s+\\w+\\s+)?INTO\\s+${table}\\b|UPDATE\\s+${table}\\b|DELETE\\s+FROM\\s+${table}\\b)`,
+    'i'
+  );
 }
 
-test('no corpus table is written outside the boot module', () => {
+test('no operator or administrator write path into a corpus table', () => {
   const offenders = [];
-  const writePattern = (table) =>
-    new RegExp(
-      `\\b(?:INSERT\\s+(?:OR\\s+\\w+\\s+)?INTO\\s+${table}\\b|UPDATE\\s+${table}\\b|DELETE\\s+FROM\\s+${table}\\b)`,
-      'i'
-    );
-  for (const abs of walkSrcFiles()) {
+  const scan = (abs, skipRel) => {
     const rel = path.relative(repoRoot, abs).replace(/\\/g, '/');
-    if (rel === dbIndexRel) continue;
+    if (rel === skipRel) return;
     const code = stripComments(fs.readFileSync(abs, 'utf8'));
     for (const table of corpusTables) {
-      if (writePattern(table).test(code)) offenders.push(`${rel} writes ${table}`);
+      if (writePattern(table).test(code)) {
+        offenders.push(`${rel} writes ${table}`);
+      }
     }
+  };
+  for (const abs of walkFiles('internal/httpapi', /\.go$/)) scan(abs);
+  for (const abs of walkFiles('src', /\.(ts|tsx)$/)) scan(abs, dbIndexRel);
+  assert.deepEqual(offenders, []);
+});
+
+const localePredicate = /WHERE[\s\S]*?\blocale\b\s*(=|LIKE|IN\b|<>|!=)/i;
+
+test('listing endpoints never filter corpus rows by locale', () => {
+  const offenders = [];
+  const scan = (abs) => {
+    const rel = path.relative(repoRoot, abs).replace(/\\/g, '/');
+    const code = stripComments(fs.readFileSync(abs, 'utf8'));
+    if (localePredicate.test(code)) offenders.push(rel);
+  };
+  for (const abs of walkFiles('internal/httpapi', /\.go$/)) scan(abs);
+  for (const rel of ['src/lib/corpus.ts', 'src/lib/scripture.ts', dbIndexRel]) {
+    scan(path.join(repoRoot, rel));
   }
   assert.deepEqual(offenders, []);
 });
 
+function jsonHasAliases(value) {
+  if (Array.isArray(value)) return value.some(jsonHasAliases);
+  if (value && typeof value === 'object') {
+    if (Object.prototype.hasOwnProperty.call(value, 'aliases')) return true;
+    return Object.values(value).some(jsonHasAliases);
+  }
+  return false;
+}
+
+function walkDataJson(absDir, files = []) {
+  if (!fs.existsSync(absDir)) return files;
+  for (const entry of fs.readdirSync(absDir)) {
+    const abs = path.join(absDir, entry);
+    const stat = fs.statSync(abs);
+    if (stat.isDirectory()) {
+      walkDataJson(abs, files);
+      continue;
+    }
+    if (entry.endsWith('.json')) files.push(abs);
+  }
+  return files;
+}
+
+test('corpus files must not carry an aliases field', () => {
+  const offenders = walkDataJson(path.join(repoRoot, 'data'))
+    .filter((abs) => {
+      try {
+        return jsonHasAliases(JSON.parse(fs.readFileSync(abs, 'utf8')));
+      } catch {
+        return false;
+      }
+    })
+    .map((abs) => path.relative(repoRoot, abs).replace(/\\/g, '/'));
+  assert.deepEqual(offenders, []);
+});
+
+const UNKEYED_IDENT = /\b(?:BOOK_ALIASES|bookAliases)\b/;
+const TOP_LEVEL_ALIASES =
+  /^(?:export\s+)?(?:const|let|var)\s+aliases\b/m;
+
+test('no unkeyed alias list survives in source', () => {
+  const offenders = [];
+  const scan = (abs) => {
+    const rel = path.relative(repoRoot, abs).replace(/\\/g, '/');
+    const code = stripComments(fs.readFileSync(abs, 'utf8'));
+    if (UNKEYED_IDENT.test(code) || TOP_LEVEL_ALIASES.test(code)) {
+      offenders.push(rel);
+    }
+  };
+  for (const abs of walkFiles('src', /\.(ts|tsx)$/)) scan(abs);
+  for (const abs of walkFiles('internal', /\.go$/)) scan(abs);
+  for (const abs of walkFiles('spa/src', /\.(ts|tsx)$/)) scan(abs);
+  assert.deepEqual(offenders, []);
+});
+
 /**
- * Story 21.2 AC-13: exactly one bible corpus ships until Story 21.4 arbitrates
- * `bible_books`. Parameterising the emptiness guard armed AD-27's two-owner
- * hazard — `name` / `short_name` are per-translation values in a table holding
- * one global row per book, so the translation reconciling last owns every book
- * name for every reader. A second committed corpus fires it.
- *
- * Tracked files, not `discoverBibleTranslationFiles()`: an operator installing a
- * translation is a file drop by design (AC-3) and must not fail this suite, and
- * `tests/corpus-reconcile.test.mjs` stages an untracked sidecar corpus in a
- * parallel process while this runs.
+ * Exactly one bible corpus ships until leftover `bible_books` display columns
+ * are dropped (AD-27 remainder). A second committed corpus would make the last
+ * reconciler own every book name.
  */
-test('exactly one bible corpus is committed until Story 21.4 (AC-13)', () => {
+test('exactly one bible corpus is committed until bible_books display columns drop', () => {
   const tracked = execFileSync(
     'git',
     ['ls-files', '--', 'data/*/bible-translation/*.json'],
@@ -109,19 +196,6 @@ test('exactly one bible corpus is committed until Story 21.4 (AC-13)', () => {
   assert.deepEqual(
     tracked,
     ['data/en/bible-translation/kjv.json'],
-    'a second committed corpus arms AD-27: whichever translation reconciles ' +
-      'last owns every bible_books name. Land Story 21.4 first, then update ' +
-      'this expectation in the same change set'
+    'a second committed corpus arms AD-27 leftover display columns on bible_books'
   );
-});
-
-test('corpus read paths carry no locale predicate in SQL', () => {
-  const offenders = [];
-  const localePredicate =
-    /WHERE[\s\S]*?\blocale\b\s*(=|LIKE|IN\b|<>|!=)/i;
-  for (const rel of readPaths) {
-    const code = stripComments(fs.readFileSync(path.join(repoRoot, rel), 'utf8'));
-    if (localePredicate.test(code)) offenders.push(rel);
-  }
-  assert.deepEqual(offenders, []);
 });

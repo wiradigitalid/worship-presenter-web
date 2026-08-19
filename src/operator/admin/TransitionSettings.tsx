@@ -14,12 +14,14 @@ import {
   SLIDE_TRANSITION_SPECS,
   type SlideTransition,
 } from '@/lib/transitions';
+import { useT } from '@/lib/i18n/operator';
 
 export default function TransitionSettings({
   initialTransition,
 }: {
   initialTransition: SlideTransition;
 }) {
+  const { t } = useT();
   const [transition, setTransition] = useState<SlideTransition>(
     initialTransition
   );
@@ -38,11 +40,14 @@ export default function TransitionSettings({
       if (!res.ok) throw new Error('save failed');
       const data = (await res.json()) as { slide_transition: SlideTransition };
       setTransition(data.slide_transition);
-      const saved = `Saved. New decks and the projector now use ${SLIDE_TRANSITION_SPECS[data.slide_transition].label}.`;
+      const saved = t('admin.transition.saved').replace(
+        '{label}',
+        SLIDE_TRANSITION_SPECS[data.slide_transition].label
+      );
       setMessage(saved);
       toast(saved);
     } catch {
-      setMessage('Failed to save the transition setting.');
+      setMessage(t('admin.transition.failed'));
     } finally {
       setSaving(false);
     }
@@ -51,13 +56,8 @@ export default function TransitionSettings({
   return (
     <Card className="mb-8">
       <CardHeader>
-        <CardTitle>Slide transition</CardTitle>
-        <CardDescription>
-          One style for the whole deck, applied identically in the generated
-          PPTX and on the projector. Slides that opt out (flyer images) never
-          carry a transition. Every download is generated fresh, so the change
-          takes effect on the next one.
-        </CardDescription>
+        <CardTitle>{t('admin.transition.title')}</CardTitle>
+        <CardDescription>{t('admin.transition.description')}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap items-end gap-3">
         <div>
@@ -65,7 +65,7 @@ export default function TransitionSettings({
             className="mb-1.5 block text-sm font-medium"
             htmlFor="slide-transition"
           >
-            Transition
+            {t('admin.transition.label')}
           </label>
           <select
             id="slide-transition"
@@ -82,7 +82,7 @@ export default function TransitionSettings({
           </select>
         </div>
         <Button onClick={() => void save()} disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('admin.transition.saving') : t('admin.transition.save')}
         </Button>
         <p className="w-full text-sm text-muted-foreground">
           {SLIDE_TRANSITION_SPECS[transition].hint}

@@ -101,8 +101,18 @@ func (s *Server) createService(w http.ResponseWriter, r *http.Request) {
 	}
 
 	allowSecond, _ := body["allowSecond"].(bool)
+
+	parsedJSON, _ := json.Marshal(parsed)
+	imagesJSON, _ := json.Marshal(images)
+	tx, err := s.DB.Begin()
+	if err != nil {
+		log.Printf("Error creating service: %v", err)
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	defer tx.Rollback()
 	var existingID int
-	err = s.DB.QueryRow(`SELECT id FROM services WHERE date = ?`, serviceDate).Scan(&existingID)
+	err = tx.QueryRow(`SELECT id FROM services WHERE date = ?`, serviceDate).Scan(&existingID)
 	if err == nil && !allowSecond {
 		writeJSON(w, http.StatusConflict, map[string]any{
 			"error":      "Service already exists for this date",
@@ -116,16 +126,6 @@ func (s *Server) createService(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-
-	parsedJSON, _ := json.Marshal(parsed)
-	imagesJSON, _ := json.Marshal(images)
-	tx, err := s.DB.Begin()
-	if err != nil {
-		log.Printf("Error creating service: %v", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
-		return
-	}
-	defer tx.Rollback()
 	res, err := tx.Exec(
 		`INSERT INTO services (date, raw_payload, parsed_data, images_payload, participants_payload, updated_at)
 		 VALUES (?, ?, ?, ?, ?, `+db.StampNowSQL+`)`,

@@ -16,8 +16,8 @@ func names() []BookName {
 
 func TestParseRefLongNames(t *testing.T) {
 	cases := []struct {
-		in              string
-		book            string
+		in             string
+		book           string
 		ch, start, end int
 	}{
 		{"John 4:23", "John", 4, 23, 23},
@@ -64,5 +64,37 @@ func TestMatchBookLongestPrefix(t *testing.T) {
 	_, _, ok = MatchBook("Unknown", names(), nil)
 	if ok {
 		t.Fatal("unknown must fail closed")
+	}
+}
+
+func TestSuggestBooksPrefixAndAlias(t *testing.T) {
+	hits := SuggestBooks("jo", names(), nil, 20)
+	got := map[string]bool{}
+	for _, h := range hits {
+		got[h.Name] = true
+	}
+	if !got["John"] {
+		t.Fatalf("Jo should suggest John, got %#v", hits)
+	}
+	if got["1 John"] {
+		t.Fatal("Jo must not suggest 1 John — that name does not start with jo")
+	}
+
+	ps := SuggestBooks("ps", names(), AliasesFor("KJV"), 20)
+	if len(ps) != 1 || ps[0].Name != "Psalms" {
+		t.Fatalf("ps alias: %#v", ps)
+	}
+
+	if SuggestBooks("John 4:23", names(), nil, 20) != nil {
+		t.Fatal("a complete ref must not open the suggestion list")
+	}
+
+	chapter := SuggestBooks("John 3", names(), nil, 20)
+	if len(chapter) != 1 || chapter[0].Name != "John" {
+		t.Fatalf("trailing chapter is stripped: %#v", chapter)
+	}
+
+	if SuggestBooks("xx", names(), nil, 20) != nil {
+		t.Fatal("unknown prefix is empty, not a guess")
 	}
 }

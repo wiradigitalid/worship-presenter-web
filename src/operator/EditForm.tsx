@@ -14,6 +14,7 @@ import {
   flushPendingHymnCommits,
   HymnNumberAutocomplete,
 } from '@/components/HymnNumberAutocomplete';
+import { ScriptureRefAutocomplete } from '@/components/ScriptureRefAutocomplete';
 import {
   SlidePreviewList,
   type SlidePreviewItem,
@@ -21,6 +22,12 @@ import {
 import { ImageUploadField } from '@/components/ImageUploadField';
 import DeleteButton from '@/operator/DeleteButton';
 import type { PreviewEntry } from '@/lib/artifacts/preview-model';
+import { useT } from '@/lib/i18n/operator';
+import {
+  FORM_ERROR_BANNER,
+  FORM_WARN_BANNER,
+  FORM_WARN_BANNER_BODY,
+} from '@/operator/form-banners';
 import {
   buildFieldsPayload,
   coerceHydrateFields,
@@ -83,6 +90,7 @@ export default function EditForm({
   hymnIndex: HymnIndexEntry[];
 }) {
   const router = useRouter();
+  const { t } = useT();
   const [payload, setPayload] = useState(initialPayload);
   const [sermonGraphicUrl, setSermonGraphicUrl] = useState(
     initialSermonGraphicUrl
@@ -268,7 +276,7 @@ export default function EditForm({
         fields?: unknown;
       };
       if (!res.ok) {
-        throw new Error(data.error || 'Parse failed');
+        throw new Error(data.error || t('form.error.parse'));
       }
       const hydrated = coerceHydrateFields(data.fields);
       if (hydrated) setFields(hydrated);
@@ -281,7 +289,7 @@ export default function EditForm({
         Array.isArray(data.failedHymnNumbers) ? data.failedHymnNumbers : []
       );
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Parse failed');
+      setError(err instanceof Error ? err.message : t('form.error.parse'));
     } finally {
       setParseLoading(false);
     }
@@ -312,11 +320,11 @@ export default function EditForm({
       );
       const data = (await res.json()) as { error?: string; text?: string };
       if (!res.ok) {
-        throw new Error(data.error || 'Scripture not found');
+        throw new Error(data.error || t('form.error.scripture'));
       }
       setField('verseText', data.text || '');
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Scripture lookup failed');
+      setError(e instanceof Error ? e.message : t('form.error.scripture'));
     }
   };
 
@@ -355,7 +363,7 @@ export default function EditForm({
         body: formData,
       });
       const data = (await res.json()) as { error?: string; url?: string };
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      if (!res.ok) throw new Error(data.error || t('form.error.upload'));
       setAnnouncements([
         ...announcements,
         {
@@ -402,9 +410,7 @@ export default function EditForm({
     ).length;
     let clearMaster = false;
     if (recurringCount === 0 && initialMasterCount > 0) {
-      const ok = window.confirm(
-        'You removed all Master-list flyers. Clear the GLOBAL master announcement list? This affects every service. Click Cancel to keep the existing master and only update one-offs for this service.'
-      );
+      const ok = window.confirm(t('form.clearMasterConfirm'));
       if (ok) clearMaster = true;
     }
 
@@ -441,14 +447,14 @@ export default function EditForm({
         const data = (await res.json().catch(() => ({}))) as {
           error?: string;
         };
-        throw new Error(data.error || 'Failed to update');
+        throw new Error(data.error || t('form.error.update'));
       }
 
       const data = (await res.json()) as { updated_at?: string };
       if (data.updated_at) setUpdatedAt(data.updated_at);
       router.refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Error updating service');
+      setError(e instanceof Error ? e.message : t('form.error.update'));
       console.error(e);
     } finally {
       setIsSaving(false);
@@ -458,20 +464,19 @@ export default function EditForm({
   return (
     <div className="space-y-6 font-sans">
       {error && (
-        <div
-          className="p-4 bg-red-500/10 border border-red-500/20 text-red-200 rounded-xl text-sm font-medium"
-          role="alert"
-        >
+        <div className={FORM_ERROR_BANNER} role="alert">
           {error}
         </div>
       )}
 
       {failedHymnNumbers.length > 0 && (
-        <div className="p-4 border border-amber-500/30 bg-amber-500/10 text-amber-200 rounded-xl text-sm">
-          <p className="font-semibold">Missing hymns in hymnal</p>
-          <p className="text-xs mt-1 text-amber-300">
-            {failedHymnNumbers.map((n) => `SDAH ${n}`).join(', ')} — service can
-            still be saved; lyrics will be incomplete.
+        <div className={FORM_WARN_BANNER}>
+          <p className="font-semibold">{t('form.missingHymns.title')}</p>
+          <p className={FORM_WARN_BANNER_BODY}>
+            {t('form.missingHymns.body').replace(
+              '{list}',
+              failedHymnNumbers.map((n) => `SDAH ${n}`).join(', ')
+            )}
           </p>
         </div>
       )}
@@ -480,18 +485,23 @@ export default function EditForm({
         <div className="lg:col-span-7 space-y-6">
           <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
             <CardHeader>
-              <CardTitle>Announcement flyers</CardTitle>
+              <CardTitle>{t('form.flyers.title')}</CardTitle>
               <CardDescription>
                 {carouselImages.length === 0
-                  ? 'No flyer slides for this service (empty Announcement List).'
+                  ? t('form.flyers.editEmpty')
                   : usingLegacyFallback && announcements.length === 0
-                    ? 'Using legacy per-service images (Announcement List is empty).'
-                    : `${carouselImages.length} flyer${carouselImages.length === 1 ? '' : 's'} from the Announcement List.`}{' '}
+                    ? t('form.flyers.editLegacy')
+                    : carouselImages.length === 1
+                      ? t('form.flyers.editCountOne')
+                      : t('form.flyers.editCount').replace(
+                          '{n}',
+                          String(carouselImages.length)
+                        )}{' '}
                 <Link
                   href="/announcements"
                   className="text-primary hover:underline"
                 >
-                  Manage list
+                  {t('form.flyers.manage')}
                 </Link>
               </CardDescription>
             </CardHeader>
@@ -508,7 +518,7 @@ export default function EditForm({
                     >
                       <img
                         src={img}
-                        alt={`Flyer ${i + 1}`}
+                        alt={t('announcements.alt').replace('{n}', String(i + 1))}
                         className="h-full w-auto object-cover group-hover:scale-105 transition-transform"
                       />
                     </a>
@@ -521,30 +531,28 @@ export default function EditForm({
           <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
             <CardHeader>
               <CardTitle className="text-xl font-bold">
-                Edit Worship Service
+                {t('form.edit.title')}
               </CardTitle>
               <CardDescription>
-                Edit the plain text rundown, then click Parse to refill
-                structured overlays. Live preview updates as you edit. Save to
-                regenerate slides.
+                {t('form.edit.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-semibold mb-2 block text-muted-foreground">
-                  Raw Rundown Text *
+                  {t('form.rundown.label')}
                 </label>
                 <textarea
                   className="w-full h-72 p-4 font-mono text-xs bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/30 text-foreground"
                   value={payload}
                   onChange={(e) => setPayload(e.target.value)}
-                  placeholder="Paste rundown text here..."
+                  placeholder={t('form.rundown.placeholder')}
                   disabled={isSaving}
                 />
                 <div className="mt-2 flex items-center justify-between gap-3">
                   {detectedDate ? (
                     <p className="text-xs text-primary font-semibold">
-                      Detected service date: {detectedDate}
+                      {t('form.detectedDate').replace('{date}', detectedDate)}
                     </p>
                   ) : (
                     <span />
@@ -555,7 +563,7 @@ export default function EditForm({
                     disabled={isSaving || parseLoading || !payload.trim()}
                     className="px-3 py-1.5 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0"
                   >
-                    {parseLoading ? 'Parsing…' : 'Parse'}
+                    {parseLoading ? t('form.parsing') : t('form.parse')}
                   </button>
                 </div>
               </div>
@@ -564,34 +572,36 @@ export default function EditForm({
 
           <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
             <CardHeader>
-              <CardTitle className="text-lg font-bold">Bible Talk</CardTitle>
+              <CardTitle className="text-lg font-bold">
+                {t('form.bibleTalk.title')}
+              </CardTitle>
               <CardDescription>
-                Opening/closing songs and verse reading overlays.
+                {t('form.bibleTalk.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                    Opening Song
+                      {t('form.openingSong')}
                   </label>
                   <HymnNumberAutocomplete
                     value={fields.song1Number}
                     onChange={(v) => setField('song1Number', v)}
                     hymnIndex={hymnIndex}
-                    placeholder="SDAH number or title"
+                    placeholder={t('form.hymnPlaceholder')}
                     disabled={isSaving}
                   />
                 </div>
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                    Closing Song
+                      {t('form.closingSong')}
                   </label>
                   <HymnNumberAutocomplete
                     value={fields.song2Number}
                     onChange={(v) => setField('song2Number', v)}
                     hymnIndex={hymnIndex}
-                    placeholder="SDAH number or title"
+                    placeholder={t('form.hymnPlaceholder')}
                     disabled={isSaving}
                   />
                 </div>
@@ -600,28 +610,26 @@ export default function EditForm({
                 <div className="sm:col-span-1">
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Verse Reading Reference
+                      {t('form.verseRef')}
                     </label>
                     <button
                       type="button"
                       onClick={() => resolveScripture()}
                       className="text-[10px] text-primary hover:underline font-bold"
                     >
-                      Resolve
+                      {t('form.resolve')}
                     </button>
                   </div>
-                  <input
-                    type="text"
-                    className="w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground"
+                  <ScriptureRefAutocomplete
                     value={fields.verseReference}
-                    onChange={(e) => setField('verseReference', e.target.value)}
-                    placeholder="e.g. Acts 18:9,10"
+                    onChange={(v) => setField('verseReference', v)}
+                    placeholder={t('form.scripturePlaceholder')}
                     disabled={isSaving}
                   />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                    Verse Reading Text
+                    {t('form.verseText')}
                   </label>
                   <textarea
                     className="w-full h-20 p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground"
@@ -636,47 +644,49 @@ export default function EditForm({
 
           <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
             <CardHeader>
-              <CardTitle className="text-lg font-bold">Divine Worship</CardTitle>
+              <CardTitle className="text-lg font-bold">
+                {t('form.divineWorship.title')}
+              </CardTitle>
               <CardDescription>
-                Songs and special song overlays.
+                {t('form.divineWorship.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                    Opening Song
+                      {t('form.openingSong')}
                   </label>
                   <HymnNumberAutocomplete
                     value={fields.song3Number}
                     onChange={(v) => setField('song3Number', v)}
                     hymnIndex={hymnIndex}
-                    placeholder="SDAH number or title"
+                    placeholder={t('form.hymnPlaceholder')}
                     disabled={isSaving}
                   />
                 </div>
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                    Closing Song
+                      {t('form.closingSong')}
                   </label>
                   <HymnNumberAutocomplete
                     value={fields.song4Number}
                     onChange={(v) => setField('song4Number', v)}
                     hymnIndex={hymnIndex}
-                    placeholder="SDAH number or title"
+                    placeholder={t('form.hymnPlaceholder')}
                     disabled={isSaving}
                   />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                    Special Song
+                    {t('form.specialSong')}
                   </label>
                   <input
                     type="text"
                     className="w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground"
                     value={fields.specialSong}
                     onChange={(e) => setField('specialSong', e.target.value)}
-                    placeholder="e.g. Youth Choir (- for none)"
+                    placeholder={t('form.specialSongPlaceholder')}
                     disabled={isSaving}
                   />
                 </div>
@@ -686,29 +696,31 @@ export default function EditForm({
 
           <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
             <CardHeader>
-              <CardTitle className="text-lg font-bold">Sermon</CardTitle>
+              <CardTitle className="text-lg font-bold">
+                {t('form.sermon.title')}
+              </CardTitle>
               <CardDescription>
-                Speaker, closing prayer, and sermon graphic.
+                {t('form.sermon.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                    Sermon Speaker
+                    {t('form.sermonSpeaker')}
                   </label>
                   <input
                     type="text"
                     className="w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground"
                     value={fields.sermonSpeaker}
                     onChange={(e) => onSermonSpeakerChange(e.target.value)}
-                    placeholder="e.g. Pr. John Doe"
+                    placeholder={t('form.sermonSpeakerPlaceholder')}
                     disabled={isSaving}
                   />
                 </div>
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                    Closing Prayer Person
+                    {t('form.closingPrayer')}
                   </label>
                   <input
                     type="text"
@@ -717,17 +729,17 @@ export default function EditForm({
                     onChange={(e) =>
                       setField('closingPrayerPerson', e.target.value)
                     }
-                    placeholder="Auto-fills from speaker"
+                    placeholder={t('form.closingPrayerPlaceholder')}
                     disabled={isSaving}
                   />
                 </div>
               </div>
               <ImageUploadField
-                label="Sermon Graphic"
+                label={t('form.sermonGraphic')}
                 value={sermonGraphicUrl}
                 onChange={setSermonGraphicUrl}
-                previewAlt="Sermon graphic preview"
-                uploadLabel="Upload Sermon Image"
+                previewAlt={t('form.sermonGraphicAlt')}
+                uploadLabel={t('form.sermonGraphicUpload')}
                 disabled={isSaving}
               />
             </CardContent>
@@ -736,29 +748,29 @@ export default function EditForm({
           <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
             <CardHeader>
               <CardTitle className="text-lg font-bold">
-                Family of the Week
+                {t('form.family.title')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <ImageUploadField
-                label="Family Photo"
+                label={t('form.familyPhoto')}
                 value={familyPhotoUrl}
                 onChange={setFamilyPhotoUrl}
-                previewAlt="Family of the week photo preview"
-                uploadLabel="Upload Family Photo"
+                previewAlt={t('form.familyPhotoAlt')}
+                uploadLabel={t('form.familyPhotoUpload')}
                 disabled={isSaving}
               />
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                  Family Prayer Request
-                </label>
-                <textarea
-                  className="w-full h-20 p-3 text-xs bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
-                  value={fields.familyPrayerRequest}
-                  onChange={(e) =>
-                    setField('familyPrayerRequest', e.target.value)
-                  }
-                  placeholder="Prayer request for family of the week"
+                    {t('form.familyPrayer')}
+                  </label>
+                  <textarea
+                    className="w-full h-20 p-3 text-xs bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
+                    value={fields.familyPrayerRequest}
+                    onChange={(e) =>
+                      setField('familyPrayerRequest', e.target.value)
+                    }
+                    placeholder={t('form.familyPrayerPlaceholder')}
                   disabled={isSaving}
                 />
               </div>
@@ -768,29 +780,29 @@ export default function EditForm({
           <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
             <CardHeader>
               <CardTitle className="text-lg font-bold">
-                Youth of the Week
+                {t('form.youth.title')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <ImageUploadField
-                label="Youth Photo"
+                label={t('form.youthPhoto')}
                 value={youthPhotoUrl}
                 onChange={setYouthPhotoUrl}
-                previewAlt="Youth of the week photo preview"
-                uploadLabel="Upload Youth Photo"
+                previewAlt={t('form.youthPhotoAlt')}
+                uploadLabel={t('form.youthPhotoUpload')}
                 disabled={isSaving}
               />
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                  Youth Prayer Request
-                </label>
-                <textarea
-                  className="w-full h-20 p-3 text-xs bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
-                  value={fields.youthPrayerRequest}
-                  onChange={(e) =>
-                    setField('youthPrayerRequest', e.target.value)
-                  }
-                  placeholder="Prayer request for youth of the week"
+                    {t('form.youthPrayer')}
+                  </label>
+                  <textarea
+                    className="w-full h-20 p-3 text-xs bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
+                    value={fields.youthPrayerRequest}
+                    onChange={(e) =>
+                      setField('youthPrayerRequest', e.target.value)
+                    }
+                    placeholder={t('form.youthPrayerPlaceholder')}
                   disabled={isSaving}
                 />
               </div>
@@ -800,19 +812,17 @@ export default function EditForm({
           <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
             <CardHeader>
               <CardTitle className="text-lg font-bold">
-                Announcement Flyers
+                {t('form.flyers.title')}
               </CardTitle>
               <CardDescription>
-                Master list edits apply globally. Unchecked = one-time for this
-                service. You can reorder and insert one-offs among master
-                flyers.
+                {t('form.flyers.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                 {announcements.length === 0 ? (
                   <p className="text-xs text-muted-foreground italic text-center py-4">
-                    No announcement flyers in the list.
+                    {t('form.flyers.empty')}
                   </p>
                 ) : (
                   announcements.map((ann, idx) => (
@@ -852,7 +862,7 @@ export default function EditForm({
                                 }}
                                 className="size-3 rounded border-border text-primary focus:ring-0 cursor-pointer"
                               />
-                              Master list
+                              {t('form.flyers.master')}
                             </label>
                           </div>
                         </div>
@@ -863,7 +873,7 @@ export default function EditForm({
                           disabled={idx === 0}
                           onClick={() => moveAnnouncement(idx, -1)}
                           className="p-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-30 cursor-pointer text-muted-foreground"
-                          title="Move Up"
+                          title={t('form.moveUp')}
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -885,7 +895,7 @@ export default function EditForm({
                           disabled={idx === announcements.length - 1}
                           onClick={() => moveAnnouncement(idx, 1)}
                           className="p-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-30 cursor-pointer text-muted-foreground"
-                          title="Move Down"
+                          title={t('form.moveDown')}
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -906,7 +916,7 @@ export default function EditForm({
                           type="button"
                           onClick={() => removeAnnouncement(ann.id)}
                           className="p-1 text-red-500 rounded hover:bg-red-500/10 cursor-pointer"
-                          title="Remove"
+                          title={t('form.remove')}
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -932,7 +942,7 @@ export default function EditForm({
               <div className="grid gap-3 sm:grid-cols-12 items-end pt-2 border-t border-border/40">
                 <div className="sm:col-span-8">
                   <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">
-                    Add Flyer URL
+                    {t('form.flyers.addUrl')}
                   </label>
                   <input
                     type="text"
@@ -955,7 +965,7 @@ export default function EditForm({
                     }}
                     className="flex-1 text-center py-2 text-xs font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all cursor-pointer shadow-sm"
                   >
-                    Add URL
+                    {t('form.flyers.addUrlButton')}
                   </button>
                   <input
                     type="file"
@@ -972,20 +982,15 @@ export default function EditForm({
                     htmlFor="flyer-upload-edit-btn"
                     className="flex-1 flex items-center justify-center cursor-pointer text-center py-2 text-xs font-semibold bg-primary/10 border border-primary/20 text-primary rounded-lg hover:bg-primary/20 transition-all"
                   >
-                    Upload File
+                    {t('form.flyers.upload')}
                   </label>
                 </div>
               </div>
               <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/50 pt-3">
                 <span className="font-medium text-foreground/80">
-                  How flyers work:{' '}
+                  {t('form.flyers.title')}:{' '}
                 </span>
-                Check <span className="font-medium">Master list</span> for
-                recurring flyers that apply to every service (editing them
-                updates the global list). Leave it unchecked for a one-off
-                flyer that appears only on this service. You can reorder rows
-                and mix master and one-off flyers in the order they should
-                appear on screen.
+                {t('form.flyers.how')}
               </p>
             </CardContent>
           </Card>
@@ -995,15 +1000,15 @@ export default function EditForm({
           <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md relative overflow-hidden">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-bold flex justify-between items-center">
-                <span>Live Slide Preview</span>
+                <span>{t('form.preview.title')}</span>
                 {previewLoading && (
                   <span className="text-[10px] bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded-full animate-pulse">
-                    Parsing...
+                    {t('form.parsing')}
                   </span>
                 )}
               </CardTitle>
               <CardDescription className="text-xs">
-                Real-time generated Order of Service slides mapping.
+                {t('form.preview.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0 border-t border-border/50">
@@ -1019,10 +1024,10 @@ export default function EditForm({
         <DeleteButton id={id} updatedAt={updatedAt} />
         <div className="flex gap-3">
         <Button variant="outline" onClick={resetFromProps} disabled={isSaving}>
-          Cancel
+          {t('form.cancel')}
         </Button>
         <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? 'Saving & Parsing...' : 'Save & Regenerate'}
+          {isSaving ? t('form.edit.saving') : t('form.edit.save')}
         </Button>
         </div>
       </div>

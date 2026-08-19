@@ -57,8 +57,13 @@ db.prepare(
 ).run();
 db.close();
 
-const { parseScriptureRef, lookupScripture, stripVerseMarkup, isBibleTranslationEmpty } =
-  await import(pathToFileURL(path.join(root, 'src', 'lib', 'scripture.ts')).href);
+const {
+  parseScriptureRef,
+  lookupScripture,
+  stripVerseMarkup,
+  isBibleTranslationEmpty,
+  suggestScriptureBooks,
+} = await import(pathToFileURL(path.join(root, 'src', 'lib', 'scripture.ts')).href);
 
 test('stripVerseMarkup removes @n tags', () => {
   assert.equal(stripVerseMarkup('@6But the hour@5'), 'But the hour');
@@ -147,4 +152,14 @@ test('lookupScripture normalizes translation code casing', () => {
   const passage = lookupScripture('John 4:23', 'kjv');
   assert.ok(passage);
   assert.equal(passage.translation, 'KJV');
+});
+
+test('suggestScriptureBooks prefixes John and not 1 John', () => {
+  const hits = suggestScriptureBooks('jo', 'KJV');
+  assert.ok(hits.some((h) => h.name === 'John'));
+  assert.ok(!hits.some((h) => h.name === '1 John'));
+});
+
+test('suggestScriptureBooks stays empty for a complete reference', () => {
+  assert.deepEqual(suggestScriptureBooks('John 4:23', 'KJV'), []);
 });

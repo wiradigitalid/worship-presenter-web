@@ -16,9 +16,8 @@ import type { CreateServiceInput, CreateServiceResult } from './types';
 /**
  * Create a service from an already narrowed body.
  *
- * Sequence is load-bearing: the date check precedes the deferred image /
- * participants / announcements validation, which precedes the date-collision
- * check, exactly as the original route handler did.
+ * Sequence is load-bearing: parse and payload validation precede the
+ * date-collision check, which runs inside the same transaction as INSERT.
  */
 export function createService(
   db: Database.Database,
@@ -42,47 +41,64 @@ export function createService(
   }
   parsedData = normalizeParsedRundown(parsedData);
 
-  const existing = db
-    .prepare<[string], { id: number }>('SELECT id FROM services WHERE date = ?')
-    .get(serviceDate);
-
-  if (existing && !input.allowSecond) {
-    return {
-      ok: false,
-      kind: 'collision',
-      existingId: existing.id,
-      date: serviceDate,
-    };
-  }
-
   const parsedJson = JSON.stringify(parsedData);
   const imagesJson = JSON.stringify(payload.imagesPayload);
   const { announcements } = payload;
   const { clearMaster } = input;
 
+  class DateCollision extends Error {
+    existingId: number;
+    date: string;
+    constructor(existingId: number, date: string) {
+      super('collision');
+      this.existingId = existingId;
+      this.date = date;
+    }
+  }
+
   let serviceId = 0;
-  const commit = db.transaction(() => {
-    const result = db
-      .prepare<[string, string, string, string, string | null]>(
-        `INSERT INTO services
+  try {
+    const commit = db.transaction(() => {
+      const existing = db
+        .prepare<[string], { id: number }>(
+          'SELECT id FROM services WHERE date = ?'
+        )
+        .get(serviceDate);
+      if (existing && !input.allowSecond) {
+        throw new DateCollision(existing.id, serviceDate);
+      }
+      const result = db
+        .prepare<[string, string, string, string, string | null]>(
+          `INSERT INTO services
              (date, raw_payload, parsed_data, images_payload, participants_payload, updated_at)
            VALUES (?, ?, ?, ?, ?, ${STAMP_NOW_SQL})`
-      )
-      .run(
-        serviceDate,
-        input.rawPayload,
-        parsedJson,
-        imagesJson,
-        payload.participantsRaw
-      );
-    serviceId = Number(result.lastInsertRowid);
+        )
+        .run(
+          serviceDate,
+          input.rawPayload,
+          parsedJson,
+          imagesJson,
+          payload.participantsRaw
+        );
+      serviceId = Number(result.lastInsertRowid);
 
-    if (announcements) {
-      syncWorshipAnnouncements(serviceId, announcements, { clearMaster }, db);
+      if (announcements) {
+        syncWorshipAnnouncements(serviceId, announcements, { clearMaster }, db);
+      }
+      cloneRegistryToNewService(db, serviceId);
+    });
+    commit();
+  } catch (err) {
+    if (err instanceof DateCollision) {
+      return {
+        ok: false,
+        kind: 'collision',
+        existingId: err.existingId,
+        date: err.date,
+      };
     }
-    cloneRegistryToNewService(db, serviceId);
-  });
-  commit();
+    throw err;
+  }
 
   return {
     ok: true,

@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import type { Role } from '@/lib/auth/session';
+import { useT } from '@/lib/i18n/operator';
 
 export type AccountRow = {
   id: number;
@@ -23,6 +24,7 @@ export default function AccountsManager({
   initialAccounts: AccountRow[];
 }) {
   const router = useRouter();
+  const { t } = useT();
   const [accounts, setAccounts] = useState(initialAccounts);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -50,13 +52,13 @@ export default function AccountsManager({
         body: JSON.stringify({ username, password, role }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create');
+      if (!res.ok) throw new Error(data.error || t('admin.accounts.createFailed'));
       setUsername('');
       setPassword('');
       setRole('operator');
       refresh([...accounts, data.account]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to create');
+      setError(e instanceof Error ? e.message : t('admin.accounts.createFailed'));
     } finally {
       setBusy(false);
     }
@@ -72,12 +74,12 @@ export default function AccountsManager({
         body: JSON.stringify({ role: nextRole }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update role');
+      if (!res.ok) throw new Error(data.error || t('admin.accounts.roleFailed'));
       refresh(
         accounts.map((a) => (a.id === id ? (data.account as AccountRow) : a))
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to update role');
+      setError(e instanceof Error ? e.message : t('admin.accounts.roleFailed'));
     } finally {
       setBusy(false);
     }
@@ -94,21 +96,21 @@ export default function AccountsManager({
         body: JSON.stringify({ password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+      if (!res.ok) throw new Error(data.error || t('admin.accounts.resetFailed'));
       setResetPw((prev) => {
         const next = { ...prev };
         delete next[id];
         return next;
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to reset password');
+      setError(e instanceof Error ? e.message : t('admin.accounts.resetFailed'));
     } finally {
       setBusy(false);
     }
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`Delete account “${name}”?`)) return;
+    if (!confirm(t('admin.accounts.confirmDelete').replace('{name}', name))) return;
     setBusy(true);
     setError(null);
     try {
@@ -116,10 +118,10 @@ export default function AccountsManager({
         method: 'DELETE',
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Failed to delete');
+      if (!res.ok) throw new Error(data.error || t('admin.accounts.deleteFailed'));
       refresh(accounts.filter((a) => a.id !== id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to delete');
+      setError(e instanceof Error ? e.message : t('admin.accounts.deleteFailed'));
     } finally {
       setBusy(false);
     }
@@ -129,22 +131,22 @@ export default function AccountsManager({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Create account</CardTitle>
+          <CardTitle>{t('admin.accounts.createTitle')}</CardTitle>
           <CardDescription>
-            Roles are admin (full) or operator (hub only).
+            {t('admin.accounts.createDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-3">
             <input
-              placeholder="Username"
+              placeholder={t('admin.accounts.username')}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             />
             <input
               type="password"
-              placeholder="Password (min 8)"
+              placeholder={t('admin.accounts.password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -159,7 +161,7 @@ export default function AccountsManager({
             </select>
           </div>
           <Button onClick={handleCreate} disabled={busy}>
-            Create
+            {t('admin.accounts.create')}
           </Button>
         </CardContent>
       </Card>
@@ -172,14 +174,19 @@ export default function AccountsManager({
 
       <Card>
         <CardHeader>
-          <CardTitle>Accounts</CardTitle>
+          <CardTitle>{t('admin.accounts.listTitle')}</CardTitle>
           <CardDescription>
-            {accounts.length} account{accounts.length === 1 ? '' : 's'}
+            {accounts.length === 1
+              ? t('admin.accounts.countOne')
+              : t('admin.accounts.count').replace(
+                  '{n}',
+                  String(accounts.length)
+                )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {accounts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No accounts yet.</p>
+            <p className="text-sm text-muted-foreground">{t('admin.accounts.empty')}</p>
           ) : (
             accounts.map((a) => (
               <div
@@ -190,8 +197,12 @@ export default function AccountsManager({
                   <div>
                     <p className="font-medium">{a.username}</p>
                     <p className="text-xs text-muted-foreground">
-                      id {a.id} · created{' '}
-                      {new Date(a.created_at).toLocaleString()}
+                      {t('admin.accounts.meta')
+                        .replace('{id}', String(a.id))
+                        .replace(
+                          '{when}',
+                          new Date(a.created_at).toLocaleString()
+                        )}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -212,14 +223,14 @@ export default function AccountsManager({
                       disabled={busy}
                       onClick={() => handleDelete(a.id, a.username)}
                     >
-                      Delete
+                      {t('admin.accounts.delete')}
                     </Button>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                   <input
                     type="password"
-                    placeholder="New password"
+                    placeholder={t('admin.accounts.newPassword')}
                     value={resetPw[a.id] || ''}
                     onChange={(e) =>
                       setResetPw((prev) => ({
@@ -235,7 +246,7 @@ export default function AccountsManager({
                     disabled={busy}
                     onClick={() => handleResetPassword(a.id)}
                   >
-                    Reset password
+                    {t('admin.accounts.resetPassword')}
                   </Button>
                 </div>
               </div>

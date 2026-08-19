@@ -83,6 +83,54 @@ function normalizeBookKey(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+export type ScriptureBookSuggestion = {
+  name: string;
+  shortName: string;
+};
+
+const DEFAULT_SUGGEST_LIMIT = 20;
+
+/** Prefix suggestions for the operator autocomplete. A complete ref is empty. */
+export function suggestBooks(
+  q: string,
+  names: BookName[],
+  aliases: Array<{ alias: string; bookId: number }>,
+  limit = DEFAULT_SUGGEST_LIMIT
+): ScriptureBookSuggestion[] {
+  const cap =
+    limit <= 0 || limit > DEFAULT_SUGGEST_LIMIT ? DEFAULT_SUGGEST_LIMIT : limit;
+  if (parseScriptureRef(q)) return [];
+  let input = normalizeBookKey(q);
+  if (!input) return [];
+  const fields = input.split(' ');
+  if (fields.length >= 2 && /^\d+$/.test(fields[fields.length - 1] ?? '')) {
+    const n = Number(fields[fields.length - 1]);
+    if (Number.isInteger(n) && n > 0) {
+      input = fields.slice(0, -1).join(' ');
+    }
+  }
+  if (!input) return [];
+  const byId = new Map(names.map((n) => [n.id, n]));
+  const seen = new Set<number>();
+  const out: ScriptureBookSuggestion[] = [];
+  const consider = (key: string, book: BookName | undefined) => {
+    if (!book) return;
+    const k = normalizeBookKey(key);
+    if (!k || (k !== input && !k.startsWith(input))) return;
+    if (seen.has(book.id)) return;
+    seen.add(book.id);
+    out.push({ name: book.name, shortName: book.shortName });
+  };
+  for (const n of names) {
+    consider(n.name, n);
+    consider(n.shortName, n);
+  }
+  for (const a of aliases) {
+    consider(a.alias, byId.get(a.bookId));
+  }
+  return out.slice(0, cap);
+}
+
 function matchBook(
   bookPart: string,
   names: BookName[],
@@ -202,4 +250,13 @@ export function lookupScripture(
       : `${matched.canonicalName} ${parsed.chapter}:${parsed.verseStart}-${parsed.verseEnd}`;
 
   return { reference, text, translation: code };
+}
+
+/** Book suggestions for the named translation. Operator autocomplete only. */
+export function suggestScriptureBooks(
+  q: string,
+  translationCode: string
+): ScriptureBookSuggestion[] {
+  const code = translationCode.trim().toUpperCase();
+  return suggestBooks(q, loadBookNames(code), aliasesFor(code));
 }

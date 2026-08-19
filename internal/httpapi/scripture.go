@@ -12,16 +12,46 @@ import (
 
 func (s *Server) getScripture(w http.ResponseWriter, r *http.Request) {
 	ref := strings.TrimSpace(r.URL.Query().Get("ref"))
-	if ref == "" {
-		writeError(w, http.StatusBadRequest, "Missing ref query parameter")
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if ref == "" && q == "" {
+		writeError(w, http.StatusBadRequest, "Missing ref or q query parameter")
 		return
 	}
+	code, ok := s.resolveTranslation(w, r)
+	if !ok {
+		return
+	}
+	if ref != "" {
+		passage, found := s.lookupScripture(ref, code)
+		if !found {
+			writeError(w, http.StatusNotFound, "Scripture reference not found")
+			return
+		}
+		writeJSON(w, http.StatusOK, passage)
+		return
+	}
+	names := s.loadBookNames(code)
+	hits := scripture.SuggestBooks(q, names, scripture.AliasesFor(code), 20)
+	suggestions := make([]map[string]string, 0, len(hits))
+	for _, h := range hits {
+		suggestions = append(suggestions, map[string]string{
+			"name":       h.Name,
+			"short_name": h.ShortName,
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"suggestions": suggestions,
+		"translation": code,
+	})
+}
+
+func (s *Server) resolveTranslation(w http.ResponseWriter, r *http.Request) (string, bool) {
 	translationParam := strings.TrimSpace(r.URL.Query().Get("translation"))
 	installed, err := s.listTranslationCodes()
 	if err != nil {
 		log.Printf("Error looking up scripture: %v", err)
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
-		return
+		return "", false
 	}
 	code := "KJV"
 	if translationParam != "" {
@@ -35,26 +65,21 @@ func (s *Server) getScripture(w http.ResponseWriter, r *http.Request) {
 		}
 		if !known {
 			writeError(w, http.StatusBadRequest, `Unknown bible translation "`+normalized+`"`)
-			return
+			return "", false
 		}
 		code = normalized
 	}
 	var n int
 	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM bible_verses WHERE translation_code = ?`, code).Scan(&n); err != nil {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
-		return
+		return "", false
 	}
 	if n == 0 {
 		writeError(w, http.StatusServiceUnavailable,
 			code+` corpus is empty. It ships at data/*/bible-translation/`+strings.ToLower(code)+`.json and is reconciled from that file on boot; check it with npm run corpus:verify.`)
-		return
+		return "", false
 	}
-	passage, ok := s.lookupScripture(ref, code)
-	if !ok {
-		writeError(w, http.StatusNotFound, "Scripture reference not found")
-		return
-	}
-	writeJSON(w, http.StatusOK, passage)
+	return code, true
 }
 
 func (s *Server) listTranslationCodes() ([]string, error) {

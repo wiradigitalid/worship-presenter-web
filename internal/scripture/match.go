@@ -181,3 +181,62 @@ func MatchBook(bookPart string, names []BookName, aliases []Alias) (id int, cano
 	}
 	return winnerID, winnerName, true
 }
+
+const defaultSuggestLimit = 20
+
+// SuggestBooks returns books whose name, short name, or scoped alias starts
+// with q. A complete chapter:verse reference yields no suggestions — the
+// operator has already left the book-picking step. Ambiguous prefixes return
+// every candidate; uniqueness is the lookup's job, not the list's.
+func SuggestBooks(q string, names []BookName, aliases []Alias, limit int) []BookName {
+	if limit <= 0 || limit > defaultSuggestLimit {
+		limit = defaultSuggestLimit
+	}
+	if _, _, _, _, ok := ParseRef(q); ok {
+		return nil
+	}
+	input := normalize(q)
+	if input == "" {
+		return nil
+	}
+	fields := strings.Fields(input)
+	if len(fields) >= 2 {
+		if _, ok := atoiPositive(fields[len(fields)-1]); ok {
+			input = strings.Join(fields[:len(fields)-1], " ")
+		}
+	}
+	if input == "" {
+		return nil
+	}
+	byID := map[int]BookName{}
+	for _, n := range names {
+		byID[n.ID] = n
+	}
+	seen := map[int]struct{}{}
+	var out []BookName
+	consider := func(key string, n BookName) {
+		k := normalize(key)
+		if k == "" || n.ID == 0 {
+			return
+		}
+		if k != input && !strings.HasPrefix(k, input) {
+			return
+		}
+		if _, dup := seen[n.ID]; dup {
+			return
+		}
+		seen[n.ID] = struct{}{}
+		out = append(out, n)
+	}
+	for _, n := range names {
+		consider(n.Name, n)
+		consider(n.ShortName, n)
+	}
+	for _, a := range aliases {
+		consider(a.Alias, byID[a.BookID])
+	}
+	if len(out) > limit {
+		out = out[:limit]
+	}
+	return out
+}

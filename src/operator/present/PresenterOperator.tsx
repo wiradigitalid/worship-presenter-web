@@ -50,6 +50,8 @@ import {
   type SlideTransition,
 } from '@/lib/transitions';
 import { Button } from '@/components/ui/button';
+import { ScriptureRefAutocomplete } from '@/components/ScriptureRefAutocomplete';
+import { useT } from '@/lib/i18n/operator';
 import SlideGridDialog from './SlideGridDialog';
 import {
   PRESENTER_TONE_CLASS,
@@ -262,6 +264,7 @@ export default function PresenterOperator({
    */
   transition: SlideTransition;
 }) {
+  const { t } = useT();
   const [index, setIndex] = useState(0);
   const [gridOpen, setGridOpen] = useState(false);
   const [blank, setBlank] = useState(false);
@@ -541,11 +544,24 @@ export default function PresenterOperator({
       const res = await fetch(
         `/api/scripture?ref=${encodeURIComponent(scriptureRef.trim())}`
       );
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        reference?: string;
+        text?: string;
+      };
       if (!res.ok) {
-        setScriptureError(res.status === 404 ? 'Not found' : 'Lookup failed');
+        setScriptureError(
+          data.error ||
+            (res.status === 404
+              ? t('presenter.scripture.notFound')
+              : t('presenter.scripture.lookupFailed'))
+        );
         return;
       }
-      const data = (await res.json()) as { reference: string; text: string };
+      if (!data.reference || !data.text) {
+        setScriptureError(t('presenter.scripture.lookupFailed'));
+        return;
+      }
       broadcast({
         type: 'scripture',
         reference: data.reference,
@@ -553,7 +569,7 @@ export default function PresenterOperator({
         planIdentity: planIdentityRef.current,
       });
     } catch {
-      setScriptureError('Lookup failed');
+      setScriptureError(t('presenter.scripture.lookupFailed'));
     } finally {
       setScriptureBusy(false);
     }
@@ -821,28 +837,34 @@ export default function PresenterOperator({
           </section>
 
           <section className={`p-3 ${PANEL_CLASS}`}>
-            <h2 className="mb-2 text-sm font-semibold">Scripture</h2>
+            <h2 className="mb-2 text-sm font-semibold">
+              {t('presenter.scripture.title')}
+            </h2>
             <p className="mb-2 text-xs text-muted-foreground">
-              On-demand only — not used for deck theme slides.
+              {t('presenter.scripture.hint')}
             </p>
-            <input
-              className="mb-2 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none"
-              placeholder="John 4:23"
-              value={scriptureRef}
-              onChange={(e) => setScriptureRef(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  void pushScripture();
-                }
-              }}
-            />
+            <div className="mb-2">
+              <ScriptureRefAutocomplete
+                value={scriptureRef}
+                onChange={setScriptureRef}
+                placeholder={t('presenter.scripture.placeholder')}
+                inputClassName="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void pushScripture();
+                  }
+                }}
+              />
+            </div>
             <Button
               size="sm"
               onClick={() => void pushScripture()}
               disabled={scriptureBusy || !scriptureRef.trim()}
             >
-              {scriptureBusy ? 'Looking up…' : 'Push to projector'}
+              {scriptureBusy
+                ? t('presenter.scripture.lookingUp')
+                : t('presenter.scripture.push')}
             </Button>
             {scriptureError && (
               <p className="mt-2 text-xs text-amber-300">{scriptureError}</p>

@@ -2946,21 +2946,9 @@ const CHROMATIC_TEXT = new RegExp(
  * four; this is the criterion.
  */
 const UNPAIRED_CHROMATIC_TEXT = [
-  // The two forms' warning and error banners, which paint a DARK-only shade on
-  // a surface that is light by default — `text-amber-200` over `bg-amber-500/10`,
-  // `text-red-200` over `bg-red-500/10`. Round 2 measured these; the product
-  // decision for untokenized hues lives in deferred-work.md (theme closure; no story
-  // owner yet). Cited so a reader can check the claim rather than take the
-  // file's word for it.
-  'src/operator/EditForm.tsx: text-amber-200 [:471, DESIGN.md Open Item 4]',
-  'src/operator/EditForm.tsx: text-amber-300 [:473, DESIGN.md Open Item 4]',
-  'src/operator/EditForm.tsx: text-red-200 [:463, DESIGN.md Open Item 4]',
+  // Remove-row icons on the two forms. Warning/error banners now pair
+  // `text-amber-950`/`dark:text-amber-100` and `text-destructive`.
   'src/operator/EditForm.tsx: text-red-500 [:911, DESIGN.md Open Item 4]',
-  'src/operator/CreateForm.tsx: text-amber-200 [:444, DESIGN.md Open Item 4]',
-  'src/operator/CreateForm.tsx: text-amber-200 [:481, DESIGN.md Open Item 4]',
-  'src/operator/CreateForm.tsx: text-amber-300 [:447, DESIGN.md Open Item 4]',
-  'src/operator/CreateForm.tsx: text-amber-300 [:483, DESIGN.md Open Item 4]',
-  'src/operator/CreateForm.tsx: text-red-200 [:473, DESIGN.md Open Item 4]',
   'src/operator/CreateForm.tsx: text-red-500 [:880, DESIGN.md Open Item 4]',
   // Pinned dark, so it cannot express itself in `dark:` variants at all: the
   // Presenter renders dark under either theme (AC-3), which is why
