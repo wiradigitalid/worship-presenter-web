@@ -12,7 +12,7 @@ waves:
     fr: [FR-21]
     size: S
     depends_on: []
-    spec_folder: _bmad-output/specs/w1-registry-order/
+    spec_folder: _bmad-output/specs/spec-w1-registry/
     retires:
       - _bmad-output/prior-knowledge/_bmad-output/specs/spec-artifact-registry-authoring/authoring-boundaries.md
     retires_fastpath:
