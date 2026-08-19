@@ -1,7 +1,7 @@
 ---
 topic: Registry
 artifact: .what/registry/SRS-registry.md
-updated: 2026-08-19T14:16
+updated: 2026-08-19T14:18
 ---
 
 - (event) G4 guarded as-built: UC-14..16; LC-11. Snapshot AD-16 [MISSING] in the DDL.
@@ -16,3 +16,4 @@ updated: 2026-08-19T14:16
 - (event) Blueprint vs code: screen inventory row 7 drops UC-16. AdminArtifactsPage is UC-14/UC-15 only; Sync Artifact has no route and is a Hub surface once AD-16 ships.
 - (event) G3: two-surface constraint; catalog coverage floor (no spellings); BR-11 Announcement expands whole Hub list; UC-14 SongSet canvas read-only as-built.
 - (event) wdi-review: Reset/GET 500 on corrupt JSON.parse; UC-16 corrupt live row omit-and-log when Sync ships (OQ-32). Stamp pending.
+- (event) Owner held G4. V13 stamped SRS+SDD at 02f8d3a. g4_passed true.

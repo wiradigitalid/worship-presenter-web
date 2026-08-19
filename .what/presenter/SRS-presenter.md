@@ -7,7 +7,7 @@ updated: 2026-08-19
 satisfies: [FR-15, FR-16, FR-19, FR-22]
 reviewed:
   date: '2026-08-19'
-  sha: '9ab09960cff59de97da9214a24d3c9d5c39db050'
+  sha: '02f8d3a124a8c4d4e266ec005f8fc0495879914e'
   lenses: [structure, prose, edge-case-hunter]
 ---
 

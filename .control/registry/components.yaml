@@ -19,7 +19,7 @@ product_components:
   - id: hub
     name: "Hub"
     mode: deep
-    g4_passed: false
+    g4_passed: true
     risk_accepted: medium
     risk_note: "congregation personal data in the Service payload and announcement list; Operator accounts"
     owns:
@@ -35,7 +35,7 @@ product_components:
   - id: presenter
     name: "Presenter"
     mode: deep
-    g4_passed: false
+    g4_passed: true
     risk_accepted: medium
     risk_note: "displays names and verses on the room screen; does not write the weekly payload"
     owns:
@@ -50,7 +50,7 @@ product_components:
   - id: registry
     name: "Registry"
     mode: deep
-    g4_passed: false
+    g4_passed: true
     risk_accepted: medium
     risk_note: "Deck structure; deleting an entry is irreversible; not weekly content"
     owns:

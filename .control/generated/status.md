@@ -19,7 +19,7 @@ validators_skipped:
     is checked at G5
 open_questions:
   blocking: 0
-  assumptions: 21
+  assumptions: 29
   external: 1
   answered: 4
   blocking_budget: 9

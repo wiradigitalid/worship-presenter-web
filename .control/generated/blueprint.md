@@ -79,6 +79,8 @@ Conceptual. Database column types belong in `.how/`.
 | Rundown | Text the Operator enters in Hub this phase; later Events may send it on Telegram | becomes Service payload |
 | Hymn | One Song Book entry, identified by book + number | resolved into a Service song block (BR-3) |
 
+The Operator form is one raw Rundown plus structured overlays. Physical field names: `.how/hub/05-model/form-fields.md`.
+
 ### presenter
 
 ### Domain model — Presenter
@@ -106,6 +108,8 @@ Conceptual. Database column types belong in `.how/`.
 | SongSet Slot | slot identity | Four fixed song-block positions | identity belongs to the system; at most one row per slot |
 
 One Registry holds zero or more ArtifactTemplates. After FR-21, one Service has one Snapshot. A SongSet slot may have at most one live row.
+
+Placeholder Catalog **coverage floor** (intent, not persisted spelling — Story 20.5 owns the key strings): service date; theme verse; verse reading; sermon speaker / title / graphic; special song; closing-prayer person; family and youth prayer text and photos. SongSet hymn/lyric values and Announcement flyer slots are system expansion, not catalog keys.
 
 ## Three inventories
 
@@ -199,7 +203,7 @@ Derived by `inventory.py` from `export default function` in `src/app/**/page.tsx
 | 4 | web/ServiceRunSheet | `/services/[id]` | — | hub | UC-4, UC-5, UC-6, UC-7, UC-18 |
 | 5 | web/AnnouncementsPage | `/announcements` | — | hub | UC-21 |
 | 6 | web/AdminPage | `/admin` | — | hub | UC-9, UC-19, UC-22 |
-| 7 | web/AdminArtifactsPage | `/admin/artifacts` | — | registry | UC-14, UC-15, UC-16 |
+| 7 | web/AdminArtifactsPage | `/admin/artifacts` | — | registry | UC-14, UC-15 |
 | 8 | web/SlideshowPage | `/services/[id]/slideshow` | — | presenter | UC-11 |
 | 9 | web/PresentPage | `/services/[id]/present` | — | presenter | UC-12, UC-13 |
 | 10 | web/ProjectorPage | `/services/[id]/present/projector` | — | presenter | UC-12 |
@@ -207,4 +211,5 @@ Derived by `inventory.py` from `export default function` in `src/app/**/page.tsx
 #### Findings
 
 - States are not declared on these pages; the `states:` map in frontmatter is empty, so the column is `—`. Empty and error states demanded by the UX guide are not yet named here.
-- UC served is a judgement the reader cannot derive from `page.tsx`; values are the prior catalogue mapping, kept in this file.
+- UC served is a judgement the reader cannot derive from `page.tsx`; values are the prior catalogue mapping, kept in this file, except where that mapping names a UC the page does not run.
+- UC-16 (Sync Artifact) is not on this page and has no route in `src/`. It is a Hub surface once AD-16 ships (SDD Registry Evidence). Do not list it on row 7.

@@ -1,7 +1,7 @@
 ---
 topic: Hub
 artifact: .what/hub/SRS-hub.md
-updated: 2026-08-19T14:16
+updated: 2026-08-19T14:18
 ---
 
 - (event) G4 guarded as-built: UC-1, UC-5, UC-7; LC-1..LC-8; picoclaw integration.
@@ -18,3 +18,4 @@ updated: 2026-08-19T14:16
 - (event) wdi-review SDD: hymns Evidence aligned to 200 empty array; settings keys as-built; LC-12 callers vs depends; webhook action else rundown-or-400; CAP-11 mismatches disposition OQ-27 not BUG. Not stamped (g4_passed false).
 - (event) G4: form-fields.md from CreateForm/EditForm; BR-6 lyric join on LC-16; create/edit share field set; /services/[id] chrome listed on SDD screens. No 01-ux.
 - (event) wdi-review Hub SRS+SDD at 33a047b then as-built encodes: overlay-adjacent announcements PUT empty/LWW (OQ-33/34); picoclaw BUG->OQ-27; form-fields Resolve miss. Stamp pending content commit.
+- (event) Owner held G4. V13 stamped SRS+SDD at 02f8d3a (structure, prose, edge-case-hunter). g4_passed true.
