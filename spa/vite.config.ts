@@ -8,7 +8,22 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   root: dir,
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    {
+      name: 'projected-html',
+      configureServer(server) {
+        server.middlewares.use((req, _res, next) => {
+          const url = req.url?.split('?')[0] ?? '';
+          if (url.endsWith('/slideshow') || url.endsWith('/projector')) {
+            req.url = '/projected.html';
+          }
+          next();
+        });
+      },
+    },
+  ],
   resolve: {
     alias: {
       '@': path.resolve(dir, '../src'),
@@ -23,5 +38,11 @@ export default defineConfig({
   build: {
     outDir: path.resolve(dir, 'dist'),
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(dir, 'index.html'),
+        projected: path.resolve(dir, 'projected.html'),
+      },
+    },
   },
 });

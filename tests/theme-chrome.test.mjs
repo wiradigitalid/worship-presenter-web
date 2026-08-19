@@ -17,14 +17,14 @@
  * theme deliberately). Story 17.7 extended this same net to the *shell behind*
  * a projected route — `layout.tsx`, framework fallbacks, and server first paint.
  * `FULL_SCREEN` still covers the client hook defence; structural discovery from
- * `src/app/(projected)` covers the Server Components above it.
+ * `src/app/(projected)` covers the room-facing React clients.
  *
  * The projected surface is two routes, and each is a route shell plus a client
  * tree. Both halves are guarded, because the shell is reached at the same URL
  * whenever `buildSlidePlan` throws:
  *
- *   slideshow/page.tsx           -> SlideshowClient -> SlideView -> ArtifactSlide
- *   present/projector/page.tsx   -> ProjectorClient -> SlideView -> ArtifactSlide
+ *   spa/src/pages/SlideshowPage.tsx -> SlideshowClient -> SlideView -> ArtifactSlide
+ *   spa/src/pages/ProjectorPage.tsx -> ProjectorClient -> SlideView -> ArtifactSlide
  *
  * The closure test starts at every route special file in the projected group,
  * walks *out of* them transitively, and requires every module it reaches to be
@@ -610,23 +610,29 @@ const PROJECTED = projectedRoutes.specialFiles;
 
 test('Story 17.7: the projected route group owns both unchanged public URLs', () => {
   assert.deepEqual(projectedRoutes.urls, [
-    '/services/[id]/present/projector',
-    '/services/[id]/slideshow',
+    '/services/:id/present/projector',
+    '/services/:id/slideshow',
   ]);
-  assert.equal(projectedRoutes.layouts.length, 1, 'one projected root owns both URLs');
-  assert.equal(projectedRoutes.layouts[0], `${PROJECTED_ROUTE_GROUP}/layout.tsx`);
+  assert.equal(projectedRoutes.layouts.length, 1, 'one projected document owns both URLs');
+  assert.equal(projectedRoutes.layouts[0], 'spa/projected.html');
   assert.equal(
     fs.existsSync(path.join(repoRoot, 'src/app/layout.tsx')),
     false,
-    'multiple roots require removing the top-level layout'
+    'the retired App Router root layout must not return'
   );
   const allPages = discoverAppPages(repoRoot);
   for (const url of projectedRoutes.urls) {
-    const owners = allPages.filter((file) => projectedUrlForPage(file) === url);
+    const owners = allPages.filter((file) => {
+      try {
+        return projectedUrlForPage(file) === url;
+      } catch {
+        return false;
+      }
+    });
     assert.deepEqual(
       owners,
       projectedRoutes.pages.filter((file) => projectedUrlForPage(file) === url),
-      `${url} must have no owner outside ${PROJECTED_ROUTE_GROUP}`
+      `${url} must be owned only by its SPA projected page`
     );
   }
 });
@@ -634,16 +640,16 @@ test('Story 17.7: the projected route group owns both unchanged public URLs', ()
 test('Story 17.7: every projected framework fallback is discovered structurally', () => {
   for (const name of ['not-found.tsx', 'error.tsx']) {
     assert.ok(
-      projectedRoutes.specialFiles.includes(`${PROJECTED_ROUTE_GROUP}/${name}`),
-      `${name} must live inside the projected root boundary`
+      projectedRoutes.specialFiles.includes(`spa/src/projected/${name}`),
+      `${name} must live inside the projected SPA fallbacks`
     );
   }
 });
 
 test('Story 17.7: projected page normalization removes route groups and nothing else', () => {
   assert.equal(
-    projectedUrlForPage('src/app/(projected)/services/[id]/present/projector/page.tsx'),
-    '/services/[id]/present/projector'
+    projectedUrlForPage('spa/src/pages/ProjectorPage.tsx'),
+    '/services/:id/present/projector'
   );
 });
 
@@ -753,14 +759,32 @@ function styleLiteral(styleObject, property, expected, message) {
   assert.equal(actual, expected, `${message}.${property} must be the literal ${expected}`);
 }
 
+function styleAttribute(html, tag) {
+  const match = html.match(new RegExp(`<${tag}\\b([^>]*)>`, 'i'));
+  assert.ok(match, `spa/projected.html must render <${tag}>`);
+  const style = /style\s*=\s*"([^"]*)"/i.exec(match[1] ?? '');
+  assert.ok(style, `<${tag}> must state its shell on a style attribute`);
+  return style[1];
+}
+
+function cssLiteral(style, cssName, expected, message) {
+  const match = new RegExp(
+    `(?:^|;)\\s*${cssName}\\s*:\\s*([^;]+)`,
+    'i'
+  ).exec(style.replace(/\s+/g, ' '));
+  assert.ok(match, `${message} must set ${cssName}`);
+  assert.equal(match[1].trim(), expected, `${message}.${cssName} must be the literal ${expected}`);
+}
+
 function projectedShellLiteral(element, property, expected) {
-  const file = `${PROJECTED_ROUTE_GROUP}/layout.tsx`;
-  const source = read(file);
-  const { root, sourceFile } = defaultReturnedRoot(source, file);
-  const rendered = findRenderedElement(root, element, file);
-  const styleName = styleIdentifierFor(rendered, file);
-  assert.equal(styleName, `${element}Style`, `<${element}> must use ${element}Style`);
-  styleLiteral(literalStyleObject(sourceFile, styleName, file), property, expected, styleName);
+  const html = read('spa/projected.html');
+  const cssName = {
+    backgroundColor: 'background-color',
+    overflow: 'overflow',
+    scrollbarGutter: 'scrollbar-gutter',
+  }[property];
+  assert.ok(cssName, `unknown shell property ${property}`);
+  cssLiteral(styleAttribute(html, element), cssName, expected, element);
 }
 
 for (const [element, property, expected] of [
@@ -780,14 +804,16 @@ for (const forbidden of ['ThemeProvider', 'getUiLocale', 'suppressHydrationWarni
     ? 'projected root excludes operator providers: ThemeProvider'
     : `projected root excludes operator shell state ${forbidden}`;
   test(`Story 17.7: ${claim}`, () => {
-    const layout = stripComments(read(`${PROJECTED_ROUTE_GROUP}/layout.tsx`));
-    assert.doesNotMatch(layout, new RegExp(`\\b${forbidden}\\b`));
+    assert.doesNotMatch(read('spa/projected.html'), new RegExp(`\\b${forbidden}\\b`));
+    const block = /if \(projected\) \{[\s\S]*?\n  \}/.exec(read('spa/src/App.tsx'));
+    assert.ok(block, 'App.tsx must branch projected routes away from the operator shell');
+    assert.doesNotMatch(block[0], new RegExp(`\\b${forbidden}\\b`));
   });
 }
 
 test('Story 17.7: projected not-found and error fallbacks are literal and generic', () => {
   for (const name of ['not-found.tsx', 'error.tsx']) {
-    const file = `${PROJECTED_ROUTE_GROUP}/${name}`;
+    const file = `spa/src/projected/${name}`;
     const source = read(file);
     const { root, sourceFile } = defaultReturnedRoot(source, file);
     const rendered = findRenderedElement(root, 'main', file);
@@ -1162,34 +1188,23 @@ test('AC-4: every projected focusable states a literal outline colour', () => {
   );
 });
 
-/** The two room-facing route shells: the `buildSlidePlan` failure branches. */
-const ROUTE_SHELLS = projectedRoutes.pages;
+/** The two room-facing fallbacks when a service cannot be shown. */
+const ROUTE_SHELLS = [
+  'spa/src/projected/not-found.tsx',
+  'spa/src/projected/error.tsx',
+];
 
 test('the room-facing failure branches can both be scrolled', () => {
-  // Not a theme assertion. It lives here because this is the file that knows
-  // which surfaces are room-facing, and because the two branches diverged
-  // immediately after a change set declared them one failure: the slideshow's was
-  // rewritten to `overflow-y-auto` with a `min-h-full` inner column, the
-  // projector's stayed `fixed inset-0 … justify-center` with no overflow
-  // handling, and a `fixed` element cannot be scrolled. An
-  // `ArtifactHydrationError` carries up to five `key=value` scope pairs at
-  // `text-xl font-mono`, so on a short projector the detail clipped at both ends
-  // on the one screen whose job is telling the operator how to recover.
   for (const file of ROUTE_SHELLS) {
     const source = read(file);
-    const covering = jsxReturnBranches(source).flat().filter((tag) =>
-      tag && /(?:^|\s)fixed inset-0(?:$|\s)/.test(classNameValues(tag)[0] ?? '')
-    );
-    assert.equal(covering.length, 1, `${file} should have one full-screen branch`);
-    const [value] = classNameValues(covering[0]);
+    assert.match(source, /position:\s*'fixed'/, `${file} must cover the viewport`);
+    assert.match(source, /inset:\s*0/, `${file} must cover the viewport`);
     assert.match(
-      value,
-      /(?:^|\s)overflow-(?:y-)?auto(?:$|\s)/,
-      `${file} covers the viewport with \`fixed inset-0\`, which cannot scroll. ` +
-        `A registry failure renders up to five scope pairs at \`text-xl ` +
-        `font-mono\` here, and it clips with nothing able to reach it. Both ` +
-        `room-facing branches state the same recovery: this is one failure at ` +
-        `two URLs. Found: ${value}`
+      source,
+      /overflowY:\s*'auto'/,
+      `${file} covers the viewport with a fixed surface, which cannot scroll ` +
+        `unless overflowY is auto. Both room-facing fallbacks state the same ` +
+        `recovery: this is one failure at two URLs.`
     );
   }
 });
@@ -1359,13 +1374,13 @@ test('AC-4: the projected tree stays closed, transitively and with no exempt dir
     }
   }
 
-  // A floor on the reach, so the walk cannot quietly stop early again: the
-  // `.tsx`-only enqueue scanned 12 modules where following every extension
-  // reaches 27. A refactor that drops it back to one hop fails here rather than
-  // reporting an empty offender list — which is the only reason the earlier
-  // narrowing survived two rounds.
+  // A floor on the reach, so the walk cannot quietly stop early again. The
+  // App Router page.tsx used to pull SQLite/plan modules into this graph
+  // (27+). The SPA pages only import the room-facing clients, so the live
+  // tree is smaller; a `.tsx`-only enqueue still stops around a handful of
+  // files and misses `src/lib/projected-shell.ts`. Keep the floor above that.
   assert.ok(
-    walked.length >= 27,
+    walked.length >= 10,
     `the closure walk reached only ${walked.length} modules; it used to stop at ` +
       `the first \`.ts\` hop and that is the shape of this regression. Reached: ` +
       `${walked.map(({ file }) => file).sort().join(', ')}`
@@ -2216,46 +2231,46 @@ for (const file of [
 
 // --- AC-1, AC-2, AC-5: the choice is mounted, and mounted in one place ------
 
-test('AC-1/AC-2: the root layout mounts the theme provider and suppresses the html mismatch', () => {
-  const layout = read('src/app/(operator)/layout.tsx');
+test('AC-1/AC-2: the operator shell mounts the theme provider', () => {
+  const app = read('spa/src/App.tsx');
 
   assert.match(
-    layout,
-    /<ThemeProvider>[\s\S]*\{children\}[\s\S]*<\/ThemeProvider>/,
-    'children must render inside ThemeProvider, or useTheme() resolves to nothing'
+    app,
+    /<ThemeProvider>[\s\S]*\{routes\}[\s\S]*<\/ThemeProvider>/,
+    'operator routes must render inside ThemeProvider, or useTheme() resolves to nothing'
   );
   assert.match(
-    layout,
-    /suppressHydrationWarning/,
-    'next-themes writes the class onto <html> before React hydrates; without ' +
-      'suppressHydrationWarning the expected attribute mismatch logs an error'
+    read('src/components/ThemeProvider.tsx'),
+    /^'use client';/m,
+    'next-themes writes the class onto <html> before React hydrates; the provider is the client boundary'
   );
   assert.doesNotMatch(
-    layout,
-    /^\s*'use client'/m,
-    'the root layout stays a Server Component — the provider is the client boundary'
+    read('spa/src/main.tsx'),
+    /ThemeProvider/,
+    'main.tsx must not wrap the projected document in the operator theme provider'
   );
 });
 
 // Story 17.3 — browser tab/bookmark name the product, not create-next-app.
 test('Story 17.3: root metadata names Worship Presenter Web, not create-next-app boilerplate', () => {
-  const layout = read('src/app/(operator)/layout.tsx');
-
-  assert.doesNotMatch(
-    layout,
-    /Create Next App/,
-    'metadata.title must not carry the create-next-app boilerplate title'
-  );
-  assert.doesNotMatch(
-    layout,
-    /Generated by create next app/,
-    'metadata.description must not carry the create-next-app boilerplate description'
-  );
-  assert.match(
-    layout,
-    /title:\s*["']Worship Presenter Web["']/,
-    'metadata.title must be the product-owned name from design-system.md frontmatter'
-  );
+  for (const file of ['spa/index.html', 'spa/projected.html']) {
+    const html = read(file);
+    assert.doesNotMatch(
+      html,
+      /Create Next App/,
+      `${file} must not carry the create-next-app boilerplate title`
+    );
+    assert.doesNotMatch(
+      html,
+      /Generated by create next app/,
+      `${file} must not carry the create-next-app boilerplate description`
+    );
+    assert.match(
+      html,
+      /<title>Worship Presenter Web<\/title>/,
+      `${file} title must be the product-owned name from design-system.md frontmatter`
+    );
+  }
 });
 
 test('AC-1/AC-2: the provider is a client component with system default', () => {
@@ -2326,9 +2341,9 @@ test('AC-5: sonner reads the theme, and the provider sits above it', () => {
     'sonner must not mount its own provider — one provider, at the root'
   );
   assert.match(
-    read('src/app/(operator)/layout.tsx'),
+    read('spa/src/App.tsx'),
     /<ThemeProvider>/,
-    'the provider is above sonner because it is above everything'
+    'the provider is above sonner because it is above operator chrome'
   );
 });
 

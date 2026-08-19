@@ -171,6 +171,13 @@ func (s *Server) getPptx(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(buf)
 }
 
+func spaIndexName(pathname string) string {
+	if strings.HasSuffix(pathname, "/slideshow") || strings.HasSuffix(pathname, "/projector") {
+		return "projected.html"
+	}
+	return "index.html"
+}
+
 func (s *Server) fallback(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(r.URL.Path, "/api/") {
 		if r.URL.Path == "/api/auth/login" || r.URL.Path == "/api/auth/logout" ||
@@ -181,6 +188,7 @@ func (s *Server) fallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not Found", http.StatusNotFound)
 		return
 	}
+	indexName := spaIndexName(r.URL.Path)
 	rel := strings.TrimPrefix(r.URL.Path, "/")
 	candidates := []string{
 		filepath.Join(s.Root, "spa", "dist", rel),
@@ -190,8 +198,8 @@ func (s *Server) fallback(w http.ResponseWriter, r *http.Request) {
 	if rel == "" || rel == "login" || strings.HasPrefix(rel, "services") ||
 		rel == "announcements" || strings.HasPrefix(rel, "admin") || strings.HasSuffix(rel, "/") {
 		candidates = append([]string{
-			filepath.Join(s.Root, "spa", "dist", "index.html"),
-			filepath.Join(s.Root, "spa", "index.html"),
+			filepath.Join(s.Root, "spa", "dist", indexName),
+			filepath.Join(s.Root, "spa", indexName),
 			filepath.Join(s.Root, "public", "index.html"),
 		}, candidates...)
 	}
@@ -206,9 +214,9 @@ func (s *Server) fallback(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, p)
 		return
 	}
-	index := filepath.Join(s.Root, "spa", "dist", "index.html")
+	index := filepath.Join(s.Root, "spa", "dist", indexName)
 	if _, err := os.Stat(index); err != nil {
-		index = filepath.Join(s.Root, "spa", "index.html")
+		index = filepath.Join(s.Root, "spa", indexName)
 	}
 	if _, err := os.Stat(index); err == nil {
 		http.ServeFile(w, r, index)

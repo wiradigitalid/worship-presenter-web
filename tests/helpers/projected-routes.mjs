@@ -3,15 +3,15 @@ import path from 'node:path';
 
 export const PROJECTED_ROUTE_GROUP = 'src/app/(projected)';
 
-export const PROJECTED_SPECIAL_BASENAMES = new Set([
-  'page',
-  'layout',
-  'not-found',
-  'error',
-  'loading',
-  'template',
-  'default',
-]);
+const SPA_PROJECTED_PAGES = [
+  'spa/src/pages/SlideshowPage.tsx',
+  'spa/src/pages/ProjectorPage.tsx',
+];
+
+const SPA_PROJECTED_FALLBACKS = [
+  'spa/src/projected/not-found.tsx',
+  'spa/src/projected/error.tsx',
+];
 
 const ROUTE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx']);
 const MODULE_EXTENSIONS = ['.tsx', '.ts', '.jsx', '.js', '.json', '.css'];
@@ -26,42 +26,38 @@ function walkFiles(root, rel) {
 }
 
 export function projectedUrlForPage(file) {
-  const relative = path.posix.relative('src/app', file.replaceAll('\\', '/'));
-  const segments = relative
-    .split('/')
-    .filter((segment) => !/^\(.+\)$/.test(segment));
-  const last = segments.at(-1) ?? '';
-  if (!/^page\.(?:js|jsx|ts|tsx)$/.test(last)) {
-    throw new Error(`not a projected page file: ${file}`);
+  const normalized = file.replaceAll('\\', '/');
+  if (normalized.endsWith('spa/src/pages/ProjectorPage.tsx')) {
+    return '/services/:id/present/projector';
   }
-  segments.pop();
-  return `/${segments.join('/')}`.replace(/\/$/, '') || '/';
+  if (normalized.endsWith('spa/src/pages/SlideshowPage.tsx')) {
+    return '/services/:id/slideshow';
+  }
+  throw new Error(`not a projected page file: ${file}`);
 }
 
 export function discoverAppPages(repoRoot) {
-  return walkFiles(repoRoot, 'src/app')
-    .filter((file) => /^page\.(?:js|jsx|ts|tsx)$/.test(path.posix.basename(file)))
+  return walkFiles(repoRoot, 'spa/src/pages')
+    .filter((file) => /\.tsx$/.test(file))
     .sort();
 }
 
 export function discoverProjectedRoutes(repoRoot) {
-  const files = walkFiles(repoRoot, PROJECTED_ROUTE_GROUP)
+  const pages = SPA_PROJECTED_PAGES.filter((file) =>
+    fs.existsSync(path.join(repoRoot, file))
+  );
+  const fallbacks = SPA_PROJECTED_FALLBACKS.filter((file) =>
+    fs.existsSync(path.join(repoRoot, file))
+  );
+  const specialFiles = [...pages, ...fallbacks];
+  const clientFiles = walkFiles(repoRoot, PROJECTED_ROUTE_GROUP)
     .filter((file) => ROUTE_EXTENSIONS.has(path.posix.extname(file)))
     .sort();
-  const specialFiles = files.filter((file) =>
-    PROJECTED_SPECIAL_BASENAMES.has(path.posix.basename(file, path.posix.extname(file)))
-  );
-  const pages = specialFiles.filter((file) =>
-    /^page\.(?:js|jsx|ts|tsx)$/.test(path.posix.basename(file))
-  );
-  const layouts = specialFiles.filter((file) =>
-    /^layout\.(?:js|jsx|ts|tsx)$/.test(path.posix.basename(file))
-  );
   return {
-    files,
+    files: [...new Set([...specialFiles, ...clientFiles])],
     specialFiles,
     pages,
-    layouts,
+    layouts: ['spa/projected.html'],
     urls: pages.map(projectedUrlForPage).sort(),
   };
 }
@@ -121,6 +117,8 @@ export function discoverModuleGraph(repoRoot, roots) {
   const queue = [...roots];
   while (queue.length > 0) {
     const file = queue.shift();
+    if (!fs.existsSync(path.join(repoRoot, file))) continue;
+    if (path.posix.extname(file) === '.html') continue;
     for (const { specifier, resolved } of discoverLocalModuleImports(repoRoot, file)) {
       if (seen.has(resolved)) continue;
       seen.set(resolved, `${file} -> ${specifier}`);

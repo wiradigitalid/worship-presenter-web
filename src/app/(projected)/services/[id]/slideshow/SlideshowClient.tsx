@@ -7,6 +7,7 @@ import SlideView from '@/components/SlideView';
 import { transitionLayerStyle, type SlideTransition } from '@/lib/transitions';
 import { useProjectedShell } from '@/lib/use-projected-shell';
 import { useSlideTransition } from '@/lib/use-slide-transition';
+import '@/app/(projected)/projected.css';
 
 export default function SlideshowClient({
   serviceId,

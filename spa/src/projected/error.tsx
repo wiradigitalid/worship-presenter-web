@@ -1,7 +1,4 @@
-'use client';
-
 import type { CSSProperties } from 'react';
-import { useEffect } from 'react';
 
 const surfaceStyle: CSSProperties = {
   position: 'fixed',
@@ -21,15 +18,7 @@ const contentStyle: CSSProperties = {
   textAlign: 'center',
 };
 
-export default function ProjectedError({
-  error,
-}: {
-  error: Error & { digest?: string };
-}) {
-  useEffect(() => {
-    console.error('Projected route failed:', error);
-  }, [error]);
-
+export default function ProjectedError() {
   return (
     <main style={surfaceStyle}>
       <div style={contentStyle}>

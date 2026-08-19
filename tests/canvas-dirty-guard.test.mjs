@@ -726,13 +726,9 @@ test('AC-4: the provider mounts on the page, never on the root layout', () => {
     );
   }
 
-  const layout = ast('src/app/(operator)/layout.tsx');
-  assert.ok(
-    !hasUseClient(layout),
-    "AD-24: `'use client'` on the root layout converts the whole app"
-  );
+  const app = ast('spa/src/App.tsx');
   assert.equal(
-    identifiers(layout, 'NavigationBlockerProvider').length,
+    identifiers(app, 'NavigationBlockerProvider').length,
     0,
     'AD-24: a provider mounts at the narrowest layout covering its consumers, ' +
       'and both of this one\'s consumers live on a single page'
