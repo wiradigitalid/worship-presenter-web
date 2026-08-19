@@ -4,13 +4,16 @@ component: hub
 realizes: [UC-1, UC-17]
 risky: true
 created: 2026-08-18
+updated: 2026-08-19
 ---
 
 # Flow — Webhook intake and correction
 
+Later **CAP-11**. As-built in `src/app/api/webhook/route.ts`. Not this phase's handover (that is UC-2 / `/services/new`). Do not delete this flow.
+
 ## Realizes
 
-UC-1 new rundown/upsert; UC-17 `action: correct`. Third party: picoclaw.
+UC-1 new rundown/upsert; UC-17 `action: correct` — both CAP-11 later. Third party: picoclaw.
 
 ## Participants
 

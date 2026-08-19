@@ -7,7 +7,7 @@ critical: false
 created: 2026-08-18
 ---
 
-# UC-16 — I Sync Artifact to a Service that has already been reviewed
+# UC-16 — I Sync Artifact to a Service already reviewed
 
 ## Trigger
 
@@ -15,7 +15,7 @@ Admin chooses Sync Artifact on a Service.
 
 ## Precondition
 
-Admin is signed in. The Service exists. The Operator may see that the structure is stale, but does not run Sync.
+Admin is signed in. The Service exists. Operator cannot run Sync.
 
 ## Main Flow
 
@@ -29,6 +29,7 @@ Admin is signed in. The Service exists. The Operator may see that the structure 
 | From step | Condition | What happens |
 | --- | --- | --- |
 | 1 | Service was created before the Snapshot model | The first Sync is the on-ramp into that model (AD-16) |
+| 3 | Live Registry dropped or added entries | Entered fields remain; unused ones stay stored and inert; new slots start empty. Announcement membership stays the Service's live list, not cloned from Registry (AD-16) |
 
 ## Failure Flows
 

@@ -29,7 +29,7 @@ The Operator is signed in. That Service exists.
 
 | From step | Condition | What happens |
 | --- | --- | --- |
-| 2 | New hymn number is not in the Song Book | May be saved; the song block is marked incomplete (FR-2) |
+| 2 | New hymn number is not in the Song Book | The Service is saved; the song block is marked incomplete (FR-2, BR-3) |
 
 ## Failure Flows
 

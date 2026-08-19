@@ -3,7 +3,7 @@ type: srs
 component: registry
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 satisfies: [FR-4, FR-5, FR-6, FR-20, FR-21]
 reviewed:
   date: ''
@@ -34,17 +34,18 @@ Changing the worship order must not wait for a deploy, and must not overwrite a 
 | --- | --- | --- | --- | --- |
 | UC-14 | I change a slide's layout | Admin | FR-20 | no |
 | UC-15 | I change slide order and a delete stays deleted | Admin | FR-21 | yes |
-| UC-16 | I Sync Artifact to a Service that has already been reviewed | Admin | FR-21 | no |
+| UC-16 | I Sync Artifact to a Service already reviewed | Admin | FR-21 | no |
 | UC-20 | I see a Deck that matches this week's payload | Operator | FR-4, FR-5, FR-6 | no |
 
 ## Constraints · [G3]
 
-Not per-church configuration. Registry holds structure, not family names or prayers.
+Not per-church configuration. Source: brief Scope Out; glossary Artifact Registry (one Registry, not per-church). AD-14 admin-only global templates.
 
 ## Non-Goals · [G3]
 
 - Fill weekly payload — Hub.
-- Live control — brief.
+- Live control — Presenter.
+- Add a new Artifact Template from Admin — development until a create verb ships (FR-21). `insertIfMissing` is bootstrap only (AD-17).
 
 ## Prerequisite · [G3]
 

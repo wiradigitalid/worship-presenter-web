@@ -15,6 +15,8 @@ Events paste a Rundown (text, and images if any) into the Telegram channel picoc
 
 ## Precondition
 
+This use case realises **CAP-11 (last phase)**. This phase's create path is UC-2.
+
 Webhook channel is ready. Song Book is shipped.
 
 ## Main Flow
@@ -43,7 +45,7 @@ Webhook channel is ready. Song Book is shipped.
 
 ## Outcome
 
-One dated Service holds that week's payload. Events need not open Hub.
+Later (CAP-11): one dated Service holds that week's payload. Events need not open Hub.
 
 ## Business Rules
 

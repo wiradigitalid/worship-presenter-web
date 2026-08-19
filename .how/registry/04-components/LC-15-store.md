@@ -16,7 +16,7 @@ Read/write `artifact_templates`, Reset, `position` order, AD-15 validation.
 
 ## Depends on
 
-LC-11 (Admin HTTP)
+SQLite in `web`. LC-11 calls this; this does not call LC-11.
 
 ## Interface
 
@@ -24,4 +24,4 @@ LC-11 (Admin HTTP)
 
 ## Notes
 
-Seed is bootstrap + Reset only (AD-17).
+Seed is bootstrap + Reset only (AD-17). `position` is persisted and asserted contiguous. Admin delete and reorder functions are [MISSING] (FR-21 / UC-15).

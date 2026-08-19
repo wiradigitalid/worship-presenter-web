@@ -28,7 +28,9 @@ Admin is signed in.
 
 | From step | Condition | What happens |
 | --- | --- | --- |
-| 1 | Reset one entry to seed | Only that entry recovers from seed; deleted ones stay gone |
+| 1 | Reset one entry that still has a seed | That entry's layout returns to seed; other entries unchanged. Override record (backgrounds, fonts) remains; Reset does not clear it (AD-22) |
+| 1 | Delete a SongSet slot row | Delete is allowed; Hub hymn binding for that slot stays stored and is inert (AD-19) |
+| 1 | Delete every remaining live entry | Allowed; a new Service's Deck has no slides from Registry (AD-17: N rows, including zero) |
 
 ## Failure Flows
 
@@ -43,4 +45,4 @@ Live Registry = what Admin left in place. Delete is irreversible except Reset pe
 
 ## Business Rules
 
-BR-9
+BR-8 · BR-9

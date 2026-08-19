@@ -13,5 +13,5 @@ updated: 2026-08-18
 
 | id | Rule | Binds | Source | Status |
 | --- | --- | --- | --- | --- |
-| BR-6 | Blank blacks the Jemaat screen without changing Deck position. | presenter | FR-16 · UC-12 | active |
+| BR-6 | Blank blacks the Congregation screen without changing Deck position. | presenter | FR-16 · UC-12 | active |
 | BR-7 | A verse overlay does not write the Service payload. | presenter | FR-19 · UC-13 | active |

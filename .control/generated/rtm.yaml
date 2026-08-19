@@ -1,6 +1,6 @@
 rtm:
 - BG: BG-1
-  CAP: CAP-1
+  CAP: CAP-11
   FR: FR-1
   DEC: []
   UC: UC-1
@@ -39,7 +39,7 @@ rtm:
   exempt: false
   broken_at: story
 - BG: BG-1
-  CAP: CAP-1
+  CAP: CAP-11
   FR: FR-12
   DEC: []
   UC: UC-17
@@ -156,6 +156,19 @@ rtm:
   exempt: false
   broken_at: story
 - BG: BG-1
+  CAP: CAP-1
+  FR: FR-2
+  DEC: []
+  UC: UC-2
+  story: ''
+  wave: ''
+  release: ''
+  test: []
+  status: ''
+  green: false
+  exempt: false
+  broken_at: story
+- BG: BG-1
   CAP: CAP-9
   FR: FR-20
   DEC: []
@@ -259,8 +272,8 @@ rtm:
   green: false
   exempt: true
   broken_at: no_uc
-- BG: BG-2
-  CAP: CAP-4
+- BG: BG-1
+  CAP: CAP-1
   FR: FR-27
   DEC: []
   UC: UC-2

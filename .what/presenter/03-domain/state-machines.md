@@ -3,7 +3,7 @@ type: lifecycle
 component: presenter
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 entities: [ProjectorLiveness]
 ---
 
@@ -20,11 +20,23 @@ Presenter does not write domain entities. What has state is the browser presenta
 | From | To | Trigger | Who may | Guard | Side effect |
 | --- | --- | --- | --- | --- | --- |
 | none | live | Ack from the projector window | System | only the projector window may send (AD-29) | live verdict |
+| none | lost | Projector was opened but no ack within the freshness window | System | `opened` was recorded; `none` with no open attempt is not an alarm | lost verdict |
 | live | lost | `closed` handle or no ack within the freshness window | System | single-evaluator predicate | lost verdict |
 | lost | live | New ack | System | — | live verdict |
-| * | * | Blank | Operator | BR-6 | Deck position unchanged |
 
 `none` is not an alarm. False `live` is forbidden; uncertainty becomes `lost` (AD-29).
+
+## Session display
+
+Ephemeral on the channel, not a persisted entity. Blank is not a liveness transition (BR-6).
+
+| Mode | Meaning |
+| --- | --- |
+| showing | Congregation sees the current Deck slide |
+| blanked | Black cover; index and any verse overlay stay underneath |
+| overlay | Verse text on the Congregation screen; payload unchanged (BR-7) |
+
+Blank covers overlay. Advance may change index under blank or overlay. Closing overlay or releasing blank shows the current index.
 
 ### What is deliberately not modelled
 

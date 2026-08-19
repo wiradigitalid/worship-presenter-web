@@ -1,27 +1,28 @@
 # Class B — no path knob at all.
 #
-# Stock bmad-correct-course customize.toml only opens activation_steps, persistent_facts, and
-# on_complete. There is no *_output_path, so the proposal still lands in
-# _bmad-output/planning-artifacts/sprint-change-proposal-{date}.md and MUST be re-landed by
+# bmad-correct-course's own default customize.toml only opens activation_steps, persistent_facts,
+# and on_complete. There is no *_output_path, so its proposal still lands at
+# _bmad-output/planning-artifacts/sprint-change-proposal-{date}.md and MUST be landed again by
 # wdi-decision as a `DEC-` of type course-correction. The `SCP-` code and the
-# .control/supplements/ folder HAVE BEEN WITHDRAWN — a course correction is a decision, and there
-# is no second code naming the same thing.
+# .control/supplements/ folder have ALREADY BEEN RETIRED — a course correction is a decision, and
+# there is no second code naming the same thing.
 #
-# The main danger is not the path, but this skill's habit of editing directly: its default is
+# The main danger is not the path but this skill's habit of editing directly: its default is
 # "direct updates to epics, stories, or PRD sections". In this repo that MUST NOT happen —
-# document changes go through wdi-decision intent `apply`, wave contents through wdi-build.
-# So the prohibition is installed as persistent_facts, held from activation, not as polish at the end.
+# document changes go through wdi-decision intent `apply`, and wave content through wdi-build.
+# That is why the prohibition is installed as a persistent fact, held from activation, rather than
+# as end-of-run polish.
 
 [workflow]
 
 persistent_facts = [
-  "file:{project-root}/.constitution/document/delivery-flow-guide.md",
-  "file:{project-root}/.constitution/document/corpus-guide.md",
-  "This skill MUST NOT write or edit anything in {project-root}/.what/ or {project-root}/.how/. Its output is a proposal; document changes are done by wdi-decision intent `apply` after its `DEC-` is accepted, and wave contents by wdi-build.",
+  "file:{project-root}/.constitution/method/document/delivery-flow-guide.md",
+  "file:{project-root}/.constitution/method/document/corpus-guide.md",
+  "This skill MUST NOT write or edit anything in {project-root}/.what/ or {project-root}/.how/. Its output is a proposal; document changes are made by wdi-decision intent `apply` once the `DEC-` is accepted, and wave content by wdi-build.",
   "epics.md and sprint-status.yaml are NOT used in this repo — we run the stories route. Neither MUST be read as a source, and neither MUST be created.",
-  "Impact scanning MUST cover .what/_prd/, .what/<pc>/, .how/_platform/, .how/<pc>/, SPEC.md, .control/registry/waves.yaml, and story files. .what/<pc>/ is unknown to this skill entirely and without this it would go stale in silence.",
-  "Every plan change that is expensive to reverse MUST become a `DEC-` through wdi-decision, not a paragraph inside the proposal. The course correction itself is one `DEC-` of type course-correction.",
-  "A correction that cancels more than 30% of a wave's stories MUST NOT be handled as a patch. Say so, and let the wave be recut through wdi-build.",
+  "The impact scan MUST cover .what/_prd/, .what/<pc>/, .how/_platform/, .how/<pc>/, SPEC.md, .control/registry/waves.yaml, and the story files. .what/<pc>/ is unknown to this skill entirely, and without this it goes stale silently.",
+  "Every plan change that is expensive to reverse MUST become a `DEC-` through wdi-decision, not a paragraph inside the proposal. A course correction is itself one `DEC-` of type course-correction.",
+  "A correction that voids more than 30% of a wave's stories MUST NOT be handled as a patch. Say so, and let the wave be re-cut through wdi-build.",
 ]
 
-on_complete = "Hand landing to wdi-decision: the whole proposal becomes one `DEC-` of type course-correction, and the run folder MUST NOT be deleted. MUST NOT place it yourself, MUST NOT edit .what/ or .how/."
+on_complete = "Hand the landing to wdi-decision: the whole proposal becomes one `DEC-` of type course-correction, and its run folder MUST NOT be deleted. MUST NOT land itself, MUST NOT edit .what/ or .how/."

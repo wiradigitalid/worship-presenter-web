@@ -3,7 +3,7 @@ type: lifecycle
 component: registry
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 entities: [ArtifactTemplate]
 ---
 
@@ -20,10 +20,10 @@ entities: [ArtifactTemplate]
 | — | live | First bootstrap | System | settings marker | N seed rows |
 | live | live | Save layout / order | Admin | AD-15 validation | `updated_at` |
 | live | live | Reset to seed | Admin | row has a seed origin | seed layout; AD-22 override remains |
-| live | gone | Delete | Admin | — | id is not filled by the seeder |
+| live | gone | Delete | Admin | Allowed on a SongSet slot (Hub hymn binding stays stored and inert, AD-19) and on the last live row (N=0 Deck, AD-17). HTTP verb [MISSING] | id is not filled by the seeder |
 
 Existing Services do not change state here until Sync (BR-8). Sync itself is an action on the Service (Hub), Admin-only.
 
 ### What is deliberately not modelled
 
-`ServiceRegistrySnapshot` as state — its table is [MISSING]. Today a new Service always reads the `live` Registry.
+`ServiceRegistrySnapshot` as state — its table is [MISSING]. Disposition: planned AD-16 / FR-21. Today a new Service always reads the `live` Registry.

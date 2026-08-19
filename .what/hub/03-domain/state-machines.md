@@ -3,7 +3,7 @@ type: lifecycle
 component: hub
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 entities: [Service, Account]
 ---
 
@@ -17,8 +17,8 @@ entities: [Service, Account]
 
 | From | To | Trigger | Who may | Guard | Side effect |
 | --- | --- | --- | --- | --- | --- |
-| absent | present | Rundown received or Hub form | Events · Operator | date parseable | weekly payload + images |
-| present | present | Correction / edit / generate | Events · Operator | BR-4 on Hub edit | `updated_at` advances |
+| absent | present | Hub form (this phase); Telegram Rundown received (CAP-11 later) | Operator now; Events later | date parseable | weekly payload + images |
+| present | present | Hub edit / generate (this phase); Telegram correction (CAP-11 later) | Operator now; Events later | BR-4 on Hub edit | `updated_at` advances |
 | present | absent | Delete | Operator | — | that week's assets go too, including `UPLOADS_DIR` files no longer referenced; recurring announcements remain (BR-5) |
 
 There is no `draft` state. What is saved is what is shown.

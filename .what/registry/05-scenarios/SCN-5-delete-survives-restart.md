@@ -14,12 +14,12 @@ UC-15 step 3.
 
 ## Condition
 
-The `web` process boots again after Admin deleted an entry.
+The process starts again after Admin deleted an entry.
 
 ## Flow
 
 1. The seeder does not fill the gap (AD-17).
-2. The plan is built only from rows still in the database.
+2. The plan is built only from entries still live.
 3. The deleted entry does not appear in a new Service's Deck.
 
 ## Outcome
@@ -28,4 +28,4 @@ Delete stays deleted. Per-entry Reset remains the only way back to seed.
 
 ## Why it is not in the UC
 
-This is a boot guarantee, not an Operator step on screen.
+This is a restart branch, not a step Admin takes on screen.

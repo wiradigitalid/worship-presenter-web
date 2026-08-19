@@ -4,7 +4,7 @@ component: hub
 lc: LC-2
 direction: exposed
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 ---
 
 # Contract — Services
@@ -36,13 +36,15 @@ UC-2, UC-3, UC-5, UC-6, UC-7, UC-8, UC-18, UC-23.
 | Validation | Service id integer; PUT requires the client's `updated_at` (AD-6). |
 | Error handling | Envelope in `cross-cutting.md`. 409 stale. 404 missing. 400 id/body. 500 PPTX generate. |
 | Rate limiting | `none` — one congregation, home PC; not a public API. |
-| Idempotency | GET is safe. DELETE again → 404. POST same date: update, not a duplicate (FR-1/FR-27). Stale PUT does not write. |
+| Idempotency | GET is safe. DELETE again → 404. POST same date without override → 409 + `existingId` (UC-2, OQ-8); with explicit override a second row is inserted — not an upsert. Webhook upsert is CAP-11 (`08-webhook.md`). Stale PUT does not write. |
 
 ## Error behaviour
 
 | Condition | Response | Caller should |
 | --- | --- | --- |
 | Stale `updated_at` | 409 | GET/RSC again, merge, PUT again (SCN-2) |
+| Date already exists, no override | 409 + `existingId` | Open the existing Service, or confirm a second row |
+| No date / empty Rundown | 400 | Fix the paste; no row |
 | Not found | 404 | Refresh the list |
 | Plan/PPTX failed | 500 | Retry; Sabbath uses the old file if one exists |
 

@@ -3,9 +3,9 @@ type: sdd
 component: registry
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 realizes: [UC-14, UC-15, UC-16, UC-20]
-binds: [AD-7, AD-8, AD-9, AD-11, AD-12, AD-13, AD-14, AD-15, AD-16, AD-17, AD-18, AD-19, AD-20, AD-21, AD-22]
+binds: [AD-5, AD-6, AD-7, AD-8, AD-9, AD-11, AD-12, AD-13, AD-14, AD-15, AD-16, AD-17, AD-18, AD-19, AD-20, AD-21, AD-22]
 reviewed:
   date: ''
   sha: ''
@@ -18,9 +18,9 @@ As-built: global templates in SQLite. Per-Service snapshot (AD-16) **not yet** a
 
 ## Decision Summary · [outline]
 
-Registry is `/admin/artifacts` plus its API: Deck order, General canvas, SongSet configuration, Reset to seed. The plan reads `artifact_templates` rows (or the map assembled at build), not a JSON file after bootstrap.
+Registry is `/admin/artifacts` plus its API: layout, Reset to seed, ordered list. Admin reorder and delete HTTP are [MISSING] (FR-21 / UC-15). The plan reads `artifact_templates` rows (or the map assembled at build), not a JSON file after bootstrap.
 
-Expensive choice: seed is bootstrap + Reset only (AD-17); delete is not revived by restart.
+Expensive choice: seed is bootstrap + Reset only (AD-17); a deleted row is not revived by restart (verified; Admin verb still [MISSING]).
 
 ## Structure · [outline]
 
@@ -35,6 +35,8 @@ Direction: Admin screen → LC-11 → LC-15 → `artifact_templates`. Hub/Presen
 
 | AD | Quoted rule | How it lands here |
 | --- | --- | --- |
+| AD-5 | `src/proxy.ts` is the one request gate, and its `config.matcher` regex **is** the authorization boundary — anything it does not match is served with no session check at all, so a new exclusion ships together with its assertion in `tests/proxy-matcher.test.mjs` in the same change set. | `/admin/artifacts` and `/api/admin/artifacts/**` sit inside the matcher (AD-14). |
+| AD-6 | every service mutation carries the client's `updated_at` as a precondition; a stale value is rejected with HTTP 409 and the client re-reads before retrying. No write path may bypass the precondition. | PUT artifacts: `updatedAt` / `RegistryStaleError`. Sync Artifact is [MISSING] (AD-16). |
 | AD-7 | `buildSlidePlan` is the single source of slide order and content for every surface. | Registry supplies entries; the plan orders. |
 | AD-8 | image references resolve only through the shared helpers in `src/lib` | Save canvas. |
 | AD-9 | schema changes go through the app's startup DDL on the `getDb` path. | `artifact_templates` table. |
@@ -55,13 +57,15 @@ Direction: Admin screen → LC-11 → LC-15 → `artifact_templates`. Hub/Presen
 
 | Boundary | Slow | Absent | Lying | What the user sees | What is logged |
 | --- | --- | --- | --- | --- | --- |
-| GET /api/admin/artifacts | Slow list | 403/500 | Corrupt row → fail closed (AD-17) | List short one; not a silent seed | id + reason |
-| GET /api/admin/artifacts/[id] | Slow | 404 | Payload does not parse → fail closed | Editor does not open a lying layout | log |
-| PUT /api/admin/artifacts/[id] | Slow | 404 | AD-15 validation failed → 400; stale → AD-6 shape in the store | Previous layout | console |
-| POST …/reset | Slow | 404 | Id without seed → no Reset | Message; Admin override remains (AD-22) | console |
-| /admin/artifacts | Heavy canvas | 403 | — | Registry | — |
+| GET /api/admin/artifacts | Slow list | 403/500 | Summaries do not parse payload; a corrupt row still appears | Full list of labels | console.error on 500 |
+| GET /api/admin/artifacts/[id] | Slow | 404 | Payload does not parse → 500; no seed substitute | Editor does not open a lying layout | console.error: id + reason |
+| PUT /api/admin/artifacts/[id] | Slow | 404 | AD-15 validation failed → 400; stale → AD-6 shape in the store | Previous layout | console.error: id + reason |
+| POST /api/admin/artifacts/[id]/reset | Slow | 404 | Id without seed → 404 `Template not found`; Reset is not available | Layout returns to seed; override record remains (AD-22). Without seed: show that Reset failed | console.error: id + reason |
+| /admin/artifacts | Heavy canvas | 403 | — | Editor does not open; last saved layout remains | — |
 
-Sync Artifact (UC-16) is on the Service Hub surface, Admin-only. If the route does not yet exist, that is [MISSING] relative to AD-16.
+Process timeout: Next/Node default. Registry does not retry to the client; Admin presses again.
+
+Plan read (`loadRegistrySnapshot`): a corrupt row is omitted from the Deck and logged with id + reason; it is not silently re-seeded (AD-17). Sync Artifact (UC-16) is a Hub surface, Admin-only. Do not invent a Registry route. [MISSING] — Evidence.
 
 ## Robustness Analysis · [deep]
 
@@ -69,7 +73,7 @@ Sync Artifact (UC-16) is on the Service Hub surface, Admin-only. If the route do
 | --- | --- | --- | --- | --- |
 | UC-15 | `/admin/artifacts` + LC-11 | LC-15 | ArtifactTemplate | ordered list; gone survives boot |
 
-UC-14 and UC-16 are not `critical`; their design is in the contract/store. Delete flow: `06-flows/delete-template.md`. `01-ux/` canvas belongs to `wdi-ux` (skipped).
+UC-14 and UC-16 are not `critical`. UC-16 is a Hub surface once AD-16 ships; do not invent a Registry Sync route. Delete flow: `06-flows/delete-template.md`. `01-ux/` canvas belongs to `wdi-ux` (skipped).
 
 ## Evidence
 
@@ -77,6 +81,8 @@ UC-14 and UC-16 are not `critical`; their design is in the contract/store. Delet
 | --- | --- | --- | --- |
 | `artifact_templates` table exists | verified | `src/lib/db/index.ts` ±500 | — |
 | Per-Service snapshot table | [MISSING] | grep `registry_snapshot` / CREATE TABLE in `db/index.ts` | planned: AD-16 / FR-21; not a BUG until a wave closes it |
+| Sync Artifact HTTP route | [MISSING] | grep `syncArtifact` / `src/app/api/**/route.ts` | planned: AD-16 / FR-21; Hub surface, not a Registry inventory row |
+| Admin delete / reorder verb | [MISSING] | `store.ts` exports list/get/update/reset/insertIfMissing; no DELETE or reorder on LC-11 | planned: FR-21 / UC-15. AD-17 non-revival is verified by SQL delete in `tests/registry-reseed.test.mjs` |
 | `RegistrySnapshot` in code | [PARTIAL] | `src/lib/artifacts/registry-snapshot.ts` = live map per plan, not an AD-16 freeze | do not mix the names |
 | Seed does not substitute a missing row at plan time | verified | spine AD-11 closed Story 20.1 | — |
 | LC-15 store | verified | `src/lib/registry/store.ts` | — |

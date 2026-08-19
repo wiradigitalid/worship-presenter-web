@@ -14,7 +14,7 @@ usecases:
     title: "I paste a Rundown in Hub and a new Service is saved"
     actor: Operator
     component: hub
-    satisfies: [FR-27]
+    satisfies: [FR-27, FR-2]
     critical: true
   - id: UC-3
     title: "I open the dated Service list"

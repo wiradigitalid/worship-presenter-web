@@ -7,7 +7,7 @@ decision: null
 
 # Private data — this product
 
-The hard gate is `.constitution/public-repository.md`. This file is the how-to that used to live next to the operator manuals.
+The hard gate is `.constitution/project/public-repository.md`. This file is the how-to that used to live next to the operator manuals.
 
 ## Where your own data goes
 

@@ -1,23 +1,23 @@
 ---
 type: structure
 scope: document
-verified: 2026-08-18
-commit: 84db8e7
+verified: 2026-08-19
+commit: bfa1dad
 ---
 
 # Document Structure
 
 Written and refreshed only by `wdi-init` intent `structure`, never by hand. Rules live in
-`.constitution/structure-guide.md`. Placement test: `document/corpus-guide.md`.
+`.constitution/method/structure-guide.md`. Placement test: `.constitution/method/document/corpus-guide.md`.
 
 ## Verified
 
-2026-08-18, commit `84db8e7` plus working tree G2–G4 `mode: deep` unpublished, honouring `.gitignore`.
+2026-08-19, commit `bfa1dad` plus unpublished working tree (0.5.3 two-folder constitution, `public-repository.md` in `project/`), honouring `.gitignore`.
 
 ## Top level
 
 ```text
-.constitution/                # how we work — populated
+.constitution/                # how we work — populated (method/ + project/)
 .control/                     # what currently holds — registries + maps
 .what/                        # what was promised — brief, 3 PRD, 3 SRS
 .how/                         # how it is built — spine, C4, 3 SDD deep
@@ -30,13 +30,18 @@ _bmad-output/                 # BMad workspace — deferred-work register
 
 ```text
 .constitution/
-├── constitution.md
-├── public-repository.md      # ★ public-repo gate
-├── document/
-│   ├── corpus-guide.md       # ★
-│   ├── delivery-flow-guide.md
-│   └── templates/
-└── scripts/                  # validate.py · timeline.py · inventory.py
+├── method/                   # kit — overwritten by update
+│   ├── constitution.md       # Articles 3, 4, 6, 7
+│   ├── document/
+│   │   └── corpus-guide.md   # ★ placement
+│   ├── scripts/              # validate.py · timeline.py · inventory.py
+│   └── why/                  # Reference — does not bind
+└── project/                  # this product — never overwritten
+    ├── constitution.md       # ★ Articles 1, 2, 5
+    ├── public-repository.md  # ★ public-repo gate
+    ├── private-data.md
+    ├── deployment.md
+    └── codebase-*-guide.md
 ```
 
 ### `.control/`
@@ -49,7 +54,7 @@ _bmad-output/                 # BMad workspace — deferred-work register
 │   ├── requirements.yaml
 │   ├── usecases.yaml
 │   └── decisions.yaml        # DEC-001 applied
-├── questions/assumptions.md
+├── questions/
 ├── memlog/
 ├── generated/                # validate.py --generate
 ├── structure-document.md
@@ -78,7 +83,7 @@ _bmad-output/                 # BMad workspace — deferred-work register
 .how/
 ├── _platform/
 │   ├── ARCHITECTURE-SPINE.md # ★
-│   ├── design-system.md      # operator chrome tokens (DEC-001)
+│   ├── design-system.md
 │   ├── c4-l1-system-context.md
 │   ├── c4-l2-containers.md
 │   ├── c4-l3-web.md
@@ -90,7 +95,7 @@ _bmad-output/                 # BMad workspace — deferred-work register
 
 ### `_bmad-output/`
 
-Live BMad workspace. Open implementation debt: `implementation-artifacts/deferred-work.md`.
+Live BMad workspace. Open implementation debt: `implementation-artifacts/deferred-work.md`. Prior documents sit in `prior-knowledge/`.
 
 ## Product Components
 
@@ -104,7 +109,7 @@ Live BMad workspace. Open implementation debt: `implementation-artifacts/deferre
 
 | File | State |
 | --- | --- |
-| `registry/index.yaml` | product.name Worship Presenter Web; `mode: deep`; `gates_passed: []` |
+| `registry/index.yaml` | product.name Worship Presenter Web; `mode: deep`; `gates_passed: [G1, G2, G3]` |
 | `registry/components.yaml` | 3 PC `mode: deep`, container `web`, LC-1…LC-16 |
 | `registry/requirements.yaml` | BG · CAP · FR-1…28 · NFR · UJ |
 | `registry/usecases.yaml` | UC-1…UC-23 |
@@ -114,11 +119,11 @@ Live BMad workspace. Open implementation debt: `implementation-artifacts/deferre
 
 ## Findings
 
-- `inventory.py` does not derive a Next.js inventory — written by hand from `src/`.
-- `wdi-ux` was not run; `01-ux/` is empty on all three PCs; operator chrome tokens live in `.how/_platform/design-system.md` (DEC-001).
-- The `weekly-sabbath` PRD folder was withdrawn (too global); three area PRDs replace it. History: `.control/memlog/prd-weekly-sabbath.md`.
-- `gates_passed` is empty until the owner marks a gate.
-- `g4_passed: false` on all three PCs; `wdi-review` has not been run (the owner skipped the gate check).
+- `.work/` exists at the repo root (committed scratch) and is not one of the five corpus roots. Purpose is stated in `AGENTS.md`; not unclaimed.
+- `01-ux/` is absent on all three PCs; operator chrome tokens live in `.how/_platform/design-system.md` (DEC-001).
+- `inventory.py` does not derive a Next.js inventory — inventories in `.how/_platform/` were written from `src/`.
+- `g4_passed: false` on all three PCs; `wdi-review` has not stamped a `reviewed:` trace (V13).
+- The `weekly-sabbath` PRD folder was withdrawn; history: `.control/memlog/prd-weekly-sabbath.md`.
 
 ---
 

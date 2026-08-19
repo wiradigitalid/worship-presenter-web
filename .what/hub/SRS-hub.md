@@ -3,7 +3,7 @@ type: srs
 component: hub
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 satisfies: [FR-1, FR-2, FR-3, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-17, FR-18, FR-23, FR-24, FR-25, FR-27, FR-28]
 reviewed:
   date: ''
@@ -15,7 +15,7 @@ reviewed:
 
 ## Decision Summary · [G3]
 
-Hub is the Operator's door: Service list, create from Rundown, Run-Sheet, edit, generate, download PPTX, announcements, accounts, language settings. Events need not open it — they send Telegram.
+Hub is the Operator's door: log in, create a Service from this week's Rundown, list, Run-Sheet, edit, generate, download PPTX, announcements, accounts, language settings. Telegram via picoclaw (UC-1, UC-17) is last-phase intake, not this phase's handover.
 
 ## Why · [G3]
 
@@ -26,7 +26,7 @@ Without Hub, the multimedia turn falls back to one person assembling files. This
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
 | Operator | Multimedia team | List, create, edit, generate, download, delete, Run-Sheet, announcements |
-| Events | Rundown sender | Send Telegram (need not open Hub) |
+| Events | Later: Rundown sender on Telegram | Not a Hub user this phase |
 | Admin | Account and settings manager | Accounts, transitions, locale |
 
 ## UC Catalogue · [G3]
@@ -34,7 +34,7 @@ Without Hub, the multimedia turn falls back to one person assembling files. This
 | id | Use case | Actor | Satisfies | critical |
 | --- | --- | --- | --- | --- |
 | UC-1 | Events send a Rundown on Telegram and its Service appears | Events | FR-1, FR-2 | yes |
-| UC-2 | I paste a Rundown in Hub and a new Service is saved | Operator | FR-27 | yes |
+| UC-2 | I paste a Rundown in Hub and a new Service is saved | Operator | FR-27, FR-2 | yes |
 | UC-3 | I open the dated Service list | Operator | FR-8 | no |
 | UC-4 | I follow the worship order from the Run-Sheet | Operator | FR-17 | no |
 | UC-5 | I edit Service fields in Hub | Operator | FR-11 | yes |
@@ -50,10 +50,12 @@ Without Hub, the multimedia turn falls back to one person assembling files. This
 | UC-22 | I browse the Song Book and translations by language | Admin | FR-23, FR-24 | no |
 | UC-23 | My edit is rejected because someone else already saved | Operator | FR-28 | no |
 
+UC-1 and UC-17 realise CAP-11 (Telegram, last phase). This phase's create path is UC-2.
+
 ## Constraints · [G3]
 
 - Hub is not public — brief Constraints. Source: brief.
-- Jemaat data does not enter git — brief. Source: constitution public-repository.
+- Congregation data does not enter git — brief. Source: `.constitution/project/public-repository.md`.
 
 ## Non-Goals · [G3]
 
@@ -63,17 +65,19 @@ Without Hub, the multimedia turn falls back to one person assembling files. This
 
 ## Prerequisite · [G3]
 
-Song Book is shipped. WEBHOOK_SECRET for the Telegram path (OQ-4, go-live).
+Song Book is shipped. `WEBHOOK_SECRET` is for the later Telegram path (CAP-11, OQ-4).
 
 ## Success Signal · [G3]
 
-Friday review ≤ 10 minutes; Events need not open Hub to hand over a Rundown.
+Friday review ≤ 10 minutes; the Operator creates this week's Service in Hub without assembling PowerPoint.
 
 ## Assumptions, Risks, and To Be Confirmed · [G3]
 
 ### Assumptions
 
-OQ-1, OQ-2.
+- OQ-17 — The Operator has this week's Rundown content in time to enter it in Hub. Wrong: no Service that week.
+- OQ-2 — One church, one worship flow, for this product's scope. Wrong: Scope In is not enough.
+- OQ-1 is parked on CAP-11 (Events parseable Rundown when Telegram ships).
 
 ### Risks
 
@@ -81,7 +85,7 @@ Payload holds photos and prayers until manual delete.
 
 ### To Be Confirmed
 
-OQ-4 host secrets — external, not G3.
+OQ-4 — When will the production host set `AUTH_SECRET`, `WEBHOOK_SECRET`, and a durable path for the database? External; not G3.
 
 ## Gate Checklist · [G3]
 
@@ -97,4 +101,4 @@ OQ-4 host secrets — external, not G3.
 
 ## Open Items
 
-OQ-1 · OQ-2 · OQ-4 · OQ-6
+OQ-17 · OQ-2 · OQ-4 · OQ-6. OQ-1 is parked on CAP-11.

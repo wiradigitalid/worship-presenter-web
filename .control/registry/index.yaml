@@ -25,7 +25,7 @@ mode: deep
 
 # GATES ALREADY PASSED. Written only on the repo owner's decision at that gate itself, and MUST NOT
 # be filled by an agent to clear a path for itself.
-gates_passed: []
+gates_passed: [G1, G2, G3]
 
 roles: []
   # - role: Product Owner

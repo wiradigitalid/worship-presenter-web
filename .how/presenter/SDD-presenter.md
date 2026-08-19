@@ -3,7 +3,7 @@ type: sdd
 component: presenter
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 realizes: [UC-11, UC-12, UC-13]
 binds: [AD-1, AD-7, AD-10, AD-12, AD-23, AD-24, AD-25, AD-26, AD-27, AD-28, AD-29]
 reviewed:
@@ -18,7 +18,7 @@ As-built. Offline guarantee is not this component's responsibility (AD-1).
 
 ## Decision Summary · [outline]
 
-Presenter is two (three) URLs at the `(projected)` root plus controls under `(operator)`: slideshow, presenter, projector. Sync between windows is client `BroadcastChannel`, no WebSocket (AD-10). On-demand verses use the local corpus.
+Presenter is three URLs: slideshow and projector at the `(projected)` root, plus presenter controls under `(operator)`. Sync between windows is client `BroadcastChannel`, no WebSocket (AD-10). On-demand verses use the local corpus.
 
 Expensive choice: one channel module `@/lib/present-channel`; Operator chrome does not paint the room screen (AD-24).
 
@@ -52,7 +52,7 @@ Direction: Operator controls → LC-14 → LC-10 → projector. LC-9 from the co
 
 | Boundary | Slow | Absent | Lying | What the user sees | What is logged |
 | --- | --- | --- | --- | --- | --- |
-| GET /api/scripture | Overlay waits | 500 / absent corpus reported as absent | Ambiguous reference → does not guess (NFR-5) | Verse does not appear; Deck stays | console |
+| GET /api/scripture | Overlay waits | 500 / absent corpus reported as absent | Ambiguous reference → does not guess (NFR-5). No session → 401 | Verse does not appear; Deck stays | console |
 | LC-10 channel | Delayed message | Projector `lost` (AD-29) | Message from another tab / different plan identity | Identity clause **not yet** in code — slide-offset risk [MISSING] on `PresentMessage` | — |
 | /services/[id]/slideshow | Slow load | 404 | Plan failed | Black/error projected screen | console |
 | /services/[id]/present | — | 404 | — | Controls do not open | — |
@@ -89,4 +89,4 @@ Contracts: `02-contracts/`. No `06-flows/` — not money, not delete, not a thir
 
 ## Open Items
 
-OQ-5
+OQ-5. Session display (showing / blanked / overlay) is ephemeral on the channel, not a table.

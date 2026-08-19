@@ -3,7 +3,7 @@ type: c4
 level: l2
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 ---
 
 # C4 L2 — Containers
@@ -20,10 +20,10 @@ C4Container
     System_Ext(picoclaw, "picoclaw")
     System_Ext(ppt, "Presentation app")
     Container(web, "web", "Next.js App Router + SQLite", "Hub, Registry, Presenter, PPTX generate")
-    Rel(events, picoclaw, "Rundown on Telegram")
-    Rel(picoclaw, web, "POST /api/webhook")
-    Rel(operator, web, "HTTPS")
+    Rel(operator, web, "enters Rundown, review, present")
     Rel(admin, web, "HTTPS")
+    Rel(events, picoclaw, "later: Rundown on Telegram")
+    Rel(picoclaw, web, "later: POST /api/webhook")
     Rel(web, ppt, "PPTX file")
 ```
 
@@ -39,8 +39,8 @@ C4Container
 
 | From | To | Purpose | Over |
 | --- | --- | --- | --- |
-| picoclaw | web | Intake / Rundown correction | HTTP JSON, `WEBHOOK_SECRET` |
-| Operator / Admin | web | Review, generate, present, Registry | HTTPS + session |
+| picoclaw | web | Later intake / Rundown correction (CAP-11) | HTTP JSON, `WEBHOOK_SECRET` |
+| Operator / Admin | web | Create Rundown, review, generate, present, Registry | HTTPS + session |
 | web | Presentation app | Sabbath guarantee | PPTX file on the laptop |
 
 ## Product Components per container

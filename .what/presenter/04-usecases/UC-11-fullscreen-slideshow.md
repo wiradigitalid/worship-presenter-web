@@ -7,7 +7,7 @@ critical: false
 created: 2026-08-18
 ---
 
-# UC-11 — I run a fullscreen slideshow
+# UC-11 — I present a fullscreen slideshow
 
 ## Trigger
 
@@ -28,18 +28,21 @@ The Service exists. The Operator is signed in. One slide plan can already be bui
 
 | From step | Condition | What happens |
 | --- | --- | --- |
-| 2 | Song block is incomplete | Existing slides are still shown; the gap is visible in Hub, not guaranteed hidden |
+| 2 | Song block is incomplete | Existing slides are still shown. Hub already shows the incomplete song; Presenter does not hide that gap |
+| 3 | Last slide | Index holds; no wrap-around |
+| 3 | Previous slide | Allowed; index stays inside the plan |
 
 ## Failure Flows
 
 | From step | Failure | What the system does | What the user is left with |
 | --- | --- | --- | --- |
 | 1 | Network drops after the page has loaded | The show already in browser memory may continue | This is not the Sabbath guarantee; PPTX remains the fallback path (OQ-5) |
-| 1 | Service does not exist | Does not show | Operator returns to the list |
+| 1 | Service does not exist | The system does not show the slideshow | Operator returns to the list |
+| 2 | Slide plan cannot be built | Black or error on the projected screen | Operator returns to Hub; PPTX remains the guarantee |
 
 ## Outcome
 
-Jemaat see the same order as the PPTX for this Service, for as long as the browser session lives.
+The Congregation sees the same order as the PPTX for this Service, for as long as the browser session lives.
 
 ## Business Rules
 

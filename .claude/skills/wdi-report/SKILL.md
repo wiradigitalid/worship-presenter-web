@@ -20,9 +20,9 @@ voice of a derived one is the most expensive kind of wrong.
 
 | Owner | Produces |
 |---|---|
-| `.constitution/scripts/validate.py` | `generated/rtm` · `dag` · `status` · `risks` · `components` · `decisions` · `blueprint` · `estimate` |
-| `.constitution/scripts/timeline.py` | `generated/timeline` · `generated/report` · `.control/reports/<period>.md` |
-| `.constitution/scripts/inventory.py` | The three inventories, derived from code |
+| `.constitution/method/scripts/validate.py` | `generated/rtm` · `dag` · `status` · `risks` · `components` · `decisions` · `blueprint` · `estimate` |
+| `.constitution/method/scripts/timeline.py` | `generated/timeline` · `generated/report` · `.control/reports/<period>.md` |
+| `.constitution/method/scripts/inventory.py` | The three inventories, derived from code |
 | `wdi-reconcile` | Drift between corpus and registry — read-only, no file |
 | **this skill** | The judgment on top: whether the tables are fresh enough to report on, and the human commentary written at publish time |
 
@@ -36,7 +36,7 @@ MUST NOT write into `generated/` yourself. Your job starts where their output st
 ## Step 1 — Refresh, or refuse
 
 ```bash
-uv run .constitution/scripts/timeline.py --refresh --generate
+uv run .constitution/method/scripts/timeline.py --refresh --generate
 ```
 
 `--refresh` runs the validators first, so both halves of `generated/` are derived at the same commit. Read what
@@ -44,11 +44,11 @@ it prints before reading anything else:
 
 | What it says | What you MUST do |
 |---|---|
-| `rtm/status belum ada` (exit 3) | Stop. The tables cannot be built, so there is nothing honest to report |
-| `git tidak menjawab` (exit 3) | Stop. Every actual date comes from git; without it there is no time dimension |
-| `registry punya perubahan yang belum dicommit` | Say so in the report header. The numbers describe a working tree, not `main` |
-| `story tanpa riwayat git` | Name those stories. They count toward progres janji but cannot appear under Proven |
-| `n temuan validator` | Report the count and, if any are red, say which gate they block |
+| `rtm/status not yet generated` (exit 3) | Stop. The tables cannot be built, so there is nothing honest to report |
+| `git did not respond` (exit 3) | Stop. Every actual date comes from git; without it there is no time dimension |
+| `the registry has uncommitted changes` | Say so in the report header. The numbers describe a working tree, not `main` |
+| `story with no git history` | Name those stories. They count toward promise progress but cannot appear under Proven |
+| `n findings` | Report the count and, if any are red, say which gate they block |
 
 A report built on stale tables is worse than no report: it looks authoritative and is not.
 
@@ -82,14 +82,14 @@ unbounded on the left, and you MUST repeat that rather than picking a date.
 ## Step 4 — Publish
 
 ```bash
-uv run .constitution/scripts/timeline.py --publish weekly
+uv run .constitution/method/scripts/timeline.py --publish weekly
 ```
 
 A published report is **frozen**. It states what was true on a date, exactly like minutes. The script refuses to
 overwrite one (exit 4) rather than trusting anyone to remember.
 
 - You MUST NOT edit a published report. If it was wrong, the next report says so.
-- The `## Catatan` block is the one part a person writes, once, at publish time, before the commit.
+- The `## Note` block is the one part a person writes, once, at publish time, before the commit.
 - Commentary MUST cite rather than restate: a slip has a cause, and that cause already lives in a `DEC-`, an
   `OQ-`, a risk, or a defect.
 
@@ -144,11 +144,11 @@ is the ideal shape of a wave and because an `FR` has had a proof of done since b
 | `FR` | Its id |
 | Epic | The Product Component |
 | `mode` | That component's depth — this is what makes document load visible |
-| Paparan | `risk_accepted` + `risk_note` |
-| Beban | Mandays, derived from the parent `CAP`'s `estimate_mandays`, divided among its `FR` |
-| Prioritas | From the `CAP` |
-| Bergantung pada | From `depends_on` |
-| Rilis | The `CAP`'s `target_release` |
+| Exposure | `risk_accepted` + `risk_note` |
+| Effort | Mandays, derived from the parent `CAP`'s `estimate_mandays`, divided among its `FR` |
+| Priority | From the `CAP` |
+| Depends on | From `depends_on` |
+| Release | The `CAP`'s `target_release` |
 
 ## Step 4 — Say what it is, and what it is not
 

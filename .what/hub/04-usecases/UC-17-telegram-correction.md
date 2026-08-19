@@ -15,6 +15,8 @@ Events send a correction to the same channel (for example, change the opening so
 
 ## Precondition
 
+This use case realises **CAP-11 (last phase)**. This phase's create path is UC-2; Hub edit is UC-5.
+
 Webhook is ready. There is a nearest Sabbath Service, or a named date.
 
 ## Main Flow
@@ -36,7 +38,7 @@ Webhook is ready. There is a nearest Sabbath Service, or a named date.
 | From step | Failure | What the system does | What the user is left with |
 | --- | --- | --- | --- |
 | 2 | Service not found | Rejects; not a new Service | Events must send a full Rundown or name a date |
-| 1 | Secret is wrong | 401 | Correction does not enter |
+| 1 | Secret is wrong | Rejects the send | Correction does not enter |
 | 3 | Fails mid-write | Does not claim success | Resend is safe if the payload is the same |
 
 ## Outcome

@@ -12,11 +12,11 @@ created: 2026-08-18
 
 ## Responsibility
 
-Interpret the Rundown, resolve hymns, write `services` rows (create, date upsert, correction, edit with `updated_at`). Delete Service: cascade one-off + unlink unreferenced local uploads.
+Interpret the Rundown, resolve hymns, write `services` rows (Hub create with date-collision 409 unless explicit second row; webhook date upsert later CAP-11; correction; edit with `updated_at`). Delete Service: cascade one-off + unlink unreferenced local uploads.
 
 ## Depends on
 
-LC-8 (webhook in) · LC-2 (Hub HTTP) · LC-7 (Song Book)
+LC-2 (Hub HTTP, this phase) · LC-7 (Song Book) · LC-8 (webhook in, CAP-11 later)
 
 ## Interface
 

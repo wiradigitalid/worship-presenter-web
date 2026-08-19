@@ -3,7 +3,7 @@ type: c4
 level: 3
 container: web
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 ---
 
 # C4 L3 — web
@@ -26,7 +26,7 @@ C4Component
 
 | Element | What it is | Notes |
 | --- | --- | --- |
-| Hub | Operator door + Events intake | rundown-to-service FRs + operator-turn Hub |
+| Hub | Operator door; Hub-form intake this phase; webhook later (CAP-11) | rundown-to-service FRs + operator-turn Hub |
 | Registry | Deck structure | Not the week's payload |
 | Presenter | In-browser present | Offline guarantee remains PPTX on Hub |
 

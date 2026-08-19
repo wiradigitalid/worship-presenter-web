@@ -15,7 +15,7 @@ goals:
 
 capabilities:
   - id: CAP-1
-    text: Intake a Rundown from Telegram into a weekly payload
+    text: Intake a Rundown into a weekly payload from the Hub form
     goal: BG-1
     target_release: as-built
     priority: must
@@ -70,9 +70,14 @@ capabilities:
     goal: BG-2
     target_release: as-built
     priority: must
+  - id: CAP-11
+    text: Intake a Rundown from Telegram via picoclaw
+    goal: BG-1
+    target_release: later
+    priority: must
 
 functional:
-  - { id: FR-1,  capability: CAP-1, text: "Ingest a Rundown from Telegram into a structured weekly payload" }
+  - { id: FR-1,  capability: CAP-11, text: "Ingest a Rundown from Telegram into a structured weekly payload" }
   - { id: FR-2,  capability: CAP-1, text: "Validate and resolve hymns by Song Book number, at the API" }
   - { id: FR-3,  capability: CAP-1, text: "Manage the announcement list that persists across weeks" }
   - { id: FR-4,  capability: CAP-2, text: "Assemble a Deck from the fixed frame plus the weekly payload" }
@@ -83,7 +88,7 @@ functional:
   - { id: FR-9,  capability: CAP-3, text: "Preview a Service per slide in the browser" }
   - { id: FR-10, capability: CAP-3, text: "Manually delete a Service and its assets, including local files in UPLOADS_DIR" }
   - { id: FR-11, capability: CAP-4, text: "Edit Service fields through the Hub form" }
-  - { id: FR-12, capability: CAP-1, text: "Send a correction via Telegram to an existing Service" }
+  - { id: FR-12, capability: CAP-11, text: "Send a correction via Telegram to an existing Service" }
   - { id: FR-13, capability: CAP-4, text: "Regenerate this Service's Deck in place" }
   - { id: FR-14, capability: CAP-5, text: "Download a PPTX that presents fully offline" }
   - { id: FR-15, capability: CAP-6, text: "Present a Service as a fullscreen slideshow in the browser" }
@@ -98,7 +103,7 @@ functional:
   - { id: FR-24, capability: CAP-10, text: "Browse installed corpora by language; the default filters the display, not the data" }
   - { id: FR-25, capability: CAP-10, text: "Display the Operator interface in the Operator's language" }
   - { id: FR-26, capability: CAP-3, text: "Auto-delete only PPTX files that have expired under the retention policy", no_uc: "automatic retention, not a user action" }
-  - { id: FR-27, capability: CAP-4, text: "Create a new Service from the Hub form" }
+  - { id: FR-27, capability: CAP-1, text: "Create a new Service from the Hub form" }
   - { id: FR-28, capability: CAP-4, text: "First save wins when edits collide" }
 
 nonfunctional:
@@ -112,7 +117,7 @@ nonfunctional:
     enforced_by: [tests/pptx-ceiling.test.mjs]
   - id: NFR-3
     goal: BG-1
-    text: Lyric slides are never cramped; the Jemaat can read from the pews.
+    text: Lyric slides are never cramped; the Congregation can read from the pews.
     enforced_by: [tests/lyrics.test.mjs]
   - id: NFR-4
     goal: BG-1
@@ -148,3 +153,5 @@ journeys:
     text: A late correction (song swap) arrives and the Deck is regenerated in ≤ 5 minutes.
   - id: UJ-4
     text: Operator presents Sabbath from the offline PPTX, with presenter view as a complement.
+  - id: UJ-5
+    text: Operator logs into Hub and creates this week's Service from a Rundown.

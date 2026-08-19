@@ -4,7 +4,7 @@ component: hub
 lc: LC-8
 direction: exposed
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 ---
 
 # Contract — Webhook
@@ -15,14 +15,14 @@ updated: 2026-08-18
 
 ## Purpose
 
-UC-1, UC-17. JSON agnostic of Telegram (AD-3).
+Later CAP-11: UC-1, UC-17. As-built JSON agnostic of Telegram (AD-3). Not this phase's create path (that is UC-2).
 
 ## Operations
 
 | Operation | Purpose | Realizes |
 | --- | --- | --- |
-| POST `/api/webhook` rundown | Upsert Service by date | UC-1 |
-| POST `/api/webhook` `action: correct` | Correct an existing Service | UC-17 |
+| POST `/api/webhook` rundown | Upsert Service by date | UC-1 — CAP-11 later |
+| POST `/api/webhook` `action: correct` | Correct an existing Service | UC-17 — CAP-11 later |
 
 ## Five lanes
 

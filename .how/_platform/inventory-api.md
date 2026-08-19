@@ -4,7 +4,7 @@ kind: api
 scope: _platform
 status: draft
 created: '2026-08-18'
-updated: '2026-08-18'
+updated: '2026-08-19'
 derived_from: code
 verified: ''
 platform_rows: []
@@ -54,3 +54,4 @@ Source: `export async function` in `src/app/api/**/route.ts`. Not `inventory.py`
 - There is no `GET /api/services/[id]`. The Run-Sheet reads SQLite in the Server Component for page `/services/[id]`. Screen inventory row 4.
 - `inventory.py` does not read App Router.
 - Verbs above from `route.ts` exports 2026-08-18.
+- Plan vs code: `POST /api/webhook` is published in `src/` (FR-1 / FR-12), while this phase's intake promise is Hub form (FR-27). The row stays — as-built — and CAP-11 is the later product phase. Do not treat the shipped webhook as this phase's handover.

@@ -3,11 +3,13 @@ type: integration
 component: hub
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 provider: picoclaw (agent outside this repo; Telegram channel)
 ---
 
 # Integration — picoclaw
+
+picoclaw is **last-phase intake** (CAP-11, UC-1, UC-17). It is not this phase's handover — that is the Operator Hub form (UC-2). As-built `POST /api/webhook` stays specified below.
 
 ## Who owns it
 
@@ -20,7 +22,7 @@ provider: picoclaw (agent outside this repo; Telegram channel)
 
 ## What we use it for
 
-FR-1, FR-12, UC-1, UC-17. picoclaw reads the Rundown on Telegram and calls our JSON.
+Later CAP-11: FR-1, FR-12, UC-1, UC-17. picoclaw reads the Rundown on Telegram and calls our JSON. Not this phase's create path.
 
 ## What we send and receive
 
@@ -52,4 +54,4 @@ No dedicated watchdog beyond the Operator opening Friday's list. [PARTIAL]
 
 ## What we would do without them
 
-Intake moves to pasting the Rundown in Hub (FR-27). Events would have to open Hub, which this area's vision rejects — so the Telegram feature stops, the product does not.
+This phase already uses Hub form (FR-27). When CAP-11 is live, losing picoclaw returns intake to that same form; the Telegram feature stops, the product does not.

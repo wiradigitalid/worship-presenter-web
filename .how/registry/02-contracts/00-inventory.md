@@ -4,7 +4,7 @@ kind: endpoint
 scope: registry
 status: draft
 created: '2026-08-18'
-updated: '2026-08-18'
+updated: '2026-08-19'
 derived_from: code
 verified: '84db8e7'
 ---
@@ -22,4 +22,5 @@ verified: '84db8e7'
 
 ## Findings
 
-- Sync Artifact (UC-16) is not yet an HTTP row in the platform inventory if the route does not exist — see SDD Registry `[MISSING]` AD-16.
+- Sync Artifact (UC-16) is not an HTTP row. Checked: no route. SDD `[MISSING]` AD-16 / FR-21; Hub surface — do not invent a Registry path.
+- Admin delete and reorder HTTP are [MISSING] on LC-11. AD-17 non-revival is verified by SQL delete in `tests/registry-reseed.test.mjs`. Planned FR-21 / UC-15; not inventory rows until they exist.

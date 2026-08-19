@@ -6,7 +6,7 @@ into this intro; they would drift.
 
 ## Public repository
 
-Full rule: `.constitution/public-repository.md`. Before **every** `git commit` and **every** `git push`:
+Full rule: `.constitution/project/public-repository.md`. Before **every** `git commit` and **every** `git push`:
 
 1. Refuse to stage `.env*`, `data/local/`, `data/uploads/`, `data.db*`, `slides*/`, `*.pptx` /
    `*.potx`, or any real congregation / payment / production-host data.
@@ -91,9 +91,9 @@ Read this instead of reasoning about what `.what/` and `.how/` mean.
 
 | The thing in your hand | Its folder |
 |---|---|
-| A rule, a guide, a template — how we work | `.constitution/` |
+| A rule, a guide, a template — how we work | `.constitution/method/` — **overwritten in full by `update`** |
 | A rule that binds **only this product** | `.constitution/project/` — `update` never writes over it, `promote` never publishes it |
-| The explanation of a rule, never a rule itself | `.constitution/method/` |
+| The explanation of a rule, never a rule itself | `.constitution/method/why/` |
 | A decision, an open question, a registry, a structure map, minutes | `.control/` |
 | The brief, a PRD, a use case, a business rule — what is promised | `.what/` |
 | The spine, C4, an inventory, an SDD, a contract — how it is built | `.how/` |
@@ -113,7 +113,7 @@ Read this instead of reasoning about what `.what/` and `.how/` mean.
 | `.work/` | Scratch; emptied when a task closes | Secrets, commercial figures, anything meant as authority |
 
 The placement test: **is this file still correct after its wave has passed?** Yes → the corpus. No →
-`_bmad-output/`. In doubt → `document/corpus-guide.md`.
+`_bmad-output/`. In doubt → `.constitution/method/document/corpus-guide.md`.
 
 The method does not use a `docs/` layer for corpus or rules. A leftover `docs/` folder is inventory
 to sort, not a second home.
@@ -128,7 +128,8 @@ to sort, not a second home.
 Per-component `mode` wins over global, and there is no third scope — `mode` MUST NOT be overridden per
 wave or per `SPEC.md`. A component at `mode: catalog` **skips G4 entirely**. Neither field MUST be
 derived from the other: one component MAY be thin on purpose and reviewed the hardest.
-`document/delivery-flow-guide.md` owns both; `method/rationale.md` says why they are separate.
+`.constitution/method/document/delivery-flow-guide.md` owns both;
+`.constitution/method/why/rationale.md` says why they are separate.
 
 ## The five gates and the fifteen skills
 
@@ -161,9 +162,10 @@ verifies the result, and lands the memlog.
   re-derives them.
 - A `DEC-` with status `applied` MUST NOT be edited, except to record its supersession — status moves
   to `superseded` and names its replacement. A change of mind produces a new `DEC-`.
-- A file in `.constitution/method/` MUST NOT be cited as the reason to reject a change. It is
+- A file in `.constitution/method/why/` MUST NOT be cited as the reason to reject a change. It is
   `status: Reference` — it explains, it does not bind, and where it disagrees with a guide the guide
-  wins and the disagreement is a defect.
+  wins and the disagreement is a defect. This covers `why/` ONLY: a guide in
+  `.constitution/method/document/` is `status: Accepted` and it binds.
 - More than the component's `mode` demands MUST NOT be written. Exceeding the depth the owner set is
   not diligence.
 - `.claude/skills/bmad-*/customize.toml` MUST NOT be edited — it is overwritten on every BMad update;
@@ -173,35 +175,37 @@ verifies the result, and lands the memlog.
 
 | Task | Load |
 |---|---|
-| Wanting the whole method in five minutes | `.constitution/method/README.md` |
-| About to change a rule, and needing to know what breaks | `.constitution/method/rationale.md` |
-| Asking whether a document exists at this `mode`, or where a file goes | `.constitution/method/artifact-map.md` |
-| Unsure whether a file may exist in this repo | `.constitution/repo-guide.md` |
-| Unsure where a file lives | `.constitution/document/corpus-guide.md` |
-| Unsure what a method term means | `.constitution/method-glossary.md` |
+| Wanting the whole method in five minutes | `.constitution/method/why/README.md` |
+| About to change a rule, and needing to know what breaks | `.constitution/method/why/rationale.md` |
+| Asking whether a document exists at this `mode`, or where a file goes | `.constitution/method/why/artifact-map.md` |
+| Unsure whether a file may exist in this repo | `.constitution/method/repo-guide.md` |
+| Unsure where a file lives | `.constitution/method/document/corpus-guide.md` |
+| Unsure what a method term means | `.constitution/method/method-glossary.md` |
 | Unsure about a domain term | `.control/product-glossary.md` |
 | Looking for a non-technical fact — a domain, an account, a legal entity, a locked date | `.control/project-non-technical-log.md` |
-| Naming anything — a code identifier, a file, a database column | `.constitution/language-guide.md` |
-| Asking "which gate now, what next" | `.constitution/document/delivery-flow-guide.md` · skill `wdi-help` |
-| Setting or changing `mode` or `risk_accepted` | `.constitution/document/delivery-flow-guide.md` · skill `wdi-init` |
-| Invoking a BMad skill | `.constitution/document/bmad-guide.md` · `document/bmad-skill-register.md` |
-| Writing or reviewing a product brief | `.constitution/document/brief-guide.md` |
-| Writing or reviewing a PRD | `.constitution/document/prd-guide.md` |
-| Writing or reviewing UX | `.constitution/document/ux-guide.md` |
-| Writing or reviewing an SRS | `.constitution/document/srs-guide.md` |
-| Writing or reviewing an SDD | `.constitution/document/sdd-guide.md` |
-| Writing the spine, an `AD-N`, C4, or one of the three inventories | `.constitution/document/architecture-guide.md` |
-| Opening, accepting, or applying a `DEC-` | `.constitution/document/decision-guide.md` |
-| Writing or reading a structure map | `.constitution/structure-guide.md` |
+| Naming anything — a code identifier, a file, a database column | `.constitution/method/language-guide.md` |
+| Asking "which gate now, what next" | `.constitution/method/document/delivery-flow-guide.md` · skill `wdi-help` |
+| Setting or changing `mode` or `risk_accepted` | `.constitution/method/document/delivery-flow-guide.md` · skill `wdi-init` |
+| Invoking a BMad skill | `.constitution/method/document/bmad-guide.md` · `.constitution/method/document/bmad-skill-register.md` |
+| Writing or reviewing a product brief | `.constitution/method/document/brief-guide.md` |
+| Writing or reviewing a PRD | `.constitution/method/document/prd-guide.md` |
+| Writing or reviewing UX | `.constitution/method/document/ux-guide.md` |
+| Writing or reviewing an SRS | `.constitution/method/document/srs-guide.md` |
+| Writing or reviewing an SDD | `.constitution/method/document/sdd-guide.md` |
+| Writing the spine, an `AD-N`, C4, or one of the three inventories | `.constitution/method/document/architecture-guide.md` |
+| Opening, accepting, or applying a `DEC-` | `.constitution/method/document/decision-guide.md` |
+| Writing or reading a structure map | `.constitution/method/structure-guide.md` |
 | Looking for where code lives, or placing new code | `.control/structure-codebase.md` |
 | Looking for where a document lives | `.control/structure-document.md` |
-| Writing or reviewing code | `.constitution/codebase/stack-guide.md` · `conventions-guide.md` · `brownfield-guide.md` |
+| Writing or reviewing code | `.constitution/project/codebase-stack-guide.md` · `.constitution/project/codebase-conventions-guide.md` · `.constitution/project/codebase-brownfield-guide.md` |
 
-All three `codebase/*-guide.md` start as `status: Draft`. While they are, their contents MAY be read
+All three `.constitution/project/codebase-*-guide.md` start as `status: Draft`. While they are, their contents MAY be read
 as guidance but MUST NOT be used to reject a change.
 
 The two structure maps MUST NOT be installed as `doc_standards` — they are facts, not standards. Nor
-MUST anything in `.constitution/method/`; `status: Reference` forbids it.
+MUST anything in `.constitution/method/why/`; `status: Reference` forbids it. A guide in
+`.constitution/method/document/` MAY be installed that way, and several already are — see
+`_bmad/custom/bmad-prd.toml`.
 
 ## Bugs, decisions, questions
 
@@ -233,8 +237,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Code
 
-Next.js app in `src/`. Package versions: `package.json`. Until `codebase/*-guide.md` are
-`Accepted`, they MAY be read as guidance and MUST NOT reject a change.
+Next.js app in `src/`. Package versions: `package.json`. The three
+`.constitution/project/codebase-*-guide.md` files are protected at every `status:`.
+While `Draft`, they MAY be read as guidance and MUST NOT reject a change.
 
 A test that asserts something is **absent** is worth nothing until it has been seen to fail. Prove
 every new or changed absence-guard by injecting the defect, then reverting. Inject every form the
@@ -244,8 +249,9 @@ guard claims to cover. Do not narrow a guard to silence a false positive without
 
 - A skill MUST NOT be invoked automatically. Name the one that fits and wait for the owner's
   go-ahead. Reading a skill as reference is fine.
-- `.work/` is gitignored here. It MUST NOT be imported by `src/`, MUST NOT be committed, and MUST be
-  excluded when searching for code.
+- `.work/` is committed scratch, emptied when a task closes. It MUST NOT be imported by `src/`,
+  MUST be excluded when searching for code, and MUST stay out of the Docker image (`.dockerignore`).
+  Congregation data MUST NOT land there.
 
 ## Sync rule for this file
 

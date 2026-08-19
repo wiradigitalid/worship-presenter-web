@@ -3,7 +3,7 @@ type: model
 component: hub
 layer: physical
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 ---
 
 # Model — Hub (physical)
@@ -44,17 +44,23 @@ One Service has zero or many uploads in the JSON payload and one-off announcemen
 | services | participants_payload | TEXT | Role JSON |
 | services | created_at | DATETIME | Row created time |
 | services | updated_at | DATETIME | AD-6 precondition |
+| hymns | id | INTEGER PK | Hymn row identity |
 | hymns | book_code | TEXT | Book key (AD-26) |
 | hymns | number | INTEGER | Number in that book |
 | hymns | title | TEXT | Hymn title in the Song Book |
 | hymns | lyrics | TEXT | Verse/refrain lyrics |
+| announcement_items | id | INTEGER PK | Item identity |
 | announcement_items | image_url | TEXT | Image ref (AD-8) |
 | announcement_items | service_id | INTEGER NULL | null = recurring |
 | announcement_items | sort_order | INTEGER | Display order |
+| announcement_items | created_at | DATETIME | Row created time |
+| accounts | id | INTEGER PK | Account identity |
 | accounts | username | TEXT UNIQUE | Sign-in name |
 | accounts | password_hash | TEXT | Password hash |
 | accounts | role | TEXT | `admin` \| `operator` |
 | accounts | token_version | INTEGER | Revoke session |
+| accounts | created_at | DATETIME | Row created time |
+| login_attempts | id | INTEGER PK | Ledger row |
 | login_attempts | scope | TEXT | `user-ip` \| `ip` |
 | login_attempts | key | TEXT | Lockout-window key |
 | login_attempts | attempted_at | INTEGER | unix s |

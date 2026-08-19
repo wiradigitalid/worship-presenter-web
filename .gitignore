@@ -51,7 +51,6 @@ data.db-shm
 data.db.bak-*
 
 # Local corpus dumps / source decks (not runtime assets)
-.work/
 /*.pptx
 
 # Ephemeral generated PPTX cache (FR-10b)

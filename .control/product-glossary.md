@@ -5,9 +5,9 @@
 SSOT for **product** vocabulary — what this product talks about. Each term is defined **once**
 here, then used as written throughout the corpus.
 
-**Method** vocabulary lives in `.constitution/method-glossary.md` and MUST NOT be redefined
+**Method** vocabulary lives in `.constitution/method/method-glossary.md` and MUST NOT be redefined
 here. The split test: would this term still apply on a different product? Yes →
-`method-glossary.md`, no → here.
+`.constitution/method/method-glossary.md`, no → here.
 
 ## Rules
 
@@ -24,31 +24,31 @@ here. The split test: would this term still apply on a different product? Yes �
 
 **Artifact Template** — one Artifact Registry entry: the layout of one slide (elements, sizes, content bindings). The unit Admin edits.
 
-**Data Locale** — the language of a **corpus** (a Bible translation or Song Book). Not UI Locale. Never controls what the Jemaat sees.
+**Congregation** — the audience of the projection. Never opens the product.
+
+**Data Locale** — the language of a **corpus** (a Bible translation or Song Book). Not UI Locale. Never controls what the Congregation sees.
 
 **Deck** — the presentation generated for one Service, guaranteed as an offline PPTX.
 
-**Events** — a group separate from Operator; they hand over the Rundown (participants, songs, posters, announcements) via Telegram.
+**Events** — a group separate from Operator. Later they hand over the Rundown via Telegram. Not Hub users this phase.
 
-**Hub** — logged-in Service list for review, edit, regenerate, and PPTX download. Not a public site.
+**Hub** — logged-in Service list where the Operator creates, reviews, edits, regenerates, and downloads PPTX. Not a public site.
 
-**Jemaat** — the audience of the projection. Never opens the product.
+**Operator** — a multimedia-team member who logs in, enters this week's Rundown in Hub, reviews the Service, and presents it on Sabbath. The **primary** user.
 
-**Operator** — a multimedia-team member who reviews the Service in Hub and presents it on Sabbath. The **primary** user.
-
-**picoclaw** — the agent that reads the Rundown on Telegram and calls the API. Not the Operator interface.
+**picoclaw** — the agent that reads the Rundown on Telegram and calls the API. Last-phase intake. Not the Operator interface.
 
 **Placeholder Catalog** — closed set of weekly-payload placeholders that may be bound on a General entry. Extending the catalog is a development change.
 
 **PPTX** — the OpenXML file downloaded before worship; the Sabbath guarantee independent of venue internet.
 
-**Presenter** — two-screen browser surface (Operator control + Jemaat image) plus slideshow; not an offline guarantee.
+**Presenter** — two-screen browser surface (Operator control + Congregation image) plus slideshow; not an offline guarantee.
 
 **Projector Liveness** — verdict on whether the projector window still answers: `none`, `live`, or `lost`. Not a state stored in SQLite.
 
-**Run-Sheet** — web view of one Service's full worship order (roles, names, songs, times) for the Operator, not for the Jemaat screen.
+**Run-Sheet** — web view of one Service's full worship order (roles, names, songs, times) for the Operator, not for the Congregation screen.
 
-**Rundown** — the semi-structured text Events send, describing one Service's order.
+**Rundown** — the semi-structured text describing one Service's order. This phase the Operator enters it in Hub; later Events may send it on Telegram.
 
 **Sabbath** — the weekly worship day on which the Deck is presented.
 
@@ -64,6 +64,6 @@ here. The split test: would this term still apply on a different product? Yes �
 
 **Sync Artifact** — Admin action that replaces a Service's Snapshot with the live Artifact Registry.
 
-**Telegram** — the intake channel Events already use; not the Operator interface.
+**Telegram** — later-phase intake channel for Events; not the Operator interface and not this phase's handover path.
 
-**UI Locale** — the Operator interface language. Does not reach the Jemaat screen.
+**UI Locale** — the Operator interface language. Does not reach the Congregation screen.

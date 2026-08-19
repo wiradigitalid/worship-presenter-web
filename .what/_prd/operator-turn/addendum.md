@@ -3,7 +3,7 @@ title: "Addendum: Operator Turn"
 initiative: operator-turn
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 ---
 
 # Addendum
@@ -22,6 +22,7 @@ Condition 1 for retiring the pre-method archive (DEC-001). Old PRD numbers are n
 | FR-13b | FR-28 | operator-turn |
 | NFR-1 … NFR-9 | same | enforced in `requirements.yaml` |
 | UJ-1 | UJ-1 | rundown-to-service |
+| UJ-5 | UJ-5 | rundown-to-service |
 | UJ-2 · UJ-3 · UJ-4 | same | operator-turn |
 | Phase 1–6 | `target_release: as-built` | old wave not imported |
 | BIC as live client | Church Name | `index.yaml` |

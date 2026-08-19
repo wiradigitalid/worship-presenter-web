@@ -10,7 +10,15 @@ note: "Detail that does not fit the 1–2 page brief. Technical constraints and 
 
 ## Source material
 
-DEC-001 retired the pre-method archive. Live promises sit in the three area PRDs and `requirements.yaml`. Deck frame: `.what/registry/03-domain/deck-frame.md`. Spine: `.how/_platform/ARCHITECTURE-SPINE.md`. Old → new IDs: `.what/_prd/operator-turn/addendum.md`.
+DEC-001 retired the pre-method archive as live authority. Owner direction 2026-08-19 recut intake: Hub first, Telegram+picoclaw last. Live promises sit in the area PRDs and `requirements.yaml`. Deck frame: `.what/registry/03-domain/deck-frame.md`. Spine: `.how/_platform/ARCHITECTURE-SPINE.md`. Old → new IDs: `.what/_prd/operator-turn/addendum.md`. Feeding archive (temporary): `_bmad-output/prior-knowledge/`.
+
+## Intake phasing (owner, 2026-08-19)
+
+- **Now:** Operator (multimedia) logs into Hub and enters the Rundown. Events are skipped this phase.
+- **Last:** Telegram via picoclaw. Ideal channel; deferred because web is cheaper and easier to stabilize first.
+- PicoCloud in that conversation **is** picoclaw.
+
+A separate Telegram PRD was considered and not opened: `FR-N` MUST NOT move between PRDs, and a reader looking for “how a Rundown becomes a Service” still opens `rundown-to-service`. Telegram stays there as a later capability (`CAP-11`).
 
 ## Technical constraints (they only shape implementation)
 
@@ -27,4 +35,4 @@ This becomes `AD-N` in the spine at G3, not a Constraints row in the brief.
 
 ## What has already shipped (context, not a new promise)
 
-The as-built in `src/` already covers Hub, webhook, PPTX generate, slideshow, presenter/projector, scripture, Song Book, canvas registry, dark mode. This brief **locks why the product exists**, not a catalogue of features already coded. Features still in backlog (registry authoring Epic 20, concurrency, etc.) are handled by PRD/wave, not here.
+The as-built in `src/` already covers Hub, a Telegram webhook, PPTX generate, slideshow, presenter/projector, scripture, Song Book, canvas registry, dark mode. This brief **locks why the product exists**, not a catalogue of features already coded. The webhook existing in code does not make Telegram this phase's promise.

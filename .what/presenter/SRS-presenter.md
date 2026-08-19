@@ -3,7 +3,7 @@ type: srs
 component: presenter
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 satisfies: [FR-15, FR-16, FR-19, FR-22]
 reviewed:
   date: ''
@@ -19,26 +19,26 @@ Presenter is the Sabbath turn in the browser: slideshow, two screens, on-demand 
 
 ## Why · [G3]
 
-The Operator needs a control screen separate from what Jemaat see. That is not Hub (prep) and not Registry (structure).
+The Operator needs a control screen separate from what the Congregation sees. That is not Hub (prep) and not Registry (structure).
 
 ## Actor Register · [G3]
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
 | Operator | On-duty at the venue laptop | Slideshow, presenter, projector, verse |
-| Jemaat | Screen audience | Do not open this surface |
+| Congregation | Screen audience | Do not open this surface |
 
 ## UC Catalogue · [G3]
 
 | id | Use case | Actor | Satisfies | critical |
 | --- | --- | --- | --- | --- |
-| UC-11 | I run a fullscreen slideshow | Operator | FR-15 | no |
-| UC-12 | I run a two-screen presenter | Operator | FR-16 | no |
+| UC-11 | I present a fullscreen slideshow | Operator | FR-15 | no |
+| UC-12 | I run the two-screen presenter | Operator | FR-16 | no |
 | UC-13 | I display an on-demand verse on the projector | Operator | FR-19, FR-22 | no |
 
 ## Constraints · [G3]
 
-Operator Chrome does not reach the room screen. Source: forthcoming AD-24 in the spine.
+Operator Chrome does not reach the room screen. Source: AD-24 (adopted) in the spine.
 
 ## Non-Goals · [G3]
 
@@ -48,17 +48,17 @@ Operator Chrome does not reach the room screen. Source: forthcoming AD-24 in the
 
 ## Prerequisite · [G3]
 
-Service already exists. FR-16 before FR-19.
+A Service already exists. Verse overlay (FR-19) requires the two-screen presenter (FR-16).
 
 ## Success Signal · [G3]
 
-Projector shows only slides; blank does not shift Deck position.
+Projector shows only slides. Blank does not itself shift Deck position. Slideshow order matches the Deck/PPTX. A verse overlay leaves the Service payload unchanged.
 
 ## Assumptions, Risks, and To Be Confirmed · [G3]
 
 ### Assumptions
 
-OQ-5.
+PPTX remains the offline guarantee; the browser slideshow is best-effort after one Service is loaded (OQ-5).
 
 ### Risks
 

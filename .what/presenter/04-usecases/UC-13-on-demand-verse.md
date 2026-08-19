@@ -20,7 +20,7 @@ UC-12 is running or the projector screen is open. A translation is selected.
 ## Main Flow
 
 1. The Operator enters a verse reference.
-2. The system displays the text in the selected translation on the Jemaat screen.
+2. The system displays the text in the selected translation on the Congregation screen.
 3. The Operator closes the overlay.
 4. The Deck slide at the original position returns; the Service payload does not change.
 
@@ -29,13 +29,16 @@ UC-12 is running or the projector screen is open. A translation is selected.
 | From step | Condition | What happens |
 | --- | --- | --- |
 | 1 | Operator chooses another translation for this lookup | Verse from that translation; the default setting need not change |
+| 1 | Empty reference | Lookup does not run; overlay does not change |
+| 2 | Operator advances the Deck while overlay is open | Overlay stays; index may move underneath; closing overlay shows the current Deck slide |
+| 2 | Operator blanks while overlay is open | Blank covers the overlay; overlay remains until cleared (BR-6) |
 
 ## Failure Flows
 
 | From step | Failure | What the system does | What the user is left with |
 | --- | --- | --- | --- |
-| 2 | Reference is unclear or corpus is absent | Does not guess; failure is visible | Overlay does not show a wrong verse; Deck is unchanged |
-| 2 | Translation is not installed | Reports absent | Default setting is not rewritten silently |
+| 2 | Reference is unclear, missing, empty, or the translation is not installed | Does not guess (SCN-4); failure is visible | Overlay does not show a wrong verse; Deck is unchanged |
+| 2 | Session expired | Gate refuses the lookup | Overlay fails visible; Deck unchanged |
 
 ## Outcome
 

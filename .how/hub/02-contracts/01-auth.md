@@ -4,7 +4,7 @@ component: hub
 lc: LC-1
 direction: exposed
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 ---
 
 # Contract — Auth
@@ -41,7 +41,7 @@ UC-9. Log in, log out, change password.
 | --- | --- | --- |
 | Corrupt JSON | 400 | Fix the body |
 | Wrong credentials / disguised lockout | 401 `Invalid username or password` | Do not enumerate accounts |
-| Too many attempts | 401/lockout message + Retry-After | Wait for the window |
+| Too many attempts | 429 lockout message + Retry-After | Wait for the window |
 | AUTH_SECRET absent | 503 | Fix the host |
 
 ## Compatibility

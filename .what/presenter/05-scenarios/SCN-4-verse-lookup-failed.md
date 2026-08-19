@@ -6,7 +6,7 @@ attaches_to: UC-13
 created: 2026-08-18
 ---
 
-# SCN-4 — Verse reference is ambiguous or corpus is absent
+# SCN-4 — Verse reference is ambiguous, missing, or the translation is not installed
 
 ## Where it branches
 
@@ -14,7 +14,7 @@ UC-13 step 2.
 
 ## Condition
 
-The reference text matches more than one book, or the requested translation is not installed.
+The reference is empty, matches more than one book, matches none, or the requested translation is not installed.
 
 ## Flow
 
@@ -25,7 +25,7 @@ The reference text matches more than one book, or the requested translation is n
 
 ## Outcome
 
-Jemaat do not see a wrong verse mid-worship.
+The Congregation does not see a wrong verse mid-worship.
 
 ## Why it is not in the UC
 

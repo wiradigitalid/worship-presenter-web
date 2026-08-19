@@ -1,36 +1,37 @@
 ---
 type: structure
 scope: codebase
-verified: 2026-08-18
-commit: 84db8e7
+verified: 2026-08-19
+commit: bfa1dad
 ---
 
 # Codebase Structure
 
 Written and refreshed only by `wdi-init` intent `structure`, never by hand. Rules live in
-`.constitution/structure-guide.md`. Naming: `codebase/conventions-guide.md`. Versions:
-`codebase/stack-guide.md`.
+`.constitution/method/structure-guide.md`. Naming: `.constitution/project/codebase-conventions-guide.md`.
+Versions: `.constitution/project/codebase-stack-guide.md`.
 
 ## Verified
 
-2026-08-18, commit `84db8e7` plus working tree G2–G4 unpublished, honouring `.gitignore`.
+2026-08-19, commit `bfa1dad` plus unpublished working tree (0.5.3 two-folder constitution, `public-repository.md` in `project/`), honouring `.gitignore`.
 
 ## Top level
 
 ```text
 worship-presenter-web/
 ├── src/                      # [container] web — Next.js App Router
-├── public/                   # static slide plates
+├── public/                   # static slide plates (`/assets/...`)
 ├── data/                     # committed seed corpora; not the live DB
 ├── scripts/                  # [tooling]
 ├── tests/                    # [tooling]
 ├── .github/                  # CI
 ├── .agents/ · .claude/       # installed skills
-├── .constitution/            # [docs] method kit
+├── .constitution/            # [docs] method/ kit + project/ room
 ├── .control/                 # [docs] control plane
 ├── .what/ · .how/            # [docs] corpus
+├── .work/                    # committed scratch; emptied when a task closes
 ├── _bmad/                    # BMad installer
-├── _bmad-output/             # [docs] live BMad workspace (deferred-work)
+├── _bmad-output/             # BMad workspace (deferred-work)
 ├── .cursor/                  # editor rules
 ├── Dockerfile                # ★ prod image
 ├── docker-compose.yml
@@ -52,10 +53,13 @@ src/
 │   ├── (projected)/          # room display
 │   └── api/<resource>/route.ts
 ├── lib/                      # domain + plan + pptx + db
+│   ├── db/                   # SQLite
+│   ├── artifacts/            # registry hydration + render models
+│   └── slide-plan.ts         # ★ LC-16 planner
 └── components/               # UI
 ```
 
-**Flow:** `proxy.ts` → `app/**` → `lib/**` → SQLite `DB_PATH`. PPTX: `lib/pptx.ts` in the same process. Plan: `lib/slide-plan.ts` (LC-16).
+**Flow:** `proxy.ts` → `app/**` → `lib/**` → SQLite `DB_PATH`. PPTX: `lib/pptx.ts` in the same process.
 
 ## Libraries
 
@@ -75,11 +79,6 @@ tests/public-repo-guard.test.mjs  # ★ public-repo absence-guard
 | --- | --- |
 | `.next/` (gitignored) | `next build` |
 | `.control/generated/` | `validate.py` / `timeline.py` |
-
-## Unclaimed
-
-- `.cursor/` — editor, not product.
-- `_bmad-output/` — live BMad workspace; open implementation debt in `implementation-artifacts/deferred-work.md`.
 
 ---
 

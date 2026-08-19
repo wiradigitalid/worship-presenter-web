@@ -13,7 +13,7 @@ The Artifact Registry is the source of *which slides exist* and *their order*. T
 
 - Widescreen **16:9**. Text sits in free-floating boxes at absolute coordinates — not PowerPoint placeholders.
 - A generated Deck is on the order of **~68 slides** for a full Sabbath with four hymns. Hymn length changes the count; announcement flyers change it too.
-- Operator chrome tokens in `design-system.md` never reach these slides. Projected appearance is the Registry canvas (AD-20).
+- Operator chrome never reaches these slides. Projected appearance is the Registry canvas (AD-20).
 
 ## Three macro-sections
 

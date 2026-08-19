@@ -4,7 +4,7 @@ kind: endpoint
 scope: hub
 status: draft
 created: '2026-08-18'
-updated: '2026-08-18'
+updated: '2026-08-19'
 derived_from: code
 verified: '84db8e7'
 ---
@@ -47,3 +47,4 @@ Numbers match `.how/_platform/inventory-api.md` for Hub-owned rows. Spec per res
 
 - Numbers 25–29 belong to Registry/Presenter in the platform inventory; not used here.
 - No OpenAPI; prose contracts. Source: `src/app/api/**/route.ts`.
+- POST `/api/webhook` (30) is as-built CAP-11 later; this phase's create path is POST `/api/services` (UC-2).
