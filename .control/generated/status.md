@@ -9,9 +9,8 @@ rtm_rows:
   counted: 29
   excluded_no_uc: 1
 work_progress: []
-gate_readiness: 96%
-validators_red:
-- V13
+gate_readiness: 100%
+validators_red: []
 validators_skipped:
   V14: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
     but its presence in generated/report is not checked
@@ -20,7 +19,7 @@ validators_skipped:
     is checked at G5
 open_questions:
   blocking: 0
-  assumptions: 12
+  assumptions: 21
   external: 1
   answered: 4
   blocking_budget: 9
