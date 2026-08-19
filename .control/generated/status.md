@@ -9,10 +9,9 @@ rtm_rows:
   counted: 29
   excluded_no_uc: 1
 work_progress: []
-gate_readiness: 92%
+gate_readiness: 96%
 validators_red:
 - V13
-- V24
 validators_skipped:
   V14: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
     but its presence in generated/report is not checked

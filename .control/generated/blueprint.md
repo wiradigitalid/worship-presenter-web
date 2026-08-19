@@ -114,101 +114,97 @@ One Registry holds zero or more ArtifactTemplates. After FR-21, one Service has 
 
 ### Inventory — tables
 
-Derived from `src/lib/db/index.ts` (SQLite DDL in the same process). `inventory.py` reads Go migrations / standalone `CREATE TABLE` SQL — **a mismatch** with this repo. Findings below.
+Derived by `inventory.py` from `CREATE TABLE IF NOT EXISTS` in `src/lib/db/index.ts`. Numbers are stable; new rows take the next number. Numbers 12–13 were never live tables (one-shot rebuild names) and MUST NOT be reused.
 
 #### Rows
 
 | No | Table | Owning component | What it holds | Key columns | Status |
 | --- | --- | --- | --- | --- | --- |
-| 1 | services | hub | One dated Service and the week's payload | id, date | published |
-| 2 | hymns | hub | Song Book entries | number, book | published |
-| 3 | announcement_items | hub | Announcement list | id, order | published |
-| 4 | accounts | hub | Per-person accounts | id, username | published |
-| 5 | login_attempts | hub | Login trail | — | published |
+| 1 | services | hub | One dated Service and the week's payload | id | published |
+| 2 | hymns | hub | Song Book entries | id, book_code, number | published |
+| 3 | announcement_items | hub | Announcement list | id | published |
+| 4 | accounts | hub | Per-person accounts | id | published |
+| 5 | login_attempts | hub | Login trail | id | published |
 | 6 | revoked_sessions | hub | Revoked sessions | sid | published |
 | 7 | settings | hub | Application settings | key | published |
-| 8 | bible_translations | presenter | Translation corpora | code, locale | published |
-| 9 | bible_books | presenter | Book names per translation | — | published |
-| 10 | bible_verses | presenter | Verse text | — | published |
-| 11 | artifact_templates | registry | Slide order and layout | id, order | published |
-| 12 | hymns_with_book_code | hub | View/shape hymn + book code | — | published |
-| 13 | bible_verses_with_translation_code | presenter | View/shape verse + translation code | — | published |
+| 8 | bible_translations | presenter | Translation corpora | code | published |
+| 9 | bible_books | presenter | Book names per translation | id | published |
+| 10 | bible_verses | presenter | Verse text | id, book_id, chapter, verse, translation_code | published |
+| 11 | artifact_templates | registry | Slide order and layout | id | published |
 
 #### Findings
 
-- `inventory.py` does not derive these rows: its pattern is Gin + SQL migrations + React Router, while live code is Next.js App Router and DDL in TypeScript. This inventory is read from `src/lib/db/index.ts`, not from the script.
+- Rows 12 (`hymns_with_book_code`) and 13 (`bible_verses_with_translation_code`) were catalogued as live tables. They are one-shot rebuild names in the same DDL file, then `RENAME TO` the live tables. Dropped from the rows; those numbers MUST NOT be reused.
 - The per-Service Registry snapshot (AD-16) **does not yet** have a table. `ServiceRegistrySnapshot` in Registry `owns` is a promise; the code assembles a live map per plan build (`src/lib/artifacts/registry-snapshot.ts`). See SDD Registry, label `[MISSING]`.
 
 ### List of endpoints — `inventory-api.md`
 
 ### Inventory — endpoints
 
-Source: `export async function` in `src/app/api/**/route.ts`. Not `inventory.py` output (App Router). Numbers are stable; new rows take the next number.
+Derived by `inventory.py` from `export async function GET|POST|PUT|PATCH|DELETE` in `src/app/api/**/route.ts`. Host `web` is the one `built: true` container. Numbers are stable; new rows take the next number.
 
 #### Rows
 
-| No | Method | Path | Owning component | Description | Status |
-| --- | --- | --- | --- | --- | --- |
-| 1 | POST | `/api/auth/login` | hub | Log in | published |
-| 2 | POST | `/api/auth/logout` | hub | Log out | published |
-| 3 | POST | `/api/auth/change-password` | hub | Change password | published |
-| 4 | GET | `/api/services` | hub | List Services | published |
-| 5 | POST | `/api/services` | hub | Create Service | published |
-| 6 | PUT | `/api/services/[id]` | hub | Update Service (AD-6) | published |
-| 7 | DELETE | `/api/services/[id]` | hub | Delete Service | published |
-| 8 | GET | `/api/services/[id]/pptx` | hub | Download PPTX | published |
-| 9 | POST | `/api/services/preview` | hub | Preview | published |
-| 10 | GET | `/api/announcements` | hub | List announcements | published |
-| 11 | POST | `/api/announcements` | hub | Add announcement item | published |
-| 12 | PUT | `/api/announcements` | hub | Reorder list | published |
-| 13 | PATCH | `/api/announcements/[id]` | hub | Update one item | published |
-| 14 | DELETE | `/api/announcements/[id]` | hub | Delete one item | published |
-| 15 | POST | `/api/upload` | hub | Upload image | published |
-| 16 | POST | `/api/upload/from-url` | hub | Fetch image from URL | published |
-| 17 | GET | `/api/uploads/[filename]` | hub | Read upload | published |
-| 18 | GET | `/api/hymns` | hub | Search hymns | published |
-| 19 | GET | `/api/admin/accounts` | hub | List accounts | published |
-| 20 | POST | `/api/admin/accounts` | hub | Create account | published |
-| 21 | PATCH | `/api/admin/accounts/[id]` | hub | Update account | published |
-| 22 | DELETE | `/api/admin/accounts/[id]` | hub | Delete account | published |
-| 23 | GET | `/api/admin/settings` | hub | Settings | published |
-| 24 | PUT | `/api/admin/settings` | hub | Update settings | published |
-| 25 | GET | `/api/admin/artifacts` | registry | List templates | published |
-| 26 | GET | `/api/admin/artifacts/[id]` | registry | One template | published |
-| 27 | PUT | `/api/admin/artifacts/[id]` | registry | Save layout | published |
-| 28 | POST | `/api/admin/artifacts/[id]/reset` | registry | Restore seed | published |
-| 29 | GET | `/api/scripture` | presenter | Verse lookup | published |
-| 30 | POST | `/api/webhook` | hub | picoclaw intake / correction | published |
+| No | Host | Method | Path | Owning component | Description | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | web | POST | `/api/auth/login` | hub | Log in | published |
+| 2 | web | POST | `/api/auth/logout` | hub | Log out | published |
+| 3 | web | POST | `/api/auth/change-password` | hub | Change password | published |
+| 4 | web | GET | `/api/services` | hub | List Services | published |
+| 5 | web | POST | `/api/services` | hub | Create Service | published |
+| 6 | web | PUT | `/api/services/[id]` | hub | Update Service (AD-6) | published |
+| 7 | web | DELETE | `/api/services/[id]` | hub | Delete Service | published |
+| 8 | web | GET | `/api/services/[id]/pptx` | hub | Download PPTX | published |
+| 9 | web | POST | `/api/services/preview` | hub | Preview | published |
+| 10 | web | GET | `/api/announcements` | hub | List announcements | published |
+| 11 | web | POST | `/api/announcements` | hub | Add announcement item | published |
+| 12 | web | PUT | `/api/announcements` | hub | Reorder list | published |
+| 13 | web | PATCH | `/api/announcements/[id]` | hub | Update one item | published |
+| 14 | web | DELETE | `/api/announcements/[id]` | hub | Delete one item | published |
+| 15 | web | POST | `/api/upload` | hub | Upload image | published |
+| 16 | web | POST | `/api/upload/from-url` | hub | Fetch image from URL | published |
+| 17 | web | GET | `/api/uploads/[filename]` | hub | Read upload | published |
+| 18 | web | GET | `/api/hymns` | hub | Search hymns | published |
+| 19 | web | GET | `/api/admin/accounts` | hub | List accounts | published |
+| 20 | web | POST | `/api/admin/accounts` | hub | Create account | published |
+| 21 | web | PATCH | `/api/admin/accounts/[id]` | hub | Update account | published |
+| 22 | web | DELETE | `/api/admin/accounts/[id]` | hub | Delete account | published |
+| 23 | web | GET | `/api/admin/settings` | hub | Settings | published |
+| 24 | web | PUT | `/api/admin/settings` | hub | Update settings | published |
+| 25 | web | GET | `/api/admin/artifacts` | registry | List templates | published |
+| 26 | web | GET | `/api/admin/artifacts/[id]` | registry | One template | published |
+| 27 | web | PUT | `/api/admin/artifacts/[id]` | registry | Save layout | published |
+| 28 | web | POST | `/api/admin/artifacts/[id]/reset` | registry | Restore seed | published |
+| 29 | web | GET | `/api/scripture` | presenter | Verse lookup | published |
+| 30 | web | POST | `/api/webhook` | hub | picoclaw intake / correction | published |
 
 #### Findings
 
 - There is no `GET /api/services/[id]`. The Run-Sheet reads SQLite in the Server Component for page `/services/[id]`. Screen inventory row 4.
-- `inventory.py` does not read App Router.
-- Verbs above from `route.ts` exports 2026-08-18.
 - Plan vs code: `POST /api/webhook` is published in `src/` (FR-1 / FR-12), while this phase's intake promise is Hub form (FR-27). The row stays — as-built — and CAP-11 is the later product phase. Do not treat the shipped webhook as this phase's handover.
 
 ### List of screens — `inventory-screen.md`
 
 ### Inventory — screens
 
-Source: `src/app/**/page.tsx`. Route groups `(operator)` / `(projected)` do not appear in the URL.
+Derived by `inventory.py` from `export default function` in `src/app/**/page.tsx`. Route groups `(operator)` / `(projected)` do not appear in the URL. Screen identity is `<spa>/<Component>`. Numbers are stable; new rows take the next number.
 
 #### Rows
 
-| No | Screen | Route | Owning component | Actor | UC served |
+| No | Screen | Route | States | Owning component | UC served |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Login | `/login` | hub | Operator | UC-9 |
-| 2 | Worship Hub | `/` | hub | Operator | UC-3 |
-| 3 | Create service | `/services/new` | hub | Operator | UC-2 |
-| 4 | Run sheet | `/services/[id]` | hub | Operator | UC-4, UC-5, UC-6, UC-7, UC-18 |
-| 5 | Announcements | `/announcements` | hub | Operator | UC-21 |
-| 6 | Settings | `/admin` | hub | Admin | UC-9, UC-19, UC-22 |
-| 7 | Artifact Registry | `/admin/artifacts` | registry | Admin | UC-14, UC-15, UC-16 |
-| 8 | Web slideshow | `/services/[id]/slideshow` | presenter | Operator | UC-11 |
-| 9 | Presenter | `/services/[id]/present` | presenter | Operator | UC-12, UC-13 |
-| 10 | Projector | `/services/[id]/present/projector` | presenter | Congregation (recipient) | UC-12 |
+| 1 | web/LoginPage | `/login` | — | hub | UC-9 |
+| 2 | web/Dashboard | `/` | — | hub | UC-3 |
+| 3 | web/CreateServicePage | `/services/new` | — | hub | UC-2 |
+| 4 | web/ServiceRunSheet | `/services/[id]` | — | hub | UC-4, UC-5, UC-6, UC-7, UC-18 |
+| 5 | web/AnnouncementsPage | `/announcements` | — | hub | UC-21 |
+| 6 | web/AdminPage | `/admin` | — | hub | UC-9, UC-19, UC-22 |
+| 7 | web/AdminArtifactsPage | `/admin/artifacts` | — | registry | UC-14, UC-15, UC-16 |
+| 8 | web/SlideshowPage | `/services/[id]/slideshow` | — | presenter | UC-11 |
+| 9 | web/PresentPage | `/services/[id]/present` | — | presenter | UC-12, UC-13 |
+| 10 | web/ProjectorPage | `/services/[id]/present/projector` | — | presenter | UC-12 |
 
 #### Findings
 
-- The older EXPERIENCE named the same ten surfaces; aligned with `page.tsx` 2026-08-18.
-- `inventory.py` looks for React Router `<Route path>`, not `page.tsx`.
+- States are not declared on these pages; the `states:` map in frontmatter is empty, so the column is `—`. Empty and error states demanded by the UX guide are not yet named here.
+- UC served is a judgement the reader cannot derive from `page.tsx`; values are the prior catalogue mapping, kept in this file.
