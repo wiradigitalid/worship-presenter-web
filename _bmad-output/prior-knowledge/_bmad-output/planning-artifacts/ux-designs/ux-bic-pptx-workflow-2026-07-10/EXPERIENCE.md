@@ -1,0 +1,341 @@
+---
+name: Worship Presenter Web — Experience
+status: final
+updated: '2026-08-05'
+sources:
+  - ../../prds/prd-bic-pptx-workflow-2026-07-10/prd.md
+  - ../../architecture/architecture-bic-pptx-workflow-2026-07-10/ARCHITECTURE-SPINE.md
+  - ../../../specs/spec-worship-web-input/SPEC.md
+  - ../../../specs/spec-artifact-registry-authoring/SPEC.md
+design_reference: ./DESIGN.md
+---
+
+# Experience — Worship Presenter Web
+
+> **Honesty note.** This documents behavior as shipped, ratified against `src/app/**` on 2026-07-29 and re-verified state by state on 2026-07-30. It is not a redesign. Gaps are recorded under *Open Items*, never described as working. [`DESIGN.md`](./DESIGN.md) owns visual identity; this file owns how the product behaves. Both win over any mock on conflict.
+>
+> **Where a state is designed but not shipped, this file now says so inline** — marked **⚠ designed, not shipped**. The 2026-07-29 version described four such states in the present tense and deferred verification to the readiness assessment; that assessment ran without answering the question, and one of the four turned out not to exist.
+>
+> **Reconciled against the architecture spine on 2026-07-30, and again on 2026-08-01 for the corpus, locale and reference-input decisions.** Structural invariants are the spine's (`AD-1`..`AD-28`) and are cited here, never restated. Everything this file carries from AD-16, AD-19, AD-22, AD-26, AD-27 and AD-28 is `[TARGET]` in that spine — decided and unbuilt — so it appears under the marker above; the spine's own status tags are the authority on which is which. Every `AD-n` in this file was re-checked against the spine's *AD map* on 2026-07-30, which is the translation table for the nine decisions it renumbered.
+>
+> **Glossary:** the operator-facing term is **run sheet** (two words). "Order of service" is the congregation's term and does not appear in the UI.
+
+## Foundation
+
+**Form factor: desktop web, plus a projected second display.** This is not a responsive-first product; see *Responsive & Platform*. The operator works on a laptop; the congregation sees a projector or OBS output. There is no mobile flow, and the canvas editor assumes a pointer.
+
+UI system: **shadcn/ui (base-nova) on Next.js App Router + Tailwind 4**. Server Components are the default; `'use client'` appears only where hooks, browser APIs, or event handlers require it (initiative spine). Visual identity: [`DESIGN.md`](./DESIGN.md) — greyscale, Geist Sans, shadcn defaults with one deliberate light `muted-foreground` token override; primitives remain unmodified.
+
+Two constraints shape every decision below:
+
+- **The Sabbath path must not depend on the hub.** Offline PPTX download is the primary projection route (AD-1). Web slideshow and presenter mode are shipped conveniences, not the guarantee.
+- **Every surface is behind one gate.** `src/proxy.ts` authenticates and authorizes every route except `/login`, the login/logout APIs, `/api/webhook`, and static assets (AD-5). There is no anonymous surface.
+
+## Information Architecture
+
+Ten surfaces, enumerated from `src/app/**/page.tsx`. Route → purpose → who owns the detailed contract:
+
+| Surface | Route | Role | Detailed contract |
+| --- | --- | --- | --- |
+| Login | `/login` | Session entry; `next` target sanitized via `safeNextPath` | AD-5 |
+| Worship Hub | `/` | Service card list + client-side search (date / speaker / title) | PRD FR-8 |
+| Create service | `/services/new` | Worship web input form — the manual alternative to agent intake | `spec-worship-web-input` (`form-fields.md`) |
+| Run sheet | `/services/[id]` | Service order, timings, edit / delete, PPTX download | `spec-worship-web-input` (`edit-page-chrome.md`) |
+| Web slideshow | `/services/[id]/slideshow` | Full-screen review player; owned by the projected route-group root, with no operator chrome or theme state | PRD FR-9 / FR-15, AD-24 |
+| Presenter | `/services/[id]/present` | Operator control view with notes + scripture lookup. **The translation is a parameter, not the name of this surface** (FR-24) — the shipped panel is headed *Scripture (KJV)* and Story 21.2 removes that literal | PRD FR-16 / FR-19 |
+| Projector | `/services/[id]/present/projector` | Audience output, driven by the presenter; owned by the same projected route-group root as the slideshow | AD-10, AD-24 |
+| Announcements | `/announcements` | Persistent flyer list; hub-local upload | PRD FR-3 |
+| Settings (admin) | `/admin` | Per-person Admin/Operator accounts, the app-wide slide-transition style, and the four language settings once they land — see *Sub-surfaces* | PRD FR-18, AD-23, FR-24 / FR-25 |
+| Artifact Registry (admin) | `/admin/artifacts` | Registry authoring — three surfaces in one route, see below | `spec-artifact-registry-authoring` (`slide-kinds.md`) |
+
+Navigation exposes only three of these (`Dashboard` / `Announcements` / `Settings` in `Header`) plus the profile dropdown. Everything else is reached contextually from a service card or from Settings. `/admin` and `/admin/artifacts` are invisible to an operator-role account — the gate returns 403 rather than hiding a link that would then 403. The filesystem has two sibling presentation roots without changing these public URLs: `src/app/(operator)` owns operator metadata, fonts, locale, and theme; `src/app/(projected)` owns both room-facing URLs, their literal black first paint, and generic literal-colour `not-found` / `error` fallbacks. Route groups are structural only and never appear in a URL.
+
+Every surface above is landed on by a journey in *Key Flows*.
+
+### Inside `/admin/artifacts`: three surfaces, not one
+
+The route is one page and three authoring surfaces, and which one an administrator gets is fixed by the row's kind — no surface widens that authority (AD-22). What a save here reaches is the **live registry**; "global slide templates" is the description AD-16 retires.
+
+| Authoring surface | Applies to | What the administrator may do | Status |
+| --- | --- | --- | --- |
+| Ordered registry list | every row | Add, delete, rename, reorder. The order of this list is the order of the deck (CAP-2; AD-17 for a delete that stays deleted through a restart) | **⚠ designed, not shipped.** *Owner: Story 20.3.* `artifact_templates` now has an ordering column and the list is sorted by it (Story 20.1) — but `/api/admin/artifacts` still carries no create, delete or reorder verb |
+| Free canvas | `general` rows **only** | Compose freely, including Placeholder Catalog keys inserted onto the slide (CAP-3, CAP-4; AD-22 for *General only*, AD-19 for the catalog's key set) | **Partly shipped.** The canvas itself ships (AD-13, AD-15). *General only* is structurally true after Story 20.2; the Placeholder Catalog does not: **⚠** *Owners: Story 20.4, Story 20.5.* `isCanvasAuthorable` refuses every administrator edit to a `song-set` or `announcement` row instead |
+| Bounded configuration | `songset-*` rows | Exactly two background images — one for the title layout, one for the lyric layout that verse and refrain share — plus font style and font size. **No canvas**, and the row's placeholder set and slot binding are not the administrator's to touch (AD-22, AD-19) | **⚠ designed, not shipped.** *Owner: Story 20.7* |
+
+An `announcement` row is authored nowhere on this route: its membership is the Announcements master list at `/announcements` (CAP-7).
+
+**Row display — decided here 2026-07-31, closing the R9 routing.** A row's chip names its **kind** — `[general]`, `[song-set]`, `[announcement]` — never the entry key. `songset-bt-open` is AD-19's server-owned binding vocabulary, and this file's own voice rule keeps system vocabulary off every surface a human reads; CAP-5's `[kind] label` display and its rule that the label is the only administrator-editable part both point the same way. The four SongSet rows therefore share one chip and are told apart by their labels — and because rename is allowed, the bounded-configuration surface must state the row's slot identity read-only, phrased in worship vocabulary (which slot of which service part) rather than as the raw key, so a rename cannot orphan the row's liturgical identity. *Owner: Story 20.2 (list chip on the shipped `/admin/artifacts` surface); Story 20.3 (ordered list inherits it); Story 20.7 (read-only slot statement).*
+
+### Sub-surfaces inside those routes
+
+Six surfaces carry their own behavior but no route of their own, so they are named here rather than left to be discovered inside a flow.
+
+**The IA table above does not move for FR-24 or FR-25 — decided here 2026-08-01, because the sprint item that routed them asked the question and nothing else could answer it.** Neither the corpus picker nor the UI-locale switcher is a route. The two corpus defaults follow the shipped per-concern settings pattern onto `/admin` (`RetentionSettings.tsx`, `TransitionSettings.tsx`), `ui_locale` follows the same pattern onto the same page, and the translation control lives in the Presenter panel beside the lookup it scopes. All four are rows below. What *would* have moved the IA table is a browse-the-corpora surface of its own, and FR-24 explicitly does not ask for one: the picker has to make other locales reachable **from where the choice is made**, not from somewhere an operator has to go first.
+
+| Sub-surface | Lives in | Role | Status |
+| --- | --- | --- | --- |
+| Slide transition (admin) | `/admin` | Picks the one app-wide transition style. Applied identically in the generated PPTX and on the projector (AD-23). Landed on by Flow 8 | **Shipped** (`admin/TransitionSettings.tsx` → `PUT /api/admin/settings`) |
+| Live transition override | `/services/[id]/present` | Lets the presenter change the style for the live browser session only. Travels to the projector over AD-10's channel; changes nothing persisted, and a PPTX already downloaded keeps the style it was built with (AD-23). Landed on by Flow 8 | **Shipped** (`PresenterOperator.tsx`, badged *Live only · not saved*) |
+| Four per-slot hymnal bindings | `/services/new` and the run sheet edit form | Binds a hymnal number to each of the four SongSet slot identities — `songset-bt-open`, `songset-bt-close`, `songset-ds-open`, `songset-ds-close`. The slot identity **is** the binding key and is never administrator-editable (AD-19, CAP-8). Landed on by Flow 1 step 4 and Flow 2 step 3 | **⚠ designed, not shipped.** *Owner: Story 20.7.* The four identities appear nowhere in `src/`; today these are the four positional fields `song1Number`…`song4Number`, which AD-19 replaces rather than aliases |
+| Translation control | `/services/[id]/present` | Picks which installed Bible translation this lookup reads. Opens on the default locale's translations and carries an always-present way to reach the others (FR-24). Scoping the lookup is the point: AD-28 gives the matcher the **chosen** translation on every operator surface, so this control and the matcher's scope parameter are the same value. Landed on by Flow 3 step 4 | **⚠ designed, not shipped.** *Owner: Story 21.3.* The panel is headed `Scripture (KJV)` with the translation hard-coded (`PresenterOperator.tsx:692`) and `ScripturePassage.translation` is the literal type `'KJV'` (`scripture.ts:6`) |
+| Language settings (admin) | `/admin` | The four settings, and there is deliberately no fifth (FR-24): `default_data_locale`, `default_bible_translation`, `default_song_book`, `ui_locale`. The first three are the corpus axis, the fourth the interface axis; they move independently. Landed on by Flow 9 | **⚠ Partly shipped.** One of four — `ui_locale` landed 2026-08-02 (Story 24.1); `default_data_locale` and `default_bible_translation` are Story 21.3's, `default_song_book` Story 22.3's. `src/lib/settings.ts` now holds `RETENTION_KEY`, `SLIDE_TRANSITION_KEY` and `UI_LOCALE_KEY`. **This row names a concern, not a card, and must not be read as one** — Story 24.1 settled it: per-concern means **one component per setting**, `UiLocaleSettings.tsx` beside `TransitionSettings.tsx` and `RetentionSettings.tsx`, grouped by adjacency on the page. A shared "language settings" card is a file Stories 21.3 and 22.3 would each have to rewrite, which is the merge the 2026-08-01 cut exists to avoid |
+| UI-locale switcher | `/admin` | Sets the language the operator interface is written in, and operator documents' `<html lang>` with it. **It reaches no room-facing surface** — there is no `projection_locale`, by decision (PRD §4.12), so this is AD-24's closure read in the other direction. Landed on by Flow 9 | **Shipped 2026-08-02** (`admin/UiLocaleSettings.tsx` → `PUT /api/admin/settings`, Story 24.1). Two locales, `en` and `id`; the catalogue is **code that ships with the build** (`src/lib/i18n/`, AD-25), so the switcher offers what this build has catalogues for and never what a corpus declares — the two vocabularies are separate constants on purpose. `<html lang>` reads the setting in `src/app/(operator)/layout.tsx`, and `force-dynamic` there is what keeps it out of the build. The sibling room-facing root stays independent at `lang="en"`. **The closure is asserted, not assumed** — `tests/i18n.test.mjs` walks the shared projected module graph and fails on a catalogue import or a `getUiLocale` call |
+
+## Voice and Tone
+
+Microcopy is plain and operational. The operator is a volunteer, not a software user — labels name the thing in worship vocabulary ("Run sheet", "Announcements", "Hymn number"), never in system vocabulary ("entity", "record", "payload").
+
+Two binding rules:
+
+- **Never project a placeholder.** Any string that reaches a slide is worship-facing. `midweek-prayer` currently carries a literal `[placeholder]` where a day and time belong (recorded in `deferred-work.md`); it will be projected verbatim until someone supplies real values.
+- **Errors state the recovery, not the cause.** A stale-write conflict (AD-6) tells the operator their copy is out of date and to reload — it does not surface HTTP 409.
+
+## Component Patterns
+
+Behavioral contracts only; visual specs live in [`DESIGN.md`](./DESIGN.md) → *Components*. The two tables cover the same component set.
+
+### The transient-confirmation channel: ratified, not wired (2026-08-05)
+
+The owner ratified a **combined inline + toast** design for this channel on 2026-08-05, closing the question the `sonner` row below and *Open Item 4* had carried since 2026-07-31: this product does want a transient channel — under a rule, not none, and not the delete-two-rows-and-uninstall alternative that had been the likely outcome. **Nothing here is a discovery.** Clause three below is already the second sentence the `sonner` row has carried since it shipped — the combined design is what these documents described all along; what was missing was never the design, only the wiring and a rule for when each channel applies. The wiring is `17-9-toast-channel-wiring`. Story 17.7 supplied its required mount boundary at `src/app/(operator)/layout.tsx`: the toast provider's consumers are operator routes only, and the sibling projected root cannot inherit it. This decision is recorded once, here; the `sonner` rows below and in [`DESIGN.md`](./DESIGN.md), and *Open Item 4*, cite this block rather than restating a clause.
+
+1. **One event, one channel.** An outcome is reported inline **or** by toast, never both. Double-reporting is noise, and an operator who learns two channels always agree learns to read neither.
+2. **Toast only when the inline surface is gone.** A toast is admissible only where the surface that would have carried the inline message is no longer on screen, or no longer in view, at the moment the outcome arrives — the case that motivates it is an action completing after a route change.
+3. **Toast is never the sole channel for an error that blocks work.** It self-dismisses, and assistive technology does not reliably announce it. This clause is not new.
+
+| Pattern | Behavior |
+| --- | --- |
+| `Header` | Present on every gated page. Shows the signed-in username; profile dropdown carries change-password and logout; the theme control sits beside it. |
+| `ThemeToggle` | Cycles **system → light → dark** and back, one click per step, persisting to `localStorage` so the choice survives a reload and a new tab. With nothing stored the hub follows the operating system. `system` stays in the cycle deliberately: it is what a first visit gets, and a two-way switch would make it unreachable after the first click. **Scope is operator chrome only** — the presenter and slide-grid surfaces pin their own dark surface and ignore the choice (a dim sanctuary is not a preference), and no theme the operator picks can reach a projected slide, slideshow frame, projected shell, failure fallback, or downloaded PPTX. Story 17.7 closed the server-first-paint gap by placing both room-facing URLs beneath `src/app/(projected)/layout.tsx`, which paints literal black and owns generic literal-colour `not-found` / `error` fallbacks while the sibling operator root alone owns `ThemeProvider`. `useProjectedShell` remains a hydrated, per-document defensive claim rather than the first-paint mechanism. `tests/theme-chrome.test.mjs` discovers the projected route tree structurally and guards its layout, special files, pages, full-screen clients, props, focus outlines, literal colours, and transitive module closure; adding a projected file no longer requires adding its path to a second inventory. |
+| Service card list | Loads once, filters client-side. `GET /api/services?q=` remains for agents/automation — the UI does not use it for keystroke search. |
+| `HymnNumberAutocomplete` | Number-first lookup against the hymnal corpus; resolves to a title the operator confirms before it enters the run sheet. |
+| Scripture reference field | **⚠ Designed, not shipped** — *Owner: Story 21.5.* **One field holds the whole reference — no book dropdown, no separate chapter and verse inputs** — with inline autocomplete, on the `HymnNumberAutocomplete` precedent. **The single field is a decision, not a default:** a book picker was recommended and the owner chose this instead (input-model Correct Course, 2026-08-01), and the choice is load-bearing twice over. Paste of a full reference keeps working, which a picker breaks; and the field has to find where the book name ends anyway, so it inherits Story 21.4's longest-prefix match against corpus-supplied names — which is the same matcher the rundown uses, in the other scope (AD-28). A picker would have needed a second mechanism for the rundown, where a Telegram sender chooses nothing. Suggestions are **scoped to the chosen translation, never across translations**, and accepting one leaves the translation's full name in the field, so `Ps` is a typing shortcut and never a stored value — that is what pays for dropping `shortName`. One component serves every operator surface: the presenter lookup and both service forms. **Today there are three plain inputs and no component** — `PresenterOperator.tsx:696`, `CreateForm.tsx:584`, `EditForm.tsx:615`, each paired with an explicit *Push to projector* / *Resolve* action. |
+| Corpus picker | **⚠ Designed, not shipped** — *Owners: Story 21.3 (translations), Story 22.3 (song books).* The shared shape behind the presenter's translation control and the admin defaults. **Its job is to make the never-filter rule visible.** `default_data_locale` decides what the picker shows *first* and reaches no query — every listing endpoint returns every installed corpus with its locale (FR-24) — so the control has to carry an **always-present** way to reach the other locales, not a preference to change and not a submenu to find. Stated as behavior because the failure is silent: a default that only filters the view is indistinguishable, from the operator's side, from one that filters the data, and an operator who believes the English hymnal is unreachable will not ask for it. The case that must work is an Indonesian service singing one English hymn — and choosing it changes no setting, so the next song still opens on the default. |
+| `ImageUploadField` / `ImageFieldPreview` | Accepts an upload or a remote URL; both resolve through the shared safety helpers (AD-8). A rejected reference must say *why* it was rejected. |
+| `SlideView` / `SlidePreviewList` | Render the hydrated plan from `buildSlidePlan` (AD-7). Never re-derive order. Selecting a preview moves the presenter, not the projector directly. |
+| `artifacts/ArtifactSlide` | Renders one Artifact template from registry data. Purely presentational: no lookups, no interaction, no state. Identical output on web and in the PPTX path, because both consume the same hydrated AST (AD-12). |
+| `slide-surface` | Fixed 16:9 region. Content may be clipped at its edges deliberately, preserving source-deck geometry (AD-15); clipping is never treated as an error to correct. |
+| `admin/ArtifactEditor` | Fabric.js owns canvas state; React reads it only on explicit **Save** (AD-13). Consequence for the operator: **unsaved canvas changes are invisible to the app**. This row ended *"navigating away loses them silently"* until 2026-08-04, and Story 17.4 made that sentence false — leaving it would have had the pattern table contradict the surface row and the Open Item that both record the fix. Losing the work is still the outcome of leaving; it is no longer silent. The editor knows it is dirty, says so beside Save/Reset, and every exit it can reach asks first — see the `/admin/artifacts` row in *Per-surface states* for the four behaviours and the one exit (logout) deliberately left to Open Item 5. |
+| `admin/TransitionSettings` | Selects the one app-wide transition style and saves it explicitly (AD-23). Its confirmation must say *where* the change lands and when: new PPTX downloads and the projector, from the next download onward — never implying that decks already downloaded were restyled. |
+| `admin/UiLocaleSettings` | Sets the hub's interface language and saves it explicitly, on `admin/TransitionSettings`'s pattern. **The card commits on Save, not on select** — the dropdown may show a pending choice while every label around it stays in the persisted language, because a control with a Save button that previews its own labels tells the operator the setting changed before it did. On success the root layout re-renders so `<html lang>` follows without a reload. **An unresolved string is a visible defect, never silent English** — a missing catalogue entry renders a marker naming the key and logs server-side, and there is deliberately no fallback to `en`, because English text in an Indonesian hub is indistinguishable from a string nobody has translated yet. **One language for the whole install, not per operator:** every write path into settings is admin-gated and there is no per-account persisted tier — AD-24 records that as a limitation and where it would be revisited, and Story 24.1 explicitly did not close it. |
+| Presenter transition control | Overrides the style for the live browser session and broadcasts it to the projector immediately (AD-23, AD-10). **It must read as live-only at a glance**, not on hover: the control is badged and, whenever the live style differs from the saved one, the surface says so in words. An operator who believed this had changed the deck would stop asking for the saved setting to be fixed, and their next download would contradict what they just watched. |
+| `dialog` / `popover` | Confirmations (delete) and lookups (hymn search). Never carry primary workflow; anything essential stays on the page. |
+| `sonner` toasts | Transient confirmations, under the channel rule ratified 2026-08-05 — see *The transient-confirmation channel: ratified, not wired*, above. **⚠ Ratified, not wired** — *Owner: `17-9-toast-channel-wiring`.* `Toaster` is mounted nowhere and `toast(` is called nowhere in `src/` (re-verified 2026-08-05), so the rule has no mechanism yet. Story 17.7 supplied the operator root where 17.9 can mount it without reaching either projected URL. Open Item 4. |
+| `LogoutButton` | Revokes the session server-side, not just client cookie state (AD-5). |
+
+## State Patterns
+
+Cross-cutting states:
+
+| State | Behavior |
+| --- | --- |
+| Unauthenticated | Redirect to `/login` with a sanitized `next`; API calls get `401 {error}`. |
+| Insufficient role | `403` — for pages a bare Forbidden, for APIs `{error: 'Forbidden'}`. Not a redirect: an operator hitting `/admin` should learn it exists and is not theirs, not bounce. |
+| Session revoked mid-session | Logout, password change, demotion, or account deletion invalidate immediately (AD-5). The next request lands on `/login` **without warning**, which is correct for security and unhelpful mid-edit. See Open Items. |
+| Stale write | `409`; the operator is told their copy is outdated and must reload (AD-6). Their edit is not silently discarded. |
+| Cold load | No skeleton states. Surfaces are Server-Component-rendered and arrive complete; this is a deliberate consequence of the rendering model, not an omission. |
+| Deck generation in progress | Generating or regenerating a ~68-slide service is budgeted in **minutes, not seconds** (NFR-2, SM-5). The operator sees that work is running and is prevented from firing a second generation over the first. A multi-minute operation with no progress state reads as a hang. |
+| Unmapped input | Any rundown line the parser could not confidently map, and any image whose role could not be resolved or that is missing, is listed for the reviewer to resolve or dismiss — **not** only failed hymn numbers (NFR-5). Nothing is silently dropped, and nothing reaches a slide as a broken placeholder. This is a general channel: it is the safety net that compensates for the deck being reviewed rather than proof-read slide by slide. |
+
+Per-surface states:
+
+| Surface | States |
+| --- | --- |
+| `/` | **Empty** — first run, no services yet. **Filtered-empty** — search matches nothing; the filter must remain visible and clearable. |
+| `/services/new` | **Validation error** — per-field rules in `form-fields.md`; the form retains every entered value and names the offending field. **In-flight submit** — the submit control disables so a double-submit cannot create two services. **Unresolved hymn** — a number the corpus does not know is surfaced at entry, not at generation. |
+| `/services/[id]` | **Stale write** — as in the cross-cutting table. **Delete confirmation** — destructive and irreversible, so it is a `dialog`, never an inline control. **⚠ Stale snapshot — designed, not shipped.** *Owner: Story 20.8.* Once a service carries its own cloned registry snapshot (AD-16), the live registry can move on without it, so a reviewed service can be out of date with respect to what an administrator has since authored. AD-16 makes the *state* real; **whether and how an operator sees it is undecided, and this file owns that call** — see Open Item 6. |
+| `/services/[id]/slideshow` | **Slides unavailable** — a `buildSlidePlan` throw names the failure on the black projection canvas and offers the two recovery routes (run sheet, Admin → Artifacts), rather than a blank screen. **Changed 2026-07-31**, from a `destructive`-bordered `Card`: this is a projected URL, and a token-painted error surface followed the operator's theme in front of the room. It paints in literal colours now, for the reason the projector's own failure branch always has, and carries the projector's headline verbatim — the two had drifted to *Slides unavailable* and *Slides cannot be built* for the same failure at two room-facing URLs. **It also scrolls.** The first literal-colour version was `overflow-hidden` with the content centred, and an `ArtifactHydrationError` carries up to five `key=value` scope pairs at `text-xl font-mono`: on a short viewport the detail clipped at both ends and the recovery links went off-screen unreachable, on the one screen whose entire job is telling the operator how to recover. *An "empty plan" state is deliberately absent:* `slide-plan.ts:253` pushes the `welcome` leaf unconditionally at the head of every plan, so zero slides cannot occur. |
+| `/services/[id]/present/projector` | **Slides unavailable** — the same failure as the slideshow row above, at the other room-facing URL, and deliberately the same screen: same headline, same literal-colour black canvas, same `ArtifactHydrationError` detail. Two differences, both intended — it offers **no recovery links**, because the projector window has nowhere to send an operator who is looking at the congregation's screen, and the run sheet route belongs on the surface the operator is actually holding. **It also scrolls**, since 2026-08-01: it was left `overflow-hidden` with the content centred when its twin was fixed, so a five-pair scope detail clipped at both ends with no way to reach it. `ROUTE_SHELLS` in `tests/theme-chrome.test.mjs` now binds both branches to state an overflow, so the twins cannot diverge again. |
+| `/services/[id]/present` | Five states — see the presenter table below. |
+| `/announcements` | **Empty** — no flyers yet. **Upload rejected** — an image failing the AD-8 rules states which rule it failed, not a generic error. |
+| `/admin` | **Last admin** — shipped as a refusal, not a warning: `src/lib/auth/accounts.ts:158` refuses the role change, `:195` refuses the delete. **Transition save failed** — shipped: the failure is stated on the surface and the selection stays as the administrator left it, so a failed save never reads as an applied one (`TransitionSettings.tsx`). |
+| `/admin/artifacts` | **Save rejected** — shipped. `AD-15` validates every registry write, so rejection is a designed outcome: the canvas keeps the operator's work and the message names what failed (`ArtifactEditor.tsx:728`, `:760` for the concurrent-edit case, which states explicitly what was discarded and what to re-apply). **Reset confirmation** — reset discards persisted edits for one template. **Unsaved canvas — shipped 2026-08-04 (Story 17.4).** It used to read *"⚠ designed, not shipped"*, and it was: no dirty flag and no `beforeunload` guard existed anywhere in `src/`, so the only unsaved-work messaging was the 409 conflict path, which fires on save and never on leaving. There are now four behaviours. **Seen:** an *Unsaved changes* line sits beside Save/Reset whenever the mounted editable canvas carries authoring the server has not seen. **Tab-level:** closing, reloading or retyping the URL raises the browser's own leave-site prompt. **Template switch:** clicking a different row confirms first, because the switch remounts the canvas and discards the added-element map; re-clicking the row already open prompts nothing. **Route-level:** all five `Header` links confirm before leaving. A read-only template arms none of it. **The flag is in memory only** — never `localStorage`, never SQLite — per AD-24, which names this story as the reason. **Logout is deliberately not covered:** it is a `router.replace()` in a click handler, out of reach of `onNavigate`, and belongs to Open Item 5. |
+
+Presenter states, broken out because this is the surface an operator watches while a service runs:
+
+| State | Behavior |
+| --- | --- |
+| **Projector blanked** (FR-16) | Shipped, all four consequences. The operator blacks the projector at any time with `B` or the control and restores it; the deck still advances underneath; the projector window is not lost; a scripture overlay beneath is undisturbed; the operator view keeps showing current and next slide and indicates the blanked state; a projector opened or reloaded while blanked comes up blank. |
+| **Popup blocked** | The browser refused the projector window. The presenter offers the same URL as a plain link rather than leaving a dead button. |
+| **Corpus empty** | **Rewritten 2026-08-01; the default flipped and this row's claim turned out to be false on this surface.** It used to read *"lookup is unavailable when the corpus was never imported (an ops step) — the presenter says so instead of returning empty results."* Both halves have changed. **The ops step is gone:** Story 21.1 ships `data/bible/kjv.json` and seeds it from zero on first boot (AD-25), so a fresh clone resolves a reference with nothing handed to it, and *never imported* stops being a state anyone reaches. What survives is the narrower case the seeder cannot fix — a corpus table left empty by an unreadable or absent file, or a translation installed holding no verses — and `/api/scripture` still answers it deliberately: `503` naming the file and `npm run corpus:verify` (`src/app/api/scripture/route.ts:18-27`). **And the presenter does not say so.** `PresenterOperator.tsx:432` collapses every non-404 status into a flat `Lookup failed`, so that message reaches the operator on the two service forms — which surface `data.error` (`CreateForm.tsx:300`, `EditForm.tsx:316`) — and **nowhere on the surface used during a service**. So one fault produces two different answers depending on which surface the operator is standing at, and the presenter — the surface in use while a service runs — is the one that says least. *Owner: Story 21.5*, which owns this field on all three surfaces and already carries *an unresolved reference is visible as a defect, never silently blank*. |
+| **Live transition differs from the saved style** | Shipped. The operator has overridden the transition for this session (AD-23). The surface states which style is projecting, that nothing was saved, and what the deck, future PPTX downloads and the next Presenter will still use — so the override cannot be mistaken for a settings change. |
+| **Lost sync** — shipped (Story 17.5, `AD-29`) | The projector's acknowledgement has gone stale, or the retained window handle reports `closed` — one evaluator (`src/lib/projector-liveness.ts`) turns both into a single `never-opened`/`live`/`lost` verdict; the acknowledgement is primary (whatever the handle says), the handle's `closed` reading is a corroborating fast path that reports a clean close in well under a second rather than after a timeout. While `lost`, the header shows a persistent line, independent of **Popup blocked** (either, both or neither may show), naming the recovery — reopen the projector — rather than the cause. It is silent in `never-opened`, and it clears on the next sign of life: reopening re-attaches over the same one `request-sync` round trip Flow 3 Branch 3a already describes. |
+
+## Interaction Primitives
+
+- **Presenter and projector share a single `BroadcastChannel`** (AD-10), and the presenter is its sole authority over deck state — that was already loose rather than one-way, since `request-sync` has always travelled projector→presenter, and `AD-29` (Story 17.5) now fixes what the reverse direction may carry: the projector's own liveness, an unprompted heartbeat the presenter only ever observes, and nothing the presenter would adopt as deck state. Both windows are same-origin on one machine; there is no server round-trip and therefore no dependency on hub connectivity mid-service. **What the channel does not yet carry is which deck it is talking about.** AD-10 requires every message to carry a plan identity so a receiver holding a different plan refuses to follow the index and says so on the room-facing screen; that clause is `[TARGET]` in the spine and the messages carry a bare index today. Presenter and projector each build their own plan at their own moment, so a structural change while a projector window is open — an administrator saving a template right now, a Sync once AD-16 ships — offsets one screen against the other with nothing to signal it. The remedy is code, not an affordance, which is why it is not an Open Item here; it is noted because it is the one way this primitive can be *silently* wrong, and it bounds what the presenter can currently promise.
+- **Full-screen surfaces** (slideshow, projector) fill the viewport; chrome is absent by design.
+- **PPTX download** is the terminal action of Friday preparation and the first action of Sabbath. It is a file, not a link.
+- **Search** is client-side filtering over an already-loaded list, not a server query per keystroke.
+
+## Accessibility Floor
+
+Stated honestly: **no accessibility pass has been run.** What holds today does so by construction rather than by verification —
+
+- Primary-text contrast is high because the palette is near-black on near-white ([`DESIGN.md`](./DESIGN.md) → *Contrast on load-bearing combinations*). Story 17.2 (2026-08-03) repaired the light `muted-foreground` token so all three recorded host surfaces clear WCAG AA normal text — **5.02:1** on `background`, **4.61:1** on `muted`, **4.53:1** on the ambient `bg-primary/5` glow. Resolved colours, method, and before/after evidence live in [`DESIGN.md`](./DESIGN.md); this bullet is the summary only. This is not a complete accessibility audit.
+- The dark palette **has now been measured**, on 2026-07-30 by Story 17.1 (AC-6), and its four text pairs pass: 18.97:1 `foreground` on `background`, 14.23:1 `primary-foreground` on `primary`, 7.66:1 and 5.86:1 for the two `muted-foreground` pairs ([`DESIGN.md`](./DESIGN.md) → *The same four pairs in the dark palette*). Story 17.2 left the dark token unchanged. The amber affordances layered on the presenter are still unmeasured there ([`DESIGN.md`](./DESIGN.md) → *Open Item 4*).
+- **Four text pairs is what was measured, and non-text contrast fails.** Added 2026-07-31, because *"the dark palette passes"* was starting to read as a clean bill of health. `border-border` is applied to every node in the product by a universal selector, and measures **1.29:1** dark / **1.26:1** light against WCAG 1.4.11's 3:1 for a control boundary; the focus ring passes in dark (4.18:1) and **fails in light (2.58:1)**. So the resting outline of every control, and the focus indicator on the theme half most operators are on, are both below the floor ([`DESIGN.md`](./DESIGN.md) → *Open Item 6*). This is not a regression from the theme control — it predates it in both themes — but the theme control is what made it worth stating: it is the first icon-only control in the header, and an icon with no label leans on its box.
+- shadcn primitives carry Base UI's focus management and ARIA wiring, unmodified, so the five installed components inherit a reasonable floor. One place that had to be asked for explicitly: a pre-hydration placeholder that renders as natively `disabled` leaves the tab order and re-enters it on hydration, moving focus order under the operator. `ThemeToggle` uses Base UI's `focusableWhenDisabled` so the placeholder is `aria-disabled` and focusable — inert without being absent.
+
+- **Operator `<html lang>` follows the setting now, and that is not yet an accessibility win.** Story 24.1 (2026-08-02) replaced the hard-coded `en` on the operator document; Story 17.7 later isolated room-facing routes in a sibling root that deliberately stays at `en` and reads no interface setting. Until the Story 24.2 sweep the operator hub is bilingual in **one admin block**, so choosing Indonesian makes operator documents declare `id` while 100–150 strings are still English literals. **A screen reader will then read English text with Indonesian phonetics** — a sharper misstatement than the honest `en` it replaced, not a softer one. Recorded here because the epic was split deliberately, and the mismatch between declared and actual language is what the split costs; this bullet is the only line on the list with a dated owner, and the mismatch closes when 24.2 lands.
+
+Unverified and load-bearing: keyboard reachability of the Fabric canvas editor (a pointer-first surface with no known keyboard equivalent), focus order on the run sheet edit form, and screen-reader labelling throughout. Treated as an Open Item, not a claim.
+
+## Responsive & Platform
+
+Triggered because this is a multi-surface product. The committed platform set is deliberately narrow:
+
+| Surface | Commitment |
+| --- | --- |
+| Operator laptop (desktop browser, pointer + keyboard) | The only supported working surface. Layouts assume ≥1024px. |
+| Projected display (second monitor / OBS capture) | Output only. 16:9, no chrome, no interaction. |
+| Tablet | **Out of scope**, not undecided. The canvas editor is pointer-first and the run sheet is dense. |
+| Phone | **Out of scope.** No flow in this product is designed to be completed on a phone. |
+
+This is a commitment, not an aspiration: a future request to operate from a tablet at the console is a real design question requiring its own UX work, not a CSS adjustment.
+
+## Venue & Projection Constraints
+
+Product-specific section — experience constraints no generic UX checklist would surface.
+
+- A failure during a service cannot be retried later. Every constraint below follows from that, as does the offline primacy stated in *Foundation*.
+- The operator watches two surfaces at once — presenter notes on the laptop, audience output on the projector. Requiring attention on a third surface breaks the model.
+- The projected surface is 16:9 and fixed. Template geometry is normalized percentages with stable IDs; coordinates may deliberately exceed the canvas to preserve source-deck clipping (AD-15).
+- **Registry edits are global and immediate today, and that rule has already been reversed in the decision that governs it.** Both halves have to be stated, because the rule is settled and the code is not. *As shipped:* an administrator changing a template on Friday changes every service, including ones already reviewed, and there is no per-service override — the "global across services" clause of AD-14. *Decided, not scheduled:* AD-16 was recorded on 2026-07-30 and supersedes that clause. Creating a service clones the registry into a service-bound snapshot, a later live edit reaches an existing service only through the explicit **Sync Artifact** action, and Sync is admin-only. AD-16 is `[TARGET]` — it lands with Epic 20 (CAP-6, Story 20.8) and no code implements it yet, which is why this bullet still describes the old behavior first. It supersedes **AD-14** and nothing else; a previous version of this bullet cited `AD-4`, which is LiveServer durable paths and an unrelated decision. The new state this creates — a service whose snapshot has fallen behind — is in *State Patterns* under `/services/[id]`, and its affordance is Open Item 6. *(Was cited as Open Item 5 until 2026-08-01 — a stale pointer left by the 2026-07-31 insertion of the toast-channel item, which pushed this one from 5 to 6. Item 5 is session revocation, so the citation resolved to a real entry about something else, which is the failure mode a dangling-link check cannot catch.)*
+- **Nobody owns the question *"is this readable from the pews?"*** The ownership split for the projected deck, and the fact that this gap is deliberate rather than accidental, are stated once in [`DESIGN.md`](./DESIGN.md) → *Who owns the deck the congregation sees*.
+
+## Key Flows
+
+Every flow names its PRD user journey, and protagonist names are the PRD's (§2.3) used verbatim — Sari, Bimo, Elen. **UJ-1** (Sari sends the week's rundown to the events Telegram chat) has no flow here by design: Sari never opens the Web Hub, so her journey lives entirely outside this product's surfaces.
+
+### Flow 1 — Bimo prepares Sabbath on Friday evening *(UJ-2)*
+
+Bimo is on the multimedia team and used to rebuild the deck by hand every week. It is Friday, past nine, and the speaker changed this afternoon.
+
+1. Opens the hub, signs in.
+2. Scans the service card list, types the date to filter, opens this Sabbath's run sheet.
+3. Sees the run sheet that arrived from the Telegram intake earlier in the week — one hymn number failed to resolve and was read back rather than dropped.
+4. Fixes the hymn number; the autocomplete confirms a title before he accepts it.
+5. Updates the speaker and saves.
+6. Opens the web slideshow to read through what will be projected.
+7. **Climax:** downloads the PPTX. From this moment the service is safe — the venue needs no network, no hub, and no laptop but the one holding the file.
+8. Closes the laptop.
+
+**Branch 1a — someone edited while he was reading.** His save at step 5 is refused: the run sheet changed after he loaded it (AD-6). He is told his copy is out of date and to reload — his typed values are not discarded silently. He reloads, re-applies the speaker change, and continues. Without this refusal, the other person's edit would have vanished with no trace.
+
+**Branch 1b — the rundown had lines nobody could map.** Step 3 shows more than a failed hymn: two rundown lines could not be confidently parsed, and one image's role could not be resolved. Both are listed for him to resolve or dismiss (NFR-5). Nothing is silently dropped, and nothing reaches a slide as a broken placeholder.
+
+### Flow 2 — Bimo creates a service by hand *(UJ-5)*
+
+The Telegram channel is not configured this week — or it is down. This is the fallback path that keeps the product usable without intake.
+
+1. Opens **Create service** (`/services/new`).
+2. Pastes the raw rundown text and triggers Parse.
+3. Fills sermon and family/youth details directly in the form. A hymn number the corpus does not know is flagged as he types, not at generation.
+4. **Climax:** a service already exists for the parsed date. The form warns of the collision and refuses to create a duplicate until he explicitly confirms an override — so the fallback path cannot quietly shadow a service that already arrived by Telegram.
+5. Submits once; the control disables so an impatient second click cannot create two services. He rejoins Flow 1 at step 6.
+
+### Flow 3 — Elen projects on Sabbath morning *(UJ-4)*
+
+Elen has never built a deck. She is scheduled on the presentation computer today, arrives twenty minutes early, and the sanctuary Wi-Fi is unreliable.
+
+1. Opens the downloaded PPTX. This is the guaranteed path and needs nothing else.
+2. *If* the hub is reachable and she prefers the richer path, opens presenter mode and sends the projector window to the second display.
+3. Follows the run sheet; presenter and projector stay in step over the local `BroadcastChannel`.
+4. **Climax:** mid-sermon the speaker cites a verse that is not in the deck. She types the reference into the presenter's scripture field and shows it on demand — without it ever having been injected into the deck. **⚠ Two halves of this beat are designed, not shipped.** *(Story 21.3, Story 21.5.)* The speaker is reading Indonesian this morning, so she picks the translation on the panel first and the field completes book names in **that** translation — she types `Kis` and gets `Kisah Para Rasul`, and what the congregation reads back is that same spelling (AD-27, AD-28). Today the panel is headed `Scripture (KJV)`, the translation is a literal in the type, and the field is a plain input: she must know the English name and spell it herself, and a two-word book name does not parse at all.
+5. Between sections she blanks the projector to black while the podium changes over, then restores it. The deck position does not move, the projector window is not lost, and her own view keeps showing current and next slide with the blanked state clearly indicated (FR-16).
+6. After the service nothing needs saving. The service record is already immutable.
+
+**Branch 3a — the projector window dies.** Between hymns someone closes the projector window. **Shipped (Story 17.5, `AD-29`):** the presenter surfaces lost sync within the freshness window — well under a second for a clean close, since the retained handle's `closed` read fires immediately rather than waiting — so Elen sees the warning line instead of only discovering it by looking at the second screen. She reopens the projector from the same control and it re-attaches on one `request-sync` round trip, coming up blank if it was blank when it died, and the lost-sync line clears itself the moment that round trip lands. If the hub itself has gone she falls back to the PPTX from step 1, which is the entire reason step 1 comes first.
+
+### Flow 4 — a correction arrives by Telegram on Saturday morning *(UJ-3)*
+
+Saturday, 08:40. The song leader messages the events chat: the divine-service opening song is changing. The agent proposes the target service and applies the correction only after the sender confirms.
+
+1. Bimo opens the run sheet he reviewed on Friday and sees that its content changed after his download.
+2. The changed song block is identifiable — he is not left to diff two decks by eye.
+3. **Climax:** he regenerates and re-downloads. Generation shows progress while it runs, because the budget for this operation is minutes rather than seconds (NFR-2), and the whole round trip must fit inside five minutes (SM-5).
+4. The stale PPTX on the presentation laptop is replaced before the service starts.
+
+*The reviewer-facing half is what this product owns; the Telegram confirmation exchange belongs to the agent, not the Web Hub.*
+
+### Flow 5 — Bimo changes a slide template without a deploy
+
+1. Signs in as an administrator; reaches Settings, then the Artifact Registry.
+2. Picks the template whose title sits too low.
+3. Drags it on the canvas. Fabric owns this state — the app cannot see it yet.
+4. **Climax:** clicks **Save**. Validation runs on an untrusted payload (AD-15) and the template persists to SQLite, with no code change and no deploy. *What the save reaches is the part that changes:* today it reaches **every** service, including ones already reviewed, which render the new geometry on both web and PPTX. **⚠ Designed, not shipped** (*AD-16; Epic 20 CAP-6, owner Story 20.8*): the save reaches the **live registry** only. A service that already exists keeps its own cloned snapshot and renders exactly what it rendered before — nothing Bimo does on this route reaches next Sabbath's service on its own.
+5. **⚠ Designed, not shipped** (*AD-16; owner Story 20.8*). To bring an existing service onto the new template he opens that service and runs **Sync Artifact**, which re-clones the registry into that service's snapshot. Three properties the affordance has to carry, because each is a promise to somebody: it is **admin-only**, so this beat is Bimo's and not an operator's; it carries the service's `updated_at` precondition (AD-6), so a Sync over a service someone else has just changed is refused rather than applied; and it **replaces the structure while leaving every value the operator entered untouched** (*State* convention) — "destructive" is about the snapshot, never about the run sheet.
+6. If the result is wrong, Reset restores that one template from the seed. Two consequences of AD-11 and AD-17 that will surprise him and that this file has not yet designed for: Reset restores the shipped **label** too, so it reverts a rename, and a row Bimo authored himself has no shipped content to restore and therefore exposes **no Reset at all** — two rows in one list with different affordances. Open Item 7.
+
+**Branch 5a — validation refuses the payload.** His canvas contains an element the registry vocabulary does not admit (rotation, for instance, which the validator has no property for). Save is refused, the canvas keeps his arrangement, and the message names the offending property rather than reporting a generic failure. Extending the vocabulary is a registry-contract change, not something he can resolve on the canvas.
+
+**Branch 5b — the service Elen presents on Sabbath is still on last week's structure. ⚠ Designed, not shipped** (*AD-16; owner Story 20.8*). Bimo's save at step 4 never reached it, and he does not run Sync — so the service is *stale*: correct, renderable, and behind. This is the intended behavior of AD-16 rather than a fault, which is precisely why it needs an affordance: a state nobody is shown is indistinguishable from a template edit that silently failed. Two constraints bound whatever this file eventually designs. The operator who reviews the service is the person most likely to notice, and Sync is admin-only, so **the most an operator can be given is seeing the staleness and asking for a sync** — the surface has to be honest about that rather than offering a control that 403s. And a stale snapshot must never read as an error on the run sheet: the deck it renders is the one that was reviewed. Open Item 6 owns the call.
+
+### Flow 6 — Bimo refreshes the announcement flyers
+
+Announcements persist between services, so this happens on its own schedule rather than during service prep.
+
+1. Opens **Announcements** from the header. On a first run the list is empty and says so.
+2. Adds this month's flyer — either uploading a file to the hub or pasting a remote URL.
+3. **Climax:** a pasted URL is rejected. The message names the rule it broke — the host is not on the allowlist — rather than saying "invalid image". He uploads the file instead, which resolves to a hub-local reference (AD-8) and therefore still works when the venue is offline.
+4. The flyer appears in the next generated deck without him touching a service.
+
+### Flow 7 — Bimo onboards a new projector volunteer
+
+1. Opens **Settings**; the surface is reachable only because his account is `admin`.
+2. Creates an account for the new volunteer with the `operator` role.
+3. **Climax:** the volunteer signs in and sees the hub, Announcements, and every service — but neither Settings nor the Artifact Registry. Reaching `/admin` directly returns Forbidden, so they learn the surface exists and is not theirs.
+4. Months later the volunteer stops serving. Bimo deletes the account; any live session dies on its next request rather than lingering until the cookie expires.
+
+### Flow 8 — the transition style is set once, and overridden live
+
+Both halves of this ship today. It has no PRD user journey — transitions arrived as FR-7 without one — and it is here because both of its surfaces are otherwise landed on by nothing.
+
+1. Bimo opens **Settings** and finds **Slide transition**. One style, app-wide — there is no per-service choice to make (AD-23).
+2. He picks one and saves. The confirmation tells him where it lands: the projector, and the next PPTX generated. Decks already downloaded keep the style they were built with, because a file on a laptop cannot be restyled after the fact.
+3. Sabbath morning, Elen is in Presenter. The configured fade is fighting the room's projector, and the service starts in four minutes.
+4. **Climax:** she changes the transition on the presenter itself. The projector picks it up immediately over the same channel that carries the deck position (AD-10), so the two screens never disagree *about the style* — and the control tells her plainly that nothing was saved: the deck, future downloads, and the next Presenter she opens all stay on Bimo's setting. She fixes the room without touching a setting she has no mandate to change, and without needing Bimo on a Sabbath morning.
+5. Nothing to undo afterwards. Closing the presenter ends the override.
+
+### Flow 9 — the hub learns a second language *(⚠ the interface half of step 2 is shipped; every other beat is unbuilt)*
+
+*Owners: Story 21.3, Story 22.3, Story 24.1.* Like Flow 8 it has no PRD user journey — FR-24 and FR-25 arrived on 2026-08-01 without one — and it is here because otherwise three sub-surfaces are landed on by nothing. **This preamble used to carry one blanket marker — *"every beat below is unbuilt"* — and Story 24.1 falsified it on 2026-08-02** by shipping the interface half of step 2. Status is per step now: one marker covering five beats cannot report a partial one.
+
+1. **⚠ Unbuilt.** A second Bible translation and an Indonesian song book arrive as committed corpus files and register themselves on boot (AD-26). **This is not a surface** — there is no install screen in scope, and inventing one is how a data capability grows a route nobody asked for.
+2. Bimo opens **Settings**. The two axes are separated there because they are separated everywhere: **UI Locale** is the language he reads the hub in, **Data Locale** is the language of the corpora. **They sit together by adjacency, not in one card** — each is its own per-concern block. He sets the interface to Indonesian; the page says so to a screen reader too, because `<html lang>` follows the setting rather than staying at the hard-coded `en`. **The interface half is shipped** (Story 24.1, 2026-08-02); the Data Locale half is step 3's and unbuilt. **⚠ Until the Story 24.2 sweep the hub is bilingual in one block only** — every other string is still an English literal rather than a missing key, so nothing marks itself as untranslated and nothing looks broken. That is the expected interim state, not a defect; see *Accessibility Floor* for the one place it costs something.
+3. **⚠ Unbuilt** — *Owners: Story 21.3, Story 22.3.* He sets the corpus default to Indonesian and picks the default translation. Nothing about the English corpora changes — they are still installed and still reachable.
+4. **⚠ Unbuilt.** **Climax:** Sabbath, Elen prepares a service that is Indonesian throughout except one English hymn the choir has rehearsed. The hymn picker opens on the Indonesian song book — and the English one is **visible from that same control**, not behind a settings change. She picks the hymn, and the next song's picker opens on Indonesian again. **She changed no setting to cross a language, and crossing it did not change the default for anyone else.** Had the default reached the query instead of the view, this service would have been impossible without an administrator, on a Sabbath morning, for one hymn.
+5. Nothing Bimo or Elen did here reaches the congregation's screen. The slides read what an Admin composed on the Artifact Registry canvas — there is no `projection_locale` and no setting that projects (PRD §4.12), which is Epic 17's closure read in the other direction. **This beat is the one already guaranteed** rather than merely designed — asserted by the suite named in the *UI-locale switcher* row above. It needs asserting because the closure is a product rule and not a structural impossibility: a room-facing surface legitimately reads `settings` today for `slide_transition` (AD-23), so nothing but the assertion stops `ui_locale` taking the same path.
+
+**Branch 9a — a reference that worked last Sabbath stops resolving.** Installing the second translation widened the rundown matcher's scope (AD-28), and a reference that was unambiguous against one translation is now ambiguous against two. It arrives as unmapped input, correctly and by design — and nothing tells Elen *why*. **The behavior is settled; the explanation is not.** Open Item 8.
+
+## Open Items
+
+**Behavioural and affordance questions this file owns as the UX authority.** Two neighbours hold no
+list that competes with this one: open implementation debt has a single home in
+[`deferred-work.md`](../../../implementation-artifacts/deferred-work.md), and token / visual-identity
+gaps live in [`DESIGN.md`](./DESIGN.md) → *Open Items*. Each item names the story key that owns it,
+or says why it has none.
+
+**Numbering is stable and gaps are deliberate.** A closed item is removed rather than struck through
+— git holds the prior text — but the surviving numbers never move, because dated story records cite
+them. Items 1 (projector liveness, closed by Story 17.5), 3 (unsaved canvas changes, closed by Story
+17.4) and 4 (the transient-confirmation channel, answered by Story 17.6) were closed and removed.
+Item 4's *decision* survives as a rule in *Component Patterns* → *The transient-confirmation channel:
+ratified, not wired*; its remaining **wiring** is implementation work owned by
+`17-9-toast-channel-wiring` and tracked in `deferred-work.md`, not here.
+
+2. **No accessibility verification.** *No owner yet — needs a scoping decision before a story can be written.* See *Accessibility Floor*. The canvas editor is the sharpest risk: pointer-first, with no known keyboard equivalent. Writing a story first would fix a scope nobody has chosen; the decision is how far this internal tool goes, and it is the owner's.
+
+5. **Session revocation has no mid-edit warning.** *No owner yet.* A demoted or logged-out operator loses in-progress work with no notice on their next request. The security behaviour is correct and must not change; the experience around it is undesigned, and designing it properly means deciding what a mid-edit interruption owes the operator. One exit is already open on purpose and belongs here rather than to the canvas dirty-state guard: `LogoutButton` navigates with `router.replace()` inside a click handler, so `onNavigate` never runs for it and guarding it needs a second mechanism.
+
+
+**Items 6, 7 and 8 are questions the architecture spine explicitly routes to this file.** It states in its own *Deferred* that all three are UX concerns owned by `EXPERIENCE.md`, and until 2026-07-30 this list carried none of them. Recording them here is what makes the handoff received rather than merely sent; all three are undecided, and none is a decision the spine will make. (6 and 7 were items 5 and 6 until 2026-07-31, when the toast-channel item arrived above them; 8 arrived 2026-08-01 with AD-28.)
+
+6. **A stale snapshot has no affordance.** *Owner: Story 20.8.* AD-16 makes staleness possible by design — a service renders its own cloned snapshot while the live registry moves on — so the state is real the moment CAP-6 ships. What an operator sees is undecided: a badge on the service card, a line on the run sheet, something on the download control, or deliberately nothing. Three constraints on the answer, all of them already fixed elsewhere. **Sync is admin-only** (AD-16), so an operator can be shown staleness and can *request* a sync, but cannot perform one — designing a control that 403s for the person most likely to notice would be the worst of the options. **A stale service is correct, not broken:** the deck it renders is the one that was reviewed, so this cannot borrow the `destructive` vocabulary that delete and stale-write conflicts own ([`DESIGN.md`](./DESIGN.md) → *Colors*). And *"nothing"* is a legitimate answer that has to be **chosen** rather than reached by omission — AD-16 exists partly so that a service being prepared does not shift underneath its reviewer, and telling that reviewer about every upstream edit is a way of reintroducing the interruption on the screen instead of in the deck.
+
+7. **Reset reverts a rename, and some rows have no Reset at all.** *Owner: Story 20.3.* AD-17 gives the administrator the row's `label`, and AD-11's Reset restores the shipped template *including* that label — so Reset silently undoes a rename nobody thought they were resetting. It is defensible (Reset means restore what we shipped) and it is a new operator-visible surprise, which makes it this file's call and not the spine's: confirm-with-consequences, keep the label, or restore it and say so. The same decision has a second face in the same list — under AD-17 a row an administrator *authored* has no seed to restore, so it exposes **no Reset**, and two rows sitting side by side will offer different verbs. Whatever answers the first face has to explain the second, or the list reads as broken. Both are visible in Flow 5 step 6.
+
+8. **Installing a translation can un-resolve a reference that worked last week, and nothing explains why.** *No owner yet — this is a question before it is a story, and it blocks neither Story 21.4 nor Story 21.5.* Under AD-28 the rundown matcher spans **every installed translation**, because a Telegram sender chooses none, and a reference that matches in more than one is **refused as unmapped input rather than guessed**. Both halves are right: fail-closed is the posture AD-5, AD-8, AD-17, AD-25 and AD-27 already take, and a guess here is silent and reaches the congregation's screen mid-service. **The consequence nobody has designed for is that adding a corpus is therefore not purely additive on that surface.** A reference that resolved cleanly against one translation can become ambiguous against two and start arriving as unmapped — correct behavior, on a rundown nobody edited, on a Sabbath morning, with nothing connecting it to an install the operator never associated with the rundown. That is AD-1's shape, which is why it is an item and not a footnote.
+
+   NFR-5 already makes the unmapped line **visible**; what is missing is the **explanation**, and the two are different affordances. The reviewer sees *this line could not be mapped* and reads it as a typo in the rundown, because that is what it has always meant. Three things bound the answer. **The ambiguity is intra-translation too, and lives on the single corpus shipping today** — `Phil` matches Philippians and Philemon, `Jo` matches five books — so an explanation written only for the cross-translation case would be missing on the installs that have it now. **The candidates it collided with are known at the moment of refusal**, so naming them is cheap and is probably most of the answer. And **the operator cannot act on the corpus** — installing and uninstalling are not operator surfaces (Flow 9 step 1) — so this can inform a choice between candidates but must not read as an instruction to fix an install.
