@@ -1,21 +1,13 @@
 """inventory readers — how THIS product's code is read. Owned by the product, not the method.
 
-THIS FILE IS A SKELETON. It reads nothing yet, and it says so rather than reporting an empty
-product: `SKELETON = True` below makes the engine refuse to run until the readers are written.
-Delete that line when they are.
+Stack confirmed on disk (wdi-init intent `readers`, 2026-08-19):
 
-Write them with the skill rather than by hand:
+    db      SQLite DDL inside `src/lib/db/index.ts` (`CREATE TABLE IF NOT EXISTS`, better-sqlite3)
+    api     Next.js App Router `src/app/api/**/route.ts` (`export async function GET|POST|…`)
+    screen  Next.js App Router `src/app/**/page.tsx` (route groups `(operator)` / `(projected)`
+            are not in the URL)
 
-    wdi-init  intent `readers`
-
-That skill reads this repo — its migrations, its routes, its screens, whatever shape they take —
-and fills the three functions in for the stack actually in front of it. It is the right way round:
-the package ships no stack, and no example to be mistaken for one.
-
-The whole file is yours. `wdi-method update` never writes over it and `promote` never publishes it,
-so there is nothing here marked off-limits and nothing to merge. The engine —
-`.constitution/method/scripts/inventory.py` — is the method's and is replaced on every update.
-That is the seam: a folder, not a marked region inside a shared file.
+The whole file is yours. `wdi-method update` never writes over it and `promote` never publishes it.
 
 WHAT THE ENGINE EXPECTS. Three functions, each taking the repo root and returning a `Derived`:
 
@@ -25,16 +17,9 @@ WHAT THE ENGINE EXPECTS. Three functions, each taking the repo root and returnin
 
 Three names are INJECTED before this module executes, so import nothing for them:
 
-    Row(key, cells, source)   one row. `key` is its stable identity, used for comparison; `cells`
-                              are in the column order the engine renders; `source` is the file it
-                              was read from
-    Derived(rows, unread)     what a reader returns
-    decisions(path)           an inventory's own `states:` and `platform_rows:`, read from its
-                              frontmatter — a judgement no pattern can derive, so it is declared in
-                              the artifact it governs
-
-Nothing else is offered. Needing more of the engine means the seam is in the wrong place, and that
-is a change to make in the method — not to reach around here.
+    Row(key, cells, source)
+    Derived(rows, unread)
+    decisions(path)
 
 THE COLUMN ORDER `cells` MUST FOLLOW:
 
@@ -42,25 +27,40 @@ THE COLUMN ORDER `cells` MUST FOLLOW:
     api     Host · Method · Path · Owning component · Description · Status
     screen  Screen · Route · States · Owning component · UC served
 
-(The leading `No` is the engine's; it keeps the numbering stable and a reader MUST NOT supply it.)
+(The leading `No` is the engine's; a reader MUST NOT supply it.)
 
-THE RULE THAT NO STACK CHANGES: whatever a pattern cannot read is appended to `unread` and
-reported. It MUST NOT be guessed, and it MUST NOT be silently dropped. An inventory assembled from
-a README, or from a route name that merely looks plausible, is worth less than none — it reads as
-derived while being invented.
-
-A kind this product genuinely does not have MAY return `Derived()`. That is a real answer, and it
-is not the same as this file still being a skeleton.
+Whatever a pattern cannot read is appended to `unread`. It MUST NOT be guessed.
 """
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
-# Delete this line once the three functions below actually read something. While it is here the
-# engine refuses to run, because a skeleton returning nothing and a product owning nothing look
-# identical in the output — and only one of them is true.
-SKELETON = True
+# One as-built container (`components.yaml` `built: true`). Host / spa identity.
+HOST = "web"
+
+# Table → PC: from `owns:` in components.yaml against the DDL names in db/index.ts.
+# hymns is Hub's Song Book (FR-23/24, `/api/hymns`), not a Presenter corpus table.
+TABLE_PC = {
+    "services": "hub",
+    "hymns": "hub",
+    "announcement_items": "hub",
+    "accounts": "hub",
+    "login_attempts": "hub",
+    "revoked_sessions": "hub",
+    "settings": "hub",
+    "bible_translations": "presenter",
+    "bible_books": "presenter",
+    "bible_verses": "presenter",
+    "artifact_templates": "registry",
+}
+
+# One-shot rebuild names in the same file: created, copied, dropped, renamed. Not live tables.
+MIGRATE_ONLY = {
+    "hymns_with_book_code": "hymns",
+    "bible_verses_with_translation_code": "bible_verses",
+}
 
 
 def read(path: Path) -> str:
@@ -70,16 +70,186 @@ def read(path: Path) -> str:
         return ""
 
 
-def derive_db(root: Path) -> "Derived":       # noqa: F821 — injected by the engine
-    """Every table this product stores, from wherever its schema actually lives."""
-    return Derived(unread=["derive_db has not been written for this product yet"])
+def _posix(root: Path, path: Path) -> str:
+    return path.relative_to(root).as_posix()
 
 
-def derive_api(root: Path) -> "Derived":      # noqa: F821 — injected by the engine
-    """Every endpoint this product serves, from wherever its routes are registered."""
-    return Derived(unread=["derive_api has not been written for this product yet"])
+def _paren_body(text: str, open_idx: int) -> str | None:
+    """Body inside the '(' at open_idx, or None if unbalanced."""
+    depth = 0
+    for i, ch in enumerate(text[open_idx:], start=open_idx):
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return text[open_idx + 1 : i]
+    return None
 
 
-def derive_screen(root: Path) -> "Derived":   # noqa: F821 — injected by the engine
-    """Every screen this product renders, from wherever its routes are declared."""
-    return Derived(unread=["derive_screen has not been written for this product yet"])
+def _key_columns(body: str) -> str:
+    keys: list[str] = []
+    for m in re.finditer(
+        r"^\s*(\w+)\s+[^,\n]+PRIMARY KEY\b", body, re.I | re.M
+    ):
+        keys.append(m.group(1))
+    for m in re.finditer(r"UNIQUE\s*\(([^)]+)\)", body, re.I):
+        keys.append(", ".join(p.strip() for p in m.group(1).split(",")))
+    return ", ".join(keys) if keys else "—"
+
+
+LIVE_TABLE_RE = re.compile(r"CREATE TABLE IF NOT EXISTS (\w+)\s*\(", re.I)
+ANY_TABLE_RE = re.compile(r"CREATE TABLE (\w+)\s*\(", re.I)
+
+
+def derive_db(root: Path) -> "Derived":  # noqa: F821
+    """Tables from the SQLite DDL in `src/lib/db/index.ts`."""
+    source = root / "src" / "lib" / "db" / "index.ts"
+    text = read(source)
+    unread: list[str] = []
+    if not text:
+        return Derived(unread=[f"{_posix(root, source)} could not be read"])
+
+    rel = _posix(root, source)
+    live: dict[str, tuple[str, str]] = {}
+    for m in LIVE_TABLE_RE.finditer(text):
+        name = m.group(1)
+        body = _paren_body(text, m.end() - 1)
+        if body is None:
+            unread.append(f"{rel}: unbalanced CREATE TABLE IF NOT EXISTS {name}")
+            continue
+        live[name] = (_key_columns(body), rel)
+
+    for m in ANY_TABLE_RE.finditer(text):
+        name = m.group(1)
+        if name in live:
+            continue
+        dest = MIGRATE_ONLY.get(name)
+        if dest:
+            unread.append(
+                f"{rel}: CREATE TABLE {name} is a one-shot rebuild, then RENAME TO {dest} "
+                f"— not a live table"
+            )
+        else:
+            unread.append(f"{rel}: CREATE TABLE {name} is not IF NOT EXISTS — unread")
+
+    rows = []
+    for name in sorted(live):
+        keys, src = live[name]
+        owner = TABLE_PC.get(name)
+        if owner is None:
+            unread.append(f"{rel}: table {name} has no owns: mapping — owner left `_platform`")
+            owner = "_platform"
+        rows.append(Row(
+            key=name,
+            cells=[name, owner, "—", keys, "published"],
+            source=src,
+        ))
+    return Derived(rows=rows, unread=unread)
+
+
+METHOD_RE = re.compile(
+    r"^export async function (GET|POST|PUT|PATCH|DELETE)\b", re.M
+)
+
+
+def _api_path(root: Path, route_file: Path) -> str:
+    rel = route_file.relative_to(root / "src" / "app").as_posix()
+    parts = [p for p in rel.split("/") if p != "route.ts"]
+    return "/" + "/".join(parts)
+
+
+def _api_owner(path: str) -> str:
+    if path.startswith("/api/admin/artifacts"):
+        return "registry"
+    if path.startswith("/api/scripture"):
+        return "presenter"
+    return "hub"
+
+
+def derive_api(root: Path) -> "Derived":  # noqa: F821
+    """Endpoints from App Router `route.ts` HTTP exports."""
+    api_root = root / "src" / "app" / "api"
+    unread: list[str] = []
+    rows: list = []
+    if not api_root.is_dir():
+        return Derived(unread=["src/app/api/ is missing"])
+
+    for route_file in sorted(api_root.rglob("route.ts")):
+        rel = _posix(root, route_file)
+        text = read(route_file)
+        methods = METHOD_RE.findall(text)
+        if not methods:
+            unread.append(f"{rel}: no export async function GET|POST|PUT|PATCH|DELETE")
+            continue
+        path = _api_path(root, route_file)
+        owner = _api_owner(path)
+        for method in sorted(set(methods)):
+            rows.append(Row(
+                key=f"{HOST} {method} {path}",
+                cells=[HOST, method, f"`{path}`", owner, "—", "published"],
+                source=rel,
+            ))
+
+    rows.sort(key=lambda r: (r.cells[2], r.cells[1]))
+    return Derived(rows=rows, unread=unread)
+
+
+PAGE_FN_RE = re.compile(
+    r"^export default (?:async )?function (\w+)\b", re.M
+)
+GROUP_RE = re.compile(r"^\([^/]+\)$")
+
+
+def _screen_route(root: Path, page: Path) -> str:
+    rel = page.relative_to(root / "src" / "app").as_posix()
+    parts = [p for p in rel.split("/") if p != "page.tsx" and not GROUP_RE.match(p)]
+    if not parts:
+        return "/"
+    return "/" + "/".join(parts)
+
+
+def _screen_owner(route: str) -> str:
+    if route.startswith("/admin/artifacts"):
+        return "registry"
+    if "/slideshow" in route or "/present" in route:
+        return "presenter"
+    return "hub"
+
+
+def derive_screen(root: Path) -> "Derived":  # noqa: F821
+    """Screens from App Router `page.tsx`. Route groups do not appear in the URL."""
+    app = root / "src" / "app"
+    unread: list[str] = []
+    if not app.is_dir():
+        return Derived(unread=["src/app/ is missing"])
+
+    inv = root / ".how" / "_platform" / "inventory-screen.md"
+    state_of, _plat = decisions(inv)
+    by_parent: dict[str, list[str]] = {}
+    for state_route, parent in sorted(state_of.items()):
+        by_parent.setdefault(parent, []).append(state_route)
+
+    rows = []
+    for page in sorted(app.rglob("page.tsx")):
+        rel = _posix(root, page)
+        text = read(page)
+        fns = PAGE_FN_RE.findall(text)
+        if not fns:
+            unread.append(f"{rel}: no `export default function`")
+            continue
+        name = fns[-1]
+        route = _screen_route(root, page)
+        states = ", ".join(f"`{s}`" for s in by_parent.get(route, [])) or "—"
+        owner = _screen_owner(route)
+        rows.append(Row(
+            key=f"{HOST}:{route}",
+            cells=[f"{HOST}/{name}", f"`{route}`", states, owner, "—"],
+            source=rel,
+        ))
+
+    unread.append(
+        "UC served is not declared in page.tsx — left `—`; do not invent from the plan"
+    )
+    rows.sort(key=lambda r: r.cells[1])
+    return Derived(rows=rows, unread=unread)
