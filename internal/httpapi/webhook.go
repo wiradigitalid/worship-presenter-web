@@ -72,11 +72,8 @@ func (s *Server) postWebhook(w http.ResponseWriter, r *http.Request) {
 		serviceDate = *parsed.Date
 	}
 	parsedJSON, _ := json.Marshal(parsed)
-	imagesJSON := "[]"
-	if imgs, ok := body["images"]; ok {
-		b, _ := json.Marshal(imgs)
-		imagesJSON = string(b)
-	}
+	urls := plan.CoerceImageURLs(body["images"])
+	imagesJSON, _ := json.Marshal(urls)
 	tx, err := s.DB.Begin()
 	if err != nil {
 		log.Printf("Error processing webhook: %v", err)
@@ -163,7 +160,7 @@ func (s *Server) postWebhook(w http.ResponseWriter, r *http.Request) {
 		"parsedData":        parsed,
 		"resolvedHymns":     resolved,
 		"failedHymnNumbers": parsed.FailedHymnNumbers,
-		"imagesCount":       0,
+		"imagesCount":       len(urls),
 		"announcementsAdded": announcementsAdded,
 		"updated":           updated,
 	})

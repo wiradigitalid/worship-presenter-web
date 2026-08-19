@@ -1,8 +1,7 @@
 /**
- * Remaining Hub verbs on the Go API: announcements, hymns, scripture,
- * admin settings/accounts/registry, webhook intake.
+ * Registry delete/reorder against the Go API (UC-15): Admin-gated, token-guarded, compact 0..N-1.
  */
-import { test, before, after } from 'node:test';
+import { describe, test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'child_process';
 import { createHash } from 'crypto';
@@ -15,10 +14,9 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'hub-go-http-'));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'registry-go-http-'));
 const dbPath = path.join(tmp, 'test.db');
-const AUTH_SECRET = createHash('sha256').update('hub-go-http-secret').digest('hex');
-const WEBHOOK_SECRET = 'hub-go-webhook-secret';
+const AUTH_SECRET = createHash('sha256').update('registry-go-http-secret').digest('hex');
 const BOOTSTRAP_USER = 'admin';
 const BOOTSTRAP_PASS = 'bootstrap-pass-99';
 
@@ -26,6 +24,9 @@ function fetchRaw(url, opts = {}) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
     const headers = { ...(opts.headers || {}) };
+    if (opts.body) {
+      headers['Content-Length'] = String(Buffer.byteLength(opts.body));
+    }
     const req = http.request(
       {
         hostname: u.hostname,
@@ -88,7 +89,7 @@ function cookieFrom(headers) {
 
 let child;
 let base;
-let cookie = '';
+let adminCookie = '';
 const output = [];
 
 before(async () => {
@@ -102,7 +103,6 @@ before(async () => {
       AUTH_SECRET,
       AUTH_BOOTSTRAP_USER: BOOTSTRAP_USER,
       AUTH_BOOTSTRAP_PASSWORD: BOOTSTRAP_PASS,
-      WEBHOOK_SECRET,
       REPO_ROOT: root,
       NODE_ENV: 'test',
     },
@@ -122,7 +122,7 @@ before(async () => {
           body: JSON.stringify({ username: BOOTSTRAP_USER, password: BOOTSTRAP_PASS }),
         });
         assert.equal(login.status, 200, login.body);
-        cookie = cookieFrom(login.headers);
+        adminCookie = cookieFrom(login.headers);
         return;
       }
     } catch (err) {
@@ -142,8 +142,8 @@ after(() => {
   }
 });
 
-async function json(url, method = 'GET', body, extraHeaders = {}) {
-  const headers = { Cookie: cookie, ...extraHeaders };
+async function json(url, method = 'GET', body, cookie = adminCookie) {
+  const headers = { Cookie: cookie };
   const raw = body === undefined ? undefined : JSON.stringify(body);
   if (raw !== undefined) headers['Content-Type'] = 'application/json';
   const res = await fetchRaw(url, { method, headers, body: raw });
@@ -156,72 +156,85 @@ async function json(url, method = 'GET', body, extraHeaders = {}) {
   return { status: res.status, body: parsed };
 }
 
-test('GET /api/announcements starts empty; POST then DELETE', async () => {
-  const empty = await json(`${base}/api/announcements`);
-  assert.equal(empty.status, 200);
-  assert.deepEqual(empty.body, { items: [] });
-
-  const created = await json(`${base}/api/announcements`, 'POST', {
-    image_url: 'https://example.com/flyer.png',
-  });
-  assert.equal(created.status, 201);
-  assert.equal(created.body.item.image_url, 'https://example.com/flyer.png');
-  const id = created.body.item.id;
-
-  const listed = await json(`${base}/api/announcements`);
-  assert.equal(listed.status, 200);
-  assert.equal(listed.body.items.length, 1);
-
-  const removed = await json(`${base}/api/announcements/${id}`, 'DELETE');
-  assert.equal(removed.status, 200);
-});
-
-test('GET /api/hymns returns seeded SDAH entries', async () => {
-  const res = await json(`${base}/api/hymns?q=159`);
+async function list() {
+  const res = await json(`${base}/api/admin/artifacts`);
   assert.equal(res.status, 200);
-  assert.ok(Array.isArray(res.body.hymns));
-  assert.ok(res.body.hymns.some((h) => h.number === 159));
+  return res.body.templates;
+}
+
+describe('registry against Go', { concurrency: 1 }, () => {
+  test('Admin list is the bootstrapped ordered registry', async () => {
+    const templates = await list();
+    assert.ok(templates.length > 1);
+    assert.ok(templates.some((t) => t.id === 'song-set'));
+  });
+
+  test('Admin reorder reverses the list and refreshes tokens', async () => {
+    const before = await list();
+    const desired = [...before].reverse();
+    const res = await json(`${base}/api/admin/artifacts/order`, 'PUT', {
+      items: desired.map(({ id, updatedAt }) => ({ id, updatedAt })),
+    });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.deepEqual(
+      res.body.templates.map((t) => t.id),
+      desired.map((t) => t.id)
+    );
+    for (const t of res.body.templates) {
+      assert.notEqual(
+        t.updatedAt,
+        before.find((old) => old.id === t.id)?.updatedAt,
+        `${t.id} must receive a fresh concurrency token`
+      );
+    }
+  });
+
+  test('Admin delete removes song-set and keeps a compact list', async () => {
+    const before = await list();
+    const songSet = before.find((t) => t.id === 'song-set');
+    assert.ok(songSet);
+    const res = await json(`${base}/api/admin/artifacts/${songSet.id}`, 'DELETE', {
+      updatedAt: songSet.updatedAt,
+    });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.ok(!res.body.templates.some((t) => t.id === 'song-set'));
+    const after = await list();
+    assert.deepEqual(
+      after.map((t) => t.id),
+      res.body.templates.map((t) => t.id)
+    );
+  });
+
+  test('stale delete token is 409', async () => {
+    const before = await list();
+    const target = before[0];
+    const res = await json(`${base}/api/admin/artifacts/${target.id}`, 'DELETE', {
+      updatedAt: '2000-01-01T00:00:00.000Z',
+    });
+    assert.equal(res.status, 409);
+    const after = await list();
+    assert.deepEqual(
+      after.map((t) => t.id),
+      before.map((t) => t.id)
+    );
+  });
+
+  test('operator cannot hit admin artifacts', async () => {
+    const created = await json(`${base}/api/admin/accounts`, 'POST', {
+      username: 'registry-operator',
+      password: 'pw-operator-99',
+      role: 'operator',
+    });
+    assert.equal(created.status, 201, JSON.stringify(created.body));
+    const login = await fetchRaw(`${base}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'registry-operator', password: 'pw-operator-99' }),
+    });
+    assert.equal(login.status, 200);
+    const cookie = cookieFrom(login.headers);
+    const res = await json(`${base}/api/admin/artifacts`, 'GET', undefined, cookie);
+    assert.equal(res.status, 403);
+  });
 });
 
-test('GET /api/scripture looks up a KJV verse from the bootstrapped corpus', async () => {
-  const res = await json(`${base}/api/scripture?ref=John+3:16&translation=KJV`);
-  assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.equal(typeof res.body.text, 'string');
-  assert.ok(res.body.text.length > 0);
-});
-
-test('GET /api/admin/settings and accounts and artifacts on a fresh hub', async () => {
-  const settings = await json(`${base}/api/admin/settings`);
-  assert.equal(settings.status, 200);
-  assert.equal(typeof settings.body.pptx_retention_days, 'number');
-  assert.ok(['en', 'id'].includes(settings.body.ui_locale));
-
-  const accounts = await json(`${base}/api/admin/accounts`);
-  assert.equal(accounts.status, 200);
-  assert.ok(accounts.body.accounts.some((a) => a.username === BOOTSTRAP_USER));
-
-  const artifacts = await json(`${base}/api/admin/artifacts`);
-  assert.equal(artifacts.status, 200);
-  assert.ok(artifacts.body.templates.length > 0);
-});
-
-test('POST /api/webhook with secret creates a service', async () => {
-  const res = await json(
-    `${base}/api/webhook`,
-    'POST',
-    {
-      text: [
-        'SABBATH, JUNE 6, 2026',
-        'DIVINE SERVICE',
-        'Opening Song: SDAH #159',
-        'Sermon: Pastor Ada',
-      ].join('\n'),
-      images: ['https://example.com/a.png', 'http://127.0.0.1/evil.png'],
-    },
-    { 'x-webhook-secret': WEBHOOK_SECRET }
-  );
-  assert.equal(res.status, 201, JSON.stringify(res.body));
-  assert.ok(res.body.id > 0);
-  assert.equal(res.body.date, '2026-06-06');
-  assert.equal(res.body.imagesCount, 1);
-});

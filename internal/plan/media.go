@@ -184,6 +184,14 @@ func bucketHymns(items []ParsedItem) (bt, ds []HymnItem) {
 
 func IsSafeImageURL(ref string) bool { return isSafeImageURL(ref) }
 
+func CoerceImageURLs(value interface{}) []string {
+	out := coerceImageURLs(value)
+	if out == nil {
+		return []string{}
+	}
+	return out
+}
+
 func IsVideoURL(ref string) bool { return isVideoURL(ref) }
 
 func IsAnnouncementImageURL(ref string) bool { return isAnnouncementImageURL(ref) }

@@ -85,7 +85,7 @@ func (s *Server) createService(w http.ResponseWriter, r *http.Request) {
 	}
 	parsed := parse.Normalize(parse.ParseRundown(s.DB, rawPayload))
 	if parse.HasStructuredFields(body) {
-		parse.ApplyStructuredFields(&parsed, body)
+		parse.ApplyStructuredFields(s.DB, &parsed, body)
 		parsed = parse.Normalize(parsed)
 	}
 	if parsed.Date == nil || *parsed.Date == "" {
@@ -417,7 +417,7 @@ func (s *Server) updateService(w http.ResponseWriter, r *http.Request) {
 		parsed = parse.Normalize(parse.ParseRundown(s.DB, storedRaw))
 	}
 	if parse.HasStructuredFields(body) {
-		parse.ApplyStructuredFields(&parsed, body)
+		parse.ApplyStructuredFields(s.DB, &parsed, body)
 		parsed = parse.Normalize(parsed)
 	}
 	parsedJSON, _ := json.Marshal(parsed)
