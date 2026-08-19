@@ -1,0 +1,70 @@
+# Wave W1 x Registry — FR-21. Execution order is list order.
+# Both stories realise SPEC.md CAP-9. Story status is never recorded here or in
+# waves.yaml: it is read from story-file frontmatter.
+
+- id: "1-1"
+  title: Admin delete and reorder persist over a restart
+  description: >-
+    Ships UC-15 over HTTP — the delete and reorder verbs the SDD marks
+    [MISSING] — so a deleted entry stays gone across a restart (BR-9, SCN-5)
+    and the order Admin left is the order a new Service follows (BR-8), with
+    position compacted to 0..N-1. Creating or adding a new Artifact Template is
+    out of scope; see SPEC.md Non-goals.
+  spec_checkpoint: true
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Read SPEC.md and every path in its `companions:`. The corpus files listed
+    there are the contract and are not yours to change: a deviation from the
+    SDD or an AD-N is reported for `wdi-decision`, never patched into `.what/`,
+    `.how/`, or an applied DEC-. Verification commands and the test harness are
+    in `stack.md`; the as-built traps are in `brownfield.md` — read the
+    `position` and `assertStableAgainstSeed` sections before touching the
+    store. Land the proof in `tests/registry-reorder-delete-http.test.mjs` and
+    add that filename to the `test` script in `package.json`, or it never runs.
+    OQ-A is open: no corpus document names the verb or path, and `01-artifacts.md`
+    forbids inventing one loosely — the SDD's AD-5 row bounds it to
+    `/api/admin/artifacts/**`, already inside the proxy matcher. Choose the
+    shape in the plan, state it explicitly, and report it so it can land in
+    `01-artifacts.md` and `00-inventory.md` before the wave closes. On a test or
+    build failure whose cause is not known, run `wdi-systematic-debugging`
+    before proposing any fix; a third failed fix attempt is the signal to
+    escalate, not to try a fourth. Commit locally, never push. Public
+    repository: no congregation data, `.env`, `data/local/`, `data/uploads/`,
+    `data.db*`, rendered slides or source decks in a tracked file — invent any
+    example name you need.
+
+- id: "1-2"
+  title: Sync Artifact onto a service-bound snapshot
+  description: >-
+    Ships UC-16 — the AD-16 per-Service snapshot table through startup DDL, and
+    the Admin-only Sync Artifact action on the Hub Service route — so a Service
+    already reviewed keeps its structure until Sync (BR-8) and after Sync
+    renders the new structure with every entered Operator field intact (BR-10),
+    each announcement row still expanding the whole live list (BR-11). A corrupt
+    live row is omitted and logged, never frozen into the snapshot (OQ-32).
+  spec_checkpoint: true
+  done_checkpoint: true
+  depends_on: ["1-1"]
+  invoke_dev_with: >-
+    Runs after story 1-1 and inherits its code map. Read SPEC.md and every path
+    in its `companions:`; the corpus is not yours to change — a deviation from
+    the SDD or an AD-N is reported for `wdi-decision`, never patched. Read
+    `brownfield.md` first: `RegistrySnapshot` in `src/lib/artifacts/registry-snapshot.ts`
+    is the live map assembled per plan build and is NOT this story's durable
+    per-Service freeze, and `loadRegistrySnapshot` is the omit-and-log specimen
+    OQ-32 points Sync at. Verification commands are in `stack.md`. Land the proof
+    in `tests/registry-sync-artifact.test.mjs` and add that filename to the
+    `test` script in `package.json`. Three open questions touch this story and
+    each needs a stated answer in the plan rather than a silent one: OQ-B, the
+    Sync route's path — AD-16 puts it on a Service route, the SDD forbids a
+    Registry route, and its inventory row belongs to Hub; OQ-C, whether the
+    AD-21 transition clones a snapshot for every existing Service or leaves
+    them on AD-16's pre-existing-Service on-ramp; OQ-D, whether
+    `announcement_items.service_id` becomes enforced-scoped here. The route
+    re-checks Admin in-process with `requireAdminSession` even though the
+    Service route is gated for any signed-in account, and ships with its
+    `tests/proxy-matcher.test.mjs` assertion. On a failure whose cause is not
+    known, run `wdi-systematic-debugging` before proposing a fix; escalate on a
+    third failed attempt. Commit locally, never push. Public repository: no
+    congregation data, `.env`, `data/local/`, `data/uploads/`, `data.db*`,
+    rendered slides or source decks in a tracked file.
