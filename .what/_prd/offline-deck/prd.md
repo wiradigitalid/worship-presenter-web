@@ -3,7 +3,7 @@ title: "Offline Deck"
 initiative: offline-deck
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 ---
 
 # PRD: Offline Deck
@@ -13,6 +13,7 @@ updated: 2026-08-18
 | Date | What changed | Why | Releases affected |
 |---|---|---|---|
 | 2026-08-18 | This initiative was born from the `weekly-sabbath` split. Area: assemble the Deck, download PPTX, file retention, Artifact Registry. FR-4…7, FR-14, FR-20, FR-21, FR-26. | A reader looking for “the Sabbath file” or “change slide order” does not open the intake PRD. | as-built |
+| 2026-08-19 | FR-5 proof names the shipped lyric join and chorus repeat. FR-21 proof names that each Announcement registry row expands the whole live list and that repeats are intended. | Those rules lived only in a G5-era spec; a later wave must project them, not invent them. | as-built · later |
 
 ## 0. Document Purpose
 
@@ -55,7 +56,7 @@ Does not add a new UJ. UJ-4 (brief) for *presenting* the PPTX; UJ-2 for the revi
 
 #### FR-5: Render a song block into readable lyric slides
 
-**Proof of done:** From the pew, verse and chorus are readable; not cramped. NFR-3.
+**Proof of done:** From the pew, verse and chorus are readable; not cramped. NFR-3. Verse lines join into continuous prose (terminal punctuation → space; otherwise `"; "`). A song with at least one verse and one refrain emits Verse then Chorus after every verse. A long verse still splits when it exceeds the plan's character budget.
 
 #### FR-6: Render non-song variable content
 
@@ -87,7 +88,7 @@ Does not add a new UJ. UJ-4 (brief) for *presenting* the PPTX; UJ-2 for the revi
 
 #### FR-21: Admin changes slide order and membership
 
-**Proof of done:** A deleted entry is no longer live after restart; an already-created Service does not change until Sync Artifact; Sync replaces structure, Operator fields stay.
+**Proof of done:** A deleted entry is no longer live after restart; an already-created Service does not change until Sync Artifact; Sync replaces structure, Operator fields stay. Each Announcement registry row expands the **whole** live announcement list (membership is Hub's, not a per-row subset). Repeating that row in the order is intended — the same flyers may appear at more than one place in one Service.
 
 ## 5. Non-Goals
 

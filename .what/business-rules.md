@@ -16,3 +16,5 @@ There are no extra `BR-N` rows. Rules that bind more than one PC are already `AD
 | AD-25 · AD-26 | Hub hymns and Presenter verses |
 
 Rules that bind only one PC: `.what/<pc>/02-rules/`.
+
+BR-11 (Registry) also reaches Hub: Announcement registry rows expand the live announcement list; Hub owns membership.

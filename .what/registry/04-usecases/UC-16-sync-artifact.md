@@ -29,7 +29,7 @@ Admin is signed in. The Service exists. Operator cannot run Sync.
 | From step | Condition | What happens |
 | --- | --- | --- |
 | 1 | Service was created before the Snapshot model | The first Sync is the on-ramp into that model (AD-16) |
-| 3 | Live Registry dropped or added entries | Entered fields remain; unused ones stay stored and inert; new slots start empty. Announcement membership stays the Service's live list, not cloned from Registry (AD-16) |
+| 3 | Live Registry dropped or added entries | Entered fields remain; unused ones stay stored and inert; new slots start empty. Announcement membership stays the Service's live list, not cloned from Registry (AD-16). Each Announcement row still expands that whole list (BR-11) |
 
 ## Failure Flows
 
@@ -44,4 +44,4 @@ This Service renders the new structure. Weekly payload is not replaced by Sync.
 
 ## Business Rules
 
-BR-10
+BR-10 · BR-11

@@ -56,6 +56,7 @@ UC-1 and UC-17 realise CAP-11 (Telegram, last phase). This phase's create path i
 
 - Hub is not public — brief Constraints. Source: brief.
 - Congregation data does not enter git — brief. Source: `.constitution/project/public-repository.md`.
+- Create (`/services/new`) and edit (`/services/[id]`) share one field set and card order. Weekly values (hymn numbers, names, verses, flyers) are entered here, not on the Artifact Registry. Source: as-built forms; FR-27 · FR-11.
 
 ## Non-Goals · [G3]
 
@@ -97,7 +98,7 @@ OQ-4 — When will the production host set `AUTH_SECRET`, `WEBHOOK_SECRET`, and 
 
 ## Slots
 
-`mode: deep`. Rules: `02-rules/rules-hub.md`. Domain: `03-domain/domain-model.md`, `state-machines.md`. Full flow of each critical UC: `04-usecases/UC-1-events-send-rundown.md`, `UC-2-paste-rundown-hub.md`, `UC-5-edit-service-fields.md`, `UC-7-delete-service.md`, `UC-17-telegram-correction.md`. Branches: `05-scenarios/SCN-1-unknown-hymn.md`, `SCN-2-save-conflict.md`, `SCN-3-correction-without-target.md`.
+`mode: deep`. Rules: `02-rules/rules-hub.md`. Domain: `03-domain/domain-model.md`, `state-machines.md`. Full flow of each critical UC: `04-usecases/UC-1-events-send-rundown.md`, `UC-2-paste-rundown-hub.md`, `UC-5-edit-service-fields.md`, `UC-7-delete-service.md`, `UC-17-telegram-correction.md`. Branches: `05-scenarios/SCN-1-unknown-hymn.md`, `SCN-2-save-conflict.md`, `SCN-3-correction-without-target.md`. Physical field names: `.how/hub/05-model/form-fields.md`.
 
 ## Open Items
 

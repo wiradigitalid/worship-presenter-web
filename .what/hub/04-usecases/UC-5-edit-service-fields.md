@@ -15,7 +15,7 @@ The Operator opens an existing Service and changes fields (song numbers, names, 
 
 ## Precondition
 
-The Operator is signed in. That Service exists.
+The Operator is signed in. That Service exists. The field set is the same as create (`.how/hub/05-model/form-fields.md`).
 
 ## Main Flow
 

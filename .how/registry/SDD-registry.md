@@ -20,6 +20,8 @@ As-built: global templates in SQLite. Per-Service snapshot (AD-16) **not yet** a
 
 Registry is `/admin/artifacts` plus its API: layout, Reset to seed, ordered list. Admin reorder and delete HTTP are [MISSING] (FR-21 / UC-15). The plan reads `artifact_templates` rows (or the map assembled at build), not a JSON file after bootstrap.
 
+Two surfaces: this component does not take weekly hymn numbers or flyer membership — those stay Hub. Each Announcement row expands Hub's whole live list (BR-11).
+
 Expensive choice: seed is bootstrap + Reset only (AD-17); a deleted row is not revived by restart or by Reset (OQ-24; restart verified; Admin delete verb still [MISSING]). Reset is live→live on a still-live seed row.
 
 Screens (`inventory-screen` 7) are not an `LC` `ui-screen`: that is a `wdi-ux` slot, skipped.

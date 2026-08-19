@@ -18,3 +18,5 @@ Conceptual. Database column types belong in `.how/`.
 | SongSet Slot | slot identity | Four fixed song-block positions | identity belongs to the system; at most one row per slot |
 
 One Registry holds zero or more ArtifactTemplates. After FR-21, one Service has one Snapshot. A SongSet slot may have at most one live row.
+
+Placeholder Catalog **coverage floor** (intent, not persisted spelling — Story 20.5 owns the key strings): service date; theme verse; verse reading; sermon speaker / title / graphic; special song; closing-prayer person; family and youth prayer text and photos. SongSet hymn/lyric values and Announcement flyer slots are system expansion, not catalog keys.

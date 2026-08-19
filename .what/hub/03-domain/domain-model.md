@@ -10,3 +10,5 @@ Conceptual. Database column types belong in `.how/`.
 | AppSetting | Application settings | transition, ui_locale, default corpus |
 | Rundown | Text the Operator enters in Hub this phase; later Events may send it on Telegram | becomes Service payload |
 | Hymn | One Song Book entry, identified by book + number | resolved into a Service song block (BR-3) |
+
+The Operator form is one raw Rundown plus structured overlays. Physical field names: `.how/hub/05-model/form-fields.md`.

@@ -28,9 +28,9 @@ Admin is signed in.
 
 | From step | Condition | What happens |
 | --- | --- | --- |
-| 2 | General entry | Free canvas within AD-15 |
-| 2 | SongSet entry | Only limited configuration, not a free canvas |
-| 2 | Announcement entry | Bound to the announcement set, not a free canvas (AD-22) |
+| 2 | General entry | Free canvas within AD-15 (as-built editor) |
+| 2 | SongSet entry | Canvas is read-only. AD-22 bounded surface (two backgrounds, font style/size, override outside layout) is not shipped |
+| 2 | Announcement entry | Canvas is read-only; the row expands Hub's live list (BR-11), not a free canvas |
 
 ## Failure Flows
 

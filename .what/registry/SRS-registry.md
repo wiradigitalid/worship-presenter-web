@@ -41,6 +41,8 @@ Changing the worship order must not wait for a deploy, and must not overwrite a 
 
 Not per-church configuration. Source: brief Scope Out; glossary Artifact Registry (one Registry, not per-church). AD-14 admin-only global templates.
 
+Two surfaces: the Artifact Registry owns order, labels, and layout; Hub intake and the Announcements list own weekly values (hymn numbers per SongSet slot, names, verses, flyer membership). Neither surface does the other's job.
+
 ## Non-Goals · [G3]
 
 - Fill weekly payload — Hub.
@@ -81,7 +83,7 @@ A Registry edit that makes lyrics unreadable (NFR-3).
 
 ## Slots
 
-`mode: deep`. Rules: `02-rules/rules-registry.md`. Domain: `03-domain/domain-model.md`, `state-machines.md`, `deck-frame.md`. Flows: `04-usecases/UC-14-edit-layout.md`, `UC-15-reorder-and-delete.md` (critical), `UC-16-sync-artifact.md`. Branches: `05-scenarios/SCN-5-delete-survives-restart.md`.
+`mode: deep`. Rules: `02-rules/rules-registry.md` (BR-8…BR-11). Domain: `03-domain/domain-model.md`, `state-machines.md`, `deck-frame.md`. Flows: `04-usecases/UC-14-edit-layout.md`, `UC-15-reorder-and-delete.md` (critical), `UC-16-sync-artifact.md`. Branches: `05-scenarios/SCN-5-delete-survives-restart.md`.
 
 ## Open Items
 

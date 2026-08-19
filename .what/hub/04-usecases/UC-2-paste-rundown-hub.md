@@ -20,24 +20,25 @@ This is **this phase's** create path. The Operator is signed in. Song Book is sh
 ## Main Flow
 
 1. The Operator pastes a Rundown for one date.
-2. The system interprets the text into a weekly payload.
-3. The system resolves hymn numbers against the Song Book.
-4. The system saves a new Service for that date.
-5. The Operator sees that Service in the list.
+2. The Operator may Parse; the system fills structured overlays (same field set as edit).
+3. The system interprets the text into a weekly payload.
+4. The system resolves hymn numbers against the Song Book.
+5. The system saves a new Service for that date.
+6. The Operator sees that Service in the list.
 
 ## Alternate Flows
 
 | From step | Condition | What happens |
 | --- | --- | --- |
-| 3 | Number is unknown | Service is saved; the song block is marked incomplete |
-| 4 | Date already exists | Not duplicated without override; the Operator sees the existing Service. After an explicit override, a second Service for that date is saved |
+| 4 | Number is unknown | Service is saved; the song block is marked incomplete |
+| 5 | Date already exists | Not duplicated without override; the Operator sees the existing Service. After an explicit override, a second Service for that date is saved |
 
 ## Failure Flows
 
 | From step | Failure | What the system does | What the user is left with |
 | --- | --- | --- | --- |
-| 2 | Empty or whitespace-only paste, or no date can be read | Rejects; no row (OQ-21) | Form shows the miss; no Service |
-| 2 | Text is not parseable, but a date was read | Saves what was readable; the miss is visible (NFR-5, OQ-22) | Operator sees an incomplete Service, not silence |
+| 5 | Empty or whitespace-only paste, or no date can be read | Rejects; no row (OQ-21) | Form shows the miss; no Service |
+| 5 | Text is not parseable, but a date was read | Saves what was readable; the miss is visible (NFR-5, OQ-22) | Operator sees an incomplete Service, not silence |
 | 1 | Session expired | Rejects; no row | Operator signs in again; no new Service |
 
 ## Outcome

@@ -101,8 +101,8 @@ Every Hub-owned row from `inventory-api.md` (1–24, 30) and `inventory-screen.m
 | POST `/api/webhook` | Timeout is on picoclaw; Hub does not retry | Secret unset → 503. Agent down: Hub silent | Wrong secret → 401 (secret not logged). Bad JSON → 400. Specified: no date → no row (OQ-21); images attach or fail visibly (OQ-22) | CAP-11 later: Events get no read-back. Operator sees Hub. Not this phase's handover | `Error processing webhook:` on 500 (`src/app/api/webhook/route.ts`). Does not log the secret |
 | `/login` | Waits on POST login | Login API 500 → form error | Wrong credentials → same 401 copy | Login form; never Hub | none on the page (client shows the API body) |
 | `/` | RSC list waits on SQLite | Uncaught DB throw → framework error page | Corrupt `parsed_data` still listed by date | Dated list, or error page — not a silent empty Hub | none in `src/app/(operator)/page.tsx`; API list logs as above if the client refetch fails |
-| `/services/new` | Preview POST may lag on each paste | Preview 500 → empty preview pane | No date → 400, no row. Partial parse with date → save what was readable (OQ-22) | Form names the miss (UC-2) | `Preview error:` in `src/app/(operator)/services/new/CreateForm.tsx` |
-| `/services/[id]` | RSC + PUT save wait | Missing row → `notFound()` | Stale save → 409 then refresh. Gone after reject → UC-7 not-found (OQ-23). Session expiry at save → 401, no partial write | Run-Sheet, conflict alert, or not-found | `Preview error:` / save `console.error` in `EditForm.tsx`; delete `console.error` in `DeleteButton.tsx` |
+| `/services/new` | Preview POST may lag on each paste | Preview 500 → empty preview pane | No date → 400, no row. Partial parse with date → save what was readable (OQ-22) | Form names the miss (UC-2). Cards: Bible Talk → Divine Worship → Sermon → Family → Youth → Announcement Flyers. Live Slide Preview only | `Preview error:` in `src/app/(operator)/services/new/CreateForm.tsx` |
+| `/services/[id]` | RSC + PUT save wait | Missing row → `notFound()` | Stale save → 409 then refresh. Gone after reject → UC-7 not-found (OQ-23). Session expiry at save → 401, no partial write | Same form cards as create. Chrome: Preview, Present, Delete Service, Download PPTX, Live Slide Preview, announcement strip + Manage list. No Order of Service card | `Preview error:` / save `console.error` in `EditForm.tsx`; delete `console.error` in `DeleteButton.tsx` |
 | `/announcements` | RSC list waits | DB throw → error page | Bad image URL on mutate → 400; list unchanged | List as last successful load | announcement route `console.error` as above |
 | `/admin` | RSC waits | Not Admin → 403 `Forbidden` from the gate | Bad settings body → 400; previous values remain | Accounts, transition, locale, retention | accounts/settings `console.error` as above |
 
@@ -132,7 +132,8 @@ Every Hub-owned row from `inventory-api.md` (1–24, 30) and `inventory-screen.m
 | LC-12 parse+write | verified | `src/lib/parser.ts`, `src/lib/services/create-service.ts`, `src/lib/services/update-service.ts` | Hub POST same date is 409 unless `allowSecond`; webhook upsert is CAP-11 |
 | LC-13 PPTX on-demand; does not UPDATE `services` | verified | `src/app/api/services/[id]/pptx/route.ts` GET; `src/lib/pptx.ts` | OQ-20: generate is not a payload edit |
 | POST preview does not write Service | verified | `src/app/api/services/preview/route.ts` | OQ-20 |
-| LC-16 `buildSlidePlan` | verified | `src/lib/slide-plan.ts` | — |
+| LC-16 `buildSlidePlan` | verified | `src/lib/slide-plan.ts` | lyric join/chorus: `src/lib/lyrics.ts` (BR-6) |
+| Create/edit field set | verified | `CreateForm.tsx` / `EditForm.tsx` | `.how/hub/05-model/form-fields.md` |
 | Deleting a Service unlinks unreferenced local uploads | verified | `src/lib/services/queries.ts` `deleteService`; `tests/services-lib.test.mjs` | OQ-7 |
 | Session expiry at PUT/DELETE refuses before the handler | verified | `src/proxy.ts` `unauthorized` 401 JSON for `/api/` | OQ-23: no partial write |
 | PUT gone → 404, page `notFound()`, EditForm does not POST create | verified | `src/lib/services/update-service.ts`; `src/app/(operator)/services/[id]/page.tsx`; `EditForm.tsx` | OQ-23: UC-7 not-found, do not recreate |
@@ -146,7 +147,7 @@ Every Hub-owned row from `inventory-api.md` (1–24, 30) and `inventory-screen.m
 
 ## Slots
 
-`01-ux/` is not written — belongs to `wdi-ux`, skipped. `02-contracts/` (00-inventory + 01–08). `03-integrations/picoclaw.md`. `04-components/` LC-12, LC-13, LC-16. `05-model/data-model.md`. `06-flows/webhook-intake.md`, `delete-service.md`.
+`01-ux/` is not written — belongs to `wdi-ux`, skipped. `02-contracts/` (00-inventory + 01–08). `03-integrations/picoclaw.md`. `04-components/` LC-12, LC-13, LC-16. `05-model/data-model.md`, `form-fields.md`. `06-flows/webhook-intake.md`, `delete-service.md`.
 
 ## Open Items
 

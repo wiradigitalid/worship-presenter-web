@@ -1,7 +1,7 @@
 ---
 topic: Registry
 artifact: .what/registry/SRS-registry.md
-updated: 2026-08-19T12:19
+updated: 2026-08-19T12:48
 ---
 
 - (event) G4 guarded as-built: UC-14..16; LC-11. Snapshot AD-16 [MISSING] in the DDL.
@@ -14,3 +14,4 @@ updated: 2026-08-19T12:19
 - (event) wdi-component deep as-built amendment (behaviour+design): UC-15/SCN-5 Outcome — Delete is terminal (gone); Reset is live→live only on a still-live seed row and does not undelete (OQ-24, OQ-15). Main Flow condensed to actor/system turns; restart/old-Service stay in SCN-5/Outcome (BR-8/BR-9). SM: gone remains terminal, no gone→live. Failure Behaviour filled for inventory 25–28 + /admin/artifacts. Contracts five lanes; DELETE/reorder remain [MISSING] planned FR-21. Snapshot table [MISSING] planned AD-16. Open Items OQ-24 · OQ-15 · OQ-14. No g4_passed, no 01-ux, no Sync Artifact route, no wdi-review.
 - (event) wdi-review SDD: 403 is Forbidden not empty list; 06-flows last-row/songset/gaps/corrupt-reset; Inherited Constraints exclusion OQ-30; position gaps OQ-31. Not stamped.
 - (event) Blueprint vs code: screen inventory row 7 drops UC-16. AdminArtifactsPage is UC-14/UC-15 only; Sync Artifact has no route and is a Hub surface once AD-16 ships.
+- (event) G3: two-surface constraint; catalog coverage floor (no spellings); BR-11 Announcement expands whole Hub list; UC-14 SongSet canvas read-only as-built.
