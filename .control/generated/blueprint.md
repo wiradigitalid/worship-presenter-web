@@ -124,22 +124,23 @@ Derived by `inventory.py` from `CREATE TABLE IF NOT EXISTS` in `src/lib/db/index
 
 | No | Table | Owning component | What it holds | Key columns | Status |
 | --- | --- | --- | --- | --- | --- |
-| 1 | services | hub | One dated Service and the week's payload | id | published |
-| 2 | hymns | hub | Song Book entries | id, book_code, number | published |
-| 3 | announcement_items | hub | Announcement list | id | published |
 | 4 | accounts | hub | Per-person accounts | id | published |
+| 3 | announcement_items | hub | Announcement list | id | published |
+| 11 | artifact_templates | registry | Slide order and layout | id | published |
+| 9 | bible_books | presenter | Book names per translation | id | published |
+| 8 | bible_translations | presenter | Translation corpora | code | published |
+| 10 | bible_verses | presenter | Verse text | id, book_id, chapter, verse, translation_code | published |
+| 2 | hymns | hub | Song Book entries | id, book_code, number | published |
 | 5 | login_attempts | hub | Login trail | id | published |
 | 6 | revoked_sessions | hub | Revoked sessions | sid | published |
+| 14 | service_registry_snapshots | registry | Per-Service frozen registry clone (AD-16) | service_id, template_id | published |
+| 1 | services | hub | One dated Service and the week's payload | id | published |
 | 7 | settings | hub | Application settings | key | published |
-| 8 | bible_translations | presenter | Translation corpora | code | published |
-| 9 | bible_books | presenter | Book names per translation | id | published |
-| 10 | bible_verses | presenter | Verse text | id, book_id, chapter, verse, translation_code | published |
-| 11 | artifact_templates | registry | Slide order and layout | id | published |
 
 #### Findings
 
-- Rows 12 (`hymns_with_book_code`) and 13 (`bible_verses_with_translation_code`) were catalogued as live tables. They are one-shot rebuild names in the same DDL file, then `RENAME TO` the live tables. Dropped from the rows; those numbers MUST NOT be reused.
-- The per-Service Registry snapshot (AD-16) **does not yet** have a table. `ServiceRegistrySnapshot` in Registry `owns` is a promise; the code assembles a live map per plan build (`src/lib/artifacts/registry-snapshot.ts`). See SDD Registry, label `[MISSING]`.
+- Rows 12 (`hymns_with_book_code`) and 13 (`bible_verses_with_translation_code`) were catalogued as live tables. They are one-shot rebuild names in the same DDL file, then `RENAME TO` the live tables. Dropped from the rows; those numbers MUST NOT be reused. W1's freeze table is therefore **14**.
+- `service_registry_snapshots` is Registry-owned (AD-16). `services.registry_snapshot_at` is a Hub column on table 1, not a separate table.
 
 ### List of endpoints — `inventory-api.md`
 
@@ -151,41 +152,45 @@ Derived by `inventory.py` from `export async function GET|POST|PUT|PATCH|DELETE`
 
 | No | Host | Method | Path | Owning component | Description | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | web | POST | `/api/auth/login` | hub | Log in | published |
-| 2 | web | POST | `/api/auth/logout` | hub | Log out | published |
-| 3 | web | POST | `/api/auth/change-password` | hub | Change password | published |
-| 4 | web | GET | `/api/services` | hub | List Services | published |
-| 5 | web | POST | `/api/services` | hub | Create Service | published |
-| 6 | web | PUT | `/api/services/[id]` | hub | Update Service (AD-6) | published |
-| 7 | web | DELETE | `/api/services/[id]` | hub | Delete Service | published |
-| 8 | web | GET | `/api/services/[id]/pptx` | hub | Download PPTX | published |
-| 9 | web | POST | `/api/services/preview` | hub | Preview | published |
+| 22 | web | DELETE | `/api/admin/accounts/[id]` | hub | Delete account | published |
+| 21 | web | PATCH | `/api/admin/accounts/[id]` | hub | Update account | published |
+| 19 | web | GET | `/api/admin/accounts` | hub | List accounts | published |
+| 20 | web | POST | `/api/admin/accounts` | hub | Create account | published |
+| 28 | web | POST | `/api/admin/artifacts/[id]/reset` | registry | Restore seed | published |
+| 31 | web | DELETE | `/api/admin/artifacts/[id]` | registry | Delete template | published |
+| 26 | web | GET | `/api/admin/artifacts/[id]` | registry | One template | published |
+| 27 | web | PUT | `/api/admin/artifacts/[id]` | registry | Save layout | published |
+| 32 | web | PUT | `/api/admin/artifacts/order` | registry | Reorder templates | published |
+| 25 | web | GET | `/api/admin/artifacts` | registry | List templates | published |
+| 23 | web | GET | `/api/admin/settings` | hub | Settings | published |
+| 24 | web | PUT | `/api/admin/settings` | hub | Update settings | published |
+| 14 | web | DELETE | `/api/announcements/[id]` | hub | Delete one item | published |
+| 13 | web | PATCH | `/api/announcements/[id]` | hub | Update one item | published |
 | 10 | web | GET | `/api/announcements` | hub | List announcements | published |
 | 11 | web | POST | `/api/announcements` | hub | Add announcement item | published |
 | 12 | web | PUT | `/api/announcements` | hub | Reorder list | published |
-| 13 | web | PATCH | `/api/announcements/[id]` | hub | Update one item | published |
-| 14 | web | DELETE | `/api/announcements/[id]` | hub | Delete one item | published |
-| 15 | web | POST | `/api/upload` | hub | Upload image | published |
-| 16 | web | POST | `/api/upload/from-url` | hub | Fetch image from URL | published |
-| 17 | web | GET | `/api/uploads/[filename]` | hub | Read upload | published |
+| 3 | web | POST | `/api/auth/change-password` | hub | Change password | published |
+| 1 | web | POST | `/api/auth/login` | hub | Log in | published |
+| 2 | web | POST | `/api/auth/logout` | hub | Log out | published |
 | 18 | web | GET | `/api/hymns` | hub | Search hymns | published |
-| 19 | web | GET | `/api/admin/accounts` | hub | List accounts | published |
-| 20 | web | POST | `/api/admin/accounts` | hub | Create account | published |
-| 21 | web | PATCH | `/api/admin/accounts/[id]` | hub | Update account | published |
-| 22 | web | DELETE | `/api/admin/accounts/[id]` | hub | Delete account | published |
-| 23 | web | GET | `/api/admin/settings` | hub | Settings | published |
-| 24 | web | PUT | `/api/admin/settings` | hub | Update settings | published |
-| 25 | web | GET | `/api/admin/artifacts` | registry | List templates | published |
-| 26 | web | GET | `/api/admin/artifacts/[id]` | registry | One template | published |
-| 27 | web | PUT | `/api/admin/artifacts/[id]` | registry | Save layout | published |
-| 28 | web | POST | `/api/admin/artifacts/[id]/reset` | registry | Restore seed | published |
 | 29 | web | GET | `/api/scripture` | presenter | Verse lookup | published |
+| 8 | web | GET | `/api/services/[id]/pptx` | hub | Download PPTX | published |
+| 33 | web | POST | `/api/services/[id]/sync-artifact` | hub | Sync Artifact (AD-16) | published |
+| 7 | web | DELETE | `/api/services/[id]` | hub | Delete Service | published |
+| 6 | web | PUT | `/api/services/[id]` | hub | Update Service (AD-6) | published |
+| 9 | web | POST | `/api/services/preview` | hub | Preview | published |
+| 4 | web | GET | `/api/services` | hub | List Services | published |
+| 5 | web | POST | `/api/services` | hub | Create Service | published |
+| 16 | web | POST | `/api/upload/from-url` | hub | Fetch image from URL | published |
+| 15 | web | POST | `/api/upload` | hub | Upload image | published |
+| 17 | web | GET | `/api/uploads/[filename]` | hub | Read upload | published |
 | 30 | web | POST | `/api/webhook` | hub | picoclaw intake / correction | published |
 
 #### Findings
 
 - There is no `GET /api/services/[id]`. The Run-Sheet reads SQLite in the Server Component for page `/services/[id]`. Screen inventory row 4.
 - Plan vs code: `POST /api/webhook` is published in `src/` (FR-1 / FR-12), while this phase's intake promise is Hub form (FR-27). The row stays — as-built — and CAP-11 is the later product phase. Do not treat the shipped webhook as this phase's handover.
+- W1 added 31 `DELETE /api/admin/artifacts/[id]`, 32 `PUT /api/admin/artifacts/order`, 33 `POST /api/services/[id]/sync-artifact`. Inventory `--write` assigned those numbers (next after 30). Descriptions restored from the prior catalogue plus the W1 verbs.
 
 ### List of screens — `inventory-screen.md`
 
@@ -197,19 +202,19 @@ Derived by `inventory.py` from `export default function` in `src/app/**/page.tsx
 
 | No | Screen | Route | States | Owning component | UC served |
 | --- | --- | --- | --- | --- | --- |
-| 1 | web/LoginPage | `/login` | — | hub | UC-9 |
 | 2 | web/Dashboard | `/` | — | hub | UC-3 |
-| 3 | web/CreateServicePage | `/services/new` | — | hub | UC-2 |
-| 4 | web/ServiceRunSheet | `/services/[id]` | — | hub | UC-4, UC-5, UC-6, UC-7, UC-18 |
-| 5 | web/AnnouncementsPage | `/announcements` | — | hub | UC-21 |
-| 6 | web/AdminPage | `/admin` | — | hub | UC-9, UC-19, UC-22 |
 | 7 | web/AdminArtifactsPage | `/admin/artifacts` | — | registry | UC-14, UC-15 |
-| 8 | web/SlideshowPage | `/services/[id]/slideshow` | — | presenter | UC-11 |
-| 9 | web/PresentPage | `/services/[id]/present` | — | presenter | UC-12, UC-13 |
+| 6 | web/AdminPage | `/admin` | — | hub | UC-9, UC-19, UC-22 |
+| 5 | web/AnnouncementsPage | `/announcements` | — | hub | UC-21 |
+| 1 | web/LoginPage | `/login` | — | hub | UC-9 |
 | 10 | web/ProjectorPage | `/services/[id]/present/projector` | — | presenter | UC-12 |
+| 9 | web/PresentPage | `/services/[id]/present` | — | presenter | UC-12, UC-13 |
+| 8 | web/SlideshowPage | `/services/[id]/slideshow` | — | presenter | UC-11 |
+| 4 | web/ServiceRunSheet | `/services/[id]` | — | hub | UC-4, UC-5, UC-6, UC-7, UC-16, UC-18 |
+| 3 | web/CreateServicePage | `/services/new` | — | hub | UC-2 |
 
 #### Findings
 
 - States are not declared on these pages; the `states:` map in frontmatter is empty, so the column is `—`. Empty and error states demanded by the UX guide are not yet named here.
 - UC served is a judgement the reader cannot derive from `page.tsx`; values are the prior catalogue mapping, kept in this file, except where that mapping names a UC the page does not run.
-- UC-16 (Sync Artifact) is not on this page and has no route in `src/`. It is a Hub surface once AD-16 ships (SDD Registry Evidence). Do not list it on row 7.
+- UC-16 (Sync Artifact) is on row 4 (`/services/[id]`), Admin-only control. It is not on row 7.

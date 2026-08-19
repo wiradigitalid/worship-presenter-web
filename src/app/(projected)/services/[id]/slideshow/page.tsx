@@ -60,7 +60,7 @@ export default async function SlideshowPage({
 
   let slides: SlidePlanItem[];
   try {
-    slides = buildSlidePlan(record.date, parsed, media);
+    slides = buildSlidePlan(record.date, parsed, media, { serviceId });
   } catch (error) {
     console.error(
       `Failed to build the slide plan for service ${serviceId}:`,

@@ -9,6 +9,7 @@ import {
   applyStructuredFields,
   normalizeParsedRundown,
 } from '@/lib/parsed-fields';
+import { cloneRegistryToNewService } from '@/lib/registry/service-snapshot';
 import type { CreateServiceInput, CreateServiceResult } from './types';
 
 /**
@@ -78,6 +79,7 @@ export function createService(
     if (announcements) {
       syncWorshipAnnouncements(serviceId, announcements, { clearMaster }, db);
     }
+    cloneRegistryToNewService(db, serviceId);
   });
   commit();
 

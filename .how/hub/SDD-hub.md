@@ -4,8 +4,8 @@ component: hub
 status: draft
 created: 2026-08-18
 updated: 2026-08-19
-realizes: [UC-1, UC-2, UC-3, UC-4, UC-5, UC-6, UC-7, UC-8, UC-9, UC-10, UC-17, UC-18, UC-19, UC-21, UC-22, UC-23]
-binds: [AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-7, AD-8, AD-9, AD-12, AD-23, AD-24, AD-25, AD-26, AD-28]
+realizes: [UC-1, UC-2, UC-3, UC-4, UC-5, UC-6, UC-7, UC-8, UC-9, UC-10, UC-16, UC-17, UC-18, UC-19, UC-21, UC-22, UC-23]
+binds: [AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-7, AD-8, AD-9, AD-12, AD-16, AD-23, AD-24, AD-25, AD-26, AD-28]
 reviewed:
   date: '2026-08-19'
   sha: '02f8d3a124a8c4d4e266ec005f8fc0495879914e'
@@ -27,7 +27,7 @@ Two expensive choices reversed: (1) one authorization gate in `src/proxy.ts` plu
 | LC | type | Responsibility |
 | --- | --- | --- |
 | LC-1 | gateway | login / logout / change password |
-| LC-2 | gateway | Service CRUD, preview, PPTX |
+| LC-2 | gateway | Service CRUD, preview, PPTX, Sync Artifact |
 | LC-3 | gateway | announcement list |
 | LC-4 | gateway | upload and read images |
 | LC-5 | gateway | Admin accounts |
@@ -44,7 +44,7 @@ Screens (`inventory-screen` 1–6) are not yet `LC` `ui-screen`: that is a `wdi-
 
 ## Inherited Constraints · [guarded]
 
-Quotes are the spine **Rule** sentences. Full text in `.how/_platform/ARCHITECTURE-SPINE.md`. ADs that do not bind Hub (AD-10, AD-11, AD-13–AD-22, AD-27, AD-29) are not listed.
+Quotes are the spine **Rule** sentences. Full text in `.how/_platform/ARCHITECTURE-SPINE.md`. ADs that do not bind Hub (AD-10, AD-11, AD-13–AD-15, AD-17–AD-22, AD-27, AD-29) are not listed.
 
 | AD | Quoted rule | How it lands here |
 | --- | --- | --- |
@@ -53,11 +53,12 @@ Quotes are the spine **Rule** sentences. Full text in `.how/_platform/ARCHITECTU
 | AD-3 | The API must expose a standard JSON interface for service generation that is agnostic to the input mechanism (Telegram/picoclaw). | Hub form writes Service now; LC-8 writes the same Service later (CAP-11). |
 | AD-4 | Production is deployed as one Docker/standalone unit on the home-PC LiveServer (`presenter.example.org` via Cloudflare Tunnel). | `DB_PATH`, PPTX cache, `UPLOADS_DIR` durable. |
 | AD-5 | `src/proxy.ts` is the one request gate, and its `config.matcher` regex **is** the authorization boundary — anything it does not match is served with no session check at all, so a new exclusion ships together with its assertion in `tests/proxy-matcher.test.mjs` in the same change set. | `/api/webhook` is `WEBHOOK_SECRET` only. Session expiry at save/delete is this gate's 401 before the handler (OQ-23). |
-| AD-6 | every service mutation carries the client's `updated_at` as a precondition; a stale value is rejected with HTTP 409 and the client re-reads before retrying. | PUT Service (UC-5). GET pptx / POST preview are not mutations (OQ-20). Half of the agent paths are not yet closed (deferred-work). |
+| AD-6 | every service mutation carries the client's `updated_at` as a precondition; a stale value is rejected with HTTP 409 and the client re-reads before retrying. | PUT Service (UC-5). POST sync-artifact (UC-16). GET pptx / POST preview are not mutations (OQ-20). Half of the agent paths are not yet closed (deferred-work). |
 | AD-7 | `buildSlidePlan` is the single source of slide order and content for every surface. | Preview and PPTX do not re-order from Service fields. |
 | AD-12 | `buildSlidePlan` outputs a fully hydrated AST (Fat Payload) with exact rendering coordinates, fonts, colors, and resolved text content. | Preview and PPTX consume the fat plan; they do not look up Registry. |
 | AD-8 | image references resolve only through the shared helpers in `src/lib` — allowlisted remote http(s) and hub-local `/api/uploads/<32-hex>.(jpg|jpeg|png|gif|webp)` for announcements, and registry `/assets/...` refs for Artifact templates. | LC-4 and announcements. |
-| AD-9 | schema changes go through the app's startup DDL on the `getDb` path. | No Prisma. |
+| AD-9 | schema changes go through the app's startup DDL on the `getDb` path. | No Prisma. `services.registry_snapshot_at` is Hub; the freeze table is Registry. |
+| AD-16 | Creating a worship service **clones** the ordered live registry … into a **service-bound snapshot** | Create clones in the same transaction. Sync is `POST /api/services/[id]/sync-artifact`, Admin-only. Preview stays live. |
 | AD-23 | transition style is **one app-wide value** in `settings` (`slide_transition`), and each style is described **exactly once**, in `src/lib/transitions.ts`, carrying both its PowerPoint element and its browser animation parameters. | LC-6 writes; PPTX reads. |
 | AD-24 | **application state reaches one of three homes and *who must agree on it* picks which.** | `ui_locale` in settings, not a chrome cookie. |
 | AD-25 | A **shipped reference corpus** — a committed data file the product carries so that a fresh clone resolves a verse and a hymn offline — is **developer-owned data with exactly one writer**, and the committed file is authoritative. | Hub Song Book. |
@@ -70,7 +71,7 @@ Hub does not retry a failed call; the Operator (or picoclaw) must press again. P
 
 This phase's create boundary is `/services/new` (UC-2). `POST /api/webhook` is as-built CAP-11 later; do not treat it as this phase's handover.
 
-Every Hub-owned row from `inventory-api.md` (1–24, 30) and `inventory-screen.md` (1–6).
+Every Hub-owned row from `inventory-api.md` (1–24, 30, 33) and `inventory-screen.md` (1–6).
 
 | Boundary | Slow | Absent | Lying | What the user sees | What is logged |
 | --- | --- | --- | --- | --- | --- |
@@ -102,7 +103,8 @@ Every Hub-owned row from `inventory-api.md` (1–24, 30) and `inventory-screen.m
 | `/login` | Waits on POST login | Login API 500 → form error | Wrong credentials → same 401 copy | Login form; never Hub | none on the page (client shows the API body) |
 | `/` | RSC list waits on SQLite | Uncaught DB throw → framework error page | Corrupt `parsed_data` still listed by date | Dated list, or error page — not a silent empty Hub | none in `src/app/(operator)/page.tsx`; API list logs as above if the client refetch fails |
 | `/services/new` | Preview POST may lag on each paste | Preview 500 → empty preview pane | No date → 400, no row. Partial parse with date → save what was readable (OQ-22) | Form names the miss (UC-2). Cards: Bible Talk → Divine Worship → Sermon → Family → Youth → Announcement Flyers. Live Slide Preview only | `Preview error:` in `src/app/(operator)/services/new/CreateForm.tsx` |
-| `/services/[id]` | RSC + PUT save wait | Missing row → `notFound()` | Stale save → 409 then refresh. Gone after reject → UC-7 not-found (OQ-23). Session expiry at save → 401, no partial write | Same form cards as create. Chrome: Preview, Present, Delete Service, Download PPTX, Live Slide Preview, announcement strip + Manage list. No Order of Service card | `Preview error:` / save `console.error` in `EditForm.tsx`; delete `console.error` in `DeleteButton.tsx` |
+| POST `/api/services/[id]/sync-artifact` | Clone until browser timeout | 403 Operator; 404 missing; 400 missing token | Stale `updated_at` → 409 + current token | Run-Sheet stays on the previous freeze until success; entered fields unchanged | `Error syncing artifact registry:` on 500 |
+| `/services/[id]` | RSC + PUT save wait | Missing row → `notFound()` | Stale save → 409 then refresh. Gone after reject → UC-7 not-found (OQ-23). Session expiry at save → 401, no partial write | Same form cards as create. Chrome: Preview, Present, Delete Service, Download PPTX, Live Slide Preview, announcement strip + Manage list. Admin: Sync Artifact. No Order of Service card | `Preview error:` / save `console.error` in `EditForm.tsx`; delete `console.error` in `DeleteButton.tsx` |
 | `/announcements` | RSC list waits | DB throw → error page | Bad image URL on mutate → 400; list unchanged | List as last successful load | announcement route `console.error` as above |
 | `/admin` | RSC waits | Not Admin → 403 `Forbidden` from the gate | Bad settings body → 400; previous values remain | Accounts, transition, locale, retention | accounts/settings `console.error` as above |
 
@@ -132,6 +134,8 @@ Every Hub-owned row from `inventory-api.md` (1–24, 30) and `inventory-screen.m
 | LC-12 parse+write | verified | `src/lib/parser.ts`, `src/lib/services/create-service.ts`, `src/lib/services/update-service.ts` | Hub POST same date is 409 unless `allowSecond`; webhook upsert is CAP-11 |
 | LC-13 PPTX on-demand; does not UPDATE `services` | verified | `src/app/api/services/[id]/pptx/route.ts` GET; `src/lib/pptx.ts` | OQ-20: generate is not a payload edit |
 | POST preview does not write Service | verified | `src/app/api/services/preview/route.ts` | OQ-20 |
+| Sync Artifact is Admin-only Hub route | verified | `src/app/api/services/[id]/sync-artifact/route.ts`; `tests/proxy-matcher.test.mjs`; `tests/registry-sync-artifact.test.mjs` | UC-16 / AD-16 |
+| Create clones a snapshot in the same transaction | verified | `src/lib/services/create-service.ts` → `cloneRegistryToNewService` | AD-16 |
 | LC-16 `buildSlidePlan` | verified | `src/lib/slide-plan.ts` | lyric join/chorus: `src/lib/lyrics.ts` (BR-6) |
 | Create/edit field set | verified | `CreateForm.tsx` / `EditForm.tsx` | `.how/hub/05-model/form-fields.md` |
 | Deleting a Service unlinks unreferenced local uploads | verified | `src/lib/services/queries.ts` `deleteService`; `tests/services-lib.test.mjs` | OQ-7 |
@@ -151,4 +155,4 @@ Every Hub-owned row from `inventory-api.md` (1–24, 30) and `inventory-screen.m
 
 ## Open Items
 
-OQ-17 · OQ-2 · OQ-4 · OQ-6. OQ-1 is parked on CAP-11. Taken and encoded: OQ-20 · OQ-21 · OQ-22 · OQ-23. Parked on this SDD: OQ-27 (CAP-11 `[MISSING]` stay; not `BUG-` this wave) · OQ-28 (AD-16 not on Inherited Constraints) · OQ-33 (empty PUT announcements wipes master) · OQ-34 (announcement last-write-wins).
+OQ-17 · OQ-2 · OQ-4 · OQ-6. OQ-1 is parked on CAP-11. Taken and encoded: OQ-20 · OQ-21 · OQ-22 · OQ-23. Parked on this SDD: OQ-27 (CAP-11 `[MISSING]` stay; not `BUG-` this wave) · OQ-33 (empty PUT announcements wipes master) · OQ-34 (announcement last-write-wins).

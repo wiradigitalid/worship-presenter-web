@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import DeleteButton from './DeleteButton';
 import EditForm from './EditForm';
+import SyncArtifactButton from './SyncArtifactButton';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -183,6 +184,12 @@ export default async function ServiceRunSheet({
               Present
             </Button>
             <DeleteButton id={record.id} />
+            {isAdmin ? (
+              <SyncArtifactButton
+                serviceId={record.id}
+                updatedAt={record.updated_at || record.created_at}
+              />
+            ) : null}
             <Button
               render={<a href={`/api/services/${record.id}/pptx`} download />}
             >

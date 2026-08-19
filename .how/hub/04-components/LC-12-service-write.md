@@ -12,7 +12,7 @@ created: 2026-08-18
 
 ## Responsibility
 
-Interpret the Rundown, resolve hymns, write `services` rows (Hub create with date-collision 409 unless explicit second row; webhook date upsert later CAP-11; correction; edit with `updated_at`). Hub create refuses when no date is readable (OQ-21). Generate is not this LC (OQ-20). Delete Service: cascade one-off + unlink unreferenced local uploads.
+Interpret the Rundown, resolve hymns, write `services` rows (Hub create with date-collision 409 unless explicit second row; webhook date upsert later CAP-11; correction; edit with `updated_at`). Hub create refuses when no date is readable (OQ-21). Create clones the live registry into that Service's snapshot in the same transaction. Generate is not this LC (OQ-20). Delete Service: cascade one-off + unlink unreferenced local uploads.
 
 ## Depends on
 

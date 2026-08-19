@@ -15,8 +15,8 @@ export const ARTIFACT_REGISTRY_BOOTSTRAP_KEY = 'artifact_registry_bootstrapped';
 /** AD-21: the one monotonic data-version counter, stamped with the bootstrap. */
 export const DATA_VERSION_KEY = 'data_version';
 
-/** Everything unreleased at `bcb7349` compacts into this one version (AC-10). */
-export const CURRENT_DATA_VERSION = 1;
+/** W1 ships the AD-16 snapshot table as data version 2 (unreleased; compact before first deploy). */
+export const CURRENT_DATA_VERSION = 2;
 
 const SEED_PATH = path.join(process.cwd(), 'data', 'default-registry.json');
 

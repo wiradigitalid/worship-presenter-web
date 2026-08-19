@@ -12,7 +12,7 @@ created: 2026-08-18
 
 ## Responsibility
 
-Single source of order and hydrated layout (AD-7, AD-12). Used by preview, PPTX, Presenter.
+Single source of order and hydrated layout (AD-7, AD-12). Used by preview, PPTX, Presenter. A persisted Service reads `service_registry_snapshots`; preview (no Service) still reads the live registry.
 
 ## Depends on
 

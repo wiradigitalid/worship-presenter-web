@@ -25,8 +25,8 @@ Numbers match `.how/_platform/inventory-api.md` for Hub-owned rows. Spec per res
 | 6 | PUT | `/api/services/[id]` | `02-services.md` | published |
 | 7 | DELETE | `/api/services/[id]` | `02-services.md` | published |
 | 8 | GET | `/api/services/[id]/pptx` | `02-services.md` | published |
-| 9 | POST | `/api/services/preview` | `02-services.md` | published |
-| 10 | GET | `/api/announcements` | `03-announcements.md` | published |
+| 30 | POST | `/api/webhook` | `08-webhook.md` | published |
+| 33 | POST | `/api/services/[id]/sync-artifact` | `02-services.md` | published |
 | 11 | POST | `/api/announcements` | `03-announcements.md` | published |
 | 12 | PUT | `/api/announcements` | `03-announcements.md` | published |
 | 13 | PATCH | `/api/announcements/[id]` | `03-announcements.md` | published |
@@ -45,6 +45,6 @@ Numbers match `.how/_platform/inventory-api.md` for Hub-owned rows. Spec per res
 
 ## Findings
 
-- Numbers 25–29 belong to Registry/Presenter in the platform inventory; not used here.
+- Numbers 25–29 and 31–32 belong to Registry/Presenter in the platform inventory; not used here. 33 is Hub Sync Artifact (UC-16).
 - No OpenAPI; prose contracts. Source: `src/app/api/**/route.ts`.
 - POST `/api/webhook` (30) is as-built CAP-11 later; this phase's create path is POST `/api/services` (UC-2).

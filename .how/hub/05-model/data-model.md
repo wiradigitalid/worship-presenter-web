@@ -44,6 +44,7 @@ One Service has zero or many uploads in the JSON payload and one-off announcemen
 | services | participants_payload | TEXT | Role JSON |
 | services | created_at | DATETIME | Row created time |
 | services | updated_at | DATETIME | AD-6 precondition |
+| services | registry_snapshot_at | TEXT | When this Service last cloned the live registry (AD-16) |
 | hymns | id | INTEGER PK | Hymn row identity |
 | hymns | book_code | TEXT | Book key (AD-26) |
 | hymns | number | INTEGER | Number in that book |

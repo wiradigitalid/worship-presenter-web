@@ -7,6 +7,11 @@ import {
   loadRegistrySnapshot,
   type RegistrySnapshot,
 } from '@/lib/artifacts/registry-snapshot';
+import { getDb } from '@/lib/db';
+import {
+  loadServiceRegistrySnapshot,
+  serviceHasRegistrySnapshot,
+} from '@/lib/registry/service-snapshot';
 import {
   hydrateArtifactFromSnapshot,
   type PlaceholderValues,
@@ -822,6 +827,21 @@ function hydrateRequestPlan(
   return { plan, legacyById };
 }
 
+export type SlidePlanSource = {
+  /** When set, a frozen AD-16 snapshot is used if that Service has one. */
+  serviceId?: number;
+};
+
+function registryInput(source?: SlidePlanSource): RegistrySnapshot {
+  if (source?.serviceId != null) {
+    const db = getDb();
+    if (serviceHasRegistrySnapshot(db, source.serviceId)) {
+      return loadServiceRegistrySnapshot(db, source.serviceId);
+    }
+  }
+  return loadRegistrySnapshot();
+}
+
 /**
  * Canonical hierarchical plan: SongSets are one group node with ordered
  * title/lyric children; every other slide is a leaf artifact node.
@@ -829,11 +849,12 @@ function hydrateRequestPlan(
 export function buildArtifactPlan(
   serviceDate: string,
   parsedData: ParsedRundown,
-  images: string[] | SlidePlanMedia = []
+  images: string[] | SlidePlanMedia = [],
+  source?: SlidePlanSource
 ): ArtifactNode[] {
   // One registry read per plan build — never per slide. The snapshot's own
   // key order (position-sorted) is the sequence `buildRequestPlan` walks.
-  const snapshot = loadRegistrySnapshot();
+  const snapshot = registryInput(source);
   const orderedIds = [...snapshot.keys()];
   const ctx = computePlanContext(serviceDate, parsedData, images);
   const requests = buildRequestPlan(orderedIds, ctx);
@@ -848,9 +869,10 @@ export function buildArtifactPlan(
 export function buildSlidePlan(
   serviceDate: string,
   parsedData: ParsedRundown,
-  images: string[] | SlidePlanMedia = []
+  images: string[] | SlidePlanMedia = [],
+  source?: SlidePlanSource
 ): SlidePlanItem[] {
-  const snapshot = loadRegistrySnapshot();
+  const snapshot = registryInput(source);
   const orderedIds = [...snapshot.keys()];
   const ctx = computePlanContext(serviceDate, parsedData, images);
   const requests = buildRequestPlan(orderedIds, ctx);

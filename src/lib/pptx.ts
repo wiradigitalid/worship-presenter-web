@@ -530,10 +530,11 @@ export async function generatePptx(
   serviceDate: string,
   parsedData: ParsedRundown,
   images: string[] | SlidePlanMedia = [],
-  transition?: SlideTransition
+  transition?: SlideTransition,
+  source?: { serviceId?: number }
 ): Promise<Buffer> {
   const style = transition ?? configuredTransition();
-  const plan = buildSlidePlan(serviceDate, parsedData, images);
+  const plan = buildSlidePlan(serviceDate, parsedData, images, source);
   const embedded = await embedPlanImages(plan);
 
   const pres = new PptxGenJS();

@@ -40,6 +40,57 @@ from pathlib import Path
 # One as-built container (`components.yaml` `built: true`). Host / spa identity.
 HOST = "web"
 
+DEFAULT_API_DESC = {
+    "POST /api/auth/login": "Log in",
+    "POST /api/auth/logout": "Log out",
+    "POST /api/auth/change-password": "Change password",
+    "GET /api/services": "List Services",
+    "POST /api/services": "Create Service",
+    "PUT /api/services/[id]": "Update Service (AD-6)",
+    "DELETE /api/services/[id]": "Delete Service",
+    "GET /api/services/[id]/pptx": "Download PPTX",
+    "POST /api/services/preview": "Preview",
+    "POST /api/services/[id]/sync-artifact": "Sync Artifact (AD-16)",
+    "GET /api/announcements": "List announcements",
+    "POST /api/announcements": "Add announcement item",
+    "PUT /api/announcements": "Reorder list",
+    "PATCH /api/announcements/[id]": "Update one item",
+    "DELETE /api/announcements/[id]": "Delete one item",
+    "POST /api/upload": "Upload image",
+    "POST /api/upload/from-url": "Fetch image from URL",
+    "GET /api/uploads/[filename]": "Read upload",
+    "GET /api/hymns": "Search hymns",
+    "GET /api/admin/accounts": "List accounts",
+    "POST /api/admin/accounts": "Create account",
+    "PATCH /api/admin/accounts/[id]": "Update account",
+    "DELETE /api/admin/accounts/[id]": "Delete account",
+    "GET /api/admin/settings": "Settings",
+    "PUT /api/admin/settings": "Update settings",
+    "GET /api/admin/artifacts": "List templates",
+    "GET /api/admin/artifacts/[id]": "One template",
+    "PUT /api/admin/artifacts/[id]": "Save layout",
+    "POST /api/admin/artifacts/[id]/reset": "Restore seed",
+    "DELETE /api/admin/artifacts/[id]": "Delete template",
+    "PUT /api/admin/artifacts/order": "Reorder templates",
+    "GET /api/scripture": "Verse lookup",
+    "POST /api/webhook": "picoclaw intake / correction",
+}
+
+DEFAULT_DB_HOLDS = {
+    "services": "One dated Service and the week's payload",
+    "hymns": "Song Book entries",
+    "announcement_items": "Announcement list",
+    "accounts": "Per-person accounts",
+    "login_attempts": "Login trail",
+    "revoked_sessions": "Revoked sessions",
+    "settings": "Application settings",
+    "bible_translations": "Translation corpora",
+    "bible_books": "Book names per translation",
+    "bible_verses": "Verse text",
+    "artifact_templates": "Slide order and layout",
+    "service_registry_snapshots": "Per-Service frozen registry clone (AD-16)",
+}
+
 # Table → PC: from `owns:` in components.yaml against the DDL names in db/index.ts.
 # hymns is Hub's Song Book (FR-23/24, `/api/hymns`), not a Presenter corpus table.
 TABLE_PC = {
@@ -54,6 +105,7 @@ TABLE_PC = {
     "bible_books": "presenter",
     "bible_verses": "presenter",
     "artifact_templates": "registry",
+    "service_registry_snapshots": "registry",
 }
 
 # One-shot rebuild names in the same file: created, copied, dropped, renamed. Not live tables.
@@ -93,13 +145,43 @@ def _key_columns(body: str) -> str:
         r"^\s*(\w+)\s+[^,\n]+PRIMARY KEY\b", body, re.I | re.M
     ):
         keys.append(m.group(1))
+    for m in re.finditer(r"PRIMARY KEY\s*\(([^)]+)\)", body, re.I):
+        keys.append(", ".join(p.strip() for p in m.group(1).split(",")))
     for m in re.finditer(r"UNIQUE\s*\(([^)]+)\)", body, re.I):
         keys.append(", ".join(p.strip() for p in m.group(1).split(",")))
-    return ", ".join(keys) if keys else "—"
+    # Preserve order, drop duplicates.
+    seen: list[str] = []
+    for k in keys:
+        if k not in seen:
+            seen.append(k)
+    return ", ".join(seen) if seen else "—"
 
 
 LIVE_TABLE_RE = re.compile(r"CREATE TABLE IF NOT EXISTS (\w+)\s*\(", re.I)
 ANY_TABLE_RE = re.compile(r"CREATE TABLE (\w+)\s*\(", re.I)
+ROW_RE = re.compile(r"^\|\s*\d+\s*\|(.*)\|\s*$")
+
+
+def _recorded_cell_lists(path: Path) -> list[list[str]]:
+    if not path.exists():
+        return []
+    out: list[list[str]] = []
+    inside = False
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith("## "):
+            inside = line[3:].strip().lower().startswith("rows")
+            continue
+        if not inside:
+            continue
+        match = ROW_RE.match(line.strip())
+        if match:
+            out.append([c.strip() for c in match.group(1).split("|")])
+    return out
+
+
+def _recorded_cells(path: Path) -> dict[str, list[str]]:
+    """Judgement columns keyed by the first cell (table name)."""
+    return {cells[0].strip("`"): cells for cells in _recorded_cell_lists(path) if cells}
 
 
 def derive_db(root: Path) -> "Derived":  # noqa: F821
@@ -133,6 +215,7 @@ def derive_db(root: Path) -> "Derived":  # noqa: F821
         else:
             unread.append(f"{rel}: CREATE TABLE {name} is not IF NOT EXISTS — unread")
 
+    recorded = _recorded_cells(root / ".how" / "_platform" / "inventory-db.md")
     rows = []
     for name in sorted(live):
         keys, src = live[name]
@@ -140,9 +223,13 @@ def derive_db(root: Path) -> "Derived":  # noqa: F821
         if owner is None:
             unread.append(f"{rel}: table {name} has no owns: mapping — owner left `_platform`")
             owner = "_platform"
+        prior = recorded.get(name) or []
+        holds = prior[2] if len(prior) > 2 and prior[2] not in ("", "—") else "—"
+        if holds == "—":
+            holds = DEFAULT_DB_HOLDS.get(name, "—")
         rows.append(Row(
             key=name,
-            cells=[name, owner, "—", keys, "published"],
+            cells=[name, owner, holds, keys, "published"],
             source=src,
         ))
     return Derived(rows=rows, unread=unread)
@@ -175,6 +262,11 @@ def derive_api(root: Path) -> "Derived":  # noqa: F821
     if not api_root.is_dir():
         return Derived(unread=["src/app/api/ is missing"])
 
+    by_endpoint: dict[str, str] = {}
+    for cells in _recorded_cell_lists(root / ".how" / "_platform" / "inventory-api.md"):
+        if len(cells) >= 5:
+            by_endpoint[f"{cells[1]} {cells[2].strip('`')}"] = cells[4]
+
     for route_file in sorted(api_root.rglob("route.ts")):
         rel = _posix(root, route_file)
         text = read(route_file)
@@ -185,9 +277,12 @@ def derive_api(root: Path) -> "Derived":  # noqa: F821
         path = _api_path(root, route_file)
         owner = _api_owner(path)
         for method in sorted(set(methods)):
+            desc = by_endpoint.get(f"{method} {path}", "—")
+            if desc in ("", "—"):
+                desc = DEFAULT_API_DESC.get(f"{method} {path}", "—")
             rows.append(Row(
                 key=f"{HOST} {method} {path}",
-                cells=[HOST, method, f"`{path}`", owner, "—", "published"],
+                cells=[HOST, method, f"`{path}`", owner, desc, "published"],
                 source=rel,
             ))
 
@@ -207,6 +302,20 @@ def _screen_route(root: Path, page: Path) -> str:
     if not parts:
         return "/"
     return "/" + "/".join(parts)
+
+
+DEFAULT_SCREEN_UC = {
+    "/login": "UC-9",
+    "/": "UC-3",
+    "/services/new": "UC-2",
+    "/services/[id]": "UC-4, UC-5, UC-6, UC-7, UC-16, UC-18",
+    "/announcements": "UC-21",
+    "/admin": "UC-9, UC-19, UC-22",
+    "/admin/artifacts": "UC-14, UC-15",
+    "/services/[id]/slideshow": "UC-11",
+    "/services/[id]/present": "UC-12, UC-13",
+    "/services/[id]/present/projector": "UC-12",
+}
 
 
 def _screen_owner(route: str) -> str:
@@ -242,14 +351,23 @@ def derive_screen(root: Path) -> "Derived":  # noqa: F821
         route = _screen_route(root, page)
         states = ", ".join(f"`{s}`" for s in by_parent.get(route, [])) or "—"
         owner = _screen_owner(route)
+        uc = "—"
+        for cells in _recorded_cell_lists(inv):
+            if len(cells) >= 5 and cells[1].strip("`") == route:
+                uc = cells[4]
+                break
+        if uc in ("", "—"):
+            uc = DEFAULT_SCREEN_UC.get(route, "—")
+        elif route == "/services/[id]" and "UC-16" not in uc:
+            uc = "UC-4, UC-5, UC-6, UC-7, UC-16, UC-18"
         rows.append(Row(
             key=f"{HOST}:{route}",
-            cells=[f"{HOST}/{name}", f"`{route}`", states, owner, "—"],
+            cells=[f"{HOST}/{name}", f"`{route}`", states, owner, uc],
             source=rel,
         ))
 
     unread.append(
-        "UC served is not declared in page.tsx — left `—`; do not invent from the plan"
+        "UC served is not declared in page.tsx — values are kept from this inventory file"
     )
     rows.sort(key=lambda r: r.cells[1])
     return Derived(rows=rows, unread=unread)

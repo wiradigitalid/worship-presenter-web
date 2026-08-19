@@ -6,27 +6,31 @@
 
 waves:
   - id: W1
-    status: open
+    status: closed
     release: registry-order
     prd: [offline-deck]
     fr: [FR-21]
     size: S
     depends_on: []
     spec_folder: _bmad-output/specs/spec-w1-registry/
-    retires:
-      - _bmad-output/prior-knowledge/_bmad-output/specs/spec-artifact-registry-authoring/authoring-boundaries.md
-    retires_fastpath:
-      - _bmad-output/prior-knowledge/_bmad-output/specs/spec-worship-web-input
-      - _bmad-output/prior-knowledge/_bmad-output/specs/spec-lyrics-and-flow
-      - _bmad-output/prior-knowledge/_bmad-output/specs/spec-slide-artifact-model
-      - _bmad-output/prior-knowledge/docs
-      - _bmad-output/prior-knowledge/_bmad-output/planning-artifacts
-      - _bmad-output/prior-knowledge/_bmad-output/brainstorming
-    # After bmad-spec, fill epics (do not copy story status here):
-    #   1-1  registry  satisfies: [UC-15]  tests: [tests/registry-reorder-delete-http.test.mjs]
-    #   1-2  registry  satisfies: [UC-16]  depends_on: [1-1]  tests: [tests/registry-sync-artifact.test.mjs]
-    # Create/add of a new Artifact Template stays a later wave (SRS Non-Goal until the create verb;
-    # AD-17 origin must ship in the same change set as create).
-    # 20-3 / 20-6 / 20-8 never had story files — only sprint-status.yaml keys.
-    # Fastpath: also delete done stories 1.*–17.* except any still-backlog key, plus 20-1 and 20-2.
-    epics: []
+    spec_reviewed:
+      date: '2026-08-19'
+      sha: 'e88d177d1b63080a2b0336e60db65868df8b8da8'
+      lenses: [edge-case-hunter]
+    # Retrospective skipped: size S (V19 advisory). Stated, not silent.
+    epics:
+      - id: registry-order
+        stories:
+          - id: "1-1"
+            spec_folder: _bmad-output/specs/spec-w1-registry/
+            satisfies: [UC-15]
+            tests:
+              - tests/registry-reorder-delete-http.test.mjs
+            touches: [artifacts]
+          - id: "1-2"
+            spec_folder: _bmad-output/specs/spec-w1-registry/
+            satisfies: [UC-16]
+            depends_on: ["1-1"]
+            tests:
+              - tests/registry-sync-artifact.test.mjs
+            touches: [artifacts, services, slide-plan]

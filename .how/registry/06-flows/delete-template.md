@@ -19,9 +19,9 @@ LC-11 → LC-15 → `artifact_templates`.
 
 ## Happy path
 
-1. Admin deletes the entry. The LC-11 HTTP verb is [MISSING] — planned FR-21 / UC-15. Today the proof path is a SQL delete (`tests/registry-reseed.test.mjs`).
-2. LC-15 would delete the row and close up `position`. Store function [MISSING]; same disposition.
-3. The next boot does not insert that id (AD-17, SCN-5). This half is verified.
+1. Admin confirms delete on `/admin/artifacts`. LC-11 `DELETE /api/admin/artifacts/[id]` with `{ updatedAt }`.
+2. LC-15 deletes the row, compacts `position` to `0..N-1`, and bumps every survivor's `updated_at` in one transaction.
+3. The next boot does not insert that id (AD-17, SCN-5).
 
 ## Sequence diagram
 
@@ -31,25 +31,25 @@ sequenceDiagram
   participant G as LC-11
   participant S as LC-15
   participant D as SQLite
-  A->>G: delete id
-  Note over G: LC-11 DELETE [MISSING]
-  G->>S: delete row
-  S->>D: DELETE artifact_templates
-  Note over D: seeder does not fill the gap (verified)
+  A->>G: DELETE /api/admin/artifacts/[id] { updatedAt }
+  G->>S: deleteArtifactTemplate
+  S->>D: DELETE artifact_templates; compact position
+  Note over D: seeder does not fill the gap (AD-17)
 ```
 
 ## Failure modes
 
 | Hop | Failure | System does | Safe to retry |
 | --- | --- | --- | --- |
-| LC-11 hop | no DELETE route | does not write; Admin has no HTTP verb | n/a — [MISSING] planned FR-21 |
+| No session / not Admin | 403 | does not write | after sign-in as Admin |
+| Missing `updatedAt` | 400 | does not write | yes |
+| Stale `updatedAt` | 409 | does not write | re-read list, retry |
 | id | 404 | does not write | yes |
 | last live row deleted | list empty; seeder must not refill (AD-17, UC-15 N=0) | yes — empty Deck is allowed |
-| songset-* row deleted | Registry row gone; Hub hymn field stays stored and inert (AD-19) | yes |
-| SQL-delete proof path | may leave `position` gaps; list still `ORDER BY position` (OQ-31) | n/a until FR-21 compact |
+| songset-* / `song-set` row deleted | Registry row gone; Hub hymn field stays stored and inert (AD-19) | yes |
 | Reset while live payload will not parse | `getArtifactTemplate` throw → 500 before gone/no-seed 404 | no — fix the row or wait |
 | Boot | seeder fills the gap | **defect** AD-17 | not a user retry |
 
 ## Guarantees
 
-Delete + restart = still gone. Plan does not substitute seed for a missing id.
+Delete + restart = still gone. Plan does not substitute seed for a missing id. Existing Services keep the frozen id until Sync Artifact.

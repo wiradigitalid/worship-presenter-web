@@ -46,7 +46,9 @@ export async function GET(
     }
 
     const media = resolveSlideMediaForService(serviceId, record.images_payload);
-    const pptxBuffer = await generatePptx(record.date, parsedData, media);
+    const pptxBuffer = await generatePptx(record.date, parsedData, media, undefined, {
+      serviceId,
+    });
 
     try {
       writePptxCache(serviceId, pptxBuffer);

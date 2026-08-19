@@ -12,7 +12,7 @@ created: 2026-08-18
 
 ## Responsibility
 
-Read/write `artifact_templates`, Reset, `position` order, AD-15 validation.
+Read/write `artifact_templates`, Reset, delete, whole-list reorder, `position` compact, AD-15 validation. Service-bound freeze clone lives in `src/lib/registry/service-snapshot.ts` (same store boundary; Hub LC-2 calls it).
 
 ## Depends on
 
@@ -24,4 +24,4 @@ SQLite in `web`. LC-11 calls this; this does not call LC-11.
 
 ## Notes
 
-Seed is bootstrap + Reset only (AD-17). `position` is persisted and asserted contiguous. Admin delete and reorder functions are [MISSING] (FR-21 / UC-15). Reset updates a still-live row; it is not undelete (OQ-24).
+Seed is bootstrap + Reset only (AD-17). `position` is persisted and asserted contiguous after every delete and reorder. Reset updates a still-live row; it is not undelete (OQ-24).

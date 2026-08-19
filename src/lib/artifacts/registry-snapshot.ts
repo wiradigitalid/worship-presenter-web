@@ -13,7 +13,7 @@ import { ArtifactHydrationError } from './runtime-contract';
 
 export type RegistrySnapshot = ReadonlyMap<string, StoredArtifactTemplate>;
 
-type Row = {
+export type StoredTemplateRow = {
   id: string;
   payload: string;
   updated_at: string;
@@ -34,7 +34,9 @@ function reason(error: unknown): string {
  * template used to reach hydration and crash it with an unattributed
  * `TypeError` on `template.placeholders`.
  */
-function parseRow(row: Row): StoredArtifactTemplate | null {
+export function parseStoredTemplateRow(
+  row: StoredTemplateRow
+): StoredArtifactTemplate | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(row.payload);
@@ -77,11 +79,11 @@ export function loadRegistrySnapshot(db?: Database.Database): RegistrySnapshot {
   const database = db ?? getDb();
   const rows = database
     .prepare(`SELECT id, payload, updated_at FROM artifact_templates ORDER BY position`)
-    .all() as Row[];
+    .all() as StoredTemplateRow[];
 
   const snapshot = new Map<string, StoredArtifactTemplate>();
   for (const row of rows) {
-    const stored = parseRow(row);
+    const stored = parseStoredTemplateRow(row);
     if (stored) {
       snapshot.set(stored.id, stored);
     }

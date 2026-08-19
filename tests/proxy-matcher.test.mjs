@@ -79,6 +79,7 @@ const GATED = [
   '/announcements',
   '/api/services',
   '/api/services/1',
+  '/api/services/1/sync-artifact',
   '/api/admin/accounts',
   '/api/admin/accounts/1',
   '/api/admin/artifacts/template-id',

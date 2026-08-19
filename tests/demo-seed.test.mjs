@@ -84,7 +84,7 @@ test('seed:demo creates one deck-ready synthetic service and then refuses withou
   assert.ok(parsed.verseReading.text.length > 0);
 
   const media = resolveSlideMediaForService(service.id, service.images_payload);
-  const plan = buildSlidePlan(service.date, parsed, media);
+  const plan = buildSlidePlan(service.date, parsed, media, { serviceId: service.id });
   assert.ok(plan.some((slide) => slide.id === 'verse-reading'));
   assert.ok(plan.some((slide) => slide.id === 'announcements'));
   assert.ok(plan.some((slide) => slide.id === 'flyer-0'));

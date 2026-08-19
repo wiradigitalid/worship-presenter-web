@@ -15,6 +15,7 @@ import {
   bootstrapArtifactRegistry,
   DATA_VERSION_KEY,
 } from '../registry/seed';
+import { migrateServiceBoundSnapshots } from '../registry/service-snapshot';
 import { ARTIFACT_ENTRY_KEYS } from '../registry/types';
 
 let db: Database.Database | null = null;
@@ -506,6 +507,20 @@ export function getDb() {
         seed_hash TEXT,
         position INTEGER NOT NULL DEFAULT 0
       );
+
+      -- AD-16 service-bound freeze. No slot/kind column (AD-19). Membership
+      -- of announcements is not cloned. ON DELETE CASCADE with the Service.
+      CREATE TABLE IF NOT EXISTS service_registry_snapshots (
+        service_id INTEGER NOT NULL,
+        template_id TEXT NOT NULL,
+        position INTEGER NOT NULL,
+        label TEXT NOT NULL,
+        base_type TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (service_id, template_id),
+        FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+      );
     `);
 
     // Migrate older DBs that predate images_payload / updated_at / participants_payload
@@ -559,6 +574,11 @@ export function getDb() {
     } catch (e) {
       if (!/duplicate column/i.test(String(e))) throw e;
     }
+    try {
+      db.prepare('ALTER TABLE services ADD COLUMN registry_snapshot_at TEXT').run();
+    } catch (e) {
+      if (!/duplicate column/i.test(String(e))) throw e;
+    }
     migrateHymnsForSongBooks(db);
     migrateBibleVersesTranslationCode(db);
 
@@ -572,6 +592,7 @@ export function getDb() {
 
     // --- first-boot bootstrap (AD-17) ---
     bootstrapArtifactRegistry(db);
+    migrateServiceBoundSnapshots(db);
 
     bootstrapAdminIfEmpty(db);
     } catch (err) {
