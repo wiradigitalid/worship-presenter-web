@@ -2,7 +2,8 @@
 title: 'Admin delete and reorder persist over a restart'
 type: 'feature'
 created: '2026-08-19'
-status: 'ready-for-dev'
+status: 'done'
+baseline_revision: 'd63dac15b428914f1d456fea6673679f2c79230e'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -78,6 +79,18 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-08-19 — Review pass
+- intent_gap: 0
+- bad_spec: 0
+- patch: 8 (high 2, medium 5, low 1)
+- defer: 0
+- reject: 3 (low 3)
+- addressed_findings:
+  - `[high]` `[patch]` Reconciled a dirty selected canvas's concurrency token from successful delete/reorder summaries without replacing its unsaved payload.
+  - `[medium]` `[patch]` Reloaded and reconciled the Admin list after a remote-delete `404`, safely clearing an absent selection.
+  - `[high]` `[patch]` Serialized delete/reorder with immediate transactions before membership and token validation.
+  - `[medium]` `[patch]` Added regression coverage for delete-side token invalidation, rejection invariants, malformed JSON and payload shapes, empty reorder, and persisted reordered plan/list state after fresh startup.
+
 ## Design Notes
 
 The selected OQ-A shape is deliberately narrow and belongs to the existing protected namespace:
@@ -99,4 +112,20 @@ This closes the implementation choice only. Before wave close, report this chose
 
 ## Auto Run Result
 
-Status: ready-for-dev
+Status: done
+
+Summary: Added authenticated Admin delete and whole-list reorder mutations for Artifact Templates, with transactional contiguous positions and optimistic concurrency.
+
+Files changed:
+- `src/lib/registry/store.ts` — atomic delete/reorder operations, complete snapshot validation, and fresh tokens.
+- `src/app/api/admin/artifacts/[id]/route.ts` — Admin DELETE endpoint.
+- `src/app/api/admin/artifacts/order/route.ts` — Admin whole-list reorder endpoint.
+- `src/components/admin/ArtifactEditor.tsx` — confirmed delete, Up/Down controls, conflict recovery, and dirty-canvas token reconciliation.
+- `tests/registry-reorder-delete-http.test.mjs` — authenticated HTTP, failure, persistence, and fresh-process coverage.
+- `tests/proxy-matcher.test.mjs`, `tests/canvas-dirty-guard.test.mjs`, and `package.json` — protection/dirty-state assertions and suite registration.
+
+Review findings: 8 patches applied (high 2, medium 5, low 1); 0 deferred; 3 rejected as non-actionable or outside the story's specified verification surface. Follow-up review recommendation: false (score 2).
+
+Verification: focused reorder/delete HTTP suite passed (7 tests); proxy matcher passed (5 tests); `npm run build` passed with the pre-existing Turbopack NFT tracing warning; `npm test` passed (529 pass, 0 fail, 1 skipped); public-repository guard passed (5 tests).
+
+Residual risks: The selected OQ-A request/response shape must still be recorded by its corpus-owning follow-up; this story intentionally does not edit `.how/`.

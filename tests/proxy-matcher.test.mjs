@@ -81,6 +81,8 @@ const GATED = [
   '/api/services/1',
   '/api/admin/accounts',
   '/api/admin/accounts/1',
+  '/api/admin/artifacts/template-id',
+  '/api/admin/artifacts/order',
   '/api/uploads/x.jpg',
   '/api/uploads/0123456789abcdef0123456789abcdef.jpg',
   '/api/hymns',

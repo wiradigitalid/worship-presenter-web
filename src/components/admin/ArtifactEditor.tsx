@@ -62,6 +62,8 @@ type EditorStatus =
   | 'loading'
   | 'saving'
   | 'resetting'
+  | 'deleting'
+  | 'reordering'
   | 'success'
   | 'error'
   | 'conflict';
@@ -413,7 +415,9 @@ export default function ArtifactEditor() {
     const res = await fetch('/api/admin/artifacts');
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to load templates');
-    setTemplates(data.templates ?? []);
+    const summaries = data.templates ?? [];
+    setTemplates(summaries);
+    return summaries as ArtifactTemplateSummary[];
   }, []);
 
   const loadTemplate = useCallback(async (id: string) => {
@@ -839,6 +843,120 @@ export default function ArtifactEditor() {
     }
   };
 
+  const reconcileSelectedTemplate = async (
+    summaries: ArtifactTemplateSummary[]
+  ) => {
+    if (!selectedId) return;
+    const summary = summaries.find((item) => item.id === selectedId);
+    if (!summary) {
+      setSelectedId(null);
+      setTemplate(null);
+      setIsDirty((current) => nextDirtyState(current, 'template-changed'));
+      return;
+    }
+    // A delete/reorder refreshes every remaining row's concurrency token. Keep
+    // an unsaved canvas mounted, but advance its token from the authoritative
+    // summary so its next Save is not needlessly rejected as stale.
+    if (isDirty) {
+      setTemplate((current) =>
+        current?.id === summary.id ? { ...current, updatedAt: summary.updatedAt } : current
+      );
+      return;
+    }
+    await loadTemplate(selectedId);
+  };
+
+  const handleDeleteTemplate = async (item: ArtifactTemplateSummary) => {
+    const deletingSelected = item.id === selectedId;
+    const warning = deletingSelected && isDirty && isEditable
+      ? `Delete "${item.label}" permanently? Unsaved canvas changes will be discarded.`
+      : `Delete "${item.label}" permanently?`;
+    if (!window.confirm(warning)) return;
+
+    setStatus('deleting');
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/admin/artifacts/${item.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updatedAt: item.updatedAt }),
+      });
+      const data = await res.json();
+      if (res.status === 409) {
+        const summaries = await loadList();
+        await reconcileSelectedTemplate(summaries);
+        setStatus('conflict');
+        setMessage(
+          `${data.error || 'Template was modified elsewhere'}. Nothing was deleted; the server list was reloaded.`
+        );
+        return;
+      }
+      if (res.status === 404) {
+        const summaries = await loadList();
+        await reconcileSelectedTemplate(summaries);
+        setStatus('conflict');
+        setMessage(
+          `${data.error || 'Template no longer exists'}. Nothing was deleted; the server list was reloaded.`
+        );
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || 'Delete failed');
+      const summaries = data.templates ?? [];
+      setTemplates(summaries);
+      if (deletingSelected) {
+        setSelectedId(null);
+        setTemplate(null);
+        setIsDirty((current) => nextDirtyState(current, 'template-changed'));
+      } else {
+        await reconcileSelectedTemplate(summaries);
+      }
+      setStatus('success');
+      setMessage(`Deleted ${item.label}`);
+    } catch (err) {
+      setStatus('error');
+      setMessage(err instanceof Error ? err.message : 'Delete failed');
+    }
+  };
+
+  const handleMoveTemplate = async (item: ArtifactTemplateSummary, direction: -1 | 1) => {
+    const index = templates.findIndex((candidate) => candidate.id === item.id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= templates.length) return;
+
+    const desired = [...templates];
+    [desired[index], desired[target]] = [desired[target], desired[index]];
+    setStatus('reordering');
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/artifacts/order', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: desired.map(({ id, updatedAt }) => ({ id, updatedAt })),
+        }),
+      });
+      const data = await res.json();
+      if (res.status === 409) {
+        const summaries = await loadList();
+        await reconcileSelectedTemplate(summaries);
+        setStatus('conflict');
+        setMessage(
+          `${data.error || 'Template order was modified elsewhere'}. Nothing was reordered; the server list was reloaded.`
+        );
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || 'Reorder failed');
+      const summaries = data.templates ?? [];
+      setTemplates(summaries);
+      await reconcileSelectedTemplate(summaries);
+      setStatus('success');
+      setMessage('Template order saved');
+    } catch (err) {
+      setStatus('error');
+      setMessage(err instanceof Error ? err.message : 'Reorder failed');
+    }
+  };
+
   const isEditable = template ? isCanvasAuthorable(template.baseType) : false;
 
   const kindChipClass =
@@ -867,7 +985,12 @@ export default function ArtifactEditor() {
     };
   }, [isDirty, isEditable, setIsBlocked]);
 
-  const busy = status === 'loading' || status === 'saving' || status === 'resetting';
+  const busy =
+    status === 'loading' ||
+    status === 'saving' ||
+    status === 'resetting' ||
+    status === 'deleting' ||
+    status === 'reordering';
 
   // The canvas stops accepting input while a request is in flight, the way the
   // toolbar buttons already do.
@@ -910,9 +1033,10 @@ export default function ArtifactEditor() {
         <ul className="max-h-[70vh] space-y-1 overflow-y-auto">
           {templates.map((item) => (
             <li key={item.id}>
-              <button
-                type="button"
-                onClick={() => {
+              <div className="flex items-stretch gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
                   // Re-clicking the row that is already open is not a switch,
                   // and must not prompt. A different row re-enters mountCanvas,
                   // which throws the added-element map away and disposes the
@@ -926,18 +1050,50 @@ export default function ArtifactEditor() {
                   if (!proceed) return;
                   setSelectedId(item.id);
                 }}
-                className={`w-full rounded-xl px-3 py-2 text-left text-sm transition ${
-                  selectedId === item.id
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-muted'
-                }`}
-              >
-                <div className="font-medium">{item.label}</div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs opacity-80">
-                  <span className={kindChipClass}>[{kindChipLabel(item.baseType)}]</span>
-                  {!item.editable ? <span>read-only</span> : null}
+                  className={`min-w-0 flex-1 rounded-xl px-3 py-2 text-left text-sm transition ${
+                    selectedId === item.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-muted'
+                  }`}
+                >
+                  <div className="font-medium">{item.label}</div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs opacity-80">
+                    <span className={kindChipClass}>[{kindChipLabel(item.baseType)}]</span>
+                    {!item.editable ? <span>read-only</span> : null}
+                  </div>
+                </button>
+                <div className="flex flex-col gap-1 py-1">
+                  <button
+                    type="button"
+                    aria-label={`Move ${item.label} up`}
+                    title="Move up"
+                    onClick={() => void handleMoveTemplate(item, -1)}
+                    disabled={busy || templates[0]?.id === item.id}
+                    className="rounded border border-border px-1 text-xs disabled:opacity-50"
+                  >
+                    Up
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Move ${item.label} down`}
+                    title="Move down"
+                    onClick={() => void handleMoveTemplate(item, 1)}
+                    disabled={busy || templates.at(-1)?.id === item.id}
+                    className="rounded border border-border px-1 text-xs disabled:opacity-50"
+                  >
+                    Down
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Delete ${item.label}`}
+                    onClick={() => void handleDeleteTemplate(item)}
+                    disabled={busy}
+                    className="rounded border border-destructive px-1 text-xs text-destructive disabled:opacity-50"
+                  >
+                    Delete
+                  </button>
                 </div>
-              </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -945,7 +1101,21 @@ export default function ArtifactEditor() {
 
       <section className="space-y-4">
         {!template ? (
-          <p className="text-sm text-muted-foreground">Select a template to edit.</p>
+          <>
+            {message ? (
+              <p
+                role="alert"
+                className={`text-sm ${
+                  status === 'error' || status === 'conflict'
+                    ? 'text-destructive'
+                    : 'text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                {message}
+              </p>
+            ) : null}
+            <p className="text-sm text-muted-foreground">Select a template to edit.</p>
+          </>
         ) : (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">

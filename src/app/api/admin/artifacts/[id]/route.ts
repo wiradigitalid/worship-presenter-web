@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
 import {
+  deleteArtifactTemplate,
   getArtifactTemplate,
   RegistryNotFoundError,
   RegistryStaleError,
@@ -67,6 +68,37 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
     console.error('Error updating artifact template:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  const session = await requireAdminSession(request);
+  if (!session) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  try {
+    const { id } = await context.params;
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    }
+    const updatedAt = (body as { updatedAt?: unknown }).updatedAt;
+    if (typeof updatedAt !== 'string' || !updatedAt.trim()) {
+      return NextResponse.json({ error: 'updatedAt is required' }, { status: 400 });
+    }
+
+    const templates = deleteArtifactTemplate(getDb(), id, updatedAt);
+    return NextResponse.json({ templates });
+  } catch (error) {
+    if (error instanceof RegistryNotFoundError) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+    if (error instanceof RegistryStaleError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    console.error('Error deleting artifact template:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

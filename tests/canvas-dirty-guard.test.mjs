@@ -302,7 +302,11 @@ test('AC-1: the dirty flag adds no network call of its own', () => {
     call.arguments[0].getText()
   );
 
-  assert.equal(targets.length, 4, 'list, load, save, reset — and nothing new');
+  assert.equal(
+    targets.length,
+    6,
+    'list, load, save, reset, confirmed delete, and whole-list reorder'
+  );
   for (const target of targets) {
     assert.match(
       target,
@@ -536,11 +540,20 @@ test('AC-1: the canvas stops accepting input while busy (code review 2026-08-04)
 test('AC-3: switching template while dirty asks before it discards', () => {
   const editor = ast('src/components/admin/ArtifactEditor.tsx');
   const setters = callsNamed(editor, 'setSelectedId');
-  assert.equal(setters.length, 1, 'one place changes the mounted template');
+  assert.equal(
+    setters.length,
+    3,
+    'one guarded list switch plus successful and remote-delete selection clears'
+  );
+
+  const switchSetter = setters.find((setter) => setter.arguments[0]?.getText() === 'item.id');
+  const deleteClearers = setters.filter((setter) => setter.arguments[0]?.getText() === 'null');
+  assert.ok(switchSetter, 'the sidebar row selects the clicked template');
+  assert.equal(deleteClearers.length, 2, 'both deletion outcomes clear a gone selection');
 
   // The nearest arrow function around the setter is the list row's onClick; the
   // confirmation has to live in the same handler or it can be bypassed.
-  let handler = setters[0].parent;
+  let handler = switchSetter.parent;
   while (handler && !ts.isArrowFunction(handler)) handler = handler.parent;
   assert.ok(handler, 'the setter is expected inside the row onClick handler');
 
@@ -557,6 +570,27 @@ test('AC-3: switching template while dirty asks before it discards', () => {
     handler.getText(),
     /item\.id === selectedId/,
     'AC-3 guards the actual switch: re-clicking the active row must not prompt'
+  );
+
+  const deleteHandlers = deleteClearers.map((clearer) => {
+    let handler = clearer.parent;
+    while (handler && !ts.isArrowFunction(handler)) handler = handler.parent;
+    return handler;
+  });
+  assert.ok(
+    deleteHandlers.some(
+      (deleteHandler) =>
+        deleteHandler &&
+        identifiers(deleteHandler, 'window').length > 0 &&
+        identifiers(deleteHandler, 'isDirty').length > 0
+    ),
+    'deleting an open dirty canvas must explicitly confirm that its work is discarded'
+  );
+  assert.ok(
+    deleteHandlers.some(
+      (deleteHandler) => deleteHandler && /if \(!summary\)/.test(deleteHandler.getText())
+    ),
+    'a 404 reconciliation must clear a selected template that no longer exists'
   );
 });
 

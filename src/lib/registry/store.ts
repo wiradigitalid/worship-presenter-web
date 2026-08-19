@@ -32,6 +32,11 @@ type Row = {
   updated_at: string;
 };
 
+export type ArtifactTemplateOrderItem = {
+  id: string;
+  updatedAt: string;
+};
+
 function rowToStored(row: Row): StoredArtifactTemplate {
   const parsed = JSON.parse(row.payload) as ArtifactTemplate;
   return { ...parsed, updatedAt: row.updated_at };
@@ -96,6 +101,111 @@ export function assertContiguousPositions(db: Database.Database): void {
       );
     }
   });
+}
+
+/**
+ * A mutation must invalidate every snapshot token it affects. Date's millisecond
+ * precision can otherwise reproduce a bootstrap token during a fast test or a
+ * pair of back-to-back requests, so advance beyond the newest persisted value.
+ */
+function nextRegistryUpdatedAt(db: Database.Database): string {
+  const row = db
+    .prepare(`SELECT MAX(updated_at) AS latest FROM artifact_templates`)
+    .get() as { latest?: string | null };
+  const latest = row.latest ? Date.parse(row.latest) : Number.NEGATIVE_INFINITY;
+  return new Date(Math.max(Date.now(), latest + 1)).toISOString();
+}
+
+function validateWholeOrder(
+  items: unknown,
+  rows: Pick<Row, 'id' | 'updated_at'>[]
+): asserts items is ArtifactTemplateOrderItem[] {
+  if (!Array.isArray(items)) {
+    throw new RegistryValidationError('items must be an array');
+  }
+  if (items.length !== rows.length) {
+    throw new RegistryValidationError('items must contain every live template exactly once');
+  }
+
+  const knownIds = new Set(rows.map((row) => row.id));
+  const receivedIds = new Set<string>();
+  for (const item of items) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new RegistryValidationError('items must contain id and updatedAt');
+    }
+    const { id, updatedAt } = item as { id?: unknown; updatedAt?: unknown };
+    if (typeof id !== 'string' || !id.trim()) {
+      throw new RegistryValidationError('item id is required');
+    }
+    if (typeof updatedAt !== 'string' || !updatedAt.trim()) {
+      throw new RegistryValidationError('item updatedAt is required');
+    }
+    if (!knownIds.has(id)) {
+      throw new RegistryValidationError(`Unknown template: ${id}`);
+    }
+    if (receivedIds.has(id)) {
+      throw new RegistryValidationError(`Duplicate template: ${id}`);
+    }
+    receivedIds.add(id);
+  }
+}
+
+/** Delete one live row and compact the remaining ordered registry atomically. */
+export function deleteArtifactTemplate(
+  db: Database.Database,
+  id: string,
+  expectedUpdatedAt: string
+): ArtifactTemplateSummary[] {
+  return db.transaction(() => {
+    const target = db
+      .prepare(`SELECT id, updated_at FROM artifact_templates WHERE id = ?`)
+      .get(id) as Pick<Row, 'id' | 'updated_at'> | undefined;
+    if (!target) throw new RegistryNotFoundError(id);
+    if (target.updated_at !== expectedUpdatedAt) throw new RegistryStaleError();
+
+    db.prepare(`DELETE FROM artifact_templates WHERE id = ?`).run(id);
+    const updatedAt = nextRegistryUpdatedAt(db);
+    const survivors = db
+      .prepare(`SELECT id FROM artifact_templates ORDER BY position`)
+      .all() as Pick<Row, 'id'>[];
+    const update = db.prepare(
+      `UPDATE artifact_templates SET position = ?, updated_at = ? WHERE id = ?`
+    );
+    survivors.forEach((row, position) => update.run(position, updatedAt, row.id));
+    assertContiguousPositions(db);
+    return listArtifactSummaries(db);
+  }).immediate();
+}
+
+/**
+ * Replace the complete registry sequence atomically. Membership and every
+ * optimistic-concurrency token are checked before the first row is written.
+ */
+export function reorderArtifactTemplates(
+  db: Database.Database,
+  items: unknown
+): ArtifactTemplateSummary[] {
+  return db.transaction(() => {
+    const rows = db
+      .prepare(`SELECT id, updated_at FROM artifact_templates ORDER BY position`)
+      .all() as Pick<Row, 'id' | 'updated_at'>[];
+    validateWholeOrder(items, rows);
+
+    const tokensById = new Map(rows.map((row) => [row.id, row.updated_at]));
+    for (const item of items) {
+      if (tokensById.get(item.id) !== item.updatedAt) {
+        throw new RegistryStaleError();
+      }
+    }
+
+    const updatedAt = nextRegistryUpdatedAt(db);
+    const update = db.prepare(
+      `UPDATE artifact_templates SET position = ?, updated_at = ? WHERE id = ?`
+    );
+    items.forEach((item, position) => update.run(position, updatedAt, item.id));
+    assertContiguousPositions(db);
+    return listArtifactSummaries(db);
+  }).immediate();
 }
 
 export function getArtifactTemplate(
