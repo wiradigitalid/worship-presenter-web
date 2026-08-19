@@ -25,6 +25,9 @@ function fetchRaw(url, opts = {}) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
     const headers = { ...(opts.headers || {}) };
+    if (opts.body) {
+      headers['Content-Length'] = String(Buffer.byteLength(opts.body));
+    }
     const req = http.request(
       {
         hostname: u.hostname,
@@ -171,7 +174,12 @@ const postRaw = (rawBody) => envelope(SERVICES_URL(), 'POST', rawBody);
 const post = (body) => postRaw(JSON.stringify(body));
 const putRaw = (id, rawBody) => envelope(itemUrl(id), 'PUT', rawBody);
 const put = (id, body) => putRaw(id, JSON.stringify(body));
-const del = (id) => envelope(itemUrl(id), 'DELETE');
+const del = (id, body) =>
+  envelope(
+    itemUrl(id),
+    'DELETE',
+    body === undefined ? undefined : JSON.stringify(body)
+  );
 const getOne = (id) => envelope(itemUrl(id));
 
 async function createdService(body) {
@@ -456,17 +464,47 @@ test('PUT with an unsafe image URL returns 400 once the gates pass', async () =>
   assert.match(body.error, /sermonGraphicUrl/);
 });
 
+test('DELETE without updated_at returns the concurrency 400', async () => {
+  const id = await createdService({ raw_payload: RAW('SABBATH, MAY 8, 2026') });
+  const missing = await del(id);
+  assert.equal(missing.status, 400);
+  assert.deepEqual(missing.body, {
+    error: 'updated_at is required for concurrent edit protection',
+  });
+  const blank = await del(id, { updated_at: '   ' });
+  assert.equal(blank.status, 400);
+});
+
 test('DELETE removes an existing service, then reports 404', async () => {
   const id = await createdService({ raw_payload: RAW('SABBATH, MAY 9, 2026') });
-  const removed = await del(id);
+  const token = await tokenOf(id);
+  const stale = await del(id, { updated_at: '1999-01-01 00:00:00' });
+  assert.equal(stale.status, 409);
+  assert.equal(stale.body.updated_at, token);
+  const removed = await del(id, { updated_at: token });
   assert.equal(removed.status, 200);
   assert.deepEqual(removed.body, { message: 'Service deleted successfully' });
-  const again = await del(id);
+  const again = await del(id, { updated_at: token });
   assert.equal(again.status, 404);
   assert.deepEqual(again.body, { error: 'Service not found' });
-  const unknown = await del(999999);
+  const unknown = await del(999999, { updated_at: token });
   assert.equal(unknown.status, 404);
   assert.deepEqual(unknown.body, { error: 'Service not found' });
+});
+
+test('two PUTs with the same token: only one writes (sub-second stamp)', async () => {
+  const id = await createdService({ raw_payload: RAW('SABBATH, MAY 16, 2026') });
+  const token = await tokenOf(id);
+  const payload = {
+    updated_at: token,
+    raw_payload: RAW('SABBATH, MAY 16, 2026'),
+  };
+  const [a, b] = await Promise.all([put(id, payload), put(id, payload)]);
+  const statuses = [a.status, b.status].sort();
+  assert.deepEqual(statuses, [200, 409]);
+  const winner = a.status === 200 ? a : b;
+  assert.notEqual(winner.body.updated_at, token);
+  assert.match(String(winner.body.updated_at), /\.\d{3}$/);
 });
 
 test('a non-numeric id returns 400 Invalid Service ID on PUT and DELETE', async () => {

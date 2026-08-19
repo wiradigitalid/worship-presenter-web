@@ -38,9 +38,9 @@ Unreachable until a create verb exists (W1 Non-goal). Do not route delete or reo
 
 OQ-D: not this wave. Scoped writes already set it.
 
-## `data_version` is 2
+## `data_version` is 3
 
-W1's AD-21 1→2 transition cloned a snapshot for every Service that had none. The pre-counter wipe licence still expires at first deploy.
+W1's AD-21 1→2 transition cloned a snapshot for every Service that had none. Story 25.2 stamps 2→3 for the sub-second `updated_at` write path. The pre-counter wipe licence still expires at first deploy.
 
 ## Tests are named, not globbed
 

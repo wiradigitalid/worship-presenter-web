@@ -19,7 +19,7 @@ import (
 const (
 	artifactRegistryBootstrapKey = "artifact_registry_bootstrapped"
 	dataVersionKey               = "data_version"
-	currentDataVersion           = "2"
+	currentDataVersion           = "3"
 	defaultSongBook              = "SDAH"
 )
 
@@ -533,7 +533,7 @@ func cloneLiveToService(tx *sql.Tx, serviceID int) error {
 	if err := rows.Err(); err != nil {
 		return err
 	}
-	_, err = tx.Exec(`UPDATE services SET registry_snapshot_at = CURRENT_TIMESTAMP WHERE id = ?`, serviceID)
+	_, err = tx.Exec(`UPDATE services SET registry_snapshot_at = `+StampNowSQL+` WHERE id = ?`, serviceID)
 	return err
 }
 

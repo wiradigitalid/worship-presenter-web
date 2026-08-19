@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { getDb } from './db';
+import { STAMP_NOW_SQL } from './db/stamp';
 import {
   coerceImageUrls,
   isSafeImageUrl,
@@ -13,6 +14,7 @@ export type AnnouncementItem = {
   service_id: number | null;
   sort_order: number;
   created_at: string;
+  updated_at: string;
 };
 
 export type AnnouncementInput = {
@@ -104,6 +106,7 @@ function rowToItem(row: {
   service_id: number | null;
   sort_order: number;
   created_at: string;
+  updated_at: string;
 }): AnnouncementItem {
   return {
     id: row.id,
@@ -111,6 +114,7 @@ function rowToItem(row: {
     service_id: row.service_id ?? null,
     sort_order: row.sort_order,
     created_at: row.created_at,
+    updated_at: row.updated_at,
   };
 }
 
@@ -118,7 +122,8 @@ export function listAnnouncementItems(): AnnouncementItem[] {
   const db = getDb();
   const rows = db
     .prepare(
-      `SELECT id, image_url, service_id, sort_order, created_at
+      `SELECT id, image_url, service_id, sort_order, created_at,
+              COALESCE(updated_at, created_at) AS updated_at
        FROM announcement_items
        ORDER BY sort_order ASC, id ASC`
     )
@@ -209,15 +214,16 @@ export function addAnnouncementItem(input: AnnouncementInput): AnnouncementItem 
 
   const result = db
     .prepare(
-      `INSERT INTO announcement_items (image_url, service_id, sort_order)
-       VALUES (?, ?, ?)`
+      `INSERT INTO announcement_items (image_url, service_id, sort_order, updated_at)
+       VALUES (?, ?, ?, ${STAMP_NOW_SQL})`
     )
     .run(imageUrl, serviceId, sortOrder);
 
   const id = Number(result.lastInsertRowid);
   const row = db
     .prepare(
-      `SELECT id, image_url, service_id, sort_order, created_at
+      `SELECT id, image_url, service_id, sort_order, created_at,
+              COALESCE(updated_at, created_at) AS updated_at
        FROM announcement_items WHERE id = ?`
     )
     .get(id) as AnnouncementItem;
@@ -324,8 +330,8 @@ export function syncWorshipAnnouncements(
   );
 
   const insert = db.prepare(
-    `INSERT INTO announcement_items (image_url, service_id, sort_order)
-     VALUES (?, ?, ?)`
+    `INSERT INTO announcement_items (image_url, service_id, sort_order, updated_at)
+     VALUES (?, ?, ?, ${STAMP_NOW_SQL})`
   );
   const updateSort = db.prepare(
     `UPDATE announcement_items SET sort_order = ? WHERE id = ?`
@@ -380,8 +386,8 @@ export function replaceOneOffAnnouncementsForService(
     serviceId
   );
   const insert = db.prepare(
-    `INSERT INTO announcement_items (image_url, service_id, sort_order)
-     VALUES (?, ?, ?)`
+    `INSERT INTO announcement_items (image_url, service_id, sort_order, updated_at)
+     VALUES (?, ?, ?, ${STAMP_NOW_SQL})`
   );
   let order = nextSortOrder(db);
   for (const imageUrl of normalized) {
@@ -431,8 +437,8 @@ export function replaceAnnouncementItems(
   const tx = db.transaction(() => {
     db.prepare('DELETE FROM announcement_items').run();
     const insert = db.prepare(
-      `INSERT INTO announcement_items (image_url, service_id, sort_order)
-       VALUES (?, ?, ?)`
+      `INSERT INTO announcement_items (image_url, service_id, sort_order, updated_at)
+       VALUES (?, ?, ?, ${STAMP_NOW_SQL})`
     );
     for (const item of normalized) {
       insert.run(item.image_url, item.service_id, item.sort_order);
@@ -450,7 +456,8 @@ export function updateAnnouncementItem(
   const db = getDb();
   const existing = db
     .prepare(
-      `SELECT id, image_url, service_id, sort_order, created_at
+      `SELECT id, image_url, service_id, sort_order, created_at,
+              COALESCE(updated_at, created_at) AS updated_at
        FROM announcement_items WHERE id = ?`
     )
     .get(id) as AnnouncementItem | undefined;
@@ -476,13 +483,14 @@ export function updateAnnouncementItem(
 
   db.prepare(
     `UPDATE announcement_items
-     SET image_url = ?, service_id = ?, sort_order = ?
+     SET image_url = ?, service_id = ?, sort_order = ?, updated_at = ${STAMP_NOW_SQL}
      WHERE id = ?`
   ).run(imageUrl, serviceId, sortOrder, id);
 
   const row = db
     .prepare(
-      `SELECT id, image_url, service_id, sort_order, created_at
+      `SELECT id, image_url, service_id, sort_order, created_at,
+              COALESCE(updated_at, created_at) AS updated_at
        FROM announcement_items WHERE id = ?`
     )
     .get(id) as AnnouncementItem;

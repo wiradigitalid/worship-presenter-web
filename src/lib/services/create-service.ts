@@ -9,6 +9,7 @@ import {
   applyStructuredFields,
   normalizeParsedRundown,
 } from '@/lib/parsed-fields';
+import { STAMP_NOW_SQL } from '@/lib/db/stamp';
 import { cloneRegistryToNewService } from '@/lib/registry/service-snapshot';
 import type { CreateServiceInput, CreateServiceResult } from './types';
 
@@ -65,7 +66,7 @@ export function createService(
       .prepare<[string, string, string, string, string | null]>(
         `INSERT INTO services
              (date, raw_payload, parsed_data, images_payload, participants_payload, updated_at)
-           VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+           VALUES (?, ?, ?, ?, ?, ${STAMP_NOW_SQL})`
       )
       .run(
         serviceDate,

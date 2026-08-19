@@ -48,6 +48,10 @@ func Open(dbPath string) (*sql.DB, error) {
 		handle.Close()
 		return nil, fmt.Errorf("schema: %w", err)
 	}
+	if err := migrateColumns(handle); err != nil {
+		handle.Close()
+		return nil, fmt.Errorf("migrate: %w", err)
+	}
 	return handle, nil
 }
 

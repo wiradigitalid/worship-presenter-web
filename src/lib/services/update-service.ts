@@ -11,6 +11,7 @@ import {
   applyStructuredFields,
   normalizeParsedRundown,
 } from '@/lib/parsed-fields';
+import { STAMP_NOW_SQL } from '@/lib/db/stamp';
 import { readUpdatedAt } from './queries';
 import type {
   ServiceDetailRow,
@@ -131,7 +132,7 @@ export function updateService(
   }
   assignments.push('participants_payload = ?');
   params.push(participantsPayload);
-  assignments.push('updated_at = CURRENT_TIMESTAMP');
+  assignments.push(`updated_at = ${STAMP_NOW_SQL}`);
   params.push(serviceId, currentUpdatedAt);
 
   const sql = `UPDATE services

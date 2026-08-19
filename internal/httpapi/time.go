@@ -1,11 +1,12 @@
 package httpapi
 
 import (
+	"fmt"
 	"strings"
 	"time"
 )
 
-const sqliteTS = "2006-01-02 15:04:05"
+const sqliteSecond = "2006-01-02 15:04:05"
 
 func formatTimestamp(raw string) string {
 	raw = strings.TrimSpace(raw)
@@ -13,24 +14,28 @@ func formatTimestamp(raw string) string {
 		return raw
 	}
 	layouts := []string{
-		time.RFC3339,
 		time.RFC3339Nano,
+		time.RFC3339,
+		"2006-01-02 15:04:05.999999999",
 		"2006-01-02 15:04:05",
-		"2006-01-02T15:04:05Z",
+		"2006-01-02T15:04:05.999999999",
 		"2006-01-02T15:04:05",
 	}
 	for _, layout := range layouts {
 		if t, err := time.Parse(layout, raw); err == nil {
-			return t.UTC().Format(sqliteTS)
+			return formatUnixStamp(t.UTC())
 		}
 	}
 	s := strings.ReplaceAll(raw, "T", " ")
 	s = strings.TrimSuffix(s, "Z")
-	if i := strings.Index(s, "."); i >= 0 {
-		s = s[:i]
+	return s
+}
+
+func formatUnixStamp(t time.Time) string {
+	t = t.UTC()
+	if t.Nanosecond() == 0 {
+		return t.Format(sqliteSecond)
 	}
-	if len(s) >= 19 {
-		return s[:19]
-	}
-	return raw
+	ms := t.Nanosecond() / 1e6
+	return t.Format(sqliteSecond) + fmt.Sprintf(".%03d", ms)
 }

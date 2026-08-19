@@ -10,6 +10,7 @@ import {
   parseStoredTemplateRow,
   type RegistrySnapshot,
 } from '@/lib/artifacts/registry-snapshot';
+import { STAMP_NOW_SQL } from '@/lib/db/stamp';
 import { DATA_VERSION_KEY } from '@/lib/registry/seed';
 import { serializeTemplate } from '@/lib/registry/store';
 import type { StoredArtifactTemplate } from '@/lib/registry/types';
@@ -75,7 +76,7 @@ function cloneValidLiveRows(db: Database.Database, serviceId: number): number {
   }
   db.prepare(
     `UPDATE services
-        SET registry_snapshot_at = CURRENT_TIMESTAMP
+        SET registry_snapshot_at = ${STAMP_NOW_SQL}
       WHERE id = ?`
   ).run(serviceId);
   return position;
@@ -185,7 +186,7 @@ export function syncArtifactToService(
     const result = db
       .prepare(
         `UPDATE services
-            SET updated_at = CURRENT_TIMESTAMP
+            SET updated_at = ${STAMP_NOW_SQL}
           WHERE id = ? AND COALESCE(updated_at, created_at) = ?`
       )
       .run(serviceId, expectedUpdatedAt);

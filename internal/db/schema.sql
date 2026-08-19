@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS announcement_items (
   service_id INTEGER,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT,
   FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
 );
 

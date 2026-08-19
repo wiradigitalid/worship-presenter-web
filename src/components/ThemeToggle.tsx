@@ -6,9 +6,10 @@ import { HEADER_CONTROL_BOX } from './header-chrome';
 import {
   asThemeChoice,
   nextTheme,
-  THEME_LABEL,
   type ThemeChoice,
 } from '@/lib/theme-cycle';
+import { useT } from '@/lib/i18n/operator';
+import type { I18nKey } from '@/lib/i18n';
 
 /**
  * One control cycling system -> light -> dark -> system.
@@ -50,6 +51,7 @@ const hydrated = () => true;
 const notYetHydrated = () => false;
 
 export default function ThemeToggle() {
+  const { t } = useT();
   const { theme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(neverChanges, hydrated, notYetHydrated);
 
@@ -96,7 +98,7 @@ export default function ThemeToggle() {
         variant="outline"
         size="icon"
         className={`${shell} aria-disabled:pointer-events-none`}
-        aria-label="Theme"
+        aria-label={t('chrome.theme.placeholder')}
         disabled
         focusableWhenDisabled
       >
@@ -108,16 +110,17 @@ export default function ThemeToggle() {
   const Icon =
     current === 'light' ? SunIcon : current === 'dark' ? MoonIcon : MonitorIcon;
 
+  const currentLabel = t(`chrome.theme.${current}` as I18nKey);
+  const nextLabel = t(`chrome.theme.${next}` as I18nKey);
+
   return (
     <Button
       variant="outline"
       size="icon"
       className={shell}
       onClick={() => setTheme(next)}
-      aria-label={`${THEME_LABEL[current]}. Switch to: ${THEME_LABEL[
-        next
-      ].toLowerCase()}`}
-      title={THEME_LABEL[current]}
+      aria-label={`${currentLabel}. Switch to: ${nextLabel.toLowerCase()}`}
+      title={currentLabel}
     >
       <Icon aria-hidden="true" />
     </Button>

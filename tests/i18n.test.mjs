@@ -184,10 +184,10 @@ test('setUiLocale rejects unknown locales', () => {
 
 test('the operator SPA shell applies ui_locale without mounting on projected routes', () => {
   const app = read('spa/src/App.tsx');
-  assert.match(app, /OperatorDocumentLang/);
+  assert.match(app, /OperatorUiLocaleProvider/);
   const block = /if \(projected\) \{[\s\S]*?\n  \}/.exec(app);
   assert.ok(block);
-  assert.doesNotMatch(block[0], /OperatorDocumentLang|ui-locale-document|getUiLocale/);
+  assert.doesNotMatch(block[0], /OperatorUiLocaleProvider|OperatorDocumentLang|ui-locale-document|getUiLocale/);
 });
 
 test('the projected tree does not reach catalogue text or call getUiLocale', () => {

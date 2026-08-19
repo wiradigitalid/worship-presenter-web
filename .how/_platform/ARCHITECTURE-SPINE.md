@@ -87,7 +87,7 @@ build against until the story that lands it ships.
 - **Binds:** service mutation APIs, hub edit UI, agent/webhook corrections, registry template writes, Sync Artifact
 - **Prevents:** an operator's edit silently erased by a late correction (last-write-wins)
 - **Rule:** every service mutation carries the client's `updated_at` as a precondition; a stale value is rejected with HTTP 409 and the client re-reads before retrying. No write path may bypass the precondition. This covers registry writes and the **Sync Artifact** action of AD-16 — the shipped shape is `expectedUpdatedAt` / `RegistryStaleError` in `src/lib/registry/store.ts`.
-- **Not yet closed:** four shipped paths bypass the precondition. The rule is deliberately **not** narrowed to cookie-authenticated mutations — the unguarded path is the *agent* path, which is precisely the late correction this decision's *Prevents* describes, so scoping the rule would abandon the hazard rather than record it. Tracked in `_bmad-output/implementation-artifacts/deferred-work.md`.
+- **Not yet closed:** none. The four bypasses shipped with Story 25.1: intake that would overwrite an existing date is HTTP 409 carrying the hub's current content; a correction carries `updated_at`; `DELETE /api/services/{id}` and `PATCH`/`DELETE /api/announcements/{id}` take the same token. Story 25.2 moved the stamp to sub-second `strftime('%Y-%m-%d %H:%M:%f','now')` (data version 3) so two edits in the same second no longer both pass.
 
 ### AD-7 — `buildSlidePlan` is the only slide-order source [ADOPTED]
 - **Binds:** PPTX generation, web slideshow, presenter + projector

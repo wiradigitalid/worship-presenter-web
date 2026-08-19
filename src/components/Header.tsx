@@ -4,6 +4,7 @@ import LogoutButton from './LogoutButton';
 import ThemeToggle from './ThemeToggle';
 import { CustomLink } from './navigation-blocker';
 import { headerLinkClass, HEADER_CONTROL_BOX_BASE } from './header-chrome';
+import { useT } from '@/lib/i18n/operator';
 
 interface HeaderProps {
   username?: string;
@@ -11,6 +12,7 @@ interface HeaderProps {
 }
 
 export default function Header({ isAdmin = false, username = 'Operator' }: HeaderProps) {
+  const { t } = useT();
   const pathname = usePathname() || '';
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -35,7 +37,7 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
         body: JSON.stringify({ currentPassword, newPassword }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to change password');
+      if (!res.ok) throw new Error(data.error || t('chrome.password.failed'));
       setPwSuccess(true);
       setCurrentPassword('');
       setNewPassword('');
@@ -66,10 +68,10 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
           </div>
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
-              BIC Presenter Hub
+              {t('chrome.brand.title')}
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Manage presentation slides
+              {t('chrome.brand.tagline')}
             </p>
           </div>
         </CustomLink>
@@ -85,13 +87,13 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
             href="/"
             className={getLinkClass(pathname === '/')}
           >
-            Dashboard
+            {t('chrome.nav.dashboard')}
           </CustomLink>
           <CustomLink
             href="/announcements"
             className={getLinkClass(pathname.startsWith('/announcements'))}
           >
-            Announcements
+            {t('chrome.nav.announcements')}
           </CustomLink>
           {isAdmin && (
             <>
@@ -99,7 +101,7 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
                 href="/admin/artifacts"
                 className={getLinkClass(pathname.startsWith('/admin/artifacts'))}
               >
-                Artifacts
+                {t('chrome.nav.artifacts')}
               </CustomLink>
               <CustomLink
                 href="/admin"
@@ -107,7 +109,7 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
                   pathname.startsWith('/admin') && !pathname.startsWith('/admin/artifacts')
                 )}
               >
-                Settings
+                {t('chrome.nav.settings')}
               </CustomLink>
             </>
           )}
@@ -148,7 +150,7 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-muted-foreground">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a3 3 0 0 1-3 3m-12-6a9 9 0 0 1 18 0v.75A2.25 2.25 0 0 1 19.5 12h-1.5a2.25 2.25 0 0 0-2.25 2.25v1.5a2.25 2.25 0 0 1-2.25 2.25h-1.5a2.25 2.25 0 0 0-2.25 2.25v1.5a2.25 2.25 0 0 1-2.25 2.25H3.75A2.25 2.25 0 0 1 1.5 21V9.75A2.25 2.25 0 0 1 3.75 7.5h12Z" />
                   </svg>
-                  Change Password
+                  {t('chrome.password.change')}
                 </button>
                 <LogoutButton />
               </div>
@@ -161,27 +163,27 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
       {changePasswordOpen && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-sm border border-border bg-card/95 p-6 rounded-2xl shadow-xl space-y-4 relative animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-base font-bold text-foreground">Change Password</h3>
+            <h3 className="text-base font-bold text-foreground">{t('chrome.password.title')}</h3>
             <form onSubmit={handlePasswordChange} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Current Password</label>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('chrome.password.current')}</label>
                 <input
                   type="password"
                   autoComplete="current-password"
                   className="w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground"
-                  placeholder="Your current password"
+                  placeholder={t('chrome.password.placeholderCurrent')}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   required
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">New Password</label>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('chrome.password.new')}</label>
                 <input
                   type="password"
                   autoComplete="new-password"
                   className="w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground"
-                  placeholder="Min 8 characters"
+                  placeholder={t('chrome.password.placeholderNew')}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   minLength={8}
@@ -194,7 +196,7 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
                   badges had to leave behind for the dark surface. `emerald-400`
                   measures 9.25:1, so the success line reads as clearly as the
                   failure line beside it under either theme. */}
-              {pwSuccess && <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium animate-pulse">Password updated successfully!</p>}
+              {pwSuccess && <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium animate-pulse">{t('chrome.password.success')}</p>}
               
               <div className="flex gap-2 justify-end pt-2">
                 <button
@@ -202,14 +204,14 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
                   onClick={() => { setChangePasswordOpen(false); setCurrentPassword(''); setNewPassword(''); setPwError(null); setPwSuccess(false); }}
                   className="px-4 py-2 text-xs font-semibold rounded-lg border border-border bg-background hover:bg-muted text-foreground cursor-pointer transition-all"
                 >
-                  Cancel
+                  {t('chrome.password.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={busy}
                   className="px-4 py-2 text-xs font-semibold rounded-lg bg-primary hover:bg-primary/95 text-primary-foreground cursor-pointer shadow-sm transition-all"
                 >
-                  Save Password
+                  {t('chrome.password.save')}
                 </button>
               </div>
             </form>

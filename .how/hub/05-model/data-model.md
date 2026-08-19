@@ -55,6 +55,7 @@ One Service has zero or many uploads in the JSON payload and one-off announcemen
 | announcement_items | service_id | INTEGER NULL | null = recurring |
 | announcement_items | sort_order | INTEGER | Display order |
 | announcement_items | created_at | DATETIME | Row created time |
+| announcement_items | updated_at | TEXT | Optimistic concurrency token (AD-6) |
 | accounts | id | INTEGER PK | Account identity |
 | accounts | username | TEXT UNIQUE | Sign-in name |
 | accounts | password_hash | TEXT | Password hash |

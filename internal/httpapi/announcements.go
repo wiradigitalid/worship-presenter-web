@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	hubdb "github.com/wiradigitalid/worship-presenter-web/internal/db"
 	"github.com/wiradigitalid/worship-presenter-web/internal/plan"
 )
 
@@ -16,6 +17,7 @@ type announcementItem struct {
 	ServiceID *int    `json:"service_id"`
 	SortOrder int     `json:"sort_order"`
 	CreatedAt string  `json:"created_at"`
+	UpdatedAt string  `json:"updated_at"`
 }
 
 type worshipAnnouncement struct {
@@ -35,7 +37,8 @@ func (s *Server) listAnnouncements(w http.ResponseWriter, r *http.Request) {
 
 func listAnnouncementItems(db *sql.DB) ([]announcementItem, error) {
 	rows, err := db.Query(
-		`SELECT id, image_url, service_id, sort_order, created_at
+		`SELECT id, image_url, service_id, sort_order, created_at,
+		        COALESCE(updated_at, created_at) AS updated_at
 		   FROM announcement_items ORDER BY sort_order ASC, id ASC`,
 	)
 	if err != nil {
@@ -46,9 +49,10 @@ func listAnnouncementItems(db *sql.DB) ([]announcementItem, error) {
 	for rows.Next() {
 		var it announcementItem
 		var sid sql.NullInt64
-		if err := rows.Scan(&it.ID, &it.ImageURL, &sid, &it.SortOrder, &it.CreatedAt); err != nil {
+		if err := rows.Scan(&it.ID, &it.ImageURL, &sid, &it.SortOrder, &it.CreatedAt, &it.UpdatedAt); err != nil {
 			return nil, err
 		}
+		it.UpdatedAt = formatTimestamp(it.UpdatedAt)
 		if sid.Valid {
 			v := int(sid.Int64)
 			it.ServiceID = &v
@@ -164,7 +168,7 @@ func syncWorshipAnnouncements(db *sql.DB, serviceID int, items []worshipAnnounce
 				sid = serviceID
 			}
 			if _, err := db.Exec(
-				`INSERT INTO announcement_items (image_url, service_id, sort_order) VALUES (?, ?, ?)`,
+				`INSERT INTO announcement_items (image_url, service_id, sort_order, updated_at) VALUES (?, ?, ?, `+hubdb.StampNowSQL+`)`,
 				item.ImageURL, sid, i,
 			); err != nil {
 				return err
@@ -189,7 +193,7 @@ func syncWorshipAnnouncements(db *sql.DB, serviceID int, items []worshipAnnounce
 			continue
 		}
 		if _, err := db.Exec(
-			`INSERT INTO announcement_items (image_url, service_id, sort_order) VALUES (?, ?, ?)`,
+			`INSERT INTO announcement_items (image_url, service_id, sort_order, updated_at) VALUES (?, ?, ?, `+hubdb.StampNowSQL+`)`,
 			item.ImageURL, serviceID, i,
 		); err != nil {
 			return err
@@ -245,7 +249,7 @@ func (s *Server) addAnnouncement(w http.ResponseWriter, r *http.Request) {
 		_ = s.DB.QueryRow(`SELECT COALESCE(MAX(sort_order), -1) + 1 FROM announcement_items`).Scan(&sortOrder)
 	}
 	res, err := s.DB.Exec(
-		`INSERT INTO announcement_items (image_url, service_id, sort_order) VALUES (?, ?, ?)`,
+		`INSERT INTO announcement_items (image_url, service_id, sort_order, updated_at) VALUES (?, ?, ?, `+hubdb.StampNowSQL+`)`,
 		url, serviceID, sortOrder,
 	)
 	if err != nil {
@@ -266,12 +270,15 @@ func getAnnouncement(db *sql.DB, id int) (*announcementItem, error) {
 	var it announcementItem
 	var sid sql.NullInt64
 	err := db.QueryRow(
-		`SELECT id, image_url, service_id, sort_order, created_at FROM announcement_items WHERE id = ?`,
+		`SELECT id, image_url, service_id, sort_order, created_at,
+		        COALESCE(updated_at, created_at)
+		   FROM announcement_items WHERE id = ?`,
 		id,
-	).Scan(&it.ID, &it.ImageURL, &sid, &it.SortOrder, &it.CreatedAt)
+	).Scan(&it.ID, &it.ImageURL, &sid, &it.SortOrder, &it.CreatedAt, &it.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
+	it.UpdatedAt = formatTimestamp(it.UpdatedAt)
 	if sid.Valid {
 		v := int(sid.Int64)
 		it.ServiceID = &v
@@ -330,7 +337,7 @@ func (s *Server) replaceAnnouncements(w http.ResponseWriter, r *http.Request) {
 			sortOrder = n
 		}
 		if _, err := tx.Exec(
-			`INSERT INTO announcement_items (image_url, service_id, sort_order) VALUES (?, ?, ?)`,
+			`INSERT INTO announcement_items (image_url, service_id, sort_order, updated_at) VALUES (?, ?, ?, `+hubdb.StampNowSQL+`)`,
 			url, sid, sortOrder,
 		); err != nil {
 			log.Printf("Error replacing announcements: %v", err)
@@ -370,6 +377,15 @@ func (s *Server) patchAnnouncement(w http.ResponseWriter, r *http.Request) {
 		writeError(w, status, msg)
 		return
 	}
+	token := concurrencyToken(r, body)
+	if token == "" {
+		writeError(w, http.StatusBadRequest, requiredUpdatedAtMsg)
+		return
+	}
+	if token != existing.UpdatedAt {
+		writeStaleToken(w, announcementConflictMsg, existing.UpdatedAt)
+		return
+	}
 	url := existing.ImageURL
 	if v, has := body["image_url"]; has {
 		u, e := plan.AssertAnnouncementImageURL(asString(v))
@@ -404,11 +420,27 @@ func (s *Server) patchAnnouncement(w http.ResponseWriter, r *http.Request) {
 		}
 		sortOrder = n
 	}
-	if _, err := s.DB.Exec(
-		`UPDATE announcement_items SET image_url = ?, service_id = ?, sort_order = ? WHERE id = ?`,
-		url, sid, sortOrder, id,
-	); err != nil {
+	res, err := s.DB.Exec(
+		`UPDATE announcement_items SET image_url = ?, service_id = ?, sort_order = ?, updated_at = `+hubdb.StampNowSQL+`
+		  WHERE id = ? AND COALESCE(updated_at, created_at) = ?`,
+		url, sid, sortOrder, id, token,
+	)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		latest, loadErr := getAnnouncement(s.DB, id)
+		if loadErr == sql.ErrNoRows {
+			writeError(w, http.StatusNotFound, "Announcement not found")
+			return
+		}
+		if loadErr != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		writeStaleToken(w, announcementConflictMsg, latest.UpdatedAt)
 		return
 	}
 	item, err := getAnnouncement(s.DB, id)
@@ -425,14 +457,49 @@ func (s *Server) deleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Invalid announcement id")
 		return
 	}
-	res, err := s.DB.Exec(`DELETE FROM announcement_items WHERE id = ?`, id)
+	body, err, status, msg := readJSONObjectOptional(r, 1<<20)
+	if err != nil {
+		writeError(w, status, msg)
+		return
+	}
+	token := concurrencyToken(r, body)
+	if token == "" {
+		writeError(w, http.StatusBadRequest, requiredUpdatedAtMsg)
+		return
+	}
+	existing, err := getAnnouncement(s.DB, id)
+	if err == sql.ErrNoRows {
+		writeError(w, http.StatusNotFound, "Announcement not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if token != existing.UpdatedAt {
+		writeStaleToken(w, announcementConflictMsg, existing.UpdatedAt)
+		return
+	}
+	res, err := s.DB.Exec(
+		`DELETE FROM announcement_items WHERE id = ? AND COALESCE(updated_at, created_at) = ?`,
+		id, token,
+	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
-		writeError(w, http.StatusNotFound, "Announcement not found")
+		latest, loadErr := getAnnouncement(s.DB, id)
+		if loadErr == sql.ErrNoRows {
+			writeError(w, http.StatusNotFound, "Announcement not found")
+			return
+		}
+		if loadErr != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		writeStaleToken(w, announcementConflictMsg, latest.UpdatedAt)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"message": "Announcement deleted successfully"})

@@ -128,7 +128,7 @@ func (s *Server) createService(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 	res, err := tx.Exec(
 		`INSERT INTO services (date, raw_payload, parsed_data, images_payload, participants_payload, updated_at)
-		 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+		 VALUES (?, ?, ?, ?, ?, `+db.StampNowSQL+`)`,
 		serviceDate, rawPayload, string(parsedJSON), string(imagesJSON), participants,
 	)
 	if err != nil {
@@ -303,7 +303,34 @@ func (s *Server) deleteService(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Invalid Service ID")
 		return
 	}
-	res, err := s.DB.Exec(`DELETE FROM services WHERE id = ?`, id)
+	body, err, status, msg := readJSONObjectOptional(r, 1<<20)
+	if err != nil {
+		writeError(w, status, msg)
+		return
+	}
+	token := concurrencyToken(r, body)
+	if token == "" {
+		writeError(w, http.StatusBadRequest, requiredUpdatedAtMsg)
+		return
+	}
+	snap, err := s.loadServiceSnapshot(id)
+	if err == sql.ErrNoRows {
+		writeError(w, http.StatusNotFound, "Service not found")
+		return
+	}
+	if err != nil {
+		log.Printf("Error deleting service: %v", err)
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if token != snap.UpdatedAt {
+		writeStaleToken(w, serviceConflictMsg, snap.UpdatedAt)
+		return
+	}
+	res, err := s.DB.Exec(
+		`DELETE FROM services WHERE id = ? AND COALESCE(updated_at, created_at) = ?`,
+		id, token,
+	)
 	if err != nil {
 		log.Printf("Error deleting service: %v", err)
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -311,7 +338,16 @@ func (s *Server) deleteService(w http.ResponseWriter, r *http.Request) {
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
-		writeError(w, http.StatusNotFound, "Service not found")
+		latest, loadErr := s.loadServiceSnapshot(id)
+		if loadErr == sql.ErrNoRows {
+			writeError(w, http.StatusNotFound, "Service not found")
+			return
+		}
+		if loadErr != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		writeStaleToken(w, serviceConflictMsg, latest.UpdatedAt)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"message": "Service deleted successfully"})
@@ -436,7 +472,7 @@ func (s *Server) updateService(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
-	assignments := []string{`date = ?`, `raw_payload = ?`, `parsed_data = ?`, `updated_at = CURRENT_TIMESTAMP`}
+	assignments := []string{`date = ?`, `raw_payload = ?`, `parsed_data = ?`, `updated_at = ` + db.StampNowSQL}
 	args := []any{newDate, storedRaw, string(parsedJSON)}
 	if imagesJSON != nil {
 		assignments = append(assignments, `images_payload = ?`)
@@ -453,7 +489,7 @@ func (s *Server) updateService(w http.ResponseWriter, r *http.Request) {
 	args = append(args, id, currentUpdatedAt)
 	res, err := tx.Exec(
 		`UPDATE services SET `+strings.Join(assignments, ", ")+`
-		  WHERE id = ? AND datetime(COALESCE(updated_at, created_at)) = datetime(?)`,
+		  WHERE id = ? AND COALESCE(updated_at, created_at) = ?`,
 		args...,
 	)
 	if err != nil {

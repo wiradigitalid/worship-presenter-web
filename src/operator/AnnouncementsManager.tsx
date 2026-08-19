@@ -1,3 +1,4 @@
+import { useT } from '@/lib/i18n/operator';
 import { useRouter } from '@/lib/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ export type AnnouncementRow = {
   service_id: number | null;
   sort_order: number;
   created_at: string;
+  updated_at: string;
 };
 
 export default function AnnouncementsManager({
@@ -23,6 +25,7 @@ export default function AnnouncementsManager({
   initialItems: AnnouncementRow[];
 }) {
   const router = useRouter();
+  const { t } = useT();
   const [items, setItems] = useState(initialItems);
   const [url, setUrl] = useState('');
   const [scope, setScope] = useState<'recurring' | 'one_off'>('recurring');
@@ -77,11 +80,17 @@ export default function AnnouncementsManager({
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Remove this announcement?')) return;
+    const row = items.find((i) => i.id === id);
+    if (!row) return;
+    if (!confirm(t('announcements.confirmRemove'))) return;
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/announcements/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/announcements/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updated_at: row.updated_at }),
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data.error || 'Failed to delete');
@@ -203,25 +212,25 @@ export default function AnnouncementsManager({
     <div className="space-y-6 font-sans">
       <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
         <CardHeader>
-          <CardTitle className="text-xl font-bold">Add announcement</CardTitle>
+          <CardTitle className="text-xl font-bold">{t('announcements.addTitle')}</CardTitle>
           <CardDescription>
-            Recurring items appear every week. One-offs attach to a single service. Support direct image file upload or pasting public HTTP/S URLs.
+            {t('announcements.addDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-semibold mb-2 block text-muted-foreground">Image URL</label>
+              <label className="text-sm font-semibold mb-2 block text-muted-foreground">{t('announcements.imageUrl')}</label>
               <input
                 className="w-full p-3 font-mono text-sm bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40 text-foreground"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://example.com/flyer.jpg or auto-filled from upload"
+                placeholder={t('announcements.imagePlaceholder')}
                 disabled={busy}
               />
             </div>
             <div>
-              <label className="text-sm font-semibold mb-2 block text-muted-foreground">Or Upload Local Image</label>
+              <label className="text-sm font-semibold mb-2 block text-muted-foreground">{t('announcements.uploadLocal')}</label>
               <input
                 type="file"
                 accept="image/*"
@@ -233,7 +242,7 @@ export default function AnnouncementsManager({
           </div>
           <div className="flex flex-wrap gap-4 items-end pt-2">
             <div>
-              <label className="text-sm font-semibold mb-2 block text-muted-foreground">Scope</label>
+              <label className="text-sm font-semibold mb-2 block text-muted-foreground">{t('announcements.scope')}</label>
               <select
                 className="p-2.5 text-sm bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground cursor-pointer"
                 value={scope}
@@ -242,14 +251,14 @@ export default function AnnouncementsManager({
                 }
                 disabled={busy}
               >
-                <option value="recurring">Recurring (Weekly)</option>
-                <option value="one_off">One-off (Service Specific)</option>
+                <option value="recurring">{t('announcements.scope.recurring')}</option>
+                <option value="one_off">{t('announcements.scope.oneOff')}</option>
               </select>
             </div>
             {scope === 'one_off' && (
               <div>
                 <label className="text-sm font-semibold mb-2 block text-muted-foreground">
-                  Service ID
+                  {t('announcements.serviceId')}
                 </label>
                 <input
                   className="w-28 p-2.5 font-mono text-sm bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
@@ -266,14 +275,14 @@ export default function AnnouncementsManager({
                 className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-sm transition-all duration-200 shadow-sm active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                 disabled={busy || !url.trim()}
               >
-                {busy ? 'Working…' : 'Add to List'}
+                {busy ? t('announcements.working') : t('announcements.add')}
               </button>
               <button
                 onClick={handleReplaceAll}
                 className="px-4 py-2.5 rounded-xl border border-border bg-card/50 hover:bg-card text-foreground font-semibold text-sm transition-all duration-200 shadow-sm active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                 disabled={busy}
               >
-                Replace All…
+                {t('announcements.replaceAll')}
               </button>
             </div>
           </div>
@@ -288,22 +297,24 @@ export default function AnnouncementsManager({
       <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
         <CardHeader className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
           <div>
-            <CardTitle className="text-xl font-bold">Announcement List</CardTitle>
+            <CardTitle className="text-xl font-bold">{t('announcements.listTitle')}</CardTitle>
             <CardDescription>
               {items.length === 0
-                ? 'Empty list — PPTX uses legacy per-service images only when present; otherwise no flyer slides.'
-                : `${items.length} item${items.length === 1 ? '' : 's'} in order.`}
+                ? t('announcements.listEmptyHint')
+                : items.length === 1
+                  ? t('announcements.listCountOne')
+                  : t('announcements.listCount').replace('{n}', String(items.length))}
             </CardDescription>
           </div>
           {items.length > 1 && (
             <span className="text-xs text-muted-foreground bg-primary/5 border border-primary/10 px-3 py-1.5 rounded-lg font-medium">
-              💡 Tip: Use the ↑ / ↓ buttons to dynamically reorder slides.
+              {t('announcements.reorderTip')}
             </span>
           )}
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
-            <p className="text-muted-foreground italic text-sm text-center py-6">No items yet.</p>
+            <p className="text-muted-foreground italic text-sm text-center py-6">{t('announcements.noneYet')}</p>
           ) : (
             <ul className="divide-y divide-border/60">
               {items.map((item, index) => (
@@ -320,7 +331,7 @@ export default function AnnouncementsManager({
                     >
                       <img
                         src={item.image_url}
-                        alt={`Announcement ${index + 1}`}
+                        alt={t('announcements.alt').replace('{n}', String(index + 1))}
                         className="h-full w-full object-cover"
                       />
                     </a>
@@ -339,10 +350,15 @@ export default function AnnouncementsManager({
                             ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-400/15 dark:text-emerald-200 dark:border-emerald-400/40'
                             : 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-400/15 dark:text-amber-200 dark:border-amber-400/40'
                         }`}>
-                          {item.service_id == null ? 'Recurring' : `One-off (Service #${item.service_id})`}
+                          {item.service_id == null
+                            ? t('announcements.recurring')
+                            : t('announcements.oneOffService').replace(
+                                '{id}',
+                                String(item.service_id)
+                              )}
                         </span>
                         <span className="text-[10px] font-semibold text-muted-foreground">
-                          Order: {item.sort_order}
+                          {t('announcements.order').replace('{n}', String(item.sort_order))}
                         </span>
                       </div>
                     </div>
@@ -352,7 +368,7 @@ export default function AnnouncementsManager({
                       disabled={busy || index === 0}
                       onClick={() => move(index, -1)}
                       className="p-2 rounded-lg border border-border bg-background hover:bg-muted text-foreground transition-all disabled:opacity-30 cursor-pointer"
-                      title="Move Up"
+                      title={t('announcements.moveUp')}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" />
@@ -362,7 +378,7 @@ export default function AnnouncementsManager({
                       disabled={busy || index === items.length - 1}
                       onClick={() => move(index, 1)}
                       className="p-2 rounded-lg border border-border bg-background hover:bg-muted text-foreground transition-all disabled:opacity-30 cursor-pointer"
-                      title="Move Down"
+                      title={t('announcements.moveDown')}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
@@ -373,7 +389,7 @@ export default function AnnouncementsManager({
                       onClick={() => handleDelete(item.id)}
                       className="px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 text-destructive transition-all text-xs font-semibold cursor-pointer"
                     >
-                      Remove
+                      {t('announcements.remove')}
                     </button>
                   </div>
                 </li>

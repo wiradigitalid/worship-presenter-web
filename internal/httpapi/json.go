@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"log"
@@ -36,6 +37,31 @@ func readJSONObject(r *http.Request, maxBytes int64) (map[string]any, error, int
 	}
 	if len(raw) == 0 {
 		return nil, errEmptyJSON, http.StatusBadRequest, "Invalid JSON"
+	}
+	var v any
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return nil, err, http.StatusBadRequest, "Invalid JSON"
+	}
+	obj, ok := v.(map[string]any)
+	if !ok {
+		return nil, errNotObject, http.StatusBadRequest, "Invalid body"
+	}
+	return obj, nil, 0, ""
+}
+
+// readJSONObjectOptional accepts an empty body as {}. DELETE carries the
+// AD-6 token in JSON or as ?updated_at=.
+func readJSONObjectOptional(r *http.Request, maxBytes int64) (map[string]any, error, int, string) {
+	if maxBytes <= 0 {
+		maxBytes = 1 << 20
+	}
+	r.Body = http.MaxBytesReader(nil, r.Body, maxBytes)
+	raw, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, err, http.StatusBadRequest, "Invalid JSON"
+	}
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return map[string]any{}, nil, 0, ""
 	}
 	var v any
 	if err := json.Unmarshal(raw, &v); err != nil {

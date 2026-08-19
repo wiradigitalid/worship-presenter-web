@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/wiradigitalid/worship-presenter-web/internal/db"
 	"github.com/wiradigitalid/worship-presenter-web/internal/plan"
 )
 
@@ -431,6 +432,8 @@ func (s *Server) syncArtifact(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
+	updatedAt = formatTimestamp(updatedAt)
+	current = formatTimestamp(current)
 	if current != updatedAt {
 		writeJSON(w, http.StatusConflict, map[string]any{
 			"error":      "Conflict: service was modified; refresh and retry",
@@ -478,7 +481,7 @@ func (s *Server) syncArtifact(w http.ResponseWriter, r *http.Request) {
 	}
 	rows.Close()
 	res, err := tx.Exec(
-		`UPDATE services SET updated_at = CURRENT_TIMESTAMP, registry_snapshot_at = CURRENT_TIMESTAMP
+		`UPDATE services SET updated_at = `+db.StampNowSQL+`, registry_snapshot_at = `+db.StampNowSQL+`
 		  WHERE id = ? AND COALESCE(updated_at, created_at) = ?`,
 		id, updatedAt,
 	)

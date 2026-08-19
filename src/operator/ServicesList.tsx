@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Link from '@/components/Link';
 import { Button } from '@/components/ui/button';
+import { useT } from '@/lib/i18n/operator';
 
 interface ServiceRow {
   id: number;
@@ -39,6 +40,7 @@ function formatServiceDate(dateStr: string) {
 }
 
 export default function ServicesList({ services }: { services: ServiceRow[] }) {
+  const { t } = useT();
   const [query, setQuery] = useState('');
 
   const filteredServices = services.filter((svc) => {
@@ -78,7 +80,7 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
           <input
             type="text"
             className="w-full p-2.5 pl-10 pr-10 text-xs bg-card/60 border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/50 text-foreground transition-all"
-            placeholder="Search by sermon title, speaker, or date..."
+            placeholder={t('dashboard.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -97,7 +99,7 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="size-4 mr-1 text-primary-foreground">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          New Service
+          {t('dashboard.newService')}
         </Button>
       </div>
 
@@ -108,9 +110,9 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
             </svg>
           </div>
-          <h3 className="text-base font-bold text-foreground">No Services Found</h3>
+          <h3 className="text-base font-bold text-foreground">{t('dashboard.emptyTitle')}</h3>
           <p className="text-xs text-muted-foreground mt-2 max-w-xs mx-auto">
-            Try adjusting your search query or waiting for Telegram payload.
+            {t('dashboard.emptyBody')}
           </p>
         </div>
       ) : (
@@ -123,7 +125,7 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
               // ignore
             }
             const speaker = parsed?.sermon?.speaker || '';
-            const title = parsed?.sermon?.title || 'Worship Service';
+            const title = parsed?.sermon?.title || t('dashboard.untitled');
             
             const serviceDateFormatted = formatServiceDate(svc.date);
             const createdDateFormatted = formatDateTime(svc.created_at);
@@ -159,7 +161,7 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
                   
                   <div className="pt-4 border-t border-border/60 mt-5 flex justify-between items-center text-[10px] text-muted-foreground">
                     <span>
-                      Generated: {createdDateFormatted} by PicoClaw
+                      {t('dashboard.generatedBy').replace('{when}', createdDateFormatted)}
                     </span>
                   </div>
                 </div>

@@ -74,6 +74,23 @@ func (s *Server) postWebhook(w http.ResponseWriter, r *http.Request) {
 	parsedJSON, _ := json.Marshal(parsed)
 	urls := plan.CoerceImageURLs(body["images"])
 	imagesJSON, _ := json.Marshal(urls)
+	var existingID int
+	err = s.DB.QueryRow(`SELECT id FROM services WHERE date = ?`, serviceDate).Scan(&existingID)
+	if err == nil {
+		snap, loadErr := s.loadServiceSnapshot(existingID)
+		if loadErr != nil {
+			log.Printf("Error processing webhook: %v", loadErr)
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		writeWebhookConflict(w, snap, webhookDateConflictMsg)
+		return
+	}
+	if err != sql.ErrNoRows {
+		log.Printf("Error processing webhook: %v", err)
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
 	tx, err := s.DB.Begin()
 	if err != nil {
 		log.Printf("Error processing webhook: %v", err)
@@ -81,49 +98,26 @@ func (s *Server) postWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
-	var existingID int
-	err = tx.QueryRow(`SELECT id FROM services WHERE date = ?`, serviceDate).Scan(&existingID)
-	updated := false
-	serviceID := 0
-	if err == nil {
-		if _, err := tx.Exec(
-			`UPDATE services SET raw_payload = ?, parsed_data = ?, images_payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-			rawPayload, string(parsedJSON), imagesJSON, existingID,
-		); err != nil {
-			log.Printf("Error processing webhook: %v", err)
-			writeError(w, http.StatusInternalServerError, "Internal Server Error")
-			return
-		}
-		serviceID = existingID
-		updated = true
-	} else if err == sql.ErrNoRows {
-		res, err := tx.Exec(
-			`INSERT INTO services (date, raw_payload, parsed_data, images_payload, updated_at)
-			 VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-			serviceDate, rawPayload, string(parsedJSON), imagesJSON,
-		)
-		if err != nil {
-			log.Printf("Error processing webhook: %v", err)
-			writeError(w, http.StatusInternalServerError, "Internal Server Error")
-			return
-		}
-		id, _ := res.LastInsertId()
-		serviceID = int(id)
-	} else {
+	res, err := tx.Exec(
+		`INSERT INTO services (date, raw_payload, parsed_data, images_payload, updated_at)
+		 VALUES (?, ?, ?, ?, `+db.StampNowSQL+`)`,
+		serviceDate, rawPayload, string(parsedJSON), imagesJSON,
+	)
+	if err != nil {
 		log.Printf("Error processing webhook: %v", err)
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
+	id, _ := res.LastInsertId()
+	serviceID := int(id)
 	if err := tx.Commit(); err != nil {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	if !updated {
-		if err := db.CloneRegistryToNewService(s.DB, serviceID); err != nil {
-			log.Printf("Error cloning registry for webhook service: %v", err)
-			writeError(w, http.StatusInternalServerError, "Internal Server Error")
-			return
-		}
+	if err := db.CloneRegistryToNewService(s.DB, serviceID); err != nil {
+		log.Printf("Error cloning registry for webhook service: %v", err)
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
 	}
 	announcementsAdded := 0
 	if announcementURLs != nil {
@@ -132,7 +126,8 @@ func (s *Server) postWebhook(w http.ResponseWriter, r *http.Request) {
 			_ = s.DB.QueryRow(`SELECT COALESCE(MAX(sort_order), -1) + 1 FROM announcement_items`).Scan(&order)
 			for _, u := range announcementURLs {
 				if _, err := s.DB.Exec(
-					`INSERT INTO announcement_items (image_url, service_id, sort_order) VALUES (?, ?, ?)`,
+					`INSERT INTO announcement_items (image_url, service_id, sort_order, updated_at)
+					 VALUES (?, ?, ?, `+db.StampNowSQL+`)`,
 					u, serviceID, order,
 				); err == nil {
 					announcementsAdded++
@@ -148,21 +143,16 @@ func (s *Server) postWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	msgOut := "Webhook received and processed successfully"
-	statusOut := http.StatusCreated
-	if updated {
-		msgOut = "Webhook received; existing service for date updated"
-		statusOut = http.StatusOK
-	}
-	writeJSON(w, statusOut, map[string]any{
-		"message":           msgOut,
-		"id":                serviceID,
-		"date":              serviceDate,
-		"parsedData":        parsed,
-		"resolvedHymns":     resolved,
-		"failedHymnNumbers": parsed.FailedHymnNumbers,
-		"imagesCount":       len(urls),
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"message":            msgOut,
+		"id":                 serviceID,
+		"date":               serviceDate,
+		"parsedData":         parsed,
+		"resolvedHymns":      resolved,
+		"failedHymnNumbers":  parsed.FailedHymnNumbers,
+		"imagesCount":        len(urls),
 		"announcementsAdded": announcementsAdded,
-		"updated":           updated,
+		"updated":            false,
 	})
 }
 
@@ -177,11 +167,12 @@ func (s *Server) handleCorrection(w http.ResponseWriter, body map[string]any) {
 		writeError(w, http.StatusBadRequest, "Correction requires text and/or fields")
 		return
 	}
-	parsed := parse.ParseRundown(s.DB, text)
-	var existing struct {
-		ID   int
-		Date string
+	token := concurrencyToken(nil, body)
+	if token == "" {
+		writeError(w, http.StatusBadRequest, requiredUpdatedAtMsg)
+		return
 	}
+	parsed := parse.ParseRundown(s.DB, text)
 	dateRaw := asString(body["date"])
 	serviceID, _ := asPositiveInt(body["serviceId"])
 	if serviceID == 0 {
@@ -189,13 +180,13 @@ func (s *Server) handleCorrection(w http.ResponseWriter, body map[string]any) {
 	}
 	var err error
 	if serviceID > 0 {
-		err = s.DB.QueryRow(`SELECT id, date FROM services WHERE id = ?`, serviceID).Scan(&existing.ID, &existing.Date)
+		err = s.DB.QueryRow(`SELECT id FROM services WHERE id = ?`, serviceID).Scan(&serviceID)
 	} else if dateRaw != "" {
 		date := dateRaw
 		if parsed.Date != nil {
 			date = *parsed.Date
 		}
-		err = s.DB.QueryRow(`SELECT id, date FROM services WHERE date = ?`, date).Scan(&existing.ID, &existing.Date)
+		err = s.DB.QueryRow(`SELECT id FROM services WHERE date = ?`, date).Scan(&serviceID)
 	} else {
 		writeError(w, http.StatusNotFound, "Service not found for correction")
 		return
@@ -204,18 +195,42 @@ func (s *Server) handleCorrection(w http.ResponseWriter, body map[string]any) {
 		writeError(w, http.StatusNotFound, "Service not found for correction")
 		return
 	}
-	newDate := existing.Date
+	snap, err := s.loadServiceSnapshot(serviceID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "Service not found for correction")
+		return
+	}
+	if token != snap.UpdatedAt {
+		writeWebhookConflict(w, snap, serviceConflictMsg)
+		return
+	}
+	newDate := snap.Date
 	if parsed.Date != nil && *parsed.Date != "" {
 		newDate = *parsed.Date
 	}
 	parsedJSON, _ := json.Marshal(parsed)
-	if _, err := s.DB.Exec(
-		`UPDATE services SET date = ?, raw_payload = ?, parsed_data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-		newDate, text, string(parsedJSON), existing.ID,
-	); err != nil {
+	res, err := s.DB.Exec(
+		`UPDATE services SET date = ?, raw_payload = ?, parsed_data = ?, updated_at = `+db.StampNowSQL+`
+		  WHERE id = ? AND COALESCE(updated_at, created_at) = ?`,
+		newDate, text, string(parsedJSON), serviceID, token,
+	)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		latest, loadErr := s.loadServiceSnapshot(serviceID)
+		if loadErr != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		writeWebhookConflict(w, latest, serviceConflictMsg)
+		return
+	}
+	var updatedAt string
+	_ = s.DB.QueryRow(`SELECT COALESCE(updated_at, created_at) FROM services WHERE id = ?`, serviceID).Scan(&updatedAt)
+	updatedAt = formatTimestamp(updatedAt)
 	resolved := []map[string]any{}
 	for _, it := range parsed.Items {
 		if it.Type == "hymn" {
@@ -225,12 +240,13 @@ func (s *Server) handleCorrection(w http.ResponseWriter, body map[string]any) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"message":           "Service correction applied",
 		"action":            "correct",
-		"id":                existing.ID,
+		"id":                serviceID,
 		"date":              newDate,
 		"parsedData":        parsed,
 		"resolvedHymns":     resolved,
 		"failedHymnNumbers": parsed.FailedHymnNumbers,
 		"updated":           true,
+		"updated_at":        updatedAt,
 	})
 }
 

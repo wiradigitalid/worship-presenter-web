@@ -19,6 +19,7 @@ import {
   type SlidePreviewItem,
 } from '@/components/SlidePreviewList';
 import { ImageUploadField } from '@/components/ImageUploadField';
+import DeleteButton from '@/operator/DeleteButton';
 import type { PreviewEntry } from '@/lib/artifacts/preview-model';
 import {
   buildFieldsPayload,
@@ -1014,13 +1015,16 @@ export default function EditForm({
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 pt-4 border-t border-border/80">
+      <div className="flex justify-between gap-3 pt-4 border-t border-border/80">
+        <DeleteButton id={id} updatedAt={updatedAt} />
+        <div className="flex gap-3">
         <Button variant="outline" onClick={resetFromProps} disabled={isSaving}>
           Cancel
         </Button>
         <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? 'Saving & Parsing...' : 'Save & Regenerate'}
         </Button>
+        </div>
       </div>
     </div>
   );

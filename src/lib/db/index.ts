@@ -13,10 +13,12 @@ import {
 import {
   ARTIFACT_REGISTRY_BOOTSTRAP_KEY,
   bootstrapArtifactRegistry,
+  CURRENT_DATA_VERSION,
   DATA_VERSION_KEY,
 } from '../registry/seed';
 import { migrateServiceBoundSnapshots } from '../registry/service-snapshot';
 import { ARTIFACT_ENTRY_KEYS } from '../registry/types';
+import { STAMP_NOW_SQL } from './stamp';
 
 let db: Database.Database | null = null;
 
@@ -431,6 +433,7 @@ export function getDb() {
         service_id INTEGER,
         sort_order INTEGER NOT NULL DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT,
         FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
       );
 
@@ -594,6 +597,16 @@ export function getDb() {
     } catch (e) {
       if (!/duplicate column/i.test(String(e))) throw e;
     }
+    try {
+      db.prepare('ALTER TABLE announcement_items ADD COLUMN updated_at TEXT').run();
+      db.prepare(
+        `UPDATE announcement_items
+            SET updated_at = COALESCE(created_at, ${STAMP_NOW_SQL})
+          WHERE updated_at IS NULL OR updated_at = ''`
+      ).run();
+    } catch (e) {
+      if (!/duplicate column/i.test(String(e))) throw e;
+    }
     migrateHymnsForSongBooks(db);
     migrateBibleVersesTranslationCode(db);
 
@@ -608,6 +621,7 @@ export function getDb() {
     // --- first-boot bootstrap (AD-17) ---
     bootstrapArtifactRegistry(db);
     migrateServiceBoundSnapshots(db);
+    migrateDataVersionToCurrent(db);
 
     bootstrapAdminIfEmpty(db);
     } catch (err) {
@@ -618,6 +632,19 @@ export function getDb() {
   }
 
   return db;
+}
+
+/** Story 25.2: stamp the write-path grain change without rewriting rows. */
+function migrateDataVersionToCurrent(database: Database.Database) {
+  const row = database
+    .prepare(`SELECT value FROM settings WHERE key = ?`)
+    .get(DATA_VERSION_KEY) as { value: string } | undefined;
+  if (!row) return;
+  const version = Number(row.value);
+  if (!Number.isFinite(version) || version >= CURRENT_DATA_VERSION) return;
+  database
+    .prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`)
+    .run(DATA_VERSION_KEY, String(CURRENT_DATA_VERSION));
 }
 
 /** When accounts is empty and bootstrap env is set, seed the first admin. */

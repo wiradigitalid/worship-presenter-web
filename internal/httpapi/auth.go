@@ -194,21 +194,28 @@ func (s *Server) postChangePassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getSession(w http.ResponseWriter, r *http.Request) {
+	locale := s.uiLocale()
 	sess := sessionFrom(r)
 	if sess == nil {
-		writeError(w, http.StatusUnauthorized, "Unauthorized")
+		writeJSON(w, http.StatusUnauthorized, map[string]any{
+			"error":      "Unauthorized",
+			"ui_locale":  locale,
+		})
 		return
 	}
 	acct, err := auth.LookupAccount(s.DB, sess.UID)
 	if err != nil || acct == nil {
-		writeError(w, http.StatusUnauthorized, "Unauthorized")
+		writeJSON(w, http.StatusUnauthorized, map[string]any{
+			"error":      "Unauthorized",
+			"ui_locale":  locale,
+		})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"username":  acct.Username,
 		"role":      acct.Role,
 		"id":        acct.ID,
-		"ui_locale": s.uiLocale(),
+		"ui_locale": locale,
 	})
 }
 
