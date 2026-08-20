@@ -140,6 +140,20 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'admin.accounts.roleFailed': 'Failed to update role',
   'admin.accounts.resetFailed': 'Failed to reset password',
   'admin.accounts.deleteFailed': 'Failed to delete',
+  'admin.section.accountManagement': 'Account management',
+  'admin.section.accountManagement.description':
+    'Create operator or admin accounts, change roles, and reset passwords.',
+  'admin.section.worship': 'Worship settings',
+  'admin.section.worship.description':
+    'Slide transition and the default bible translation used by scripture lookups.',
+  'admin.section.system': 'System settings',
+  'admin.section.system.description':
+    'PPTX cache retention and the language used by hub screens and controls.',
+  'admin.accounts.colUsername': 'Username',
+  'admin.accounts.colRole': 'Role',
+  'admin.accounts.colCreated': 'Created',
+  'admin.accounts.colPassword': 'Reset password',
+  'admin.accounts.colActions': '',
   'form.collision.title': 'Date Collision Warning',
   'form.collision.body':
     'A worship service for date {date} already exists.',

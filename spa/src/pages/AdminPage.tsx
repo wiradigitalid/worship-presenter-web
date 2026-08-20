@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import AccountsManager from '@/operator/admin/AccountsManager';
-import RetentionSettings from '@/operator/admin/RetentionSettings';
-import TransitionSettings from '@/operator/admin/TransitionSettings';
-import BibleTranslationSettings from '@/operator/admin/BibleTranslationSettings';
-import UiLocaleSettings from '@/operator/admin/UiLocaleSettings';
+import WorshipSettings from '@/operator/admin/WorshipSettings';
+import SystemSettings from '@/operator/admin/SystemSettings';
 import { useSession } from '../lib/auth/SessionProvider';
 
 export default function AdminPage() {
@@ -26,13 +24,15 @@ export default function AdminPage() {
   return (
     <div className="space-y-8">
       <AccountsManager initialAccounts={accounts} />
-      <RetentionSettings initialDays={settings.pptx_retention_days} />
-      <TransitionSettings initialTransition={settings.slide_transition} />
-      <BibleTranslationSettings
-        initialCode={settings.default_bible_translation}
-        initialInstalled={Boolean(settings.default_bible_translation_installed)}
+      <WorshipSettings
+        initialTransition={settings.slide_transition}
+        initialBibleCode={settings.default_bible_translation}
+        initialBibleInstalled={Boolean(settings.default_bible_translation_installed)}
       />
-      <UiLocaleSettings initialLocale={settings.ui_locale} />
+      <SystemSettings
+        initialDays={settings.pptx_retention_days}
+        initialLocale={settings.ui_locale}
+      />
     </div>
   );
 }

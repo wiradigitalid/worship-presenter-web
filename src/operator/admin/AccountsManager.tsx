@@ -136,134 +136,154 @@ export default function AccountsManager({
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('admin.accounts.createTitle')}</CardTitle>
-          <CardDescription>
-            {t('admin.accounts.createDescription')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Input
-              placeholder={t('admin.accounts.username')}
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            <Input
-              type="password"
-              placeholder={t('admin.accounts.password')}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="operator">operator</SelectItem>
-                <SelectItem value="admin">admin</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('admin.section.accountManagement')}</CardTitle>
+        <CardDescription>
+          {t('admin.section.accountManagement.description')}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto]">
+          <Input
+            placeholder={t('admin.accounts.username')}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          <Input
+            type="password"
+            placeholder={t('admin.accounts.password')}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+            <SelectTrigger className="w-full sm:w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="operator">operator</SelectItem>
+              <SelectItem value="admin">admin</SelectItem>
+            </SelectContent>
+          </Select>
           <Button onClick={handleCreate} disabled={busy}>
             {t('admin.accounts.create')}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
 
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
+        {error ? (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('admin.accounts.listTitle')}</CardTitle>
-          <CardDescription>
-            {accounts.length === 1
-              ? t('admin.accounts.countOne')
-              : t('admin.accounts.count').replace(
-                  '{n}',
-                  String(accounts.length)
-                )}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {accounts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('admin.accounts.empty')}</p>
-          ) : (
-            accounts.map((a) => (
-              <div
-                key={a.id}
-                className="border-b border-border pb-4 last:border-0 last:pb-0 space-y-2"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{a.username}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {t('admin.accounts.meta')
-                        .replace('{id}', String(a.id))
-                        .replace(
-                          '{when}',
-                          new Date(a.created_at).toLocaleString()
-                        )}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Select
-                      value={a.role}
-                      disabled={busy}
-                      onValueChange={(v) => handleRoleChange(a.id, v as Role)}
-                    >
-                      <SelectTrigger size="sm" className="w-[120px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="operator">operator</SelectItem>
-                        <SelectItem value="admin">admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => handleDelete(a.id, a.username)}
-                    >
-                      {t('admin.accounts.delete')}
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="password"
-                    placeholder={t('admin.accounts.newPassword')}
-                    value={resetPw[a.id] || ''}
-                    onChange={(e) =>
-                      setResetPw((prev) => ({
-                        ...prev,
-                        [a.id]: e.target.value,
-                      }))
-                    }
-                    className="max-w-xs"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => handleResetPassword(a.id)}
-                    className="whitespace-nowrap"
+        <div className="text-xs text-muted-foreground">
+          {accounts.length === 1
+            ? t('admin.accounts.countOne')
+            : t('admin.accounts.count').replace(
+                '{n}',
+                String(accounts.length)
+              )}
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-muted-foreground">
+                <th className="text-left font-medium py-2 pr-3">
+                  {t('admin.accounts.colUsername')}
+                </th>
+                <th className="text-left font-medium py-2 pr-3">
+                  {t('admin.accounts.colRole')}
+                </th>
+                <th className="text-left font-medium py-2 pr-3">
+                  {t('admin.accounts.colCreated')}
+                </th>
+                <th className="text-left font-medium py-2 pr-3">
+                  {t('admin.accounts.colPassword')}
+                </th>
+                <th className="text-right font-medium py-2">
+                  {t('admin.accounts.colActions')}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {accounts.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="py-4 text-center text-muted-foreground"
                   >
-                    {t('admin.accounts.resetPassword')}
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                    {t('admin.accounts.empty')}
+                  </td>
+                </tr>
+              ) : (
+                accounts.map((a) => (
+                  <tr
+                    key={a.id}
+                    className="border-b border-border/60 last:border-0"
+                    title={`id ${a.id}`}
+                  >
+                    <td className="py-3 pr-3 font-medium">{a.username}</td>
+                    <td className="py-3 pr-3">
+                      <Select
+                        value={a.role}
+                        disabled={busy}
+                        onValueChange={(v) => handleRoleChange(a.id, v as Role)}
+                      >
+                        <SelectTrigger size="sm" className="w-[120px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="operator">operator</SelectItem>
+                          <SelectItem value="admin">admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="py-3 pr-3 text-muted-foreground">
+                      {new Date(a.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="py-3 pr-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          type="password"
+                          placeholder={t('admin.accounts.newPassword')}
+                          value={resetPw[a.id] || ''}
+                          onChange={(e) =>
+                            setResetPw((prev) => ({
+                              ...prev,
+                              [a.id]: e.target.value,
+                            }))
+                          }
+                          className="max-w-[180px]"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => handleResetPassword(a.id)}
+                          className="whitespace-nowrap"
+                        >
+                          {t('admin.accounts.resetPassword')}
+                        </Button>
+                      </div>
+                    </td>
+                    <td className="py-3 text-right">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => handleDelete(a.id, a.username)}
+                      >
+                        {t('admin.accounts.delete')}
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

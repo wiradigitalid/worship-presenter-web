@@ -142,6 +142,20 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'admin.accounts.roleFailed': 'Gagal mengubah peran',
   'admin.accounts.resetFailed': 'Gagal mengatur ulang kata sandi',
   'admin.accounts.deleteFailed': 'Gagal menghapus',
+  'admin.section.accountManagement': 'Manajemen akun',
+  'admin.section.accountManagement.description':
+    'Buat akun operator atau admin, ubah peran, dan atur ulang kata sandi.',
+  'admin.section.worship': 'Pengaturan ibadah',
+  'admin.section.worship.description':
+    'Transisi slide dan terjemahan Alkitab default yang dipakai pencarian ayat.',
+  'admin.section.system': 'Pengaturan sistem',
+  'admin.section.system.description':
+    'Retensi cache PPTX dan bahasa yang dipakai layar dan kontrol hub.',
+  'admin.accounts.colUsername': 'Nama pengguna',
+  'admin.accounts.colRole': 'Peran',
+  'admin.accounts.colCreated': 'Dibuat',
+  'admin.accounts.colPassword': 'Atur ulang kata sandi',
+  'admin.accounts.colActions': '',
   'form.collision.title': 'Peringatan tanggal bentrok',
   'form.collision.body':
     'Ibadah untuk tanggal {date} sudah ada.',
