@@ -21,6 +21,7 @@ export function ScriptureRefAutocomplete({
   disabled,
   translation,
   inputClassName,
+  onKeyDown,
 }: {
   value: string;
   onChange: (next: string) => void;
