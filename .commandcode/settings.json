@@ -1,0 +1,12 @@
+{
+  "tasteLearning": false,
+  "permissions": {
+    "allow": [
+      "Shell(npm:*)",
+      "Shell(Select-Object:*)",
+      "powershell"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}
