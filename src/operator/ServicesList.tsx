@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { CircleAlert, Plus, Search, User, X } from 'lucide-react';
 import Link from '@/components/Link';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { useT } from '@/lib/i18n/operator';
 
 interface ServiceRow {
@@ -96,13 +97,16 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
             </Button>
           ) : null}
         </div>
-        <Button
-          render={<Link href="/services/new" />}
-          className="h-auto w-full shrink-0 rounded-xl px-4 py-2.5 shadow-sm hover:shadow-md sm:w-auto"
+        <Link
+          href="/services/new"
+          className={cn(
+            buttonVariants({ variant: 'default' }),
+            'h-auto w-full shrink-0 rounded-xl px-4 py-2.5 shadow-sm hover:shadow-md sm:w-auto'
+          )}
         >
           <Plus className="size-4 shrink-0" aria-hidden />
           {t('dashboard.newService')}
-        </Button>
+        </Link>
       </div>
 
       {filteredServices.length === 0 ? (

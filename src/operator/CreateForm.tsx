@@ -7,12 +7,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Link from '@/components/Link';
+import { cn } from '@/lib/utils';
 import {
   flushPendingHymnCommits,
   HymnNumberAutocomplete,
@@ -57,9 +58,9 @@ export default function CreateForm({
   initialAnnouncements = [],
   hymnIndex = EMPTY_HYMN_INDEX,
 }: {
-  initialAnnouncements: AnnouncementSeed[];
-  hymnIndex: HymnIndexEntry[];
-}) {
+  initialAnnouncements?: AnnouncementSeed[];
+  hymnIndex?: HymnIndexEntry[];
+} = {}) {
   const router = useRouter();
   const { t } = useT();
   const [payload, setPayload] = useState('');
@@ -1009,9 +1010,9 @@ export default function CreateForm({
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t border-border/80">
-        <Button variant="outline" render={<Link href="/" />}>
+        <Link href="/" className={cn(buttonVariants({ variant: 'outline' }), 'h-auto px-4 py-2')}>
           {t('form.cancel')}
-        </Button>
+        </Link>
         <Button
           onClick={() => handleSave(false)}
           disabled={isSaving || !payload.trim()}
