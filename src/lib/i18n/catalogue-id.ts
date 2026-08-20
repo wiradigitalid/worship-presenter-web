@@ -238,6 +238,10 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'form.moveUp': 'Naikkan',
   'form.moveDown': 'Turunkan',
   'form.remove': 'Hapus',
+  'edit.actions.back': '← Kembali ke dasbor',
+  'edit.actions.preview': 'Pratinjau (Slideshow)',
+  'edit.actions.present': 'Presentasikan',
+  'edit.actions.downloadPptx': 'Unduh PPTX',
   'presenter.scripture.title': 'Ayat',
   'presenter.scripture.hint':
     'Sesuai permintaan saja — tidak dipakai untuk slide tema deck.',

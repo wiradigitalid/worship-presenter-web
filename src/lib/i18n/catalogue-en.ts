@@ -236,6 +236,10 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'form.moveUp': 'Move Up',
   'form.moveDown': 'Move Down',
   'form.remove': 'Remove',
+  'edit.actions.back': '← Back to Dashboard',
+  'edit.actions.preview': 'Preview (Slideshow)',
+  'edit.actions.present': 'Present',
+  'edit.actions.downloadPptx': 'Download PPTX',
   'presenter.scripture.title': 'Scripture',
   'presenter.scripture.hint':
     'On-demand only — not used for deck theme slides.',
