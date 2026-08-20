@@ -196,7 +196,83 @@ func computeCtx(serviceDate string, parsed ParsedRundown, media Media) ctx {
 	return c
 }
 
-func nodesFor(id string, c ctx) []node {
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
+func catalogValues(c ctx) map[string]interface{} {
+	out := map[string]interface{}{}
+	if date := firstNonEmpty(c.serviceDate); date != "" {
+		out["date"] = date
+	}
+	verseRef, themeRef := "", ""
+	verseText, themeText := "", ""
+	if c.verseReading != nil {
+		verseRef = ptrStr(c.verseReading.Reference)
+		verseText = c.verseReading.Text
+	}
+	if c.themeVerse != nil {
+		themeRef = ptrStr(c.themeVerse.Reference)
+		themeText = c.themeVerse.Text
+	}
+	if reference := firstNonEmpty(verseRef, themeRef); reference != "" {
+		out["reference"] = reference
+	}
+	if text := firstNonEmpty(verseText, themeText); text != "" {
+		out["text"] = text
+	}
+	if performer := firstNonEmpty(c.specialSong); performer != "" {
+		out["performer"] = performer
+	}
+	if c.sermon != nil {
+		if title := firstNonEmpty(c.sermon.Title); title != "" {
+			out["title"] = title
+		}
+		if speaker := firstNonEmpty(c.sermon.Speaker); speaker != "" {
+			out["speaker"] = speaker
+		}
+	}
+	if c.sermonGraphic != nil {
+		if imageURL := firstNonEmpty(*c.sermonGraphic); imageURL != "" {
+			out["imageUrl"] = imageURL
+		}
+	}
+	if person := firstNonEmpty(c.closingPrayer); person != "" {
+		out["person"] = person
+	}
+	if familyText := firstNonEmpty(c.familyPrayer, c.legacyCombined); familyText != "" {
+		out["familyText"] = familyText
+	}
+	if youthText := firstNonEmpty(c.youthPrayer); youthText != "" {
+		out["youthText"] = youthText
+	}
+	if c.familyPhoto != nil {
+		if photo := firstNonEmpty(*c.familyPhoto); photo != "" {
+			out["familyPhoto"] = photo
+		}
+	}
+	if c.youthPhoto != nil {
+		if photo := firstNonEmpty(*c.youthPhoto); photo != "" {
+			out["youthPhoto"] = photo
+		}
+	}
+	return out
+}
+
+func mergeCatalogValues(c ctx, handler map[string]interface{}) map[string]interface{} {
+	out := catalogValues(c)
+	for key, value := range handler {
+		out[key] = value
+	}
+	return out
+}
+
+func nodesFor(id string, c ctx, snap Snapshot) []node {
 	switch id {
 	case "welcome":
 		return leaf(request{
@@ -387,16 +463,24 @@ func nodesFor(id string, c ctx) []node {
 	case "thank-you":
 		return leaf(request{id: "thank-you", templateID: "thank-you"})
 	default:
+		tmpl, ok := snap.ByID[id]
+		if ok && tmpl.BaseType == "general" {
+			return leaf(request{id: id, templateID: id, values: catalogValues(c)})
+		}
 		return nil
 	}
 }
 
-func hydrateOne(snap Snapshot, r request, group *GroupRef) (*DrawItem, error) {
+func hydrateOne(snap Snapshot, r request, group *GroupRef, c ctx) (*DrawItem, error) {
 	tmpl, ok := snap.ByID[r.templateID]
 	if !ok {
 		return nil, nil
 	}
-	inst, err := hydrateArtifact(tmpl, r.id, r.layoutKey, r.values, group)
+	values := r.values
+	if tmpl.BaseType == "general" {
+		values = mergeCatalogValues(c, r.values)
+	}
+	inst, err := hydrateArtifact(tmpl, r.id, r.layoutKey, values, group)
 	if err != nil {
 		return nil, err
 	}
@@ -408,13 +492,13 @@ func BuildSlidePlan(serviceDate string, parsed ParsedRundown, media Media, snap 
 	c := computeCtx(serviceDate, parsed, media)
 	var items []DrawItem
 	for _, id := range snap.Order {
-		for _, n := range nodesFor(id, c) {
+		for _, n := range nodesFor(id, c, snap) {
 			if n.kind == "group" {
 				g := &GroupRef{ID: n.id, Label: n.label}
 				for _, ch := range n.children {
 					gg := *g
 					gg.Role = ch.role
-					item, err := hydrateOne(snap, ch.req, &gg)
+					item, err := hydrateOne(snap, ch.req, &gg, c)
 					if err != nil {
 						return nil, err
 					}
@@ -424,7 +508,7 @@ func BuildSlidePlan(serviceDate string, parsed ParsedRundown, media Media, snap 
 				}
 				continue
 			}
-			item, err := hydrateOne(snap, n.req, nil)
+			item, err := hydrateOne(snap, n.req, nil, c)
 			if err != nil {
 				return nil, err
 			}

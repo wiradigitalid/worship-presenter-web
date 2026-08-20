@@ -286,7 +286,7 @@ Seed, not an invariant. `package.json` wins on versions.
 ## Structural Seed
 
 System-level dependency direction. The `Service-bound snapshot` node and its two inbound edges
-ship as of W1 (AD-16). Remaining Epic 20 target is create/add, `songset-*` slots, and AD-20 hymn-choice handlers.
+ship as of W1 (AD-16). Remaining Epic 20 target is `songset-*` slots and AD-20 hymn-choice handlers.
 
 ```mermaid
 graph TD
@@ -316,7 +316,7 @@ Registry detail — read *through* the plan, never by a renderer, and never thro
 bootstrap is marker-gated and once-only (Story 20.1, AD-11 / AD-17 / AD-21). W1
 landed the per-service snapshot and its two inbound edges (AD-16): `buildSlidePlan`
 for a persisted Service reads `service_registry_snapshots`; preview still reads
-the live registry. What remains Epic 20 target is create/add, `songset-*` slots,
+the live registry. What remains Epic 20 target is `songset-*` slots
 and AD-20's hymn-choice handlers.
 
 ```mermaid

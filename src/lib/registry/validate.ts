@@ -8,6 +8,7 @@ import {
   type PlaceholderType,
 } from './types';
 import { isRegistryImageRef } from './asset-safety';
+import { catalogEntry, isCatalogPlaceholderKey } from './placeholder-catalog';
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 export const KEBAB_ID = /^[a-z][a-z0-9-]*$/;
@@ -461,6 +462,21 @@ export function validateArtifactTemplate(raw: unknown): ArtifactTemplate {
   };
 
   enforceBaseTypeRules(template);
+  if (template.baseType === 'general') {
+    for (const placeholder of template.placeholders) {
+      if (!isCatalogPlaceholderKey(placeholder.key)) {
+        throw new RegistryValidationError(
+          `placeholder key is not in the catalog: ${placeholder.key}`
+        );
+      }
+      const entry = catalogEntry(placeholder.key);
+      if (entry && placeholder.type !== entry.type) {
+        throw new RegistryValidationError(
+          `placeholder ${placeholder.key} must be type ${entry.type}`
+        );
+      }
+    }
+  }
   return template;
 }
 

@@ -220,9 +220,10 @@ func (s *Server) putArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var storedUpdated, payload, baseType, label string
+	var seedHash sql.NullString
 	err = s.DB.QueryRow(
-		`SELECT updated_at, payload, base_type, label FROM artifact_templates WHERE id = ?`, id,
-	).Scan(&storedUpdated, &payload, &baseType, &label)
+		`SELECT updated_at, payload, base_type, label, seed_hash FROM artifact_templates WHERE id = ?`, id,
+	).Scan(&storedUpdated, &payload, &baseType, &label, &seedHash)
 	if err == sql.ErrNoRows {
 		writeError(w, http.StatusNotFound, "Unknown template: "+id)
 		return
@@ -256,14 +257,48 @@ func (s *Server) putArtifact(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
-	newLabel, _ := body["label"].(string)
+	cleaned, err := plan.ValidateArtifactTemplate(next, s.Root)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var incoming plan.Template
+	if err := json.Unmarshal(cleaned, &incoming); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid JSON")
+		return
+	}
+	if seedHash.Valid && seedHash.String != "" {
+		seedMap, seedErr := loadSeedTemplate(s.Root, id)
+		if seedErr != nil {
+			writeError(w, http.StatusBadRequest, "Unknown template: "+id)
+			return
+		}
+		seedRaw, _ := json.Marshal(seedMap)
+		seedClean, seedErr := plan.ValidateArtifactTemplate(seedRaw, s.Root)
+		if seedErr != nil {
+			log.Printf("Error validating seed template %s: %v", id, seedErr)
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		var seed, existing plan.Template
+		if err := json.Unmarshal(seedClean, &seed); err != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		_ = json.Unmarshal([]byte(payload), &existing)
+		if err := plan.AssertStableAgainstSeed(incoming, seed, existing); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+	newLabel := incoming.Label
 	if newLabel == "" {
 		newLabel = label
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	res, err := s.DB.Exec(
 		`UPDATE artifact_templates SET label = ?, payload = ?, updated_at = ? WHERE id = ? AND updated_at = ?`,
-		newLabel, string(next), now, id, updatedAt,
+		newLabel, string(cleaned), now, id, updatedAt,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")

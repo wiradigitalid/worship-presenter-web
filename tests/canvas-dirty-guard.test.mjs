@@ -364,7 +364,7 @@ test('AC-1: each clearing event is raised on exactly one success path', () => {
   }
 });
 
-test('AC-1: the four explicit-edit handlers set the flag themselves', () => {
+test('AC-1: the five explicit-edit handlers set the flag themselves', () => {
   // Fabric fires `object:added`/`object:removed` for the insert and delete
   // paths, but `obj.set(...)` in `applyTextStyle` and `handleTextContentChange`
   // raises no canvas event at all — relying on the listeners alone would leave
@@ -373,6 +373,7 @@ test('AC-1: the four explicit-edit handlers set the flag themselves', () => {
 
   for (const handler of [
     'insertElement',
+    'insertPlaceholder',
     'handleDeleteSelected',
     'applyTextStyle',
     'handleTextContentChange',

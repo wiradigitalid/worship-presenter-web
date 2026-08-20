@@ -180,6 +180,44 @@ test('validator rejects unknown template fields', () => {
   );
 });
 
+test('General placeholder keys must be in the catalog', () => {
+  const db = getDb();
+  const created = createAuthoredGeneralTemplate(db, {
+    label: 'Catalog board',
+    id: 'catalog-guard-board',
+  });
+  try {
+    const { updatedAt, ...body } = created;
+    assert.throws(
+      () =>
+        updateArtifactTemplate(
+          db,
+          created.id,
+          {
+            ...body,
+            placeholders: [{ key: 'inventedWeekly', type: 'text', required: false }],
+          },
+          updatedAt
+        ),
+      (err) =>
+        err instanceof RegistryValidationError &&
+        /placeholder key is not in the catalog: inventedWeekly/.test(err.message)
+    );
+    const saved = updateArtifactTemplate(
+      db,
+      created.id,
+      {
+        ...body,
+        placeholders: [{ key: 'date', type: 'text', required: false }],
+      },
+      created.updatedAt
+    );
+    assert.equal(saved.placeholders[0]?.key, 'date');
+  } finally {
+    db.prepare(`DELETE FROM artifact_templates WHERE id = ?`).run(created.id);
+  }
+});
+
 test('read-only templates reject mutation', () => {
   const db = getDb();
   const songSet = getArtifactTemplate(db, 'song-set');

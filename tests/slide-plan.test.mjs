@@ -24,6 +24,9 @@ const { buildSlidePlan } = await import(
 const { getDb } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'db', 'index.ts')).href
 );
+const { createAuthoredGeneralTemplate } = await import(
+  pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'store.ts')).href
+);
 
 const sample = fs.readFileSync(
   path.join(__dirname, 'fixtures', 'sample-rundown.txt'),
@@ -273,4 +276,22 @@ test('buildSlidePlan combines Family & Youth on single Slide 56', () => {
   );
   assert.equal(plan.filter((s) => s.id === 'family-photo').length, 0);
   assert.equal(plan.filter((s) => s.id === 'youth-photo').length, 0);
+});
+
+test('authored General without a row handler still appears in the plan', () => {
+  const db = getDb();
+  const created = createAuthoredGeneralTemplate(db, {
+    label: 'Custom board',
+    id: 'custom-plan-leaf',
+  });
+  try {
+    const parsed = parseRundown(sample);
+    const plan = buildSlidePlan('2026-07-11', parsed, []);
+    assert.ok(
+      plan.some((slide) => slide.id === 'custom-plan-leaf'),
+      'an authored General must be a deck leaf even without a ROW_HANDLER'
+    );
+  } finally {
+    db.prepare(`DELETE FROM artifact_templates WHERE id = ?`).run(created.id);
+  }
 });

@@ -12,10 +12,12 @@ import {
   loadServiceRegistrySnapshot,
   serviceHasRegistrySnapshot,
 } from '@/lib/registry/service-snapshot';
+import type { StoredArtifactTemplate } from '@/lib/registry/types';
 import {
   hydrateArtifactFromSnapshot,
   type PlaceholderValues,
 } from '@/lib/artifacts/hydrate';
+import { catalogValuesFromWeekly } from '@/lib/registry/placeholder-catalog';
 import {
   findResolvedText,
   flattenArtifactPlan,
@@ -723,6 +725,34 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
   ],
 };
 
+function catalogInputFromCtx(ctx: PlanContext) {
+  return {
+    serviceDate: ctx.serviceDate,
+    verseReference: ctx.verseReading?.reference ?? undefined,
+    verseText: ctx.verseReading?.text,
+    themeReference: ctx.themeVerse?.reference ?? undefined,
+    themeText: ctx.themeVerse?.text,
+    specialSong: ctx.specialSong,
+    sermonTitle: ctx.sermon?.title,
+    sermonSpeaker: ctx.sermon?.speaker,
+    sermonGraphic: ctx.sermonGraphic,
+    closingPrayer: ctx.closingPrayer,
+    familyPrayer: ctx.familyPrayer || ctx.legacyCombined,
+    youthPrayer: ctx.youthPrayer,
+    familyPhoto: ctx.familyPhoto,
+    youthPhoto: ctx.youthPhoto,
+  };
+}
+
+function mergeGeneralValues(
+  ctx: PlanContext,
+  template: StoredArtifactTemplate | undefined,
+  values: PlaceholderValues | undefined
+): PlaceholderValues | undefined {
+  if (template?.baseType !== 'general') return values;
+  return { ...catalogValuesFromWeekly(catalogInputFromCtx(ctx)), ...values };
+}
+
 /**
  * Ordered artifact requests — the single slide-order authority.
  *
@@ -730,20 +760,39 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
  * order, i.e. `artifact_templates.position` — AC-1, AC-2), not from source
  * order: swapping two positions in the database changes this walk with no
  * TypeScript edit. `ROW_HANDLERS` decides presence/content per row; it never
- * decides placement.
+ * decides placement. An authored General without a handler still becomes a
+ * leaf so create+save is visible in the deck (Story 20.4).
  *
  * Never performs a KJV corpus lookup — theme/verse text comes from the rundown
  * or from the registry template defaults.
  */
 function buildRequestPlan(
   orderedTemplateIds: readonly string[],
-  ctx: PlanContext
+  ctx: PlanContext,
+  snapshot: RegistrySnapshot
 ): RequestNode[] {
   const nodes: RequestNode[] = [];
   for (const id of orderedTemplateIds) {
     const handler = ROW_HANDLERS[id];
-    if (!handler) continue;
-    nodes.push(...handler(ctx));
+    if (handler) {
+      nodes.push(...handler(ctx));
+      continue;
+    }
+    const template = snapshot.get(id);
+    if (template?.baseType !== 'general') continue;
+    const label = template.label;
+    nodes.push(
+      leaf({
+        id,
+        templateId: id,
+        values: catalogValuesFromWeekly(catalogInputFromCtx(ctx)),
+        legacy: (instance) => ({
+          kind: 'body',
+          title: label,
+          lines: derivedLines(instance, label),
+        }),
+      })
+    );
   }
   return nodes;
 }
@@ -751,15 +800,17 @@ function buildRequestPlan(
 function hydrateLeaf(
   snapshot: RegistrySnapshot,
   request: SlideRequest,
+  ctx: PlanContext,
   group?: { id: string; label: string; role: 'title' | 'lyric' }
 ): ArtifactLeafNode {
+  const template = snapshot.get(request.templateId);
   return {
     kind: 'artifact',
     instance: hydrateArtifactFromSnapshot(snapshot, {
       instanceId: request.id,
       templateId: request.templateId,
       layoutKey: request.layoutKey,
-      values: request.values,
+      values: mergeGeneralValues(ctx, template, request.values),
       group,
     }),
   };
@@ -775,15 +826,17 @@ function hydrateLeaf(
 function hydrateLeafOrOmit(
   snapshot: RegistrySnapshot,
   request: SlideRequest,
+  ctx: PlanContext,
   group?: { id: string; label: string; role: 'title' | 'lyric' }
 ): ArtifactLeafNode | null {
   if (!snapshot.has(request.templateId)) return null;
-  return hydrateLeaf(snapshot, request, group);
+  return hydrateLeaf(snapshot, request, ctx, group);
 }
 
 function hydrateRequestPlan(
   requests: RequestNode[],
-  snapshot: RegistrySnapshot
+  snapshot: RegistrySnapshot,
+  ctx: PlanContext
 ): {
   plan: ArtifactNode[];
   legacyById: Map<string, LegacyFields>;
@@ -804,7 +857,7 @@ function hydrateRequestPlan(
     if (node.kind === 'group') {
       const children: ArtifactLeafNode[] = [];
       for (const child of node.children) {
-        const hydrated = hydrateLeafOrOmit(snapshot, child.request, {
+        const hydrated = hydrateLeafOrOmit(snapshot, child.request, ctx, {
           id: node.id,
           label: node.label,
           role: child.role,
@@ -818,7 +871,7 @@ function hydrateRequestPlan(
       continue;
     }
 
-    const hydrated = hydrateLeafOrOmit(snapshot, node.request);
+    const hydrated = hydrateLeafOrOmit(snapshot, node.request, ctx);
     if (!hydrated) continue;
     record(node.request, hydrated.instance);
     plan.push(hydrated);
@@ -857,8 +910,8 @@ export function buildArtifactPlan(
   const snapshot = registryInput(source);
   const orderedIds = [...snapshot.keys()];
   const ctx = computePlanContext(serviceDate, parsedData, images);
-  const requests = buildRequestPlan(orderedIds, ctx);
-  return hydrateRequestPlan(requests, snapshot).plan;
+  const requests = buildRequestPlan(orderedIds, ctx, snapshot);
+  return hydrateRequestPlan(requests, snapshot, ctx).plan;
 }
 
 /**
@@ -875,8 +928,8 @@ export function buildSlidePlan(
   const snapshot = registryInput(source);
   const orderedIds = [...snapshot.keys()];
   const ctx = computePlanContext(serviceDate, parsedData, images);
-  const requests = buildRequestPlan(orderedIds, ctx);
-  const { plan, legacyById } = hydrateRequestPlan(requests, snapshot);
+  const requests = buildRequestPlan(orderedIds, ctx, snapshot);
+  const { plan, legacyById } = hydrateRequestPlan(requests, snapshot, ctx);
 
   return flattenArtifactPlan(plan).map((instance) => {
     const legacy = legacyById.get(instance.instanceId);

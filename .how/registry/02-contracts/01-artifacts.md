@@ -37,7 +37,7 @@ Static `/order` is not a template id (the seed does not ship `order`; create ref
 | Lane | Answer |
 | --- | --- |
 | Authentication | Admin + AD-5 matcher. No session / not Admin → 403 Forbidden. |
-| Validation | AD-15 structure + AD-8 images; kind does not widen (AD-22). Create body is `{ label }` (optional `id` for tests). PUT, PATCH, Reset, and DELETE require `updatedAt`. Reorder body is `{ items: [{ id, updatedAt }, ...] }` covering every live row exactly once. Reset requires a still-live **seeded** row (OQ-24, OQ-15). Authored origin is `seed_hash IS NULL`. |
+| Validation | AD-15 structure + AD-8 images; kind does not widen (AD-22). Create body is `{ label }` (optional `id` for tests). PUT, PATCH, Reset, and DELETE require `updatedAt`. A rejected PUT names the failing property (`Unknown field: template.x`, `layouts.default.elements[0].style.fontSize must be positive`). General placeholder keys must be in the Placeholder Catalog. Reorder body is `{ items: [{ id, updatedAt }, ...] }` covering every live row exactly once. Reset requires a still-live **seeded** row (OQ-24, OQ-15). Authored origin is `seed_hash IS NULL`. |
 | Error handling | Envelope in `cross-cutting.md`. Fail closed on a corrupt row (AD-17). 400 validation / membership mismatch / authored Reset. 404 id. Stale write: 409. Duplicate create id: 409. Reset on a gone id: 404, not a revive. |
 | Rate limiting | `none` — Admin-only on one host; not a public surface. |
 | Idempotency | GET is safe. PUT same value is safe. Repeated Reset to the same seed is safe on a still-live seed row. Reset on a gone id is 404, not undelete. DELETE of a gone id is 404. PUT order with the same membership and tokens is a write that still refreshes tokens. |
@@ -47,6 +47,7 @@ Static `/order` is not a template id (the seed does not ship `order`; create ref
 | Condition | Response | Caller should |
 | --- | --- | --- |
 | Payload does not parse | fail closed, not a seed substitute | Fix the row or Reset (Reset only if the row is still live and has a seed) |
+| Unknown field or invalid property on PUT | 400 naming the property | Fix the named field |
 | Placeholder rebound outside authority | 400 | Restore the server-owned set |
 | Stale `updatedAt` on PUT, PATCH, Reset, DELETE, or order | 409 | Re-read, then retry |
 | Empty create/rename label | 400 `label is required` | Send a 1–80 character label |

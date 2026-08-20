@@ -217,6 +217,69 @@ describe('registry against Go', { concurrency: 1 }, () => {
     assert.equal(dup.status, 409);
   });
 
+  test('PUT names the failing property and rejects invented General keys', async () => {
+    const created = await json(`${base}/api/admin/artifacts`, 'POST', {
+      label: 'Validate board',
+      id: 'custom-story-20-4',
+    });
+    assert.equal(created.status, 201, JSON.stringify(created.body));
+
+    const unknown = await json(
+      `${base}/api/admin/artifacts/custom-story-20-4`,
+      'PUT',
+      { ...created.body, extraField: true }
+    );
+    assert.equal(unknown.status, 400);
+    assert.match(String(unknown.body.error || ''), /Unknown field: template.extraField/);
+
+    const badFont = await json(
+      `${base}/api/admin/artifacts/custom-story-20-4`,
+      'PUT',
+      {
+        ...created.body,
+        layouts: {
+          default: {
+            aspectRatio: '16:9',
+            backgroundColor: '#000000',
+            elements: [
+              {
+                id: 'usr-1',
+                type: 'text',
+                required: false,
+                x: 1,
+                y: 1,
+                w: 10,
+                h: 10,
+                zIndex: 0,
+                content: 'Hi',
+                style: { fontSize: 0, fontColor: '#FFFFFF' },
+              },
+            ],
+          },
+        },
+      }
+    );
+    assert.equal(badFont.status, 400);
+    assert.match(
+      String(badFont.body.error || ''),
+      /layouts\.default\.elements\[0\]\.style\.fontSize must be positive/
+    );
+
+    const invented = await json(
+      `${base}/api/admin/artifacts/custom-story-20-4`,
+      'PUT',
+      {
+        ...created.body,
+        placeholders: [{ key: 'inventedWeekly', type: 'text', required: false }],
+      }
+    );
+    assert.equal(invented.status, 400);
+    assert.match(
+      String(invented.body.error || ''),
+      /placeholder key is not in the catalog: inventedWeekly/
+    );
+  });
+
   test('Admin rename updates every kind and both label homes', async () => {
     const templates = await list();
     const songSet = templates.find((t) => t.id === 'song-set');

@@ -4,9 +4,14 @@ import type {
   ArtifactLayout,
   ArtifactTemplateSummary,
   CanvasElement,
+  PlaceholderDefinition,
   StoredArtifactTemplate,
 } from '@/lib/registry/types';
 import { isCanvasAuthorable, kindChipLabel } from '@/lib/registry/types';
+import {
+  PLACEHOLDER_CATALOG,
+  catalogEntry,
+} from '@/lib/registry/placeholder-catalog';
 import {
   beforeUnloadGuard,
   CANVAS_MUTATION_EVENTS,
@@ -17,6 +22,7 @@ import {
 } from '@/lib/canvas-dirty-guard';
 import { useNavigationBlocker } from '@/components/navigation-blocker';
 import { useT } from '@/lib/i18n/operator';
+import type { I18nKey } from '@/lib/i18n';
 
 const CANVAS_WIDTH = 960;
 const CANVAS_HEIGHT = 540;
@@ -54,6 +60,10 @@ const MAX_FONT_SIZE = 200;
  */
 const MIN_ELEMENT_W_PCT = pxToPct(1, CANVAS_WIDTH);
 const MIN_ELEMENT_H_PCT = pxToPct(1, CANVAS_HEIGHT);
+
+function placeholderLabelKey(key: string): I18nKey {
+  return `admin.artifacts.placeholder.${key}` as I18nKey;
+}
 
 type FabricModule = typeof import('fabric');
 
@@ -379,7 +389,13 @@ export default function ArtifactEditor() {
   const [textContent, setTextContent] = useState('');
   /** Elements authored in this session, not yet persisted. */
   const addedElementsRef = useRef<Map<string, CanvasElement>>(new Map());
+  const addedPlaceholdersRef = useRef<Map<string, PlaceholderDefinition>>(
+    new Map()
+  );
   const insertCounterRef = useRef(0);
+  const [insertPlaceholderKey, setInsertPlaceholderKey] = useState(
+    PLACEHOLDER_CATALOG[0]?.key ?? 'date'
+  );
   /**
    * Whether the mounted canvas carries authoring the server has not seen.
    *
@@ -467,6 +483,7 @@ export default function ArtifactEditor() {
       // A fresh canvas means a fresh authoring session: anything added before is
       // either persisted (and back in layout.elements) or discarded.
       addedElementsRef.current = new Map();
+      addedPlaceholdersRef.current = new Map();
       const layout = getEditableLayout(template);
       if (!layout) {
         fabricCanvasRef.current?.dispose();
@@ -639,6 +656,85 @@ export default function ArtifactEditor() {
       // all, so the set only reads consistently if all four are explicit. Not
       // dead code; deleting it makes this handler depend on a registration two
       // hundred lines away.
+      markDirty();
+      setStatus('idle');
+      setMessage(null);
+    },
+    [template, fontColor, fontSize, syncSelection, markDirty]
+  );
+
+  const insertPlaceholder = useCallback(
+    async (key: string) => {
+      const canvas = fabricCanvasRef.current;
+      const layout = template ? getEditableLayout(template) : null;
+      const entry = catalogEntry(key);
+      if (!template || !canvas || !layout || !entry) return;
+
+      const alreadyDeclared =
+        template.placeholders.some((placeholder) => placeholder.key === key) ||
+        addedPlaceholdersRef.current.has(key);
+      if (!alreadyDeclared) {
+        addedPlaceholdersRef.current.set(key, {
+          key: entry.key,
+          type: entry.type,
+          required: false,
+        });
+      }
+
+      const usedIds = new Set<string>([
+        ...layout.elements.map((element) => element.id),
+        ...addedElementsRef.current.keys(),
+        ...canvas
+          .getObjects()
+          .map(getElementId)
+          .filter((id): id is string => typeof id === 'string'),
+      ]);
+      const id = nextElementId(usedIds, insertCounterRef.current);
+      const step = insertCounterRef.current % INSERT_CASCADE_STEPS;
+      insertCounterRef.current += 1;
+
+      const size =
+        entry.type === 'image' ? NEW_SHAPE_SIZE_PX : NEW_TEXT_SIZE_PX;
+      const offset = step * INSERT_CASCADE_PX;
+      const leftPx = (CANVAS_WIDTH - size.w) / 2 + offset;
+      const topPx = (CANVAS_HEIGHT - size.h) / 2 + offset;
+      const maxZ = [
+        ...layout.elements,
+        ...addedElementsRef.current.values(),
+      ].reduce((acc, element) => Math.max(acc, element.zIndex), -1);
+
+      const element: CanvasElement = {
+        id,
+        type: entry.type === 'image' ? 'image-placeholder' : 'text',
+        required: false,
+        x: pxToPct(leftPx, CANVAS_WIDTH),
+        y: pxToPct(topPx, CANVAS_HEIGHT),
+        w: pxToPct(size.w, CANVAS_WIDTH),
+        h: pxToPct(size.h, CANVAS_HEIGHT),
+        zIndex: maxZ + 1,
+        placeholderKey: entry.key,
+        ...(entry.type === 'image'
+          ? {}
+          : {
+              style: {
+                fontFamily: 'Arial',
+                fontSize,
+                fontColor,
+                fontWeight: 'normal',
+                textAlign: 'left' as const,
+              },
+            }),
+      };
+
+      const fabric = await import('fabric');
+      if (fabricCanvasRef.current !== canvas) return;
+
+      addedElementsRef.current.set(id, element);
+      const obj = elementToFabricObject(fabric, element, true);
+      canvas.add(obj);
+      canvas.setActiveObject(obj);
+      canvas.requestRenderAll();
+      syncSelection(canvas);
       markDirty();
       setStatus('idle');
       setMessage(null);
@@ -842,9 +938,14 @@ export default function ArtifactEditor() {
         addedElementsRef.current
       );
       const { updatedAt, ...templateBody } = template;
+      const extraPlaceholders = [...addedPlaceholdersRef.current.values()].filter(
+        (placeholder) =>
+          !template.placeholders.some((existing) => existing.key === placeholder.key)
+      );
       const payload = {
         ...templateBody,
         label: draftLabel.trim() || template.label,
+        placeholders: [...template.placeholders, ...extraPlaceholders],
         layouts: {
           ...templateBody.layouts,
           default: {
@@ -1355,6 +1456,32 @@ export default function ArtifactEditor() {
                     className="rounded-lg border border-border px-3 py-1.5 text-sm disabled:opacity-50"
                   >
                     {t('admin.artifacts.addRect')}
+                  </button>
+                  <label className="flex items-center gap-2 text-sm">
+                    <span className="sr-only">{t('admin.artifacts.insertPlaceholder')}</span>
+                    <select
+                      value={insertPlaceholderKey}
+                      onChange={(event) => setInsertPlaceholderKey(event.target.value)}
+                      disabled={busy}
+                      aria-label={t('admin.artifacts.insertPlaceholder')}
+                      className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm disabled:opacity-50"
+                    >
+                      {PLACEHOLDER_CATALOG.map((entry) => (
+                        <option key={entry.key} value={entry.key}>
+                          {t(placeholderLabelKey(entry.key))}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void insertPlaceholder(insertPlaceholderKey);
+                    }}
+                    disabled={busy}
+                    className="rounded-lg border border-border px-3 py-1.5 text-sm disabled:opacity-50"
+                  >
+                    {t('admin.artifacts.insertPlaceholder')}
                   </button>
                   <button
                     type="button"
