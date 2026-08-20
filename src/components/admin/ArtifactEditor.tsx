@@ -414,11 +414,18 @@ export default function ArtifactEditor() {
     const height = shell.clientHeight;
     if (width <= 0 || height <= 0) return;
     const scale = Math.min(width / CANVAS_WIDTH, height / CANVAS_HEIGHT);
-    canvas.setDimensions(
-      { width: CANVAS_WIDTH * scale, height: CANVAS_HEIGHT * scale },
-      { cssOnly: true }
-    );
+    // One scaling mechanism only: keep the logical canvas at 960×540 and let
+    // Fabric's zoom scale the paint. Resize the wrapper element (the
+    // `.canvas-container` Fabric auto-generates) so the visible stage fills
+    // the shell — `cssOnly` setDimensions doubly scales content and leaves
+    // the wrapper at 960×540, which is what produced the tiny-corner preview.
     canvas.setZoom(scale);
+    const wrapper = canvas.wrapperEl;
+    if (wrapper) {
+      wrapper.style.width = `${CANVAS_WIDTH * scale}px`;
+      wrapper.style.height = `${CANVAS_HEIGHT * scale}px`;
+    }
+    canvas.calcOffset();
     canvas.requestRenderAll();
   }, []);
   const [insertPlaceholderKey, setInsertPlaceholderKey] = useState(
@@ -597,6 +604,12 @@ export default function ArtifactEditor() {
 
       canvas.requestRenderAll();
       fitCanvasToShell();
+      // `aspect-video` may not have a computed height on the first frame, so
+      // retry once on the next tick. Without this, the shell stays at
+      // height=0 → scale=0 and the canvas collapses to a thread of pixels.
+      if (typeof window !== 'undefined') {
+        window.requestAnimationFrame(() => fitCanvasToShell());
+      }
     }
 
     mountCanvas().catch((err) => {
