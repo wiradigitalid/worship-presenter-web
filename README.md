@@ -121,7 +121,7 @@ If you are adapting this for a different hymnal, add your corpus at `data/song-b
 
 ## Deployment
 
-It runs anywhere Node 22 runs, including a Docker container — see [`.constitution/project/deployment.md`](.constitution/project/deployment.md). SQLite, uploaded images and the deck cache all need durable paths; that file covers which.
+Build the Go API and SPA, run `./api` (or `npm start`) on a host with Node 22 on `PATH` for the PPTX worker — see [`.constitution/project/deployment.md`](.constitution/project/deployment.md). SQLite, uploaded images and the deck cache all need durable host paths; that file covers which. Dev deploy to `presenter-dev.bic.my.id` is systemd + nginx on a VPS (runbook lives in the devops repo).
 
 ## Project history
 

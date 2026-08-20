@@ -24,4 +24,4 @@ GET pptx → OpenXML file.
 
 ## Notes
 
-As-built until cutover: `src/lib/pptx.ts` in the Next.js process. Target (DEC-003 / AD-30): Node child that receives a finished plan from the Go API, draws PPTX, exits. MUST NOT open SQLite.
+As-built (DEC-003 / AD-30): Node child exec'd by the Go API from `src/lib/pptx.ts` / `workers/pptx/`. Receives a finished plan, draws PPTX, exits. MUST NOT open SQLite.

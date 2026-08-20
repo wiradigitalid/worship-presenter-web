@@ -122,7 +122,7 @@ Live BMad workspace. Open implementation debt: `implementation-artifacts/deferre
 
 - `.work/` exists at the repo root (committed scratch) and is not one of the five corpus roots. Purpose is stated in `AGENTS.md`; not unclaimed.
 - `01-ux/` is absent on all three PCs; operator chrome tokens live in `.how/_platform/design-system.md` (DEC-001).
-- `inventory.py` still reads Next.js `src/` (as-built); Host/Screen cells name DEC-003 containers.
+- `inventory.py` reads `cmd/api`, `spa/`, and shared `src/`; Host/Screen cells name DEC-003 containers.
 - DEC-003 retired container `web`; former `c4-l3-web.md` annotations live in `c4-l3-api.md` and `c4-l3-spa.md`.
 - The `weekly-sabbath` PRD folder was withdrawn; history: `.control/memlog/prd-weekly-sabbath.md`.
 

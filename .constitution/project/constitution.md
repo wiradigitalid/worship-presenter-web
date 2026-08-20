@@ -42,7 +42,7 @@ What else is particular to this repo:
 - The legacy private repository `bic-pptx-workflow` is frozen. New work MUST happen here.
 - `3p.md` MUST NOT be created here. Operational engagement memory lives outside.
 - `.work/` is committed scratch, emptied when a task closes. It MUST NOT be imported by `src/`,
-  and `.dockerignore` keeps it out of the image. Congregation data MUST NOT land there.
+  MUST be excluded when searching for code, and MUST stay out of deploy payloads. Congregation data MUST NOT land there.
 - `docs/` holds operator-facing material that predates the method. It is inventory to
   sort, not a second home for corpus or rules. Until a slot owns a file, it stays there
   or moves to `_bmad-output/prior-knowledge/` — it MUST NOT be copied into `.what/` or

@@ -14,7 +14,7 @@ reviewed:
 
 # SDD — Hub
 
-Target: Hub UI on `spa`, APIs and plan on `api`, PPTX on `pptx-worker` (DEC-003 / AD-30). As-built until cutover still lives in Next.js `src/`.
+Target: Hub UI on `spa`, APIs and plan on `api`, PPTX on `pptx-worker` (DEC-003 / AD-30). As-built: Go API in `cmd/api`, operator UI in `spa/`, shared modules in `src/`.
 
 ## Decision Summary · [outline]
 
@@ -50,7 +50,7 @@ Quotes are the spine **Rule** sentences. Full text in `.how/_platform/ARCHITECTU
 | --- | --- | --- |
 | AD-1 | Operators use a zero-install **Web Hub** for review/run-sheet. **Phase 1** presents on Sabbath from a downloadable offline **PPTX**. | PPTX download is the guarantee; the slideshow is a complementary link. |
 | AD-2 | The picoclaw skill integration logic, the Go API, the React SPA, and the Node PPTX worker reside in a single repository and deploy as a cohesive unit. | One repo; Hub lives in `api` + `spa` + `pptx-worker`. |
-| AD-4 | Production is one Docker Compose unit on the home-PC LiveServer | Durable `DB_PATH` on the Go process. |
+| AD-4 | Production is one always-on Go API process on host storage (systemd on VPS / LiveServer behind a tunnel) | Durable `DB_PATH` on the Go process. |
 | AD-5 | The Go API has one request gate, and its path matcher **is** the authorization boundary — anything it does not match is served with no session check at all | `/api/webhook` is `WEBHOOK_SECRET` only. Session expiry at save/delete is this gate's 401 before the handler (OQ-23). As-built until cutover: `internal/gate`. |
 | AD-3 | The API must expose a standard JSON interface for service generation that is agnostic to the input mechanism (Telegram/picoclaw). | Hub form writes Service now; LC-8 writes the same Service later (CAP-11). |
 | AD-6 | every service mutation carries the client's `updated_at` as a precondition; a stale value is rejected with HTTP 409 and the client re-reads before retrying. | PUT Service (UC-5). POST sync-artifact (UC-16). GET pptx / POST preview are not mutations (OQ-20). Half of the agent paths are not yet closed (deferred-work). |

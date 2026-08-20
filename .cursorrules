@@ -245,7 +245,7 @@ guard claims to cover. Do not narrow a guard to silence a false positive without
 - A skill MUST NOT be invoked automatically. Name the one that fits and wait for the owner's
   go-ahead. Reading a skill as reference is fine.
 - `.work/` is committed scratch, emptied when a task closes. It MUST NOT be imported by `src/`,
-  MUST be excluded when searching for code, and MUST stay out of the Docker image (`.dockerignore`).
+  MUST be excluded when searching for code, and MUST stay out of deploy payloads.
   Congregation data MUST NOT land there.
 
 ## Sync rule for this file
