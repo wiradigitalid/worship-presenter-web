@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { CircleAlert, Plus, Search, User, X } from 'lucide-react';
 import Link from '@/components/Link';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
 import { useT } from '@/lib/i18n/operator';
 
 interface ServiceRow {
@@ -75,12 +74,12 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full max-w-md">
           <Search
-            className="pointer-events-none absolute top-1/2 left-2.5 size-4 shrink-0 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute top-1/2 left-3 size-4 shrink-0 -translate-y-1/2 text-muted-foreground/60"
             aria-hidden
           />
           <Input
             type="text"
-            className="h-auto rounded-xl border-border/80 bg-card/60 py-2.5 pr-8 pl-8 text-xs shadow-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
+            className="h-auto rounded-xl border-border/80 bg-card/60 py-2.5 pr-10 pl-10 text-xs shadow-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
             placeholder={t('dashboard.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -97,20 +96,17 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
             </Button>
           ) : null}
         </div>
-        <Link
-          href="/services/new"
-          className={cn(
-            buttonVariants({ variant: 'default' }),
-            'shrink-0 rounded-xl whitespace-nowrap shadow-sm hover:shadow-md'
-          )}
+        <Button
+          render={<Link href="/services/new" />}
+          className="h-auto w-full shrink-0 rounded-xl px-4 py-2.5 shadow-sm hover:shadow-md sm:w-auto"
         >
           <Plus className="size-4 shrink-0" aria-hidden />
           {t('dashboard.newService')}
-        </Link>
+        </Button>
       </div>
 
       {filteredServices.length === 0 ? (
-        <div className="border border-border/80 bg-card/45 backdrop-blur-md rounded-2xl p-12 text-center shadow-sm max-w-md mx-auto mt-6">
+        <div className="border border-border/80 bg-card/50 backdrop-blur-md rounded-2xl p-12 text-center shadow-sm max-w-md mx-auto mt-6">
           <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4 border border-primary/20">
             <CircleAlert className="size-6 shrink-0" aria-hidden />
           </div>

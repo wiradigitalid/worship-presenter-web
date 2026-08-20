@@ -130,7 +130,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={busy}
-              className="mt-2 h-auto w-full rounded-xl py-3.5 text-sm font-semibold shadow-md hover:bg-primary/95 hover:shadow-primary/10 active:scale-[0.98]"
+              className="mt-2 h-auto w-full rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground shadow-md hover:bg-primary/95 hover:shadow-primary/10 active:scale-[0.98]"
             >
               {busy ? t('login.submitting') : t('login.submit')}
             </Button>

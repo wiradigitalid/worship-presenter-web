@@ -128,7 +128,6 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
         </nav>
 
         <ThemeToggle />
-        <LogoutButton />
 
         <DropdownMenu>
           <DropdownMenuTrigger
