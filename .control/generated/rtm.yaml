@@ -330,10 +330,88 @@ rtm:
   exempt: false
   broken_at: story
 - BG: BG-1
+  CAP: CAP-9
+  FR: FR-29
+  DEC: []
+  UC: UC-24
+  story: ''
+  wave: ''
+  release: ''
+  test: []
+  status: ''
+  green: false
+  exempt: false
+  broken_at: story
+- BG: BG-1
   CAP: CAP-1
   FR: FR-3
   DEC: []
   UC: UC-21
+  story: ''
+  wave: ''
+  release: ''
+  test: []
+  status: ''
+  green: false
+  exempt: false
+  broken_at: story
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  story: ''
+  wave: ''
+  release: ''
+  test: []
+  status: ''
+  green: false
+  exempt: false
+  broken_at: story
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-31
+  DEC: []
+  UC: UC-25
+  story: ''
+  wave: ''
+  release: ''
+  test: []
+  status: ''
+  green: false
+  exempt: false
+  broken_at: story
+- BG: BG-2
+  CAP: CAP-4
+  FR: FR-32
+  DEC: []
+  UC: UC-26
+  story: ''
+  wave: ''
+  release: ''
+  test: []
+  status: ''
+  green: false
+  exempt: false
+  broken_at: story
+- BG: BG-2
+  CAP: CAP-6
+  FR: FR-33
+  DEC: []
+  UC: UC-27
+  story: ''
+  wave: ''
+  release: ''
+  test: []
+  status: ''
+  green: false
+  exempt: false
+  broken_at: story
+- BG: BG-2
+  CAP: CAP-4
+  FR: FR-34
+  DEC: []
+  UC: UC-28
   story: ''
   wave: ''
   release: ''

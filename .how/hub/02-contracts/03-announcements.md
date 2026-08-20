@@ -4,51 +4,52 @@ component: hub
 lc: LC-3
 direction: exposed
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-20
+status: retired
 ---
 
-# Contract — Announcements
+# Contract — Announcements (RETIRED)
 
-## Source of truth
+## Retirement
 
-`none`. `internal/httpapi`.
+**DEC-004** (accepted 2026-08-20) withdraws UC-21 and retires FR-3. Hub no longer composes, orders,
+or stores any announcement/flyer list. Composing announcement content — what used to be this
+contract's whole job — is now exclusively an Admin action in the Artifact Registry, as N independent
+Announcement Sets (`offline-deck` FR-21; see `.how/registry/**`, out of this component's scope).
 
-## Purpose
+This file is kept, marked `retired`, rather than deleted outright: it is the record of what a build
+must remove, and `00-inventory.md` still needs a Registry/platform-side renumbering pass this
+component cannot make (`.how/_platform/inventory-api.md` is out of scope here — reported, not edited).
 
-UC-21, FR-3.
+## What is removed
 
-## Operations
-
-| Operation | Purpose | Realizes |
+| Operation | Was | Fate |
 | --- | --- | --- |
-| GET `/api/announcements` | List | UC-21 |
-| POST `/api/announcements` | Add | UC-21 |
-| PUT `/api/announcements` | Order | UC-21 |
-| PATCH `/api/announcements/[id]` | Update item | UC-21 |
-| DELETE `/api/announcements/[id]` | Delete item | UC-21 |
+| GET `/api/announcements` | List | Removed — no Hub-owned announcement list survives to list |
+| POST `/api/announcements` | Add | Removed |
+| PUT `/api/announcements` | Order | Removed |
+| PATCH `/api/announcements/[id]` | Update item | Removed |
+| DELETE `/api/announcements/[id]` | Delete item | Removed |
 
-## Five lanes
+The `/announcements` Hub screen (`inventory-screen.md`) retires with it — see `05-model/form-fields.md`
+for the replacement: a read-only Deck preview strip on `/services/[id]`, no edit affordance.
 
-| Lane | Answer |
-| --- | --- |
-| Authentication | Session (AD-5) |
-| Validation | Image URL through AD-8 helpers; `service_id` nullable = recurring |
-| Error handling | Shared envelope. 400 URL; 404 id |
-| Rate limiting | `none` — not a public surface |
-| Idempotency | DELETE again 404. POST always a new item. PUT replaces the whole table (empty `items` deletes every row, including recurring). PATCH/PUT are last-write-wins; AD-6 does not apply (OQ-34) |
+## What survives, and where it actually lives now
 
-## Error behaviour
+The one property of the old contract that mattered to the Operator — **a flyer image is not
+re-uploaded every week** — is carried forward, but the responsibility moves:
 
-| Condition | Response | Caller should |
-| --- | --- | --- |
-| URL outside allowlist | 400 | Switch to a Hub upload or an allowlisted host |
-| Item missing | 404 | Refresh the list |
-| PUT `items: []` | 200; every `announcement_items` row gone | As-built total replace (OQ-33). Confirm UI is a later story |
+- The **image files themselves** (`/api/uploads/<32-hex>.(jpg|jpeg|png|gif|webp)`, AD-8) are untouched
+  by this retirement. Hub's upload contract (`04-upload.md`) is unaffected.
+- **Reuse across weeks** is now a property of how the Registry's Announcement Set canvases reference
+  those same URLs — copy/paste with shared image refs (DEC-004 §Copy/paste) — not of anything Hub
+  stores. Hub has no ongoing responsibility for announcement asset reuse at all after this retirement;
+  it only continues to serve the uploaded files it always served.
+- The `announcement_items` table's data-migration and drop timeline is `05-model/data-model.md` §
+  *Retirement of `announcement_items`*.
 
-## Compatibility
+## Constraints carried forward
 
-Allowing `data:` URIs is breaking against AD-8.
-
-## Constraints
-
-Deleting a Service (UC-7) cascades one-off items; recurring items (`service_id` null) remain (BR-5).
+Deleting a Service (UC-7) MUST stop cascading `announcement_items` rows the moment this contract
+retires — that cascade existed to keep one-off items from outliving their Service, and there is no
+Hub-owned one-off item left to cascade (`06-flows/delete-service.md`).

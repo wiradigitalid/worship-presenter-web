@@ -4,7 +4,7 @@ kind: endpoint
 scope: hub
 status: draft
 created: '2026-08-18'
-updated: '2026-08-19'
+updated: '2026-08-20'
 derived_from: code
 verified: '84db8e7'
 ---
@@ -27,10 +27,12 @@ Numbers match `.how/_platform/inventory-api.md` for Hub-owned rows. Spec per res
 | 8 | GET | `/api/services/[id]/pptx` | `02-services.md` | published |
 | 30 | POST | `/api/webhook` | `08-webhook.md` | published |
 | 33 | POST | `/api/services/[id]/sync-artifact` | `02-services.md` | published |
-| 11 | POST | `/api/announcements` | `03-announcements.md` | published |
-| 12 | PUT | `/api/announcements` | `03-announcements.md` | published |
-| 13 | PATCH | `/api/announcements/[id]` | `03-announcements.md` | published |
-| 14 | DELETE | `/api/announcements/[id]` | `03-announcements.md` | published |
+| 11 | POST | `/api/announcements` | `03-announcements.md` | retired |
+| 12 | PUT | `/api/announcements` | `03-announcements.md` | retired |
+| 13 | PATCH | `/api/announcements/[id]` | `03-announcements.md` | retired |
+| 14 | DELETE | `/api/announcements/[id]` | `03-announcements.md` | retired |
+| N/A | PUT | `/api/services/[id]/song-sets` (proposed) | `02-services.md` | proposed — needs a number in `.how/_platform/inventory-api.md` (out of this component's scope, reported) |
+| N/A | POST | `/api/services/[id]/song-sets/[variableName]/save-to-book` (proposed) | `02-services.md` | proposed — same numbering gap; designed, not blocked — the AD-25 drift note in `05-model/data-model.md` is closed by DEC-005/AD-36, with one build-order constraint (the AD-36 bootstrap-once migration must land first) |
 | 15 | POST | `/api/upload` | `04-upload.md` | published |
 | 16 | POST | `/api/upload/from-url` | `04-upload.md` | published |
 | 17 | GET | `/api/uploads/[filename]` | `04-upload.md` | published |
@@ -48,3 +50,8 @@ Numbers match `.how/_platform/inventory-api.md` for Hub-owned rows. Spec per res
 - Numbers 25–29 and 31–32 belong to Registry/Presenter in the platform inventory; not used here. 33 is Hub Sync Artifact (UC-16).
 - No OpenAPI; prose contracts. Source: `internal/httpapi`.
 - POST `/api/webhook` (30) is as-built CAP-11 later; this phase's create path is POST `/api/services` (UC-2).
+- **DEC-004 (2026-08-20):** rows 11–14 (`/api/announcements*`) retire with FR-3 — see
+  `03-announcements.md`. Two new operations are needed for FR-32/FR-34 (Song Set weekly inputs and
+  the explicit lyric save-to-book action) but have no number yet: this component cannot assign one
+  without editing `.how/_platform/inventory-api.md`, which is out of scope here and is reported to the
+  platform/blueprint owner instead.

@@ -2,7 +2,7 @@
 type: uc
 id: UC-14
 component: registry
-satisfies: [FR-20]
+satisfies: [FR-20, FR-30]
 critical: false
 created: 2026-08-18
 ---
@@ -28,9 +28,11 @@ Admin is signed in.
 
 | From step | Condition | What happens |
 | --- | --- | --- |
-| 2 | General entry | Free canvas within AD-15 (as-built editor) |
-| 2 | SongSet entry | Canvas is read-only. AD-22 bounded surface (two backgrounds, font style/size, override outside layout) is not shipped |
-| 2 | Announcement entry | Canvas is read-only; the row expands Hub's live list (BR-11), not a free canvas |
+| 2 | General entry (including any slide inside an Announcement Set) | Free canvas within AD-15 (as-built editor) |
+| 2 | Song Set entry — Title layout | Free canvas with its own background, shared by every Song Set entry (DEC-004) |
+| 2 | Song Set entry — Verse/Reff layout | Free canvas authored on a **blank** canvas; background is supplied at hydrate/live time, not authored here (DEC-004, FR-20, FR-33) |
+| 2 | ann-set marker | The marker itself is not a canvas; Admin edits the General slides *inside* that Announcement Set the same way as any other General (DEC-004; BR-11 retired, superseded by BR-12) |
+| 2 | Predefined field on any General canvas | Typed as a `{key}` token inside a text element's content, not a whole-element `placeholderKey` binding (DEC-004, AD-32) |
 
 ## Failure Flows
 
@@ -38,6 +40,7 @@ Admin is signed in.
 | --- | --- | --- | --- |
 | 3 | Layout or image reference is invalid | Rejects the save | Old layout remains; no half-write |
 | 3 | Not Admin | Rejects | Registry does not change |
+| 3 | Text element carries a `{key}` the Predefined Field catalog does not recognise | Save succeeds; the editor flags the unknown key at save time (FR-30) | Layout persists with the flagged token; generation later renders it empty rather than failing |
 
 ## Outcome
 
@@ -45,4 +48,4 @@ That entry in the live Registry holds the new layout. Existing Services do not c
 
 ## Business Rules
 
-BR-8
+BR-8 · BR-12 · BR-13

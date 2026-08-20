@@ -3,18 +3,19 @@ type: model
 component: hub
 layer: physical
 created: 2026-08-18
-updated: 2026-08-19
+updated: 2026-08-20
 ---
 
 # Model — Hub (physical)
 
-Source: `src/lib/db/index.ts` startup DDL. [verified]
+Source: `src/lib/db/index.ts` startup DDL. [verified] plus one planned table below (DEC-004, not yet
+in the DDL — [MISSING], see Invariants).
 
 ```mermaid
 erDiagram
   accounts ||--o{ login_attempts : "ledger"
   accounts ||--o{ revoked_sessions : "sid"
-  services ||--o{ announcement_items : "one-off"
+  services ||--o{ song_set_inputs : "weekly + lyric override"
   settings }o--|| settings : "kv"
 ```
 
@@ -23,14 +24,22 @@ erDiagram
 | Entity | Table | Identified by |
 | --- | --- | --- |
 | Service | `services` | `id` |
-| AnnouncementItem | `announcement_items` | `id` |
+| Song Set Weekly Input / Lyric Override | `song_set_inputs` (planned, DEC-004) | `(service_id, variable_name)` |
 | Account | `accounts` | `id` / `username` |
 | AppSetting | `settings` | `key` |
 | Hymn (corpus) | `hymns` | `(book_code, number)` |
 
+**`AnnouncementItem` / `announcement_items` is retired from Hub's domain (DEC-004, FR-3 retired).**
+The table's physical fate is a build-time decision, not decided here — see *Retirement of
+`announcement_items`* below; it MUST NOT be dropped before the residual-reuse caution in that section
+is satisfied.
+
 ## Relationships
 
-One Service has zero or many uploads in the JSON payload and one-off announcement items (`service_id`). Recurring items: `service_id` null. One Account one role.
+One Service has zero or many uploads in the JSON payload and zero or one `song_set_inputs` row per
+Song Set entry the Registry currently defines (`variable_name` is a soft reference — no `FOREIGN KEY`
+to a Registry table, since the entry list is Registry-owned data in a different table family;
+`ON DELETE CASCADE` still applies to `service_id`). One Account one role.
 
 ## Data dictionary
 
@@ -49,13 +58,15 @@ One Service has zero or many uploads in the JSON payload and one-off announcemen
 | hymns | book_code | TEXT | Book key (AD-26) |
 | hymns | number | INTEGER | Number in that book |
 | hymns | title | TEXT | Hymn title in the Song Book |
-| hymns | lyrics | TEXT | Verse/refrain lyrics |
-| announcement_items | id | INTEGER PK | Item identity |
-| announcement_items | image_url | TEXT | Image ref (AD-8) |
-| announcement_items | service_id | INTEGER NULL | null = recurring |
-| announcement_items | sort_order | INTEGER | Display order |
-| announcement_items | created_at | DATETIME | Row created time |
-| announcement_items | updated_at | TEXT | Optimistic concurrency token (AD-6) |
+| hymns | lyrics | TEXT | Verse/refrain lyrics; the "Save to Song Book" action (UC-28) is the only planned write path here besides the bootstrap-once loader — see *Migration* below (AD-36) |
+| song_set_inputs (planned) | service_id | INTEGER, FK → services.id ON DELETE CASCADE | Owning Service |
+| song_set_inputs (planned) | variable_name | TEXT | Which Song Set entry this row is for (Registry-owned identity, DEC-004 Supplement S2); soft reference, not a DB foreign key |
+| song_set_inputs (planned) | song_number | INTEGER NULL | This week's hymn number for the entry (FR-32) |
+| song_set_inputs (planned) | song_book_code | TEXT NULL | This week's Song Book choice; null falls back to `settings.default_song_book` (Supplement S3) |
+| song_set_inputs (planned) | background_id | TEXT NULL | This week's Verse/Reff background choice from the Background Library; null falls back to the Admin global default (Supplement S4); never the **live** override, which AD-34 keeps unpersisted |
+| song_set_inputs (planned) | lyric_override | TEXT NULL | This Service's edited lyric text (FR-34); null = untouched, falls through to `hymns.lyrics` (BR-7) |
+| song_set_inputs (planned) | updated_at | TEXT | Optimistic concurrency token, same discipline as the rest of the Service row (AD-6) |
+| ~~announcement_items~~ | ~~id~~ | ~~INTEGER PK~~ | Retired from Hub's write paths (DEC-004); table's physical fate below |
 | accounts | id | INTEGER PK | Account identity |
 | accounts | username | TEXT UNIQUE | Sign-in name |
 | accounts | password_hash | TEXT | Password hash |
@@ -74,8 +85,77 @@ One Service has zero or many uploads in the JSON payload and one-off announcemen
 ## Invariants
 
 - `UNIQUE(book_code, number)`
-- Deleting a Service cascades one-off announcements
-- Schema only through startup DDL (AD-9)
+- `PRIMARY KEY (service_id, variable_name)` on `song_set_inputs` (planned) — one row per entry per Service, upsert not insert
+- Deleting a Service cascades `song_set_inputs` (planned) — same `ON DELETE CASCADE` shape as the retired `announcement_items.service_id`
+- Schema only through startup DDL (AD-9); `song_set_inputs` is a **numbered migration** (AD-21), never a reseed (AD-17) — existing Services get empty rows, not a synthetic backfill, except the one Family/Youth/song-number JSON-key migration named below, which is a normalize-on-read change to the *contents* of `parsed_data`, not a schema migration
+
+## Migration — `song_set_inputs` (new table, DEC-004 / FR-32 / FR-34)
+
+`CREATE TABLE IF NOT EXISTS song_set_inputs` per the dictionary above, at the next startup-DDL
+version (AD-9, AD-21). **Assumption (smallest reasonable choice, not owner-confirmed):** existing
+Services' four positional hymn overlays (`song1Number`..`song4Number`, embedded today as `hymn` items
+in `parsed_data.items` rather than a named column — see `worship-form-fields.ts`) are, on this same
+migration, copied one-time into four rows keyed by the seed's default `variable_name`s
+(`opening_song_bt`, `closing_song_bt`, `opening_song_dw`, `closing_song_dw` — DEC-004 Supplement S2's
+named default seed). If the Registry has not seeded those exact four names by the time this migration
+runs, the copy is a no-op and existing Services simply start with no Song Set Weekly Input rows — never
+a crash, per AD-17's fail-closed posture for a gap in existing data.
+
+## Migration — Family/Youth split and Scripture/Theme (DEC-004 Supplement S1)
+
+`parsed_data` is a schemaless JSON blob (`services.parsed_data TEXT`) — the precedent for evolving its
+shape is already **normalize-on-read**, not a DDL migration: `normalizeParsedRundown()` already carries
+the legacy combined `familyYouth` text forward into `familyPrayerRequest` when the split fields are
+empty. The same pattern extends here, not a new mechanism:
+
+- `familyYouth` (legacy combined) → `family_request` (renamed target of `familyPrayerRequest`) as-is,
+  exactly once, the first time a row is read after this change ships; `family_name` starts empty (no
+  source value ever existed for it — DEC-004 Supplement S1).
+- `youthPrayerRequest` renames to `youth_request` the same way; `youth_name` starts empty.
+- `scripture_bible_version` is **not** a new key to invent — it already exists as-built,
+  `verseReading.translation` (`ParsedScripture.translation` / form field `verseTranslation`). DEC-004
+  Supplement S1 calls it new; that claim does not match the code read for this SDD (`src/lib/parsed-fields.ts`
+  `coerceScripture`, `src/lib/worship-form-fields.ts` `verseTranslation`) and is corrected here rather
+  than repeated. Only the catalog **key name** changes (`verseTranslation` → `scripture_bible_version`
+  as the Predefined Field token), not the underlying field.
+- `theme_reference` / `theme_text` are already independent of `scripture_reference` / `scripture_text`
+  as-built (`parsed.themeVerse` is its own `ParsedScripture`, separate from `parsed.verseReading`) — no
+  migration needed there; DEC-004's "split" language describes work already done.
+
+## Retirement of `announcement_items`
+
+Hub's write paths onto this table retire with FR-3 (contract: `02-contracts/03-announcements.md`).
+**The table itself MUST NOT be dropped in the same change that retires the API.** The residual
+responsibility DEC-004 calls out — weekly image *asset reuse* must survive — sits entirely with the
+**image files on disk** (`/api/uploads/<32-hex>.(jpg|jpeg|png|gif|webp)`, AD-8), not with this table's
+rows: those files are unaffected by anything here, and the Registry's Announcement Set canvases can
+reference the same URLs directly (an image Predefined Field / manual image element pointing at an
+existing upload) with no re-upload. What the table's rows carried — which flyer belonged to which
+week, in what order — has no automatic transform into Registry Announcement Sets; an Admin re-authors
+that structure by hand in the Registry, optionally picking the same already-uploaded image. Once that
+one-time re-authoring is done and confirmed, a later numbered migration (AD-21) may drop the table;
+until then it is dead but harmless, and Hub's delete-Service cascade (`06-flows/delete-service.md`)
+must stop touching it the moment the API retires, so a deleted Service does not silently remove rows
+an Admin has not yet migrated off of.
+
+## Resolved — AD-25 vs. "Save to Song Book" (FR-34, UC-28), closed by DEC-005 / AD-36
+
+AD-25 used to state there was **no** administrator or operator write path into a corpus table, and
+that adding one "reopens this decision before it ships." DEC-004 Supplement S12 requires exactly that
+write path into `hymns.lyrics`. This conflict is now closed: the owner ratified (2026-08-20) that the
+song book becomes administrator-owned data after a one-time bootstrap, recorded in **DEC-005** and
+landed as the living rule **AD-36**, which supersedes AD-25 in part — the song-book half only. The
+bible family (`bible_verses`, `bible_books`, `bible_translations`, `bible_book_names`) stays fully
+under AD-25, unaffected.
+
+**Consequence for this table.** `hymns` is no longer a projection of `data/song-book/*.json` once a
+book's rows have been bootstrapped: `upsertHymns` must become insert-only-for-absent-rows, gated by a
+per-book-code marker (AD-36), so the `save-to-book` write survives a restart instead of being
+overwritten by the next boot's reconcile. Build MUST land that bootstrap-once change in the same
+numbered `data_version` migration (AD-21) that ships the `save-to-book` route — see
+`06-flows/lyric-save-to-book.md` § *Migration* for the exact step. Until that migration lands, the
+route MUST NOT ship: shipping the write path first, with the old unconditional reconcile still
+running, would silently discard the Operator's correction on the very next restart.
 
 ## Physical notes
 

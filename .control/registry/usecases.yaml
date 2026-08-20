@@ -86,7 +86,7 @@ usecases:
     title: "I change a slide's layout"
     actor: Admin
     component: registry
-    satisfies: [FR-20]
+    satisfies: [FR-20, FR-30]
     critical: false
   - id: UC-15
     title: "I reorder slides and deletions stay deleted"
@@ -125,7 +125,7 @@ usecases:
     satisfies: [FR-4, FR-5, FR-6]
     critical: false
   - id: UC-21
-    title: "I manage the announcement list that persists across weeks"
+    title: "I manage the announcement list that persists across weeks — RETIRED, superseded by UC-14/UC-15"
     actor: Operator
     component: hub
     satisfies: [FR-3]
@@ -142,3 +142,33 @@ usecases:
     component: hub
     satisfies: [FR-28]
     critical: false
+  - id: UC-24
+    title: "I add, rename, or remove a song-set entry"
+    actor: Admin
+    component: registry
+    satisfies: [FR-29]
+    critical: false
+  - id: UC-25
+    title: "I maintain the background library and set the global default"
+    actor: Admin
+    component: registry
+    satisfies: [FR-31]
+    critical: false
+  - id: UC-26
+    title: "I enter this week's song numbers, books, and backgrounds for however many songs are configured"
+    actor: Operator
+    component: hub
+    satisfies: [FR-32]
+    critical: false
+  - id: UC-27
+    title: "I switch the live Verse/Reff background during the service"
+    actor: Operator
+    component: presenter
+    satisfies: [FR-33]
+    critical: false
+  - id: UC-28
+    title: "I correct a song's lyrics for this Service, and optionally save the fix back to the Song Book"
+    actor: Operator
+    component: hub
+    satisfies: [FR-34]
+    critical: true

@@ -79,7 +79,7 @@ capabilities:
 functional:
   - { id: FR-1,  capability: CAP-11, text: "Ingest a Rundown from Telegram into a structured weekly payload" }
   - { id: FR-2,  capability: CAP-1, text: "Validate and resolve hymns by Song Book number, at the API" }
-  - { id: FR-3,  capability: CAP-1, text: "Manage the announcement list that persists across weeks" }
+  - { id: FR-3,  capability: CAP-1, text: "Manage the announcement list that persists across weeks", status: retired, superseded_by: FR-21 }
   - { id: FR-4,  capability: CAP-2, text: "Assemble a Deck from the fixed frame plus the weekly payload" }
   - { id: FR-5,  capability: CAP-2, text: "Render a song block into readable lyric slides" }
   - { id: FR-6,  capability: CAP-2, text: "Render non-song variable content onto its slide kinds" }
@@ -105,6 +105,12 @@ functional:
   - { id: FR-26, capability: CAP-3, text: "Auto-delete only PPTX files that have expired under the retention policy", no_uc: "automatic retention, not a user action" }
   - { id: FR-27, capability: CAP-1, text: "Create a new Service from the Hub form" }
   - { id: FR-28, capability: CAP-4, text: "First save wins when edits collide" }
+  - { id: FR-29, capability: CAP-9, text: "Admin configures the song-set list in the Artifact Registry, not a fixed four" }
+  - { id: FR-30, capability: CAP-9, text: "An unrecognised predefined-field token never blocks Deck generation" }
+  - { id: FR-31, capability: CAP-9, text: "Admin maintains an image-only background library and a global default background for Verse/Reff" }
+  - { id: FR-32, capability: CAP-4, text: "Weekly song inputs on the Hub form match the configured song-set list" }
+  - { id: FR-33, capability: CAP-6, text: "Operator changes the live Verse/Reff background during the service" }
+  - { id: FR-34, capability: CAP-4, text: "Operator edits a song's lyrics for this Service only, with an explicit action to save them back to the Song Book" }
 
 nonfunctional:
   - id: NFR-1

@@ -53,3 +53,19 @@ sequenceDiagram
 ## Guarantees
 
 Delete + restart = still gone. Plan does not substitute seed for a missing id. Existing Services keep the frozen id until Sync Artifact.
+
+## Extended by DEC-004 (G4, not yet built)
+
+The same delete discipline (gone is terminal, restart does not revive, Sync freezes the frozen
+copy) extends to every new table:
+
+- A **Song Set entry** delete removes its spine row; Hub's stored weekly values for that
+  `variable_name` stay stored and inert — not deleted, not cleared (UC-24).
+- An **Announcement Set** delete is rejected with 409 while a live spine marker still references
+  it (`03-announcement-sets.md`) — the marker must be removed or repointed first, never a
+  cascading delete of a still-referenced set.
+- A **slide inside an Announcement Set** deletes exactly like a General on the spine: its own row
+  goes `gone`, `position` compacts within that set only, and any image it referenced is untouched
+  (`copy-paste-share-by-reference.md`).
+- A **Background Library image** or **Song Book** delete never cascades to a weekly/live reference
+  still pointing at it — it falls through the resolution order instead (AD-33/AD-34, S3).

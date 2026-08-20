@@ -3,7 +3,7 @@ title: "Operator Turn"
 initiative: operator-turn
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-20
 ---
 
 # PRD: Operator Turn
@@ -13,6 +13,7 @@ updated: 2026-08-18
 | Date | What changed | Why | Releases affected |
 |---|---|---|---|
 | 2026-08-18 | This initiative was born from the `weekly-sabbath` split. Area: logged-in Hub, Friday review, Run-Sheet, slideshow/presenter, on-demand verse, accounts, two language axes. FR-8…11, FR-13, FR-15…19, FR-22…25, FR-28. | A reader looking for “Friday review” or “projector screen” does not open the generate PRD. | as-built |
+| 2026-08-20 | The Hub form's weekly song fields now track whatever song-set list Admin has configured in the Registry, not a fixed four (FR-32). FR-23's promise is confirmed and sharpened: a song-set entry may pick its own Song Book, or fall back to the Admin-set global default, and more than one book may be in use in the same Service. Two new promises: the Operator may change the live Verse/Reff background during the service itself (FR-33), and the Operator may edit a song's lyrics for one Service only, with a separate explicit action to save the correction back to the Song Book (FR-34). | Owner ratified DEC-004: song-set count, song-book choice, live background, and lyric correction all became things the Operator or Admin does at the weekly/live layer, not fixed at the code layer. | as-built · later |
 
 ## 0. Document Purpose
 
@@ -48,7 +49,7 @@ Events while *sending* a Rundown. The congregation.
 
 ## 3. Glossary
 
-`.control/product-glossary.md` — Data Locale, UI Locale.
+`.control/product-glossary.md` — Data Locale, UI Locale, Song Set, Background Library.
 
 ## 4. Features
 
@@ -66,7 +67,7 @@ Events while *sending* a Rundown. The congregation.
 
 #### FR-10: Delete a Service manually
 
-**Proof of done:** The Service disappears from the list; that week's local files disappear from `UPLOADS_DIR`; recurring announcement items (and their files) remain.
+**Proof of done:** The Service disappears from the list; that week's local files disappear from `UPLOADS_DIR`; the Artifact Registry's Announcement Sets, and any image they still reference, remain untouched.
 
 ### 4.2 Edit and regenerate
 
@@ -83,6 +84,14 @@ Events while *sending* a Rundown. The congregation.
 #### FR-28: First save wins
 
 **Proof of done:** A second edit from the same state gets a conflict error, not a silent overwrite.
+
+#### FR-32: Weekly song inputs match the configured song-set list
+
+**Proof of done:** For every song-set entry Admin has defined in the Registry, the Hub form shows that entry's own song-number, Song-Book, and background inputs; adding or removing an entry changes what the form shows without a deploy.
+
+#### FR-34: Operator edits a song's lyrics for this Service only
+
+**Proof of done:** Editing the lyric text on the Hub form changes this Service's Deck only — the Song Book is untouched. A separate, explicit action beside the editor saves the correction back to the Song Book, so later Services start from the corrected text; typing alone never triggers that save.
 
 ### 4.3 Run-Sheet
 
@@ -108,6 +117,10 @@ Events while *sending* a Rundown. The congregation.
 
 **Proof of done:** The reference appears on the projector in the chosen translation; closing returns to the Deck slide; the payload does not change.
 
+#### FR-33: Operator changes the live Verse/Reff background
+
+**Proof of done:** During the Service, the Operator picks a different background for the projected Verse/Reff slides from the background library; the change is visible immediately and does not alter the Service payload or require regenerating the Deck.
+
 ### 4.5 Accounts
 
 **Capability:** CAP-8 — serves BG-2.
@@ -126,7 +139,7 @@ Events while *sending* a Rundown. The congregation.
 
 #### FR-23: Hymns from the chosen Song Book
 
-**Proof of done:** The same number in two books does not collide; the read-back names the book.
+**Proof of done:** The same number in two books does not collide; the read-back names the book. A song-set entry may pick its own book for that week, or fall through to the global default Admin has set; two entries in the same Service may resolve from different books.
 
 #### FR-24: Browse corpora by language
 

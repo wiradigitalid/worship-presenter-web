@@ -46,11 +46,87 @@ decisions:
       - .what/_prd/operator-turn/addendum.md
       - .what/_prd/offline-deck/addendum.md
       - _bmad-output/prior-knowledge/README.md
+  - id: DEC-005
+    status: applied
+    title: Song-book data is administrator-owned after a one-time bootstrap; the corpus file is a seed, not a projection
+    file: .control/decisions/DEC-005-song-book-authored-after-bootstrap.md
+    touches:
+      - .how/_platform/ARCHITECTURE-SPINE.md
+      - .how/hub/02-contracts/02-services.md
+      - .how/hub/02-contracts/05-hymns.md
+      - .how/hub/05-model/data-model.md
+      - .how/hub/06-flows/lyric-save-to-book.md
+      - .how/hub/SDD-hub.md
+      - .what/hub/02-rules/rules-hub.md
+      - .what/hub/03-domain/state-machines.md
+      - .what/hub/04-usecases/UC-28-correct-song-lyrics.md
+      - .what/hub/05-scenarios/SCN-4-lyric-save-to-book-race.md
+      - .control/registry/requirements.yaml
+      - .control/registry/usecases.yaml
   - id: DEC-004
-    status: draft
+    status: applied
     title: Nested artifact registries, shared Song Set layouts, inline predefined fields
     file: .control/decisions/DEC-004-nested-artifact-registries.md
-    touches: []
+    touches:
+      - .what/_prd/offline-deck/addendum.md
+      - .what/_prd/offline-deck/prd.md
+      - .what/_prd/operator-turn/addendum.md
+      - .what/_prd/operator-turn/prd.md
+      - .what/_prd/rundown-to-service/addendum.md
+      - .what/_prd/rundown-to-service/prd.md
+      - .what/business-rules.md
+      - .what/hub/02-rules/rules-hub.md
+      - .what/hub/03-domain/domain-model.md
+      - .what/hub/03-domain/state-machines.md
+      - .what/hub/SRS-hub.md
+      - .what/presenter/02-rules/rules-presenter.md
+      - .what/presenter/03-domain/state-machines.md
+      - .what/presenter/04-usecases/UC-12-two-screen-presenter.md
+      - .what/presenter/04-usecases/UC-27-live-background-switch.md
+      - .what/presenter/SRS-presenter.md
+      - .what/registry/02-rules/rules-registry.md
+      - .what/registry/03-domain/deck-frame.md
+      - .what/registry/03-domain/domain-model.md
+      - .what/registry/03-domain/state-machines.md
+      - .what/registry/04-usecases/UC-14-edit-layout.md
+      - .what/registry/04-usecases/UC-15-reorder-and-delete.md
+      - .what/registry/04-usecases/UC-16-sync-artifact.md
+      - .what/registry/04-usecases/UC-20-deck-matches-payload.md
+      - .what/registry/04-usecases/UC-24-song-set-entries.md
+      - .what/registry/04-usecases/UC-25-background-library.md
+      - .what/registry/SRS-registry.md
+      - .how/_platform/ARCHITECTURE-SPINE.md
+      - .how/_platform/inventory-api.md
+      - .how/_platform/inventory-db.md
+      - .how/_platform/inventory-screen.md
+      - .how/hub/02-contracts/00-inventory.md
+      - .how/hub/02-contracts/02-services.md
+      - .how/hub/02-contracts/03-announcements.md
+      - .how/hub/02-contracts/07-settings.md
+      - .how/hub/04-components/LC-12-service-write.md
+      - .how/hub/04-components/LC-16-slide-plan.md
+      - .how/hub/05-model/data-model.md
+      - .how/hub/05-model/form-fields.md
+      - .how/hub/06-flows/delete-service.md
+      - .how/hub/SDD-hub.md
+      - .how/presenter/02-contracts/02-present-channel.md
+      - .how/presenter/04-components/LC-14-session.md
+      - .how/presenter/SDD-presenter.md
+      - .how/registry/02-contracts/00-inventory.md
+      - .how/registry/02-contracts/02-song-set-entries.md
+      - .how/registry/02-contracts/03-announcement-sets.md
+      - .how/registry/02-contracts/04-background-library.md
+      - .how/registry/02-contracts/05-song-books.md
+      - .how/registry/04-components/LC-15-store.md
+      - .how/registry/05-model/data-model.md
+      - .how/registry/06-flows/copy-paste-share-by-reference.md
+      - .how/registry/06-flows/delete-template.md
+      - .how/registry/06-flows/predefined-field-migration.md
+      - .how/registry/SDD-registry.md
+      - .control/product-glossary.md
+      - .control/registry/components.yaml
+      - .control/registry/requirements.yaml
+      - .control/registry/usecases.yaml
   - id: DEC-003
     status: applied
     title: Go API, React SPA, on-demand Node PPTX worker

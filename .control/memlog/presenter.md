@@ -1,7 +1,7 @@
 ---
 topic: Presenter
 artifact: .what/presenter/SRS-presenter.md
-updated: 2026-08-19T19:25
+updated: 2026-08-20T19:16
 ---
 
 - (event) G4 guarded as-built: UC-11..13; LC-9, LC-10. Plan identity AD-10 still [MISSING].
@@ -17,3 +17,5 @@ updated: 2026-08-19T19:25
 - (event) wdi-review: UC-13 replace overlay on second lookup; SCN-4 failed lookup does not clear a showing overlay (PresenterOperator). Stamp pending.
 - (event) Owner held G4. V13 stamped SRS+SDD at 02f8d3a. g4_passed true.
 - (event) DEC-003: Presenter screens and LC-10/14 on spa; LC-9 on api; AD-30 quoted.
+- (decision by wdi-blueprint) G3 catalog amended for DEC-004: UC-27 (FR-33, live Verse/Reff background switch) added to SRS-presenter.md.
+- (event) wdi-component G4 (behaviour+design) for DEC-004 background switch: UC-27 (FR-33) full flow, BR-8 (session-only override, normal-order revert), BR-9 (group markers never numbered/projected); state-machines.md live-background facet added. SDD: AD-33/AD-34 quoted, Decision Summary/Structure note, Failure Behaviour LC-10 background row, ABCE UC-27 row, present-channel.md background operation + error rows, LC-14 responsibility updated. Evidence [MISSING]: PresentMessage background variant, Background Library reader, Announcement Set group row on presenter-model.ts (shared preview-model.ts change deferred to Hub's G4). No new LC registered — background rides existing LC-10/LC-14. wdi-review not run (owner to trigger).

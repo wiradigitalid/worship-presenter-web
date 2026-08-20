@@ -3,7 +3,7 @@ title: "Rundown to Service"
 initiative: rundown-to-service
 status: draft
 created: 2026-08-18
-updated: 2026-08-19
+updated: 2026-08-20
 ---
 
 # PRD: Rundown to Service
@@ -14,6 +14,7 @@ updated: 2026-08-19
 |---|---|---|---|
 | 2026-08-18 | This initiative was born. The `weekly-sabbath` folder was withdrawn: too global — one PRD for the whole product. This area only promises that a **Rundown becomes a Service**. FR-1, FR-2, FR-3, FR-12, FR-27. IDs were not restarted. | BIMA pattern: one PRD per functional area a reader would look for, not per product. | as-built |
 | 2026-08-19 | Current intake is the Operator in Hub (FR-27), not Events on Telegram. Hymn resolve and the announcement list stay. Telegram via picoclaw (FR-1, FR-12) remains in this PRD as the last-phase capability, not a second PRD. | Web is cheaper and easier to stabilize first; Events are skipped this phase; `FR-N` must not move between PRDs. | as-built · later |
+| 2026-08-20 | FR-3 is retired. Hub no longer manages an announcement list at all — composing, ordering, and deleting announcement content now happens only in the Artifact Registry (`offline-deck` FR-21), as N independent Announcement Sets Admin authors directly. The part of FR-3 that mattered to the Operator — that the same flyer image is not re-uploaded every week — is kept as a promise, just moved: FR-21 promises copied images share one file by reference, so an Announcement Set built once keeps working week after week without a fresh upload. | Owner ratified DEC-004: an Announcement row expanding "the whole live Hub list" was void; membership and order are Admin-authored structure, not a weekly Hub list the Operator maintains. | as-built · later |
 
 ## 0. Document Purpose
 
@@ -59,15 +60,15 @@ The congregation. An Admin who edits the Registry. The Operator while *presentin
 
 #### FR-27: Create a Service from the Hub form
 
-**Proof of done:** After the Operator pastes a valid Rundown for one date, the Hub shows one Service with the same roles, times, four hymn numbers, and speaker as the text; an existing date is not duplicated without override.
+**Proof of done:** After the Operator pastes a valid Rundown for one date, the Hub shows one Service with the same roles, times, the configured hymn numbers, and speaker as the text; an existing date is not duplicated without override.
 
 #### FR-2: Validate and resolve hymns by number in the Song Book
 
 **Proof of done:** A known number produces a title the Operator can match on the form; an unknown number does not cancel the Service — the song block is marked incomplete.
 
-#### FR-3: Manage an announcement list that persists across weeks
+#### FR-3: Manage an announcement list that persists across weeks — **RETIRED, superseded by FR-21**
 
-**Proof of done:** Recurring items appear the next week without being uploaded again; an empty list = zero announcement slides.
+This promise is withdrawn. Hub no longer owns any announcement-list membership or ordering — composing announcement content is now exclusively an Admin action in the Artifact Registry, as N independent Announcement Sets (`offline-deck` FR-21). The reason recurring items mattered — not re-uploading the same flyer every week — is carried forward there: FR-21 promises a copied image shares one file by reference, so an Announcement Set built once keeps presenting without a fresh upload. Nothing in this PRD's `## 4.1 Hub form` area edits announcement composition any more; Hub's remaining job on a Service is limited to the weekly fields it always owned (hymn numbers, Family/Youth values, and the like), never the announcement list itself.
 
 ### 4.2 Telegram intake — last phase
 
@@ -77,7 +78,7 @@ The congregation. An Admin who edits the Registry. The Operator while *presentin
 
 #### FR-1: Ingest a Rundown from Telegram into a structured weekly payload
 
-**Proof of done:** After sending a Rundown for one date, the Hub shows one Service with the same roles, times, four hymn numbers, and speaker as the text; sending the same date again updates, rather than duplicating.
+**Proof of done:** After sending a Rundown for one date, the Hub shows one Service with the same roles, times, the configured hymn numbers, and speaker as the text; sending the same date again updates, rather than duplicating.
 
 #### FR-12: Correct an existing Service via Telegram
 
@@ -89,6 +90,7 @@ The congregation. An Admin who edits the Registry. The Operator while *presentin
 - Not presenter, not accounts.
 - Not a song-search engine / Song Book upload.
 - Not Events using Hub this phase.
+- Not announcement composition — that is `offline-deck`'s Artifact Registry, Admin-only (FR-3 retired).
 
 ## 6. Success Metrics
 

@@ -2,12 +2,12 @@
 type: domain
 component: registry
 created: 2026-08-19
-updated: 2026-08-19
+updated: 2026-08-20
 ---
 
 # Deck frame
 
-The Artifact Registry is the source of *which slides exist* and *their order*. This note is the worship-order shape that frame encodes. Weekly names, prayers, and flyers are Service payload (Hub), not Registry.
+The Artifact Registry is the source of *which slides exist* and *their order*, and — since DEC-004 — of announcement/flyer **composition** too (each Announcement Set is its own Registry-authored ordered list). This note is the worship-order shape that frame encodes. Weekly names, prayers, hymn choices, and Family/Youth photos are Service payload (Hub), not Registry.
 
 ## Geometry
 
@@ -27,15 +27,15 @@ The shipped seed follows one congregation's order. Admin may reorder (UC-15); th
 
 ## Fixed frame vs weekly payload
 
-**Frame (Registry / standing text):** sequence agendas, dividers, standing liturgy, offering and contact layouts, midweek notice layout, welcome/closing frames.
+**Frame (Registry / standing text):** sequence agendas, dividers, standing liturgy, offering and contact layouts, midweek notice layout, welcome/closing frames, and — since DEC-004 — every Announcement Set's own slide content and order (composed once by Admin, not per week).
 
-**Weekly (Hub Service payload):** four hymn numbers and their lyrics, verse reading, sermon speaker and title graphic, closing-prayer person, family/youth text and photos, announcement flyers (variable count), optional theme-verse rotation.
+**Weekly (Hub Service payload):** song numbers/books/backgrounds for however many Song Set entries Admin has configured, any lyric overrides for this Service only, verse reading, sermon speaker and title graphic, closing-prayer person, family/youth text and photos, optional theme-verse rotation. Which Announcement Sets appear, and in what order, is decided once on the main spine (Registry), not per Service.
 
 **Printed on slides, of the weekly roster:** sermon speaker, closing-prayer person, family/youth of the week. Other rundown roles stay on the Run-Sheet (FR-17), not on the Congregation screen.
 
-## Four SongSet slots
+## Song Set entries — admin-configurable, not four fixed slots
 
-Opening and closing of Bible Talk, opening and closing of Divine Service. Slot identity belongs to the system (glossary), not to a positional `song1` field. Each hymn is one title slide plus N lyric slides. How those lyric pages join and split is Hub LC-16 (FR-5, BR-6).
+**Superseded by DEC-004.** Opening/closing of Bible Talk and Divine Service are the default seed of **N** Admin-defined Song Set entries, not a ceiling — Admin adds, renames, or removes entries directly in the Registry (FR-29), and a rundown with more than four songs is a normal shape. Each entry's identity (`variable_name`) still belongs to the system, never a positional `song1` field. Each hymn is one Title slide plus N Verse/Reff slides from the lyrics; every entry shares the one Title/Verse/Reff layout trio (Verse/Reff authored on a blank canvas, background resolved at hydrate/live time). How lyric pages join and split is Hub LC-16 (FR-5, BR-6).
 
 ## What this is not
 

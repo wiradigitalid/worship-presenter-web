@@ -14,6 +14,7 @@ updated: 2026-08-19
 |---|---|
 | FR-1 · FR-2 · FR-3 · FR-12 | same |
 | FR-11b | FR-27 |
+| FR-3 | retired 2026-08-20 (DEC-004), superseded by `offline-deck` FR-21 |
 | UJ-1 | UJ-1 |
 | — | UJ-5 (Hub create, 2026-08-19) |
 

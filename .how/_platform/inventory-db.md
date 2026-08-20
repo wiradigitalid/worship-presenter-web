@@ -4,7 +4,7 @@ kind: db
 scope: _platform
 status: draft
 created: '2026-08-18'
-updated: '2026-08-19'
+updated: '2026-08-20'
 derived_from: code
 verified: '96dfd61'
 ---
@@ -34,3 +34,4 @@ Derived by `inventory.py` from `CREATE TABLE IF NOT EXISTS` in `src/lib/db/index
 
 - Rows 12 (`hymns_with_book_code`) and 13 (`bible_verses_with_translation_code`) were catalogued as live tables. They are one-shot rebuild names in the same DDL file, then `RENAME TO` the live tables. Dropped from the rows; those numbers MUST NOT be reused. W1's freeze table is therefore **14**.
 - `service_registry_snapshots` is Registry-owned (AD-16). `services.registry_snapshot_at` is a Hub column on table 1, not a separate table.
+- **Plan vs code (DEC-004, not yet built):** table 3 (`announcement_items`, hub-owned) is retired by this decision — composition moves to the Registry as Announcement Sets nested inside `artifact_templates` or a sibling table (G4 design call). Song Set Entry, Background Library, and per-Service Lyric Override have no table yet. None are added as rows here: the code that would create them does not exist, and this inventory is derived from what runs, not from a decision not yet implemented.

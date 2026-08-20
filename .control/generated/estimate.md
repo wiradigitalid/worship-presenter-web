@@ -32,7 +32,13 @@
 | Auto-delete only PPTX files that have expired under the retention policy | `FR-26` | `—` | `catalog` | not set yet | — | must | — | as-built |
 | Create a new Service from the Hub form | `FR-27` | `—` | `catalog` | not set yet | — | must | — | as-built |
 | First save wins when edits collide | `FR-28` | `—` | `catalog` | not set yet | — | must | `CAP-3` | as-built |
+| Admin configures the song-set list in the Artifact Registry, not a fixed four | `FR-29` | `—` | `catalog` | not set yet | — | must | `CAP-2` | as-built |
 | Manage the announcement list that persists across weeks | `FR-3` | `—` | `catalog` | not set yet | — | must | — | as-built |
+| An unrecognised predefined-field token never blocks Deck generation | `FR-30` | `—` | `catalog` | not set yet | — | must | `CAP-2` | as-built |
+| Admin maintains an image-only background library and a global default background for Verse/Reff | `FR-31` | `—` | `catalog` | not set yet | — | must | `CAP-2` | as-built |
+| Weekly song inputs on the Hub form match the configured song-set list | `FR-32` | `—` | `catalog` | not set yet | — | must | `CAP-3` | as-built |
+| Operator changes the live Verse/Reff background during the service | `FR-33` | `—` | `catalog` | not set yet | — | must | `CAP-3` | as-built |
+| Operator edits a song's lyrics for this Service only, with an explicit action to save them back to the Song B… | `FR-34` | `—` | `catalog` | not set yet | — | must | `CAP-3` | as-built |
 | Assemble a Deck from the fixed frame plus the weekly payload | `FR-4` | `—` | `catalog` | not set yet | — | must | `CAP-1` | as-built |
 | Render a song block into readable lyric slides | `FR-5` | `—` | `catalog` | not set yet | — | must | `CAP-1` | as-built |
 | Render non-song variable content onto its slide kinds | `FR-6` | `—` | `catalog` | not set yet | — | must | `CAP-1` | as-built |

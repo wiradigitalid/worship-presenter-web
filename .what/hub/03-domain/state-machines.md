@@ -27,6 +27,12 @@ There is no `draft` state. What is saved is what is shown. Generate / UC-6 reads
 
 Registry Snapshot per Service (AD-16) — not yet in the DDL, so not a state here.
 
+Song Set Weekly Input and Lyric Override (FR-32, FR-34) do not get their own lifecycle: each is a
+value written and overwritten by the Service's own save (UC-5), the same as any other overlay field
+— there is no separate draft/committed state. The one departure is the Lyric Override's explicit
+"save to Song Book" action (UC-28, BR-7), which is a second, deliberate write beyond the normal
+Service save and moves `hymns.lyrics`, not this state machine.
+
 ## Account
 
 **States:** `active` · `gone`

@@ -15,7 +15,7 @@ updated: 2026-08-18
 
 ## Purpose
 
-UC-10, UC-19. Transition (AD-23), `ui_locale` (AD-24, FR-25), PPTX cache days. Default corpus is not a key on this route (AD-26 inert lives on the hymn picker, not here).
+UC-10, UC-19. Transition (AD-23), `ui_locale` (AD-24, FR-25), PPTX cache days. Default corpus is not a key on this route (AD-26 inert lives on the hymn picker, not here). **Open note (DEC-004 Supplement S3):** a global default Song Book setting (`default_song_book`, already named in AD-26's key list) is required by FR-23/FR-32's fallback order but has no confirmed home — this route's existing exclusion of "default corpus" keys, or the hymn picker surface `05-hymns.md` already carries the exclusion for, or a new surface. Not decided in this pass; flagged rather than guessed.
 
 ## Operations
 

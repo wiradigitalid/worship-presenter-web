@@ -1,8 +1,67 @@
 ---
 type: course-correction
 id: DEC-004
-status: draft
-touches: []
+status: applied
+touches:
+  - .what/_prd/offline-deck/addendum.md
+  - .what/_prd/offline-deck/prd.md
+  - .what/_prd/operator-turn/addendum.md
+  - .what/_prd/operator-turn/prd.md
+  - .what/_prd/rundown-to-service/addendum.md
+  - .what/_prd/rundown-to-service/prd.md
+  - .what/business-rules.md
+  - .what/hub/02-rules/rules-hub.md
+  - .what/hub/03-domain/domain-model.md
+  - .what/hub/03-domain/state-machines.md
+  - .what/hub/SRS-hub.md
+  - .what/presenter/02-rules/rules-presenter.md
+  - .what/presenter/03-domain/state-machines.md
+  - .what/presenter/04-usecases/UC-12-two-screen-presenter.md
+  - .what/presenter/04-usecases/UC-27-live-background-switch.md
+  - .what/presenter/SRS-presenter.md
+  - .what/registry/02-rules/rules-registry.md
+  - .what/registry/03-domain/deck-frame.md
+  - .what/registry/03-domain/domain-model.md
+  - .what/registry/03-domain/state-machines.md
+  - .what/registry/04-usecases/UC-14-edit-layout.md
+  - .what/registry/04-usecases/UC-15-reorder-and-delete.md
+  - .what/registry/04-usecases/UC-16-sync-artifact.md
+  - .what/registry/04-usecases/UC-20-deck-matches-payload.md
+  - .what/registry/04-usecases/UC-24-song-set-entries.md
+  - .what/registry/04-usecases/UC-25-background-library.md
+  - .what/registry/SRS-registry.md
+  - .how/_platform/ARCHITECTURE-SPINE.md
+  - .how/_platform/inventory-api.md
+  - .how/_platform/inventory-db.md
+  - .how/_platform/inventory-screen.md
+  - .how/hub/02-contracts/00-inventory.md
+  - .how/hub/02-contracts/02-services.md
+  - .how/hub/02-contracts/03-announcements.md
+  - .how/hub/02-contracts/07-settings.md
+  - .how/hub/04-components/LC-12-service-write.md
+  - .how/hub/04-components/LC-16-slide-plan.md
+  - .how/hub/05-model/data-model.md
+  - .how/hub/05-model/form-fields.md
+  - .how/hub/06-flows/delete-service.md
+  - .how/hub/SDD-hub.md
+  - .how/presenter/02-contracts/02-present-channel.md
+  - .how/presenter/04-components/LC-14-session.md
+  - .how/presenter/SDD-presenter.md
+  - .how/registry/02-contracts/00-inventory.md
+  - .how/registry/02-contracts/02-song-set-entries.md
+  - .how/registry/02-contracts/03-announcement-sets.md
+  - .how/registry/02-contracts/04-background-library.md
+  - .how/registry/02-contracts/05-song-books.md
+  - .how/registry/04-components/LC-15-store.md
+  - .how/registry/05-model/data-model.md
+  - .how/registry/06-flows/copy-paste-share-by-reference.md
+  - .how/registry/06-flows/delete-template.md
+  - .how/registry/06-flows/predefined-field-migration.md
+  - .how/registry/SDD-registry.md
+  - .control/product-glossary.md
+  - .control/registry/components.yaml
+  - .control/registry/requirements.yaml
+  - .control/registry/usecases.yaml
 supersedes: null
 superseded_by: null
 created: '2026-08-20'
@@ -11,6 +70,10 @@ created: '2026-08-20'
 # DEC-004 — Nested artifact registries, shared Song Set layouts, inline predefined fields
 
 ## Decision
+
+> **Read the Supplement at the end of this file first.** It carries the latest owner answers
+> (2026-08-20, rounds 2-4) and supersedes parts of the text below.
+
 
 The Artifact Registry is a **main ordered spine** of general slides, four Song Set slot markers, and zero-or-more Announcement Set markers; Song Set expansion uses **one shared trio** of layouts (Title, Verse, Reff) for all four slots; each Announcement Set is its own ordered list of general canvases; weekly text bindings are **inline `{catalog_key}` tokens** inside one styled text element; announcement composition is authored only in the Registry; the Service form supplies weekly fields (including Family/Youth) and shows deck preview only — it does not edit announcement/flyer lists.
 
@@ -144,8 +207,8 @@ Needed across Main ↔ ann-set-N and between announcement sets:
 
 | Topic | Decision |
 | --- | --- |
-| Song-set layouts | Exactly **3** shared templates: Title · Verse · Reff. One trio for **all four** slots. Not per-slot skins. |
-| Song-set slots | Four fixed identities on the main list (may be absent if Admin removes a row). |
+| Song-set layouts | Exactly **3** shared templates: Title · Verse · Reff. One trio for **all** song-set entries. Not per-entry skins. Supplement S4 adds the blank Verse/Reff canvas and live background; S13/R4 freezes the trio per service. |
+| Song-set slots | **Superseded by Supplement S2** — an admin-configurable list of N song-set entries, each with its own variable name and title. |
 | Announcement sets | **0..N**, Admin-creatable. Not mandatory on the main spine. |
 | Family / Youth | Predefined catalog fields; weekly values on the **Service** form. |
 | Hub / Service announcement editing | **Removed** from Service. Compose only in Artifact Registry. Preview only on Service. |
@@ -255,3 +318,185 @@ Illustrative ordered spine and nested sequences for a full Sabbath. Used to alig
 | Open waves / SPEC | none in-progress; next wave re-derives SPEC |
 
 Apply MUST run document owners after Product Owner **accept**. Amend the ADs above in place on apply.
+
+---
+
+# Supplement — owner rounds 2-4 (2026-08-20)
+
+This section is the **latest state of the decision**. Where it disagrees with anything above, this
+section wins. It is written to stay valid across further discussion rounds: new answers amend the
+tables here in place, they are not appended as a running log. Two rows in *Locked answers* above are
+superseded here and are marked as such. Sections S1-S8 came from round 2, S9-S12 from
+round 3, S13-S15 from round 4.
+
+## S1 — Predefined field vocabulary: old → new translation
+
+The reference-deck names become the normative catalog. Migration is per key, not a bulk rename.
+
+| Key today (`placeholder-catalog.ts:15-28`) | New key | Translation |
+| --- | --- | --- |
+| `date` | `service_date` | rename only |
+| `reference` | `scripture_reference` **+** `theme_reference` | **split.** Today one key serves two sources by fallback (`verseReference` / `themeReference`, `plan.go:213-225`), so one General cannot carry both |
+| `text` | `scripture_text` **+** `theme_text` | split, same reason |
+| — | `scripture_bible_version` | **new**; no Service field exists yet |
+| `performer` | `special_song` | rename |
+| `title` | `sermon_title` | rename |
+| `speaker` | `sermon_speaker_name` | rename |
+| `imageUrl` | `sermon_poster` | rename |
+| `person` | `closing_prayer_person` | stays a **separate** field — see S6 |
+| `familyText` | `family_name` **+** `family_request` | **split.** Old value is request text only; `family_name` never existed in form or DB |
+| `youthText` | `youth_name` **+** `youth_request` | split, same |
+| `familyPhoto` | `family_photo` | rename |
+| `youthPhoto` | `youth_photo` | rename |
+
+Song-set keys are not in today's shared catalog — they are a template-level list with different
+spellings (`data/default-registry.json:206-221`). Translation: `hymnNumber` -> `song_number`,
+`songTitle` -> `song_title`, `label` -> `verse_number` / `verse_total`, `lyrics` ->
+`verse_content[]` / `reff[]`.
+
+**Two scriptures, two purposes.** `scripture_*` is the Bible Talk verse reading; `theme_*` is the
+Divine Worship contemplation verse. They are independent weekly inputs, both authorable on the same
+slide if wanted.
+
+**Data migration.** Existing `familyText` / `youthText` values move whole into `family_request` /
+`youth_request`; the new name fields start empty and are filled once by hand. The legacy combined
+`familyYouth` text (`internal/parse/fields.go:48-57`) cannot be split automatically — it lands in
+`family_request` as-is and is cleaned up manually.
+
+## S2 — Song sets are an admin-configurable list, not four fixed slots
+
+**Supersedes** the *Locked answers* row "Song-set slots — four fixed identities".
+
+- Admin creates **N song-set entries** in the Artifact Registry. Each entry has a `variable_name`
+  and a title (e.g. `opening_song_bt`, `closing_song_bt`, `opening_song_dw`, `closing_song_dw`,
+  `song_service_1`). The four names above are the default seed, not a ceiling.
+- Each entry **auto-generates its weekly inputs** on the Service form:
+  `<var>_song_number`, `<var>_song_book_name`, `<var>_song_background`.
+- More than four songs in one rundown is a supported shape, not an exception.
+
+### Hardcodes that block this (all must become list-driven)
+
+| Layer | Where |
+| --- | --- |
+| Weekly form fields `song1Number`..`song4Number` | `src/lib/worship-form-fields.ts:6-9`, `src/operator/CreateForm.tsx:569-656`, `src/operator/EditForm.tsx:601-688` |
+| Structured-field key list | `internal/parse/fields.go:11-16` |
+| Service API defaults | `internal/httpapi/services.go:745-748` |
+| Slot index map 0..3 | `src/lib/parsed-fields.ts:20-23` |
+| Four named PPTX plan paths (`bt-opening-song`, `bt-closing-song`, `ds-opening-song`, `ds-closing-song`) | `internal/plan/plan.go:295,320,345,395` |
+| Singular `song-set` entry key | `src/lib/registry/types.ts:11` |
+
+## S3 — Song books
+
+- `hymns` already carries `book_code` (default `SDAH`, `UNIQUE(book_code, number)`,
+  `internal/db/schema.sql:13-20`), but **no code reads it**: the API never returns it
+  (`internal/httpapi/hymns.go:23-54`), lookup ignores it (`src/lib/lyrics.ts:28`), and the label
+  `SDAH %d` is hardcoded (`internal/plan/plan.go:81`).
+- A **selectable list of song books** is required — book is chosen first, hymn number second, and
+  lookup resolves on the pair `(book_code, number)`.
+- Different books MAY be used within one rundown, song by song.
+- A **global default song book** is set in Admin; each song-set entry falls back to it.
+- The product must support congregations whose books differ, and more than one book in use at once.
+
+## S4 — Song-set layouts: shared trio, live-switchable background
+
+- The **Title / Verse / Reff trio is shared by every song-set entry**, however many exist. Not
+  per-entry skins. This confirms the *Locked answers* row.
+- **Title** is an authored canvas with its own background.
+- **Verse and Reff are authored on a blank canvas** — no baked-in background. Their background is
+  supplied at run time and **MAY be changed live during the service**.
+- Background resolution order: the song-set entry's own `<var>_song_background` (weekly, optional)
+  -> the **global background** set in Admin -> blank.
+- Admin maintains a **background library**; its own settings surface adds and removes entries. A
+  weekly or live choice picks from that library.
+
+## S5 — Unknown predefined-field token
+
+Owner is indifferent to the failure mode. Chosen: **the editor flags an unknown key when the slide
+is saved; at generate time an unknown token renders as nothing (empty), and generation still
+succeeds.** Generation MUST NOT be blocked by a typo.
+
+## S6 — Closing prayer person
+
+Stays its own field in the database, separate from the sermon speaker. The Service form adds a
+**checkbox that copies the sermon speaker into it**. The reference-deck row 29 above, which reuses
+`sermon_speaker_name` for Closing Prayer, is an authoring slip and is corrected by this section.
+
+## S7 — Lyrics: parsing and slide breaks
+
+**Supersedes** the "Lyric parse" subsection above, including its two mis-citations of the as-built
+code: `expandTrailingRefrain` has no distinct-refrain path, and the default chunker is a
+320-character budget, not `maxLinesPerSlide`.
+
+| Rule | Statement |
+| --- | --- |
+| L1 | Refrain headers are `Reff` (Indonesian) and `Chorus` (English) — **both accepted**, each with or without a trailing number (`Reff`, `Reff 2`, `Chorus`, `Chorus 3`). Today the regex (`src/lib/lyrics.ts:100`) allows a number only after `Verse`, so `Reff 1` is silently swallowed as lyric text |
+| L2 | A refrain **with its own body** is used verbatim for the verse it follows. Different refrains per verse MUST be preserved. Today `expandTrailingRefrain` (`src/lib/lyrics.ts:252-274`) picks the first non-empty refrain and discards the rest — this MUST change |
+| L3 | A refrain header with **no body** inherits the nearest preceding non-empty refrain. This is how a song with one repeating refrain is authored |
+| L4 | Slide order follows the order written in the lyric database. The parser MUST NOT rebuild the sequence |
+| L5 | **A blank line inside a section is a hard slide break.** One paragraph, one slide. Today blank lines are discarded outright (`src/lib/lyrics.ts:222`) |
+| L6 | **Splitting by character count is removed.** `CONTINUOUS_CHAR_BUDGET = 320` no longer governs anything; the lyric database alone decides where a slide ends. `maxLinesPerSlide` is already inert on the production path (`src/lib/slide-plan.ts:166`) and is retired with it |
+
+**Two parsers, one behaviour.** `src/lib/lyrics.ts` (operator preview) and `internal/plan/lyrics.go`
+(PPTX) are hand-mirrored ports. Keeping both is accepted. Each MUST carry a header comment naming
+the other and stating that a change to one is incomplete until the other matches — so an agent
+editing the Go file knows to edit the TypeScript file, and the reverse.
+
+**Corpus note.** Of the 695 hymns in `data/song-book/sdah.json`, none currently use a numbered
+refrain header and none use a blank line inside a section. Old hymns therefore render unchanged
+after L1-L6 land; the new behaviour only appears where lyrics are re-authored.
+
+## S9 — Lyrics are edited inline on the Service, not by sweeping the corpus
+
+The 695-hymn corpus is **not** re-authored in a sweep. Instead, when the operator prepares a
+worship service, each song-set entry **shows the hymn's lyrics in an editable text area right
+there**, and the operator adjusts them for that week — moving a paragraph break, fixing a line,
+splitting a long stanza. Because S7/L5 makes a blank line a hard slide break, editing the text is
+how the operator decides where slides break. No separate slide-splitting control is needed.
+
+Nothing like this exists today: lyrics are read straight from the `hymns` table at plan time
+(`src/lib/lyrics.ts:28`, `internal/plan/plan.go`), and the only per-service overlay is the hymn
+*number* (`internal/parse/fields.go:87-94`). There is no lyric override field anywhere in
+`internal/db/schema.sql`. So this needs new per-service storage plus a resolution rule: the
+service's edited lyrics win over the song book's, and an untouched song falls through to the book.
+
+## S10 — Background library holds images only
+
+No solid colours, no gradients. Images.
+
+## S11 — Live background switching belongs to the operator
+
+The operator changes the background during the service, because the operator is the one running the
+day. Admin owns the library and the global default; the operator owns the moment.
+
+## S12 — Scope of an inline lyric edit
+
+Two levels, both reachable from the same place in the UI:
+
+- **Default — this service only.** Editing the lyric text on the Service form changes the deck for
+  that service and nothing else. The song book is untouched.
+- **Explicit — save to the song book.** A separate button beside the editor writes the edited lyrics
+  back to the hymn, so every future service starts from the corrected text.
+
+The button MUST be a deliberate, separate action, never a side effect of typing. The two levels sit
+together so the operator can see, in one place, what a save would and would not change.
+
+## S13 — Four rulings that closed the G4 registry questions (owner, 2026-08-20)
+
+| # | Ruling |
+| --- | --- |
+| R1 | The legacy `reference` / `text` keys do **not** default to the theme keys. The mapping is decided **per slide identity**, keyed off the stable `artifact_templates.id` and never the editable label: the Verse Reading slide (`verse-reading`, `data/default-registry.json` ~line 331) becomes `scripture_reference` / `scripture_text`; the Call For Scripture Contemplation slide (`bible-verse-contemplation`, ~line 804) becomes `theme_reference` / `theme_text`. Those are the only two seeded slides binding these keys. An admin-authored custom slide that is neither falls to `scripture_*` and is flagged `needs-review` |
+| R2 | A `variable_name` freed by deleting a Song Set entry **MAY be reused** by a later entry. No reservation, no tombstone |
+| R3 | Deleting an Announcement Set still referenced by a marker on the main artifact registry is **refused**. The Admin removes the marker from the main registry first, then deletes the set. Never cascade |
+| R4 | **Reversal of the earlier design.** The shared Title / Verse / Reff trio is **frozen per service**, not read live at render time. It joins the per-service snapshot alongside everything else DEC-004 freezes at Service creation, so editing a layout today does not silently change a Service created last week |
+
+## S14 — Song data ownership (owner, 2026-08-20)
+
+Recorded here because it is the reason DEC-005 exists. The committed corpus file `data/song-book/sdah.json` is the **initial seeder only**. A fresh clone still gets all 695 hymns from it. Once seeded, the table **is** the database: hymn lyrics and a song book's own registry row are administrator-owned, correctable when there is a human error, and **never re-read from the file on a later boot**. The same rule covers both — the hymn content rows and the `song_books` registry row.
+
+The cost, accepted by the owner: a corrected `sdah.json` shipped later reaches only fresh clones, never an existing install.
+
+This contradicts AD-25, which is the one case the method makes mandatory to record, so it is carried by its own decision — see `DEC-005-song-book-authored-after-bootstrap.md` and AD-36.
+
+## S15 — Still open
+
+None. Every question raised in rounds 1-4 is answered above.

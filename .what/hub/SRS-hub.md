@@ -4,10 +4,10 @@ component: hub
 status: draft
 created: 2026-08-18
 updated: 2026-08-19
-satisfies: [FR-1, FR-2, FR-3, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-17, FR-18, FR-23, FR-24, FR-25, FR-27, FR-28]
+satisfies: [FR-1, FR-2, FR-3, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-17, FR-18, FR-23, FR-24, FR-25, FR-27, FR-28, FR-32, FR-34]
 reviewed:
-  date: '2026-08-19'
-  sha: '02f8d3a124a8c4d4e266ec005f8fc0495879914e'
+  date: '2026-08-20'
+  sha: 'ea54cdb3f80610648510ed95120b3c1b1afcbd30'
   lenses: [structure, prose, edge-case-hunter]
 ---
 
@@ -46,11 +46,15 @@ Without Hub, the multimedia turn falls back to one person assembling files. This
 | UC-17 | Events correct one song via Telegram | Events | FR-12 | yes |
 | UC-18 | I download the PPTX for Sabbath | Operator | FR-14 | no |
 | UC-19 | I choose one transition for the whole Deck | Admin | FR-7 | no |
-| UC-21 | I manage the announcement list that persists across weeks | Operator | FR-3 | no |
+| UC-21 | I manage the announcement list that persists across weeks — **RETIRED, superseded by Registry UC-14/UC-15** | Operator | FR-3 | no |
 | UC-22 | I browse the Song Book and translations by language | Admin | FR-23, FR-24 | no |
 | UC-23 | My edit is rejected because someone else already saved | Operator | FR-28 | no |
+| UC-26 | I enter this week's song numbers, books, and backgrounds for however many songs are configured | Operator | FR-32 | no |
+| UC-28 | I correct a song's lyrics for this Service, and optionally save the fix back to the Song Book | Operator | FR-34 | yes |
 
 UC-1 and UC-17 realise CAP-11 (Telegram, last phase). This phase's create path is UC-2.
+
+UC-21's promise is withdrawn with FR-3: Hub no longer composes or reorders any announcement/flyer list — that is Registry UC-14 (edit a slide within an Announcement Set) and UC-15 (reorder/delete within it), per DEC-004. The one property of UC-21 that survives is asset reuse — a copied image shares one file by reference rather than a fresh upload each week — and it now lives on the Registry side, carried structurally by FR-21 (`offline-deck` PRD) rather than by anything Hub does.
 
 ## Constraints · [G3]
 
@@ -98,7 +102,7 @@ OQ-4 — When will the production host set `AUTH_SECRET`, `WEBHOOK_SECRET`, and 
 
 ## Slots
 
-`mode: deep`. Rules: `02-rules/rules-hub.md`. Domain: `03-domain/domain-model.md`, `state-machines.md`. Full flow of each critical UC: `04-usecases/UC-1-events-send-rundown.md`, `UC-2-paste-rundown-hub.md`, `UC-5-edit-service-fields.md`, `UC-7-delete-service.md`, `UC-17-telegram-correction.md`. Branches: `05-scenarios/SCN-1-unknown-hymn.md`, `SCN-2-save-conflict.md`, `SCN-3-correction-without-target.md`. Physical field names: `.how/hub/05-model/form-fields.md`.
+`mode: deep`. Rules: `02-rules/rules-hub.md`. Domain: `03-domain/domain-model.md`, `state-machines.md`. Full flow of each critical UC: `04-usecases/UC-1-events-send-rundown.md`, `UC-2-paste-rundown-hub.md`, `UC-5-edit-service-fields.md`, `UC-7-delete-service.md`, `UC-17-telegram-correction.md`, `UC-28-correct-song-lyrics.md`. Branches: `05-scenarios/SCN-1-unknown-hymn.md`, `SCN-2-save-conflict.md`, `SCN-3-correction-without-target.md`, `SCN-4-lyric-save-to-book-race.md`. Physical field names: `.how/hub/05-model/form-fields.md`.
 
 ## Open Items
 

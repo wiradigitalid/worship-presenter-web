@@ -4,7 +4,7 @@ kind: screen
 scope: _platform
 status: draft
 created: '2026-08-18'
-updated: '2026-08-19'
+updated: '2026-08-20'
 derived_from: code
 verified: '96dfd61'
 platform_rows: []
@@ -36,3 +36,4 @@ Derived by `inventory.py` from `<Route>` in `spa/src/App.tsx`. Screen identity i
 - UC served is a judgement the reader cannot derive from `App.tsx`; values are the prior catalogue mapping, kept in this file, except where that mapping names a UC the page does not run.
 - UC-16 (Sync Artifact) is on row 4 (`/services/[id]`), Admin-only control. It is not on row 7.
 - Plan vs code (DEC-003): Screen identity prefix is `spa`. Operator and projected shells live under `spa/src/pages`; client trees remain in `src/operator` and `src/projected`.
+- **Plan vs code (DEC-004, not yet built):** row 5 (`spa/AnnouncementsPage`, UC-21) is retired by this decision — UC-21 leaves Hub's catalogue and its promise moves to the Registry (row 7, `spa/AdminArtifactsPage`), which is expected to gain the Announcement Set / Song Set Entry / Background Library authoring surfaces (UC-24, UC-25) once built. No new row is added for that surface here; the page does not exist yet.

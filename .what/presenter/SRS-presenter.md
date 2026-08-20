@@ -3,8 +3,8 @@ type: srs
 component: presenter
 status: draft
 created: 2026-08-18
-updated: 2026-08-19
-satisfies: [FR-15, FR-16, FR-19, FR-22]
+updated: 2026-08-20
+satisfies: [FR-15, FR-16, FR-19, FR-22, FR-33]
 reviewed:
   date: '2026-08-19'
   sha: '02f8d3a124a8c4d4e266ec005f8fc0495879914e'
@@ -35,10 +35,13 @@ The Operator needs a control screen separate from what the Congregation sees. Th
 | UC-11 | I present a fullscreen slideshow | Operator | FR-15 | no |
 | UC-12 | I run the two-screen presenter | Operator | FR-16 | no |
 | UC-13 | I display an on-demand verse on the projector | Operator | FR-19, FR-22 | no |
+| UC-27 | I switch the live Verse/Reff background during the service | Operator | FR-33 | no |
 
 ## Constraints · [G3]
 
 Operator Chrome does not reach the room screen. Source: AD-24 (adopted) in the spine.
+
+A live background switch (UC-27, DEC-004) changes what the projector shows for the current Verse/Reff slide only; it never rewrites the Service payload or the Registry, and it does not survive past this session the way a Sync Artifact does — the next generate still resolves the background through the normal order (weekly choice → global default → blank).
 
 ## Non-Goals · [G3]
 
@@ -82,7 +85,7 @@ Slideshow is mistaken for the Sabbath guarantee.
 
 ## Slots
 
-`mode: deep`. No `critical` UC. Rules: `02-rules/rules-presenter.md`. Domain: `03-domain/domain-model.md`, `state-machines.md`. Component flows: `04-usecases/UC-11-fullscreen-slideshow.md`, `UC-12-two-screen-presenter.md`, `UC-13-on-demand-verse.md`. Branches: `05-scenarios/SCN-4-verse-lookup-failed.md`.
+`mode: deep`. No `critical` UC. Rules: `02-rules/rules-presenter.md`. Domain: `03-domain/domain-model.md`, `state-machines.md`. Component flows: `04-usecases/UC-11-fullscreen-slideshow.md`, `UC-12-two-screen-presenter.md`, `UC-13-on-demand-verse.md`, `UC-27-live-background-switch.md`. Branches: `05-scenarios/SCN-4-verse-lookup-failed.md`.
 
 ## Open Items
 

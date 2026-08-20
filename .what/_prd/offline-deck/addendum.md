@@ -16,6 +16,7 @@ updated: 2026-08-19
 | FR-14 | same |
 | FR-10b | FR-26 |
 | FR-20 · FR-21 | same |
+| — | FR-29, FR-30, FR-31 (DEC-004, 2026-08-20) |
 
 ## Technical constraints
 

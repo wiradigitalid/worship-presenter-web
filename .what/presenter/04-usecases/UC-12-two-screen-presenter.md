@@ -52,4 +52,4 @@ Two screens: Operator control and Congregation picture. Operator Chrome does not
 
 ## Business Rules
 
-BR-6
+BR-6 · BR-9

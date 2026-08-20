@@ -1,7 +1,7 @@
-promise_progress: 16%
+promise_progress: 14%
 rtm_rows:
   green: 5
-  counted: 31
+  counted: 37
   excluded_no_uc: 1
 work_progress:
 - wave: W1
@@ -14,9 +14,10 @@ work_progress:
   stories_done: 3
   stories_total: 3
   work_progress: 100%
-gate_readiness: 96%
+gate_readiness: 92%
 validators_red:
 - V13
+- V24
 validators_skipped:
   V14: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
     but its presence in generated/report is not checked

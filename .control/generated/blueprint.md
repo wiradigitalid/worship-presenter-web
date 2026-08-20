@@ -8,7 +8,7 @@ This is what the owner reads at **G3 Blueprint**, instead of seven files. Its co
 
 ## Use case catalogue
 
-**23 use cases**, 6 marked `critical`.
+**28 use cases**, 7 marked `critical`.
 
 | id | Use case | Component | Satisfies | critical |
 | --- | --- | --- | --- | --- |
@@ -17,7 +17,7 @@ This is what the owner reads at **G3 Blueprint**, instead of seven files. Its co
 | `UC-11` | I present a fullscreen slideshow | `presenter` | `FR-15` | no |
 | `UC-12` | I run the two-screen presenter | `presenter` | `FR-16` | no |
 | `UC-13` | I display an on-demand verse on the projector | `presenter` | `FR-19`, `FR-22` | no |
-| `UC-14` | I change a slide's layout | `registry` | `FR-20` | no |
+| `UC-14` | I change a slide's layout | `registry` | `FR-20`, `FR-30` | no |
 | `UC-15` | I reorder slides and deletions stay deleted | `registry` | `FR-21` | yes |
 | `UC-16` | I Sync Artifact to a Service already reviewed | `registry` | `FR-21` | no |
 | `UC-17` | Events correct one song via Telegram | `hub` | `FR-12` | yes |
@@ -25,9 +25,14 @@ This is what the owner reads at **G3 Blueprint**, instead of seven files. Its co
 | `UC-19` | I choose one transition for the whole Deck | `hub` | `FR-7` | no |
 | `UC-2` | I paste a Rundown in Hub and a new Service is saved | `hub` | `FR-27`, `FR-2` | yes |
 | `UC-20` | I see a Deck that matches this week's payload | `registry` | `FR-4`, `FR-5`, `FR-6` | no |
-| `UC-21` | I manage the announcement list that persists across weeks | `hub` | `FR-3` | no |
+| `UC-21` | I manage the announcement list that persists across weeks — RETIRED, superseded by UC-14/UC-15 | `hub` | `FR-3` | no |
 | `UC-22` | I browse Song Books and translations by language | `hub` | `FR-23`, `FR-24` | no |
 | `UC-23` | My edit is rejected because someone else already saved | `hub` | `FR-28` | no |
+| `UC-24` | I add, rename, or remove a song-set entry | `registry` | `FR-29` | no |
+| `UC-25` | I maintain the background library and set the global default | `registry` | `FR-31` | no |
+| `UC-26` | I enter this week's song numbers, books, and backgrounds for however many songs are configured | `hub` | `FR-32` | no |
+| `UC-27` | I switch the live Verse/Reff background during the service | `presenter` | `FR-33` | no |
+| `UC-28` | I correct a song's lyrics for this Service, and optionally save the fix back to the Song Book | `hub` | `FR-34` | yes |
 | `UC-3` | I open the dated Service list | `hub` | `FR-8` | no |
 | `UC-4` | I follow the worship order from the Run-Sheet | `hub` | `FR-17` | no |
 | `UC-5` | I edit Service fields in Hub | `hub` | `FR-11` | yes |
@@ -58,7 +63,7 @@ This is what the owner reads at **G3 Blueprint**, instead of seven files. Its co
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Admin | Structure editor | Layout, order, delete, Sync Artifact |
+| Admin | Structure editor | Layout, order, add, rename, delete, Sync Artifact |
 | Operator | Sees the result | Sees the Deck matching the payload; does not edit Registry |
 
 ## Domain model
@@ -73,11 +78,14 @@ Conceptual. Database column types belong in `.how/`.
 | Entity | Meaning | Relations |
 | --- | --- | --- |
 | Service | One dated worship gathering | 1 weekly payload, 0..1 Snapshot (owned by Registry), 0..N images |
-| AnnouncementItem | Announcement list item | recurring or one-off to one Service |
 | Account | Per-person account | Admin or Operator role |
-| AppSetting | Application settings | transition, ui_locale, default corpus |
+| AppSetting | Application settings | transition, ui_locale, default corpus, default Song Book, Background Library default |
 | Rundown | Text the Operator enters in Hub this phase; later Events may send it on Telegram | becomes Service payload |
 | Hymn | One Song Book entry, identified by book + number | resolved into a Service song block (BR-3) |
+| Song Set Weekly Input | One Song Set entry's weekly values for this Service — `<var>_song_number`, `<var>_song_book_name`, `<var>_song_background` | one per Song Set entry the Registry has configured (FR-32); the entry itself is Registry-owned |
+| Lyric Override | This Service's edited lyric text for one Song Set entry | scoped to this Service only by default; an explicit save-back action writes it into the Song Book instead (FR-34, DEC-004) |
+
+**AnnouncementItem is retired from Hub (DEC-004).** Announcement composition moved entirely to the Registry's Announcement Set (`.what/registry/03-domain/domain-model.md`); Hub owns no announcement-list entity any more (FR-3 retired, superseded by FR-21).
 
 The Operator form is one raw Rundown plus structured overlays. Physical field names: `.how/hub/05-model/form-fields.md`.
 
@@ -102,14 +110,21 @@ Conceptual. Database column types belong in `.how/`.
 
 | Entity | Identified by | Meaning | Relations |
 | --- | --- | --- | --- |
-| ArtifactTemplate | template id | One Deck-order entry | kind General / SongSet / Announcement; 0..N per Registry |
-| ServiceRegistrySnapshot | Service id (planned) | Copy of Registry when the Service is created | 1 Service : 1 Snapshot after FR-21 |
-| Placeholder Catalog | catalog key | Closed set of weekly-content bindings | many Templates may use the same entry |
-| SongSet Slot | slot identity | Four fixed song-block positions | identity belongs to the system; at most one row per slot |
+| ArtifactTemplate | template id | One Deck-order entry on the main spine | kind General / Song Set / ann-set marker; 0..N per Registry |
+| ServiceRegistrySnapshot | Service id | Copy of the whole spliced structure (main spine + every Announcement Set it references **+ the shared Title/Verse/Reff trio**) when the Service is created, or re-cloned on Sync | 1 Service : 1 Snapshot. The trio is frozen here, not read live at render time (owner ruling, 2026-08-20 — reverses an earlier live-read draft) |
+| Predefined Field Catalog | catalog key | Closed set of weekly-content keys, each an inline `{key}` token inside a text element's content | many text elements may carry the same key; supersedes **Placeholder Catalog**'s whole-element binding (DEC-004) |
+| Song Set Entry | `variable_name` | One admin-configured song block on the main spine, with its own name and title; N may exist, no fixed count | identity belongs to the system, never a positional ordinal; at most one row per `variable_name`; every entry shares the one Title/Verse/Reff layout trio; supersedes **SongSet Slot**'s four fixed positions (DEC-004) |
+| Announcement Set | ann-set id | An Admin-authored, ordered sequence of General slides, held only in the Registry | 0..N per Registry; a main-spine `ann-set` marker splices exactly one set in at that position; supersedes the row-expands-Hub's-list shape BR-11 used to describe (DEC-004) |
+| Background Library | image id | Admin's set of images (no colours, no gradients) selectable as a Verse/Reff background, plus one entry marked the global default | many Song Set entries may reference the same image; one entry per library is the global default |
+| Song Book | book code | A selectable lyrics source a Song Set entry may pick, or fall through to the Admin-set global default | many hymns per book; a Song Set entry names at most one book per week (Hub weekly value) |
 
-One Registry holds zero or more ArtifactTemplates. After FR-21, one Service has one Snapshot. A SongSet slot may have at most one live row.
+One Registry holds zero or more ArtifactTemplates (main-spine rows), each Song Set entry shares the one Title/Verse/Reff sequence, and each Announcement Set is its own ordered list independent of every other. After FR-21, one Service has one Snapshot covering the whole spliced structure.
 
-Placeholder Catalog **coverage floor** (intent, not persisted spelling — Story 20.5 owns the key strings): service date; theme verse; verse reading; sermon speaker / title / graphic; special song; closing-prayer person; family and youth prayer text and photos. SongSet hymn/lyric values and Announcement flyer slots are system expansion, not catalog keys.
+Predefined Field Catalog **coverage floor** (intent, not persisted spelling — Story 20.5 owns the key strings, translated per Supplement S1): `service_date`; `scripture_reference` / `scripture_text` / `scripture_bible_version`; `theme_reference` / `theme_text`; `special_song`; `sermon_title` / `sermon_speaker_name` / `sermon_poster`; `closing_prayer_person`; `family_name` / `family_request` / `family_photo`; `youth_name` / `youth_request` / `youth_photo`. Song Set hymn/lyric values (`song_number`, `song_title`, `verse_number`, `verse_content[]`, `reff[]`) are system expansion from the Song Book, not catalog keys, and are scoped per Song Set entry's `variable_name`.
+
+#### Deferred to G4
+
+The exact persisted shape of Song Set Entry (table vs. column), Announcement Set (its own table vs. a `parent_id` on `ArtifactTemplate`), Background Library, and Song Book selection is component-depth design, not this blueprint's job.
 
 ## Three inventories
 
@@ -141,12 +156,13 @@ Derived by `inventory.py` from `CREATE TABLE IF NOT EXISTS` in `src/lib/db/index
 
 - Rows 12 (`hymns_with_book_code`) and 13 (`bible_verses_with_translation_code`) were catalogued as live tables. They are one-shot rebuild names in the same DDL file, then `RENAME TO` the live tables. Dropped from the rows; those numbers MUST NOT be reused. W1's freeze table is therefore **14**.
 - `service_registry_snapshots` is Registry-owned (AD-16). `services.registry_snapshot_at` is a Hub column on table 1, not a separate table.
+- **Plan vs code (DEC-004, not yet built):** table 3 (`announcement_items`, hub-owned) is retired by this decision — composition moves to the Registry as Announcement Sets nested inside `artifact_templates` or a sibling table (G4 design call). Song Set Entry, Background Library, and per-Service Lyric Override have no table yet. None are added as rows here: the code that would create them does not exist, and this inventory is derived from what runs, not from a decision not yet implemented.
 
 ### List of endpoints — `inventory-api.md`
 
 ### Inventory — endpoints
 
-Derived by `inventory.py` from `export async function GET|POST|PUT|PATCH|DELETE` in `src/app/api/**/route.ts` (as-built until cutover). Host `api` is the Go container (DEC-003). Numbers are stable; new rows take the next number.
+Derived by `inventory.py` from `mux.HandleFunc` in `internal/httpapi/server.go`. Host `api` is the Go container (DEC-003). Numbers are stable; new rows take the next number.
 
 #### Rows
 
@@ -160,8 +176,10 @@ Derived by `inventory.py` from `export async function GET|POST|PUT|PATCH|DELETE`
 | 31 | api | DELETE | `/api/admin/artifacts/[id]` | registry | Delete template | published |
 | 26 | api | GET | `/api/admin/artifacts/[id]` | registry | One template | published |
 | 27 | api | PUT | `/api/admin/artifacts/[id]` | registry | Save layout | published |
+| 38 | api | PATCH | `/api/admin/artifacts/[id]` | registry | Rename template | published |
 | 32 | api | PUT | `/api/admin/artifacts/order` | registry | Reorder templates | published |
 | 25 | api | GET | `/api/admin/artifacts` | registry | List templates | published |
+| 37 | api | POST | `/api/admin/artifacts` | registry | Create authored General | published |
 | 23 | api | GET | `/api/admin/settings` | hub | Settings | published |
 | 24 | api | PUT | `/api/admin/settings` | hub | Update settings | published |
 | 14 | api | DELETE | `/api/announcements/[id]` | hub | Delete one item | published |
@@ -173,9 +191,12 @@ Derived by `inventory.py` from `export async function GET|POST|PUT|PATCH|DELETE`
 | 1 | api | POST | `/api/auth/login` | hub | Log in | published |
 | 2 | api | POST | `/api/auth/logout` | hub | Log out | published |
 | 18 | api | GET | `/api/hymns` | hub | Search hymns | published |
-| 29 | api | GET | `/api/scripture` | presenter | Verse lookup | published |
+| 29 | api | GET | `/api/scripture` | presenter | Verse lookup (`ref`) and book suggestions (`q`) | published |
+| 36 | api | GET | `/api/bible-translations` | presenter | Installed bible translations (code, name, locale, licence, provenance) plus resolved default | published |
+| 34 | api | GET | `/api/session` | hub | Current session | published |
 | 8 | api | GET | `/api/services/[id]/pptx` | hub | Download PPTX | published |
 | 33 | api | POST | `/api/services/[id]/sync-artifact` | hub | Sync Artifact (AD-16) | published |
+| 35 | api | GET | `/api/services/[id]` | hub | One Service plus assembled plan | published |
 | 7 | api | DELETE | `/api/services/[id]` | hub | Delete Service | published |
 | 6 | api | PUT | `/api/services/[id]` | hub | Update Service (AD-6) | published |
 | 9 | api | POST | `/api/services/preview` | hub | Preview | published |
@@ -188,16 +209,20 @@ Derived by `inventory.py` from `export async function GET|POST|PUT|PATCH|DELETE`
 
 #### Findings
 
-- There is no `GET /api/services/[id]`. The Run-Sheet reads the Service through the SPA page `/services/[id]` (inventory-screen row 4); after cutover that page calls the Go API rather than a Server Component.
-- Plan vs code: `POST /api/webhook` is published in `src/` (FR-1 / FR-12), while this phase's intake promise is Hub form (FR-27). The row stays — as-built — and CAP-11 is the later product phase. Do not treat the shipped webhook as this phase's handover.
-- Plan vs code (DEC-003): Host is `api` (Go target). Routes are still implemented in Next.js `src/app/api` until the cutover wave. Do not treat Host `api` as proof the Go server exists.
+- `GET /api/session` (34) and `GET /api/services/[id]` (35) exist on the Go API so the SPA can read the httpOnly session and consume the assembled plan.
+- Plan vs code: `POST /api/webhook` is published (FR-1 / FR-12), while this phase's intake promise is Hub form (FR-27). The row stays — as-built — and CAP-11 is the later product phase. Do not treat the shipped webhook as this phase's handover.
+- Plan vs code (DEC-003): Host is `api` (Go). Rows 1–38 are served by `internal/httpapi`.
 - W1 added 31 `DELETE /api/admin/artifacts/[id]`, 32 `PUT /api/admin/artifacts/order`, 33 `POST /api/services/[id]/sync-artifact`. Numbers kept; Host renamed `web` → `api` without renumbering.
+- `GET /api/bible-translations` (36) lists every installed bible translation with its locale and returns the resolved `default_bible_translation` (Story 21.3). No locale filter on the query (AD-26 / FR-24).
+- `GET /api/scripture` (29) accepts `ref` for lookup or `q` for book-name suggestions on the same path (Story 21.5). An omitted `translation` uses `default_bible_translation` (inert if uninstalled). No new row for that query shape.
+- `POST /api/admin/artifacts` (37) creates an authored General (`seed_hash` NULL). `PATCH /api/admin/artifacts/[id]` (38) renames any kind, writing column and payload together (AD-18). List summaries include `resettable` from that hash. `PUT /api/admin/artifacts/[id]` (27) validates AD-15 and names the failing property; authored Generals without a planner handler still appear in the deck.
+- **Plan vs code (DEC-004, not yet built):** rows 10–14 (`/api/announcements*`) are the as-built Hub announcement-list API and stay published as long as the current code runs; DEC-004 retires the promise behind them (FR-3) and moves announcement composition to the Registry, so these rows are expected to be **removed** and replaced by Registry-side endpoints for Announcement Set / Song Set Entry / Background Library CRUD once that G4 work ships. No new rows are added here yet — none of that code exists, and a plan-only row would be a guess this inventory exists to prevent.
 
 ### List of screens — `inventory-screen.md`
 
 ### Inventory — screens
 
-Derived by `inventory.py` from `export default function` in `src/app/**/page.tsx` (as-built until cutover). Route groups `(operator)` / `(projected)` do not appear in the URL. Screen identity is `<spa>/<Component>` (DEC-003). Numbers are stable; new rows take the next number.
+Derived by `inventory.py` from `<Route>` in `spa/src/App.tsx`. Screen identity is `<spa>/<Component>` (DEC-003). Numbers are stable; new rows take the next number.
 
 #### Rows
 
@@ -217,6 +242,7 @@ Derived by `inventory.py` from `export default function` in `src/app/**/page.tsx
 #### Findings
 
 - States are not declared on these pages; the `states:` map in frontmatter is empty, so the column is `—`. Empty and error states demanded by the UX guide are not yet named here.
-- UC served is a judgement the reader cannot derive from `page.tsx`; values are the prior catalogue mapping, kept in this file, except where that mapping names a UC the page does not run.
+- UC served is a judgement the reader cannot derive from `App.tsx`; values are the prior catalogue mapping, kept in this file, except where that mapping names a UC the page does not run.
 - UC-16 (Sync Artifact) is on row 4 (`/services/[id]`), Admin-only control. It is not on row 7.
-- Plan vs code (DEC-003): Screen identity prefix is `spa`. Pages are still Next.js `src/app/**/page.tsx` until the cutover wave.
+- Plan vs code (DEC-003): Screen identity prefix is `spa`. Operator and projected shells live under `spa/src/pages`; client trees remain in `src/operator` and `src/projected`.
+- **Plan vs code (DEC-004, not yet built):** row 5 (`spa/AnnouncementsPage`, UC-21) is retired by this decision — UC-21 leaves Hub's catalogue and its promise moves to the Registry (row 7, `spa/AdminArtifactsPage`), which is expected to gain the Announcement Set / Song Set Entry / Background Library authoring surfaces (UC-24, UC-25) once built. No new row is added for that surface here; the page does not exist yet.

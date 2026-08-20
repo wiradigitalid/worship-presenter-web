@@ -17,4 +17,4 @@ There are no extra `BR-N` rows. Rules that bind more than one PC are already `AD
 
 Rules that bind only one PC: `.what/<pc>/02-rules/`.
 
-BR-11 (Registry) also reaches Hub: Announcement registry rows expand the live announcement list; Hub owns membership.
+**BR-11 (Registry) is retired (DEC-004).** It used to reach Hub — an Announcement registry row expanded Hub's live announcement list, and Hub owned membership. Announcement composition moved entirely into the Registry as N independent Announcement Sets; Hub owns no announcement membership or ordering any more (FR-3 retired, superseded by FR-21). The rule that replaces it, BR-12, binds only Registry and lives at `.what/registry/02-rules/rules-registry.md` — there is no cross-component reach left to record here.

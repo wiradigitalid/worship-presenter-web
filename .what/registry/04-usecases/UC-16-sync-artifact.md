@@ -21,7 +21,10 @@ Admin is signed in. The Service exists. Operator cannot run Sync.
 
 1. Admin requests Sync on that Service.
 2. The system rejects if someone else already changed the Service underneath.
-3. The system replaces the structure this Service renders with the live Registry.
+3. The system replaces the structure this Service renders with the live Registry — the spine, every
+   referenced Announcement Set, **and the shared Title/Verse/Reff trio** (AD-16; the trio is
+   included here because it is frozen at creation like everything else — owner ruling,
+   2026-08-20 — not read live, so Sync is the only way an existing Service picks up a trio edit).
 4. Operator fields (song numbers, names, verses) remain.
 
 ## Alternate Flows
@@ -29,7 +32,7 @@ Admin is signed in. The Service exists. Operator cannot run Sync.
 | From step | Condition | What happens |
 | --- | --- | --- |
 | 1 | Service was created before the Snapshot model | The first Sync is the on-ramp into that model (AD-16) |
-| 3 | Live Registry dropped or added entries | Entered fields remain; unused ones stay stored and inert; new slots start empty. Announcement membership stays the Service's live list, not cloned from Registry (AD-16). Each Announcement row still expands that whole list (BR-11) |
+| 3 | Live Registry dropped or added entries | Entered fields remain; unused ones stay stored and inert; new Song Set entries start empty. Announcement Sets are structural rows on the spine now (`ann-set` markers, DEC-004) and ARE part of the cloned/re-cloned structure like every other row — this reverses the earlier "membership stays the Service's live list" reading, which depended on BR-11 (retired). Sync replaces the whole spliced structure, including which Announcement Sets appear and in what order |
 | 3 | Live Registry holds a row whose payload will not parse | Omit-and-log like plan read; do not freeze an unrenderable snapshot (OQ-32). Sync HTTP is still [MISSING] |
 
 ## Failure Flows
@@ -45,4 +48,4 @@ This Service renders the new structure. Weekly payload is not replaced by Sync.
 
 ## Business Rules
 
-BR-10 · BR-11
+BR-10 · BR-12

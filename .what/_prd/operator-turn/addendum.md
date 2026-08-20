@@ -16,10 +16,13 @@ Condition 1 for retiring the pre-method archive (DEC-001). Old PRD numbers are n
 |---|---|---|
 | FR-1 · FR-2 · FR-3 · FR-12 | same | rundown-to-service |
 | FR-11b | FR-27 | rundown-to-service |
+| FR-3 | retired 2026-08-20 (DEC-004), superseded by `offline-deck` FR-21 | rundown-to-service |
 | FR-4 … FR-7 · FR-14 · FR-20 · FR-21 | same | offline-deck |
 | FR-10b | FR-26 | offline-deck |
+| — | FR-29, FR-30, FR-31 (DEC-004, 2026-08-20) | offline-deck |
 | FR-8 · FR-9 · FR-10 · FR-11 · FR-13 · FR-15 … FR-19 · FR-22 … FR-25 | same | operator-turn |
 | FR-13b | FR-28 | operator-turn |
+| — | FR-32, FR-33, FR-34 (DEC-004, 2026-08-20) | operator-turn |
 | NFR-1 … NFR-9 | same | enforced in `requirements.yaml` |
 | UJ-1 | UJ-1 | rundown-to-service |
 | UJ-5 | UJ-5 | rundown-to-service |

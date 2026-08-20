@@ -3,109 +3,212 @@ type: sdd
 component: registry
 status: draft
 created: 2026-08-18
-updated: 2026-08-19
-realizes: [UC-14, UC-15, UC-16, UC-20]
-binds: [AD-5, AD-6, AD-7, AD-8, AD-9, AD-11, AD-12, AD-13, AD-14, AD-15, AD-16, AD-17, AD-18, AD-19, AD-20, AD-21, AD-22, AD-30]
+updated: 2026-08-20
+realizes: [UC-14, UC-15, UC-16, UC-20, UC-24, UC-25]
+binds: [AD-5, AD-6, AD-7, AD-8, AD-9, AD-11, AD-12, AD-13, AD-14, AD-15, AD-16, AD-17, AD-18, AD-19, AD-20, AD-21, AD-30, AD-31, AD-32, AD-33, AD-34, AD-35]
 reviewed:
-  date: '2026-08-19'
-  sha: 'a2bf8b0dbdda61810be611576e31ec120e54d96d'
+  date: '2026-08-20'
+  sha: 'e4499dcdaf22b8032e46bd564ce9b9eb54d99dde'
   lenses: [structure, prose, edge-case-hunter]
 ---
 
 # SDD — Registry
 
-As-built: global live templates in SQLite plus a per-Service freeze (`service_registry_snapshots`, AD-16).
+As-built baseline: global live templates in SQLite plus a per-Service freeze
+(`service_registry_snapshots`, AD-16). **This revision designs the DEC-004 nested shape on top
+of that baseline** — none of it is built yet (Evidence table marks every new claim `[MISSING]`,
+not `verified`).
 
 ## Decision Summary · [outline]
 
-Registry is `/admin/artifacts` plus its API: layout, Reset to seed, ordered list, delete, whole-list reorder. The plan for a persisted Service reads `service_registry_snapshots`; preview reads the live map. After bootstrap the plan does not read a JSON file.
+Registry is `/admin/artifacts` plus its API. The main spine stays one ordered list, but a spine
+row is now one of exactly two server-owned kinds — `general` or a **Song Set entry** — plus an
+`ann-set` marker splicing in an Admin-authored **Announcement Set** (its own ordered list of
+Generals, held in its own tables). Every Song Set entry, however many Admin has defined, shares
+one canvas trio (Title/Verse/Reff) that lives **outside** the spine, in its own singleton table.
+Like every other registry structure, the trio is **frozen into the per-service snapshot at Service
+creation** (AD-16, reversed 2026-08-20 from an earlier live-read design — see below); it is not
+read live at render time.
+Two more Admin-maintained collections join the component: a **Background Library** (images only,
+one global default) and a **Song Book** list (one global default), both referenced by weekly/live
+choices elsewhere but owned and CRUD'd here. A Predefined Field is now a `{key}` token mixed into
+a text element's own content — the closed catalog vocabulary is still a code list (AD-19), not a
+table, and an unrecognised token never blocks generation (BR-13); it is flagged only when the
+slide is saved.
 
-Two surfaces: this component does not take weekly hymn numbers or flyer membership — those stay Hub. Each Announcement row expands Hub's whole live list (BR-11).
+Two surfaces, unchanged: this component does not take weekly hymn numbers, Song Book choices,
+backgrounds, lyric corrections, or live background switches — those are Hub/Presenter (FR-32,
+FR-33, FR-34). Announcement composition lives only here now (FR-3 retired, DEC-004); the old
+Hub-owned live master list (CAP-7 as-built) is retired by AD-35.
 
-Expensive choice: seed is bootstrap + Reset only (AD-17); a deleted row is not revived by restart or by Reset (OQ-24). Reset is live→live on a still-live seed row.
+**Physical-shape decision (left open at G3, closed here):** own tables per new concept, not one
+overloaded discriminator row. `artifact_templates` keeps carrying the main spine (`general` /
+`song-set-entry` / `ann-set-marker`); the shared Title/Verse/Reff trio, an Announcement Set's own
+slide list, the Background Library, and the Song Book list each get a dedicated table. Reasoning:
+the shared trio is not spine-ordered at all (one Title/Verse/Reff exists no matter how many
+entries reference it) and an Announcement Set's slides are ordered *within that set*, not within
+the spine — folding either into `artifact_templates`'s single `position` column would make
+`position` mean two different things depending on a row's kind, which is exactly the ambiguity
+AD-15's stable-id discipline exists to prevent. One overloaded table also cannot express
+"exactly 3 rows, never more" for the trio without an application-level rule doing the work a
+schema could do for free.
 
-Screens (`inventory-screen` 7) are not an `LC` `ui-screen`: that is a `wdi-ux` slot, skipped.
+Expensive choices carried forward and one added: seed is bootstrap + Reset only (AD-17); a
+deleted row (any of the five tables below) is not revived by restart or Reset (OQ-24). **New:**
+Song Set `variable_name` uniqueness and Announcement Set / marker referential integrity are
+enforced on the write path in code, never by a DB `UNIQUE`/`FOREIGN KEY` constraint — the same
+discipline AD-19 already set for slot identity, extended by AD-31 to the new shape.
+
+Screens (`inventory-screen` row 7) are not an `LC` `ui-screen`: that is a `wdi-ux` slot, skipped.
 
 ## Structure · [outline]
 
 | LC | type | Responsibility |
 | --- | --- | --- |
-| LC-11 | gateway | GET/PUT/DELETE artifacts, POST reset, PUT order |
-| LC-15 | service | SQLite store + validation + snapshot clone |
+| LC-11 | gateway | GET/PUT/DELETE artifacts, POST reset, PUT order (as-built) **+** CRUD for Song Set entries, Announcement Sets and their slides, Background Library, Song Books (new — same gateway, wider surface, not a new `LC`) |
+| LC-15 | service | SQLite store + AD-15 validation + snapshot clone (as-built) **+** the five new tables' store logic, `variable_name`/referential checks, migration runner (new — same service, wider surface) |
 
-Direction: Admin screen → LC-11 → LC-15 → `artifact_templates`. Hub/Presenter render through LC-16, not this API.
+Direction unchanged: Admin screen → LC-11 → LC-15 → SQLite. Hub/Presenter render through LC-16
+(Slide plan builder), not this API. No new `LC` is registered by this design: every new HTTP
+surface below is one more resource family under the existing Registry gateway (LC-11), and every
+new table is one more responsibility of the existing Registry store (LC-15) — same trust boundary,
+same container (`api`), same caller. Registration of any new endpoint row belongs to
+`.how/_platform/inventory-api.md` / `inventory-screen.md`, owned by `wdi-blueprint`; this SDD
+does not write there (see Drift, below).
 
 ## Inherited Constraints · [guarded]
 
 | AD | Quoted rule | How it lands here |
 | --- | --- | --- |
-| AD-5 | The Go API has one request gate, and its path matcher **is** the authorization boundary — anything it does not match is served with no session check at all, so a new exclusion ships together with its assertion test in the same change set. | `/admin/artifacts` and `/api/admin/artifacts/**` sit inside the matcher (AD-14). As-built until cutover: `internal/gate`. |
-| AD-6 | every service mutation carries the client's `updated_at` as a precondition; a stale value is rejected with HTTP 409 and the client re-reads before retrying. No write path may bypass the precondition. | PUT/DELETE/order artifacts: `updatedAt` / `RegistryStaleError`. Sync Artifact is Hub LC-2 (`updated_at` / `ServiceStaleError`). |
-| AD-7 | `buildSlidePlan` is the single source of slide order and content for every surface. | Registry supplies entries; the plan orders. |
-| AD-8 | image references resolve only through the shared helpers in `src/lib` | Save canvas. |
-| AD-9 | schema changes go through the Go API's startup DDL when it opens SQLite. | `artifact_templates` and `service_registry_snapshots`. |
-| AD-11 | The live Artifact Registry is stored in SQLite on the durable `DB_PATH` (AD-4). | Not live JSON. |
-| AD-12 | a renderer never **reads data from** the registry itself. | Plan only. |
-| AD-13 | The Canvas Editor uses an Uncontrolled Wrapper pattern. | Fabric holds state until save. |
-| AD-14 | Artifact templates are global across services. | Admin-only UI. Global clause partly superseded by AD-16. |
-| AD-15 | Layouts use a fixed 16:9 canvas with normalized percentage coordinates and stable template/layout/element/placeholder IDs. | Validate on every write. |
-| AD-16 | Creating a worship service **clones** the ordered live registry … into a **service-bound snapshot** | Table + clone-on-create + Admin `POST /api/services/[id]/sync-artifact`. Pre-existing rows cloned in the AD-21 1→2 transition. Preview still reads live. |
-| AD-17 | The seeder initialises data **from zero only** — first install, first run — and is gated by a marker in `settings`. | Delete stays deleted. |
-| AD-18 | A shipped change that must reach rows already persisted travels as an **explicit, one-time migration** on the startup path, versioned per AD-21. | Not a re-seed. |
-| AD-19 | a key referenced across a boundary is **server-owned vocabulary, enforced on every write path**, and it is never administrator configuration. | SongSet slots. |
-| AD-20 | every slide in the deck originates from an ordered registry entry. | Planner does not inject liturgy slides. AD-20 *Prevents* first half is still debt (handlers still pick the hymn). |
-| AD-21 | All persisted data shares **one monotonic version number** in `settings` | `data_version`. |
-| AD-22 | authoring authority is fixed per kind, and no surface widens it. | General vs SongSet vs Announcement. |
-| AD-30 | The Go API is the only always-on server: it owns SQLite, assembles the slide plan, and serves JSON | LC-11 / LC-15 on `api`; Admin UI on `spa`. |
+| AD-5 | The Go API has one request gate, and its path matcher **is** the authorization boundary — anything it does not match is served with no session check at all, so a new exclusion ships together with its assertion test in the same change set. | Every new path below (`/api/admin/song-set-entries*`, `/api/admin/announcement-sets*`, `/api/admin/background-library*`, `/api/admin/song-books*`) sits inside the matcher beside `/api/admin/artifacts*` (AD-14). No new exclusion is added. |
+| AD-6 | every service mutation carries the client's `updated_at` as a precondition; a stale value is rejected with HTTP 409 and the client re-reads before retrying. No write path may bypass the precondition. | Every new write (create/rename/delete/reorder/reset) on every new table carries `updatedAt` the same way `artifact_templates` already does. |
+| AD-7 | `buildSlidePlan` is the single source of slide order and content for every surface. | Registry supplies spine entries, the trio, Announcement Set slides, and the two libraries; the plan (Hub LC-16) orders and hydrates. |
+| AD-8 | image references resolve only through the shared helpers in `src/lib` | Background Library entries and every canvas image element (Main, trio, Announcement Set) resolve through the same helpers — no new image path. |
+| AD-9 | schema changes go through the Go API's startup DDL when it opens SQLite. | The five new tables and the migration below ship as startup DDL, not a hand-run script. |
+| AD-11 | The live Artifact Registry is stored in SQLite on the durable `DB_PATH` (AD-4). | All new tables live in the same file. |
+| AD-12 | a renderer never **reads data from** the registry itself. | Unchanged — plan only. |
+| AD-13 | The Canvas Editor uses an Uncontrolled Wrapper pattern. | Unchanged for every canvas surface, including the trio and Announcement Set slides. |
+| AD-14 | Artifact templates are global across services. | Unchanged; Admin-only UI for every new surface too. |
+| AD-15 | Layouts use a fixed 16:9 canvas with normalized percentage coordinates and stable template/layout/element/placeholder IDs. | Validated on every write, on every canvas-bearing table (trio rows, Announcement Set slides), exactly as `artifact_templates` today. |
+| AD-16 | Creating a worship service **clones** the ordered live registry … into a **service-bound snapshot** | Superseded in part by AD-35 for Announcement Sets specifically (below); the general clone-on-create / Sync-only-replace rule is otherwise unchanged and now also clones the referenced Announcement Sets **and the Title/Verse/Reff trio** into the same per-service snapshot (`service_registry_snapshots`) at creation time — **reversed 2026-08-20 (owner ruling): the trio is frozen, not read live.** An earlier draft of this design left the trio unversioned and always-live, resolved fresh at every plan build; the owner ruled freezing is better, so it now joins everything else AD-16 already clones. A live registry edit reaches an existing service's trio only through the same explicit **Sync Artifact** action as every other cloned structure — never automatically. |
+| AD-17 | The seeder initialises data **from zero only** — first install, first run — and is gated by a marker in `settings`. | Bootstrap seeds the default four Song Set entries, the Title/Verse/Reff trio, and the two seed Announcement Sets (DEC-004 reference deck) once; delete on any of them stays deleted. |
+| AD-18 | A shipped change that must reach rows already persisted travels as an **explicit, one-time migration** on the startup path, versioned per AD-21. | Two numbered migrations, not reseeds: the Song Set physical-shape change (AD-31/AD-33) — `06-flows/song-set-physical-shape-migration.md`, `data_version` 3→4 — runs first, then the Predefined Field key rename/split (S1) — `06-flows/predefined-field-migration.md`, `data_version` 4→5. |
+| AD-19 | a key referenced across a boundary is **server-owned vocabulary, enforced on every write path**, and it is never administrator configuration. | Superseded in part by AD-31 for the Song Set/Announcement identities specifically (below); `general`'s closed, non-editable treatment is untouched, and the Predefined Field Catalog's own closed vocabulary is untouched (AD-32). |
+| AD-20 | every slide in the deck originates from an ordered registry entry. | Unchanged; the trio and Announcement Set slides are still registry-originated, just not on the spine's own `position` axis. |
+| AD-21 | All persisted data shares **one monotonic version number** in `settings` | `data_version` gates the predefined-field migration exactly once. |
+| AD-30 | The Go API is the only always-on server: it owns SQLite, assembles the slide plan, and serves JSON | LC-11 / LC-15 on `api`, unchanged; every new surface is more API surface, not a new process. |
+| AD-31 | *(quoted in full)* A main-spine row is now one of exactly two remaining server-owned kinds — `general` or a **Song Set entry** — plus an `ann-set` marker that splices in an Announcement Set. `general` keeps AD-19's closed, non-editable treatment exactly as written. A Song Set entry's `variable_name` and title **are** Admin-authored (FR-29): Admin adds, renames, and removes entries directly in the Registry, and a Service with more than four songs is a normal shape the Registry accepts, not a limit worked around. An **Announcement Set** is its own Admin-authored ordered list of General slides (0..N per Registry) — not a fixed kind of main-spine row at all; the spine carries only a marker referencing it. AD-19's uniqueness rule survives in a new shape: at most one live main-spine row may carry a given Song Set `variable_name`, enforced on the write path exactly as AD-19 enforced slot uniqueness — never by a column constraint. | `variable_name` uniqueness check lives in LC-15, run on create and rename; no `UNIQUE` column constraint. Marker→set reference checked the same way, in code. |
+| AD-32 | *(quoted in full)* A text Predefined Field is a `{key}` token mixed into one text element's own content, styled once per element — no per-token styling inside the same box. An image Predefined Field keeps its own geometry box exactly as AD-19 already had it; only the text case changes. Hydrate substitutes catalog values into the token positions. An unrecognised token renders as empty text and never blocks generation (FR-30); the editor flags it only when the slide is saved, not at generate time. | Validator (`src/lib/registry/validate.ts`) parses `{key}` inside text-element `content`, checks membership in the renamed catalog (S1), and returns a save-time warning list rather than a rejection for an unrecognised key. Hydrate substitution itself is Hub LC-16's job; Registry validates and stores. |
+| AD-33 | *(quoted in full)* Every Song Set entry, however many exist, shares one authored trio: **Title** is a free canvas with its own background, the same authority as `general`. **Verse** and **Reff** are free canvases too, but authored on a **blank** canvas — no background is chosen at authoring time; background resolves at hydrate/live time through AD-34's order. … An **Announcement Set** is its own ordered sequence of `general`-kind slides, held only in the Registry; the main-spine `ann-set` marker that splices it in at its position is not itself a canvas. | `song_set_layouts` table (3 rows: `title`/`verse`/`reff`), each validated and Reset exactly like a General (AD-15); no bounded-surface override record survives. Announcement Set slides live in `announcement_set_slides`, one row per slide, validated the same way. |
+| AD-34 | *(quoted in full)* FR-33 lets the Operator change the background of the projected Verse/Reff slide during a live service. … it travels over AD-10's channel carrying the same plan-identity discipline, is visible immediately on the projector, and touches neither the Service payload nor the Registry nor any table. It does not survive past that session … Ownership follows Supplement S11: Admin owns the Background Library and its global default; the Operator owns the moment. | Registry owns and serves the Background Library table and its default flag (UC-25); the live switch itself (UC-27) is a Presenter-owned session action over AD-10's channel and never calls into this component's write path. |
+| AD-35 | *(quoted in full)* An Announcement Set and the `ann-set` marker referencing it on the main spine are structural rows exactly like every General and Song Set row … **creating a Service clones the whole spliced structure** — the main spine plus every Announcement Set it references — into the service-bound snapshot, and only Sync Artifact replaces it thereafter. There is no separate, unscoped, live-reaching membership list any more. | Service creation / Sync (Hub LC-2) calls into LC-15's clone routine, which now also walks every referenced `ann_set_id` and clones its `announcement_set_slides` rows into the snapshot tables (below), not just the spine. |
 
-AD-1, AD-2, AD-4, AD-10, AD-24 are not quoted here (OQ-30): they bind the container / chrome, not Registry rows.
+AD-1, AD-2, AD-4, AD-10, AD-24 are not quoted here (OQ-30): they bind the container / chrome, not
+Registry rows.
 
 ## Failure Behaviour · [guarded]
 
-Boundaries = inventory-api rows 25–28, 31–32, 37–38 plus inventory-screen row 7 (`/admin/artifacts`). Process timeout: Go API after cutover. As-built Next/Node default. Registry does not retry to the client; Admin presses again.
+Boundaries = inventory-api rows 25–28, 31–32, 37–38 (as-built, unchanged) plus the **new**
+resource families below — none has a platform inventory row yet (see Drift). Process timeout: Go
+API. Registry does not retry to the client; Admin presses again.
 
-| Boundary | Slow | Absent | Lying | What the user sees | What is logged |
+As-built rows (`/api/admin/artifacts*`) are unchanged from the prior SDD revision and are not
+repeated here in full; see git history of this file for that table. New surfaces:
+
+| Boundary (proposed path) | Slow | Absent | Lying | What the user sees | What is logged |
 | --- | --- | --- | --- | --- | --- |
-| GET /api/admin/artifacts | List fetch until browser timeout | No session / not Admin → 403; store throw → 500 | Summaries do not parse payload; a corrupt row still appears as a label | Labels of every row, including a corrupt one. 403: `{ error: 'Forbidden' }` (not an empty list) | console.error on 500 (`Error listing artifact templates`) |
-| GET /api/admin/artifacts/[id] | Fetch until browser timeout | 403; missing id → 404 | Payload JSON/validate fail → 500; no seed substitute | Editor does not open a lying layout; last successful canvas stays mounted | console.error (`Error reading artifact template`) |
-| PUT /api/admin/artifacts/[id] | Save until browser timeout | 403; missing id → 404 | Invalid JSON / AD-15 → 400; stale `updatedAt` → 409; read-only kind → 400 | Previous layout; 409 reloads the server copy and discards unsaved canvas | console.error on 500 (`Error updating artifact template`) |
-| POST /api/admin/artifacts | Create until browser timeout | 403; empty label → 400; duplicate id → 409 | Invalid kebab id → 400 | New General at the end of the list; Reset absent | none on success |
-| PATCH /api/admin/artifacts/[id] | Rename until browser timeout | 403; missing id → 404; empty label → 400 | Stale `updatedAt` → 409 | List and editor show the new label; payload and column agree | console.error on 500 |
-| POST /api/admin/artifacts/[id]/reset | Reset until browser timeout | 403; gone id → 404 `Template not found` (does not undelete, OQ-24); authored row → 400 `Authored templates cannot be reset` | Stale `updatedAt` → 409; seed id mismatch → 400; `JSON.parse` of a corrupt live payload throws → 500 (same as GET; Reset does not skip parse) | Success: layout returns to seed; override record remains (AD-22). Gone / authored: Reset failed, membership unchanged. Corrupt: 500, row unchanged | console.error on 500 (`Error resetting artifact template`) |
-| DELETE /api/admin/artifacts/[id] | Delete until browser timeout | 403; missing id → 404; missing token → 400 | Stale `updatedAt` → 409 | List without that row; positions compacted | console.error on 500 (`Error deleting artifact template`) |
-| PUT /api/admin/artifacts/order | Reorder until browser timeout | 403; membership mismatch → 400 | Stale token on any item → 409 | Previous order until success | console.error on 500 (`Error reordering artifact templates`) |
-| /admin/artifacts | Heavy canvas / list fetch until browser timeout | Proxy 403; the page still renders the editor shell if the cookie died after the gate | Reset is shown only when the list marks the row `resettable`. A corrupt list row is still labelled. Add/Rename/Delete/Up/Down are on the editor | Editor does not open a 500 layout; last saved layout remains; Reset/Save/Delete/Reorder errors in the on-page message | page: none. API 500s as the rows above |
+| GET `/api/admin/song-set-entries` | List fetch until browser timeout | 403 | Corrupt row still appears as a label, same discipline as artifacts | Every entry's `variable_name` + title | console.error on 500 |
+| POST `/api/admin/song-set-entries` | Create until browser timeout | 403; empty `variable_name`/title → 400 | Duplicate `variable_name` on a live entry → 409 (AD-31, checked in code) | New entry appended to the spine | console.error on 500 |
+| PATCH `/api/admin/song-set-entries/[variable_name]` | Rename until browser timeout | 403; missing → 404 | Stale `updatedAt` → 409 | Title updates; `variable_name` immutable (PATCH cannot change it) | console.error on 500 |
+| DELETE `/api/admin/song-set-entries/[variable_name]` | Delete until browser timeout | 403; missing → 404 | Stale `updatedAt` → 409 | Entry removed from spine; Hub's weekly values for that name stay stored, inert | console.error on 500 |
+| GET/PUT `/api/admin/song-set-layouts/[role]` (`role` = title\|verse\|reff) | Fetch/save until browser timeout | 403; unknown role → 404 | Invalid layout (AD-15) → 400; stale `updatedAt` → 409 | Shared trio edit reflected for every **new** Service created after the save, and for any **existing** Service only after an explicit Sync Artifact (AD-16, reversed 2026-08-20 — frozen, not live) | console.error on 500 |
+| POST `/api/admin/song-set-layouts/[role]/reset` | Reset until browser timeout | 403; unknown role → 404 | Stale `updatedAt` → 409 | Layout returns to seed; same Reset semantics as a General (AD-33 retires the old override record) | console.error on 500 |
+| GET `/api/admin/announcement-sets` | List fetch until browser timeout | 403 | Corrupt slide still appears as a label within its set | Sets and their slide counts | console.error on 500 |
+| POST `/api/admin/announcement-sets` | Create until browser timeout | 403; empty label → 400 | — | New empty set; a marker is added separately (UC-15/UC-24-style add on the spine) | console.error on 500 |
+| DELETE `/api/admin/announcement-sets/[id]` | Delete until browser timeout | 403; missing → 404; still referenced by a live marker → 409 | Stale `updatedAt` → 409 | Set removed only when no live marker points at it | console.error on 500 |
+| GET/POST/PUT/PATCH/DELETE `/api/admin/announcement-sets/[id]/slides*` | Same shape as `/api/admin/artifacts*` (§ as-built), scoped to one set | 403; missing set/slide → 404 | Same validation/version conflicts as a General | Same as editing any General, scoped to that set's own ordered list | console.error on 500 |
+| GET `/api/admin/background-library` | List fetch until browser timeout | 403 | — | Image list + which one is default | console.error on 500 |
+| POST `/api/admin/background-library` | Upload/add until browser timeout | 403; non-image (AD-8) → 400 | — | New image appended | console.error on 500 |
+| PATCH `/api/admin/background-library/[id]` (set default) | Save until browser timeout | 403; missing → 404 | Stale `updatedAt` → 409 | Exactly one image is default | console.error on 500 |
+| DELETE `/api/admin/background-library/[id]` | Delete until browser timeout | 403; missing → 404 | Stale `updatedAt` → 409 | Any weekly/live reference to it falls through to blank (AD-33/AD-34); binary itself untouched (share-by-reference discipline extends to this library) | console.error on 500 |
+| GET `/api/admin/song-books` | List fetch until browser timeout | 403 | — | Books + which one is default | console.error on 500 |
+| POST `/api/admin/song-books` | Add until browser timeout | 403; empty `book_code`/name → 400 | Duplicate `book_code` → 409 | New book appended | console.error on 500 |
+| PATCH `/api/admin/song-books/[book_code]` (rename / set default) | Save until browser timeout | 403; missing → 404 | Stale `updatedAt` → 409 | Name or default flag updates | console.error on 500 |
+| DELETE `/api/admin/song-books/[book_code]` | Delete until browser timeout | 403; missing → 404 | In use by a hymn row (`hymns.book_code`, S3) → 409, do not orphan hymn rows | Book removed only when no hymn references it | console.error on 500 |
 
-Plan read (`loadRegistrySnapshot` live, or the service freeze): a corrupt row is omitted from the Deck and logged with id + reason; it is not silently re-seeded (AD-17). Sync Artifact (UC-16) is Hub `POST /api/services/[id]/sync-artifact`, Admin-only. Do not invent a Registry Sync route.
+Plan read (Hub LC-16, `loadRegistrySnapshot` or the service freeze): a corrupt row in any of the
+new tables is omitted from the Deck and logged with id + reason, same as today (AD-17) — never
+silently re-seeded. An unrecognised `{key}` token (AD-32, BR-13) is not a failure at generate time
+at all: it renders empty and the Deck still completes; the editor's save-time flag is the only
+place it is visible before then. Sync Artifact (UC-16) remains Hub's route; it now also clones
+every referenced Announcement Set's slides (AD-35). Do not invent a Registry Sync route.
 
 ## Robustness Analysis · [deep]
 
+**ABCE pass** (Boundary → Control → Entity → Behaviour), new for this revision:
+
+| Object | Kind | Realizes | Notes |
+| --- | --- | --- | --- |
+| `/admin/artifacts` (extended) | Boundary (screen) | UC-14, UC-15, UC-24, UC-25 | One screen gains song-set-entry, background-library, and song-book panels; `01-ux/` is `wdi-ux`'s slot, skipped here |
+| `/api/admin/song-set-entries*` | Boundary (gateway, LC-11) | UC-24 | — |
+| `/api/admin/song-set-layouts/[role]*` | Boundary (gateway, LC-11) | UC-14 | — |
+| `/api/admin/announcement-sets*` | Boundary (gateway, LC-11) | UC-15, UC-24-style add/remove | — |
+| `/api/admin/background-library*` | Boundary (gateway, LC-11) | UC-25 | — |
+| `/api/admin/song-books*` | Boundary (gateway, LC-11) | UC-25 (S3 extends its scope) | S3 names Song Book selection as part of registry's admin surface |
+| Registry store (LC-15, extended) | Control | All of the above | Validation, uniqueness, referential checks, snapshot clone, migration runner |
+| `SongSetEntry` | Entity | UC-24 | `variable_name` identity (AD-31) |
+| `SongSetLayoutTrio` (title/verse/reff rows) | Entity | UC-14 | Singleton set of 3, shared (AD-33); the live table Admin edits — a Service reads its own frozen copy in `service_registry_snapshots`, never this table directly (AD-16, reversed 2026-08-20) |
+| `AnnouncementSet` / `AnnouncementSetSlide` | Entity | UC-15 | 0..N sets, each its own ordered slide list (AD-33, BR-12) |
+| `BackgroundLibraryImage` | Entity | UC-25 | Images only (S10), one default |
+| `SongBook` | Entity | UC-25 (S3) | One default, referenced by `hymns.book_code` |
+| Deck hydrate (Hub LC-16) | Behaviour | UC-20 | Reads the Service's frozen snapshot (spine, trio, referenced Announcement Sets — AD-16), plus the always-live Background Library and Song Book lookups; substitutes tokens; resolves background order (AD-33/34); never writes back |
+
 | UC | Boundary in | Control | Entity | Boundary out |
 | --- | --- | --- | --- | --- |
-| UC-15 | `/admin/artifacts` + LC-11 | LC-15 | ArtifactTemplate | ordered list; gone survives boot |
+| UC-15 | `/admin/artifacts` + LC-11 | LC-15 | ArtifactTemplate, AnnouncementSet, AnnouncementSetSlide | ordered list; gone survives boot |
+| UC-24 | `/admin/artifacts` (song-set panel) + LC-11 | LC-15 | SongSetEntry | spine gains/loses an entry; Hub form (FR-32) reflects it without a deploy |
+| UC-25 | `/admin/artifacts` (library panels) + LC-11 | LC-15 | BackgroundLibraryImage, SongBook | weekly/live surfaces resolve through the new default |
 
-UC-14 and UC-16 are not `critical`. UC-20 is Operator-facing plan consume (Hub/Presenter); Registry supplies entries only (AD-7, AD-12). UC-16 is a Hub surface; do not invent a Registry Sync route. Delete flow: `06-flows/delete-template.md`. `01-ux/` canvas belongs to `wdi-ux` (skipped).
+UC-14 and UC-16 are not `critical`. UC-20 is Operator-facing plan consume (Hub/Presenter);
+Registry supplies entries only (AD-7, AD-12). UC-16 is a Hub surface; do not invent a Registry
+Sync route. Delete flow: `06-flows/delete-template.md`. New flows: `06-flows/copy-paste-share-by-reference.md`,
+`06-flows/predefined-field-migration.md`, `06-flows/song-set-physical-shape-migration.md`. `01-ux/`
+canvas belongs to `wdi-ux` (skipped).
 
 ## Evidence
 
 | Claim | Label | Read to decide | Disposition |
 | --- | --- | --- | --- |
-| `artifact_templates` table exists | verified | `src/lib/db/index.ts` ±500 | — |
-| Per-Service snapshot table | verified | `service_registry_snapshots` in `src/lib/db/index.ts`; clone in `src/lib/registry/service-snapshot.ts` | W1 / AD-16 |
+| `artifact_templates` table exists | verified | `src/lib/db/index.ts` | — |
+| Per-Service snapshot table | verified | `service_registry_snapshots`; clone in `src/lib/registry/service-snapshot.ts` | W1 / AD-16 |
+| `song_set_layouts`, `announcement_sets`, `announcement_set_slides`, `background_library_images`, `song_books` tables | [MISSING] | not read — none exist yet | This SDD's design; build creates them via AD-9 startup DDL |
+| Song Set is a singular `base_type: 'song-set'` today (the `songset-*` per-slot extension the code comments anticipate was never built), and the shipped seed carries **five** such rows, not four — the fifth (`id: "song-set"`) drives Hub's `case "song-set":` loop over `c.dsMiddle`, not a fixed slot | verified | `src/lib/registry/types.ts:2-29` (`ARTIFACT_BASE_TYPES`, `kindOf`); `data/default-registry.json` (5 `base_type: "song-set"` rows, positions 4/9/15/20/25); `internal/plan/plan.go:354-359` | AD-31 retires this; migration designed in full — `06-flows/song-set-physical-shape-migration.md` |
+| Predefined Field is a whole-element `placeholderKey` binding today | verified | `src/lib/registry/placeholder-catalog.ts:15-28` | AD-32 retires this; `06-flows/predefined-field-migration.md` |
+| `hymns.book_code` column exists but nothing reads it | verified | `internal/db/schema.sql:13-20` (S3) | Song Book selection (UC-25) is new API + UI over an existing column |
+| No `song_books` selection table exists | verified | absent from `internal/db/schema.sql` | New table this SDD adds |
+| Announcement composition is a Hub-owned live list today | verified | `src/lib/announcements.ts`, `.how/_platform/inventory-api.md` rows 10–14 | AD-35 retires it; FR-3 retired |
 | Sync Artifact HTTP route | verified | `internal/httpapi` | Hub surface; not a Registry inventory row |
-| Admin delete / reorder verb | verified | `DELETE /api/admin/artifacts/[id]`; `PUT /api/admin/artifacts/order`; `deleteArtifactTemplate` / `reorderArtifactTemplates` | UC-15. AD-17 non-revival still holds after HTTP delete |
-| `RegistrySnapshot` in code | [PARTIAL] | `src/lib/artifacts/registry-snapshot.ts` = live map per plan, not the AD-16 freeze | do not mix the names |
-| Seed does not substitute a missing row at plan time | verified | spine AD-11 closed Story 20.1 | — |
-| Reset on a gone id does not revive | verified | `internal/httpapi` returns 404 before seed lookup when `getArtifactTemplate` is null | OQ-24 |
-| LC-15 store | verified | `src/lib/registry/store.ts` | — |
+| Reset on a gone id does not revive | verified | `internal/httpapi` returns 404 before seed lookup | OQ-24; same discipline extends to every new table |
+| `RegistrySnapshot` in code is the live map, not the AD-16 freeze | [PARTIAL] | `src/lib/artifacts/registry-snapshot.ts` | do not mix the names |
 | Numeric timeout per route | [ASSUMED] | did not read `maxDuration` | platform default |
+| A gone `variable_name` may be reused by a later entry with no special guard | [ASSUMED] | DEC-004/S2 is silent | smallest reasonable choice; report at G4 close (see Report) |
+| A gone `AnnouncementSet` still referenced by a live marker is rejected on delete, marker must go first | [ASSUMED] | DEC-004/AD-35 does not state the guard explicitly | smallest reasonable choice; state-machines.md, this SDD |
+| `reference`/`text` split (S1) cannot be told apart from the payload alone between scripture vs theme purpose | resolved | S1 gives the target keys; disambiguation rule is per-slide `artifact_templates.id`, verified executable against `data/default-registry.json` (`verse-reading` line ~331, `bible-verse-contemplation` line ~804) | Owner ruling 2026-08-20, resolved inline — `06-flows/predefined-field-migration.md` § Disambiguation; never filed as a `wdi-question` (none exists in `.control/questions/`), so the earlier `[NEEDS CONFIRMATION]`/routing note in this row was stale and is corrected here |
 
 ---
 
 ## Slots
 
-`01-ux/` canvas is not written — belongs to `wdi-ux`. `02-contracts/` (00-inventory, artifacts). No `03-integrations/`. `04-components/LC-15-store.md`. `05-model/data-model.md`. `06-flows/delete-template.md`.
+`01-ux/` canvas is not written — belongs to `wdi-ux`. `02-contracts/` (`00-inventory`, `01-artifacts`
+as-built, plus `02-song-set-entries`, `03-announcement-sets`, `04-background-library`,
+`05-song-books` new). No `03-integrations/`. `04-components/LC-15-store.md` (updated). `05-model/data-model.md`
+(rewritten physical shape). `06-flows/delete-template.md` (unchanged), `copy-paste-share-by-reference.md`,
+`predefined-field-migration.md`, `song-set-physical-shape-migration.md` (new).
 
 ## Open Items
 
-OQ-24 · OQ-15 · OQ-14 · OQ-30 · OQ-32.
+OQ-24 · OQ-15 · OQ-14 · OQ-30 · OQ-32. The `reference`/`text` split disambiguation is **not**
+open — resolved by owner ruling 2026-08-20, see `06-flows/predefined-field-migration.md` §
+Disambiguation and the Evidence table above (this line previously claimed it was routed to
+`wdi-question`; no such question was ever filed, and the resolution already lived in the sibling
+flow document — corrected during wdi-review, 2026-08-20).

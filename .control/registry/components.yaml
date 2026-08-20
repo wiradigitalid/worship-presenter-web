@@ -24,7 +24,6 @@ product_components:
     risk_note: "congregation personal data in the Service payload and announcement list; Operator accounts"
     owns:
       - Service
-      - AnnouncementItem
       - Account
       - AppSetting
     srs: .what/hub/SRS-hub.md
@@ -59,6 +58,7 @@ product_components:
     owns:
       - ArtifactTemplate
       - ServiceRegistrySnapshot
+      - AnnouncementSet
     srs: .what/registry/SRS-registry.md
     sdd: .how/registry/SDD-registry.md
     containers:
