@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   coerceHymnIndexEntries,
   filterHymnIndex,
@@ -387,10 +388,12 @@ export function HymnNumberAutocomplete({
           </p>
         ) : (
           results.map((hymn) => (
-            <button
+            <Button
               key={hymn.number}
               type="button"
-              className="w-full flex justify-between items-center gap-2 px-2.5 py-1.5 text-left text-[11px] hover:bg-muted text-foreground"
+              variant="ghost"
+              size="sm"
+              className="h-auto w-full justify-between gap-2 rounded-none px-2.5 py-1.5 text-[11px] font-normal"
               onMouseDown={(e) => {
                 e.preventDefault();
               }}
@@ -405,7 +408,7 @@ export function HymnNumberAutocomplete({
               <span className="font-semibold shrink-0">
                 {formatHymnFieldDisplay(hymn.number, hymn.title)}
               </span>
-            </button>
+            </Button>
           ))
         )}
       </div>,

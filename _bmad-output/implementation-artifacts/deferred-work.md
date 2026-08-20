@@ -102,7 +102,7 @@ The gate AD-24 depends on. Live ceilings only; the closures Story 17.8 landed ar
 | The positive outline classifier is a shallow vocabulary classifier, not a CSS colour parser: `localColour` does not validate function arity or channel grammar, so `focus-visible:outline-[rgb(255)]` passes the guard and is then ignored by CSS, exposing the inherited themed outline. | **unassigned** — same terms as above | No shipped projected focusable uses one. |
 | A class name **composed at runtime** (`cn('bg-' + tone)`) is invisible: `themeReferences` is a set of regexes over source text. | unassigned | Latent; no shipped surface composes one. |
 | *"Never its own copy"* is asserted by nothing: the `FULL_SCREEN` loop asserts `useProjectedShell()` is **present**, never that a second shell implementation is absent. | unassigned | Convention rather than assertion, and AD-24 says so rather than claiming parity with AD-5. |
-| `LogoutButton` hand-rolls what `ui/button.tsx`'s `destructive` variant provides and drops the focus treatment doing it — `LOGOUT_CLASS` reproduces a subset by hand with no `focus-visible` treatment at all. | unassigned | Pre-existing; the refactor to the shared variant is larger than the one-class colour fix already filed. |
+| `LogoutButton` standalone variant now uses `ui/button.tsx`; menu variant uses `DropdownMenuItem` destructive. | done | Shadcn sweep 2026-08-20. |
 
 ---
 

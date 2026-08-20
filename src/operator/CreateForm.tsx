@@ -7,7 +7,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Link from '@/components/Link';
 import {
@@ -469,14 +472,16 @@ export default function CreateForm({
             >
               {t('form.collision.openExisting')}
             </Link>
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               disabled={isSaving || !payload.trim()}
               onClick={() => handleSave(true)}
-              className="text-xs px-3 py-1.5 rounded-lg border border-amber-800/40 bg-amber-500/20 hover:bg-amber-500/30 font-semibold transition-all disabled:opacity-50 cursor-pointer"
+              className="border-amber-800/40 bg-amber-500/20 text-xs hover:bg-amber-500/30"
             >
               {t('form.collision.createSecond')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -531,14 +536,14 @@ export default function CreateForm({
                   ) : (
                     <span />
                   )}
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
                     onClick={() => void handleParse()}
                     disabled={isSaving || parseLoading || !payload.trim()}
-                    className="px-3 py-1.5 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0"
                   >
                     {parseLoading ? t('form.parsing') : t('form.parse')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -586,13 +591,15 @@ export default function CreateForm({
                     <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       {t('form.verseRef')}
                     </label>
-                    <button
+                    <Button
                       type="button"
+                      variant="link"
+                      size="xs"
+                      className="h-auto p-0 text-[10px] font-bold"
                       onClick={() => resolveScripture()}
-                      className="text-[10px] text-primary hover:underline font-bold"
                     >
                       {t('form.resolve')}
-                    </button>
+                    </Button>
                   </div>
                   <ScriptureRefAutocomplete
                     value={fields.verseReference}
@@ -822,31 +829,30 @@ export default function CreateForm({
                             {ann.image_url}
                           </p>
                           <div className="flex items-center gap-2 mt-1.5">
-                            <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-pointer">
-                              <input
-                                type="checkbox"
+                            <Label className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground cursor-pointer">
+                              <Checkbox
                                 checked={ann.is_recurring}
-                                onChange={(e) => {
+                                onCheckedChange={(checked) => {
                                   const next = [...announcements];
                                   next[idx] = {
                                     ...next[idx],
-                                    is_recurring: e.target.checked,
+                                    is_recurring: checked === true,
                                   };
                                   setAnnouncements(next);
                                 }}
-                                className="size-3 rounded border-border text-primary focus:ring-0 cursor-pointer"
                               />
                               {t('form.flyers.master')}
-                            </label>
+                            </Label>
                           </div>
                         </div>
                       </div>
                       <div className="flex gap-1 shrink-0">
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="icon-xs"
                           disabled={idx === 0}
                           onClick={() => moveAnnouncement(idx, -1)}
-                          className="p-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-30 cursor-pointer text-muted-foreground"
                           title={t('form.moveUp')}
                         >
                           <svg
@@ -863,12 +869,13 @@ export default function CreateForm({
                               d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18"
                             />
                           </svg>
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="icon-xs"
                           disabled={idx === announcements.length - 1}
                           onClick={() => moveAnnouncement(idx, 1)}
-                          className="p-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-30 cursor-pointer text-muted-foreground"
                           title={t('form.moveDown')}
                         >
                           <svg
@@ -885,11 +892,12 @@ export default function CreateForm({
                               d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3"
                             />
                           </svg>
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           type="button"
+                          variant="destructive"
+                          size="icon-xs"
                           onClick={() => removeAnnouncement(ann.id)}
-                          className="p-1 text-red-500 rounded hover:bg-red-500/10 cursor-pointer"
                           title={t('form.remove')}
                         >
                           <svg
@@ -906,7 +914,7 @@ export default function CreateForm({
                               d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
                             />
                           </svg>
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))
@@ -926,8 +934,10 @@ export default function CreateForm({
                   />
                 </div>
                 <div className="sm:col-span-4 flex gap-1.5">
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
+                    className="flex-1"
                     onClick={() => {
                       const input = document.getElementById(
                         'new-flyer-url-input'
@@ -937,10 +947,9 @@ export default function CreateForm({
                         input.value = '';
                       }
                     }}
-                    className="flex-1 text-center py-2 text-xs font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all cursor-pointer shadow-sm"
                   >
                     {t('form.flyers.addUrlButton')}
-                  </button>
+                  </Button>
                   <input
                     type="file"
                     accept="image/*"
@@ -952,12 +961,17 @@ export default function CreateForm({
                       e.target.value = '';
                     }}
                   />
-                  <label
-                    htmlFor="flyer-upload-btn"
-                    className="flex-1 flex items-center justify-center cursor-pointer text-center py-2 text-xs font-semibold bg-primary/10 border border-primary/20 text-primary rounded-lg hover:bg-primary/20 transition-all"
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() =>
+                      document.getElementById('flyer-upload-btn')?.click()
+                    }
                   >
                     {t('form.flyers.upload')}
-                  </label>
+                  </Button>
                 </div>
               </div>
               <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/50 pt-3">
@@ -995,19 +1009,15 @@ export default function CreateForm({
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t border-border/80">
-        <Link
-          href="/"
-          className="px-5 py-2.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-sm font-semibold transition-all cursor-pointer"
-        >
+        <Button variant="outline" render={<Link href="/" />}>
           {t('form.cancel')}
-        </Link>
-        <button
+        </Button>
+        <Button
           onClick={() => handleSave(false)}
           disabled={isSaving || !payload.trim()}
-          className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground text-sm font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center justify-center"
         >
           {isSaving ? t('form.create.saving') : t('form.create.save')}
-        </button>
+        </Button>
       </div>
     </div>
   );

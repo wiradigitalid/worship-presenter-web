@@ -20,7 +20,7 @@ Light: background `oklch(1 0 0)`, foreground `oklch(0.145 0 0)`, primary `oklch(
 
 Dark: background `oklch(0.145 0 0)`, foreground `oklch(0.985 0 0)`, primary `oklch(0.922 0 0)`, destructive `oklch(0.704 0.191 22.216)`.
 
-Typography: Geist Sans / Geist Mono via `@fontsource/geist-sans` and `@fontsource/geist-mono`, imported in `spa/src/styles.css` and bound through `:root --font-geist-sans` / `--font-geist-mono` in `src/globals.css`. Radius `--radius: 0.625rem`.
+Typography: Geist Sans / Geist Mono via `@fontsource/geist-sans` and `@fontsource/geist-mono`, imported in the SPA entry stylesheet and bound through `:root --font-geist-sans` / `--font-geist-mono` in `src/globals.css`. Radius `--radius: 0.625rem`.
 
 ## Contrast on load-bearing combinations
 
@@ -54,11 +54,16 @@ Untokenized hues (amber, leftover red tints, emerald, indigo, sky) and non-text 
 
 shadcn/ui (base-nova), generated into `src/components/ui/`. Add primitives with `npx shadcn@latest add <name>`; `components.json` points at `src/globals.css` (`rsc: false`).
 
-**Installed:** `alert`, `badge`, `button`, `card`, `dialog`, `dropdown-menu`, `input`, `label`, `popover`, `select`, `separator`, `sonner`, `textarea`.
+**Installed:** `alert`, `badge`, `button`, `card`, `checkbox`, `dialog`, `dropdown-menu`, `input`, `label`, `popover`, `select`, `separator`, `sonner`, `textarea`.
 
-**Operator chrome rule:** forms and controls on Hub / admin / service-edit surfaces use these primitives — not hand-rolled `<input>`, `<select>`, or modal markup. Exceptions stay native on purpose:
+**Operator chrome rule:** Hub, admin, service-edit, and Presenter operator surfaces compose UI from `@/components/ui/*` — not hand-rolled `<button>`, `<select>`, `<textarea>`, or text `<input>`. `tests/operator-shadcn-guard.test.mjs` enforces this on every change.
 
-- `<input type="file">` (browser file picker; see `ImageUploadField`)
-- Presenter deck `<select>` controls that call `.blur()` on change so arrow keys stay on the deck (`PresenterOperator`)
+**Exemptions:**
+
+- **Top navbar** — `Header.tsx` and `ThemeToggle.tsx` keep bespoke pill layout and profile trigger styling.
+- **Native file picker** — `<input type="file">` (`ImageUploadField`, flyer upload helpers, announcements upload).
+- **Color wells** — `<input type="color">` in `ArtifactEditor` (no shadcn equivalent).
+
+Presenter `<Select>` controls that hand keyboard focus back to the deck call `blurFocusedControl()` after `onValueChange` (`PresenterOperator`).
 
 Slide geometry is Registry, not a `slide-surface` CSS class.

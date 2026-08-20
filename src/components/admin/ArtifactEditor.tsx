@@ -1281,8 +1281,9 @@ export default function ArtifactEditor() {
           {templates.map((item) => (
             <li key={item.id}>
               <div className="flex items-stretch gap-1">
-                <button
+                <Button
                   type="button"
+                  variant={selectedId === item.id ? 'default' : 'ghost'}
                   onClick={() => {
                   // Re-clicking the row that is already open is not a switch,
                   // and must not prompt. A different row re-enters mountCanvas,
@@ -1297,10 +1298,8 @@ export default function ArtifactEditor() {
                   if (!proceed) return;
                   setSelectedId(item.id);
                 }}
-                  className={`min-w-0 flex-1 rounded-xl px-3 py-2 text-left text-sm transition ${
-                    selectedId === item.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-muted'
+                  className={`min-w-0 h-auto flex-1 justify-start rounded-xl px-3 py-2 text-left text-sm font-normal ${
+                    selectedId === item.id ? '' : 'hover:bg-muted'
                   }`}
                 >
                   <div className="font-medium">{item.label}</div>
@@ -1308,7 +1307,7 @@ export default function ArtifactEditor() {
                     <span className={kindChipClass}>[{kindChipLabel(item.baseType)}]</span>
                     {!item.editable ? <span>{t('admin.artifacts.readOnly')}</span> : null}
                   </div>
-                </button>
+                </Button>
                 <div className="flex flex-col gap-1 py-1">
                   <Button
                     type="button"

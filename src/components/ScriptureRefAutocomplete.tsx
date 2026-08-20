@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEventHandler } from 'react';
 import { createPortal } from 'react-dom';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useT } from '@/lib/i18n/operator';
 
@@ -136,10 +137,12 @@ export function ScriptureRefAutocomplete({
           </p>
         ) : (
           hits.map((book) => (
-            <button
+            <Button
               key={book.name}
               type="button"
-              className="w-full flex justify-between items-center gap-2 px-2.5 py-1.5 text-left text-[11px] hover:bg-muted text-foreground"
+              variant="ghost"
+              size="sm"
+              className="h-auto w-full justify-between gap-2 rounded-none px-2.5 py-1.5 text-[11px] font-normal"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 onChange(`${book.name} `);
@@ -152,7 +155,7 @@ export function ScriptureRefAutocomplete({
                   {book.short_name}
                 </span>
               ) : null}
-            </button>
+            </Button>
           ))
         )}
       </div>,

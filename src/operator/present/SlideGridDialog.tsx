@@ -11,6 +11,7 @@
  */
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import SlideView from '@/components/SlideView';
+import { Button } from '@/components/ui/button';
 import type { SlidePlanItem } from '@/lib/slide-plan';
 import {
   Dialog,
@@ -107,17 +108,18 @@ function SlideGrid({
           const isSelected = entry.index === selected;
           const isCurrent = entry.index === currentIndex;
           return (
-            <button
+            <Button
               key={entry.instanceId}
               ref={isSelected ? selectedRef : null}
               type="button"
+              variant="ghost"
               tabIndex={isSelected ? 0 : -1}
               aria-current={isCurrent ? 'true' : undefined}
               onFocus={() => setSelected(entry.index)}
               onClick={() => onPick(entry.index)}
-              className={`flex flex-col gap-1 rounded-lg border p-1.5 text-left outline-none transition-colors ${
+              className={`h-auto flex-col items-stretch gap-1 rounded-lg border p-1.5 text-left font-normal ${
                 isSelected
-                  ? 'border-primary bg-muted ring-2 ring-primary'
+                  ? 'border-primary bg-muted ring-2 ring-primary hover:bg-muted'
                   : 'border-border hover:bg-muted'
               }`}
             >
@@ -142,7 +144,7 @@ function SlideGrid({
               <span className="truncate text-[11px] text-muted-foreground">
                 {entry.groupLabel ?? entry.title ?? ' '}
               </span>
-            </button>
+            </Button>
           );
         })}
       </div>

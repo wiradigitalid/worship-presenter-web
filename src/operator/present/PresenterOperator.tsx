@@ -50,6 +50,14 @@ import {
   type SlideTransition,
 } from '@/lib/transitions';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ScriptureRefAutocomplete } from '@/components/ScriptureRefAutocomplete';
 import { useT } from '@/lib/i18n/operator';
 import SlideGridDialog from './SlideGridDialog';
@@ -64,6 +72,11 @@ import {
 } from './presenter-model';
 
 type CssVars = CSSProperties & Record<`--${string}`, string>;
+
+function blurFocusedControl() {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement) active.blur();
+}
 
 /**
  * The cap on the current slide. Width is the smaller of a fixed maximum and the
@@ -148,14 +161,15 @@ function SlideListRow({
   onSelect: (index: number) => void;
 }) {
   return (
-    <button
+    <Button
       ref={active ? activeRef : null}
       type="button"
+      variant="ghost"
       aria-current={active ? 'true' : undefined}
       onClick={() => onSelect(entry.index)}
-      className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left transition-colors ${
+      className={`flex h-auto w-full justify-start gap-2 rounded px-2 py-1.5 text-left font-normal ${
         active
-          ? 'bg-primary text-primary-foreground'
+          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
           : 'text-foreground hover:bg-muted'
       }`}
     >
@@ -176,7 +190,7 @@ function SlideListRow({
         {entry.label}
       </span>
       <span className="truncate text-xs">{entry.title ?? ''}</span>
-    </button>
+    </Button>
   );
 }
 
@@ -209,15 +223,16 @@ const FilmstripFrame = memo(function FilmstripFrame({
   const detail =
     entry.title && entry.title !== entry.label ? ` · ${entry.title}` : '';
   return (
-    <button
+    <Button
       ref={active ? activeRef : null}
       type="button"
+      variant="ghost"
       aria-current={active ? 'true' : undefined}
       title={`${entry.index + 1} · ${entry.label}${detail}`}
       onClick={() => onSelect(entry.index)}
-      className={`w-32 shrink-0 rounded-md border p-1 text-left transition-colors ${
+      className={`h-auto w-32 shrink-0 flex-col items-stretch rounded-md border p-1 text-left font-normal ${
         active
-          ? 'border-primary bg-primary/15 ring-2 ring-primary'
+          ? 'border-primary bg-primary/15 ring-2 ring-primary hover:bg-primary/15'
           : 'border-border hover:bg-muted'
       }`}
     >
@@ -238,7 +253,7 @@ const FilmstripFrame = memo(function FilmstripFrame({
           {entry.label}
         </span>
       </span>
-    </button>
+    </Button>
   );
 });
 
@@ -740,7 +755,7 @@ export default function PresenterOperator({
                 real setting to be fixed, and the next download would surprise
                 them; hence the badge on the label rather than a tooltip, and
                 the explicit line below whenever the two disagree. */}
-            <label
+            <Label
               htmlFor="live-transition"
               className="ml-auto flex items-center gap-2 text-xs text-muted-foreground"
             >
@@ -752,26 +767,28 @@ export default function PresenterOperator({
                   Live only · not saved
                 </span>
               </span>
-              <select
-                id="live-transition"
-                className="rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus-visible:border-ring focus-visible:outline-none"
+              <Select
                 value={liveTransition}
-                onChange={(e) => {
-                  setTransitionAndSync(parseSlideTransition(e.target.value));
-                  // Hand the keyboard straight back to the deck. A `<select>`
-                  // that keeps focus owns the arrow keys, so the very next
-                  // press for "next slide" would silently pick another style
-                  // instead of moving the service on.
-                  e.currentTarget.blur();
+                onValueChange={(value) => {
+                  setTransitionAndSync(parseSlideTransition(value));
+                  // Hand the keyboard straight back to the deck. A focused select
+                  // owns the arrow keys, so the very next press for "next slide"
+                  // would silently pick another style instead of moving on.
+                  blurFocusedControl();
                 }}
               >
-                {SLIDE_TRANSITIONS.map((id) => (
-                  <option key={id} value={id}>
-                    {SLIDE_TRANSITION_SPECS[id].label}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <SelectTrigger id="live-transition" size="sm" className="w-[9.5rem]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SLIDE_TRANSITIONS.map((id) => (
+                    <SelectItem key={id} value={id}>
+                      {SLIDE_TRANSITION_SPECS[id].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Label>
 
             {liveTransition !== deckTransition ? (
               <p role="status" className="basis-full text-xs text-amber-300">
@@ -878,24 +895,30 @@ export default function PresenterOperator({
             </p>
             {bibleTranslations.length > 0 ? (
               <div className="mb-2">
-                <label
+                <Label
                   className="mb-1 block text-xs font-medium text-muted-foreground"
                   htmlFor="presenter-bible-translation"
                 >
                   {t('presenter.scripture.translation')}
-                </label>
-                <select
-                  id="presenter-bible-translation"
-                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground"
+                </Label>
+                <Select
                   value={scriptureTranslation}
-                  onChange={(e) => setScriptureTranslation(e.target.value)}
+                  onValueChange={(value) => {
+                    setScriptureTranslation(value);
+                    blurFocusedControl();
+                  }}
                 >
-                  {bibleTranslations.map((row) => (
-                    <option key={row.code} value={row.code}>
-                      {row.name ? `${row.name} (${row.code})` : row.code}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="presenter-bible-translation" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bibleTranslations.map((row) => (
+                      <SelectItem key={row.code} value={row.code}>
+                        {row.name ? `${row.name} (${row.code})` : row.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {bibleDefaultMissing ? (
                   <p className="mt-1 text-xs text-muted-foreground">
                     {t('presenter.scripture.defaultMissing')}

@@ -86,14 +86,17 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
             onChange={(e) => setQuery(e.target.value)}
           />
           {query && (
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
               onClick={() => setQuery('')}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground cursor-pointer"
+              className="absolute inset-y-0 right-0 text-muted-foreground hover:text-foreground"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
               </svg>
-            </button>
+            </Button>
           )}
         </div>
         <Button render={<Link href="/services/new" />} variant="default" className="shadow-sm rounded-xl cursor-pointer w-full sm:w-auto">

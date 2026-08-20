@@ -1,5 +1,8 @@
 import { useId, useRef, useState } from 'react';
 import { ImageFieldPreview } from '@/components/ImageFieldPreview';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 /**
  * One service image field: the picture, the two ways to set it, and the way to
@@ -25,18 +28,9 @@ import { ImageFieldPreview } from '@/components/ImageFieldPreview';
  * cosmetic fix that strands them is a worse defect than the one it fixes.
  */
 
-const INPUT_CLASS =
-  'w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground disabled:opacity-60';
-
-const ACTION_CLASS =
-  'flex items-center justify-center gap-1 w-full text-center px-4 py-2.5 text-xs font-bold bg-primary/10 border border-primary/20 rounded-xl text-primary hover:bg-primary/20 transition-all disabled:cursor-not-allowed disabled:opacity-50';
-
-// The button half is styled; the text beside it is the browser's own state.
+// The picker half is styled; the text beside it is the browser's own state.
 const PICKER_CLASS =
   'w-full text-xs text-muted-foreground file:mr-3 file:cursor-pointer file:rounded-xl file:border file:border-primary/20 file:bg-primary/10 file:px-4 file:py-2 file:text-xs file:font-bold file:text-primary hover:file:bg-primary/20 disabled:opacity-60';
-
-const LABEL_CLASS =
-  'text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block';
 
 type UploadResponse = { error?: string; url?: string };
 
@@ -151,15 +145,15 @@ export function ImageUploadField({
 
   return (
     <div className="space-y-3">
-      <span className={LABEL_CLASS}>{label}</span>
+      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
       <div className="flex flex-wrap items-start gap-4">
         <ImageFieldPreview url={value} alt={previewAlt} />
         <div className="min-w-0 flex-1 space-y-3">
           <div className="grid gap-3 sm:grid-cols-12 sm:items-center">
             <div className="sm:col-span-8">
-              <label htmlFor={pickerId} className="sr-only">
+              <Label htmlFor={pickerId} className="sr-only">
                 {label} file
-              </label>
+              </Label>
               <input
                 ref={pickerRef}
                 id={pickerId}
@@ -174,26 +168,27 @@ export function ImageUploadField({
               />
             </div>
             <div className="sm:col-span-4">
-              <button
+              <Button
                 type="button"
-                className={ACTION_CLASS}
+                variant="outline"
+                className="w-full"
                 onClick={uploadPickedFile}
                 disabled={locked || !picked}
               >
                 {busy === 'upload' ? 'Uploading…' : uploadLabel}
-              </button>
+              </Button>
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-12 sm:items-end">
             <div className="sm:col-span-8">
-              <label htmlFor={linkId} className={LABEL_CLASS}>
+              <Label htmlFor={linkId} className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Or paste an image link
-              </label>
-              <input
+              </Label>
+              <Input
                 id={linkId}
                 type="url"
-                className={INPUT_CLASS}
+                className="text-xs"
                 value={link}
                 onChange={(e) => {
                   setError(null);
@@ -204,14 +199,15 @@ export function ImageUploadField({
               />
             </div>
             <div className="sm:col-span-4">
-              <button
+              <Button
                 type="button"
-                className={ACTION_CLASS}
+                variant="outline"
+                className="w-full"
                 onClick={fetchFromLink}
                 disabled={locked || !link.trim()}
               >
                 {busy === 'fetch' ? 'Downloading…' : 'Download from link'}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -220,14 +216,16 @@ export function ImageUploadField({
               <span className="text-xs text-muted-foreground">
                 Image saved on the hub.
               </span>
-              <button
+              <Button
                 type="button"
-                className="text-xs font-bold text-destructive underline-offset-4 hover:underline disabled:opacity-50"
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-destructive"
                 onClick={remove}
                 disabled={locked}
               >
                 Remove
-              </button>
+              </Button>
             </div>
           ) : null}
 
