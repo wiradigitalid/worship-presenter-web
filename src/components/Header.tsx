@@ -1,6 +1,6 @@
 import { usePathname } from '@/lib/navigation';
 import { useState } from 'react';
-import { KeyRound, LogOut } from 'lucide-react';
+import { KeyRound } from 'lucide-react';
 import LogoutButton from './LogoutButton';
 import ThemeToggle from './ThemeToggle';
 import { CustomLink } from './navigation-blocker';
@@ -128,6 +128,7 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
         </nav>
 
         <ThemeToggle />
+        <LogoutButton />
 
         <DropdownMenu>
           <DropdownMenuTrigger

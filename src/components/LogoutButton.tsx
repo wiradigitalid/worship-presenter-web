@@ -45,7 +45,7 @@ export default function LogoutButton({
     <Button
       type="button"
       variant="ghost"
-      className="w-full justify-start gap-2 px-3 py-2 text-xs font-medium text-destructive hover:bg-red-500/10 hover:text-destructive"
+      className="shrink-0 gap-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
       onClick={logout}
       disabled={busy}
     >

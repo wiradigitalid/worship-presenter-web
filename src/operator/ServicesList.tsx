@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { CircleAlert, Plus, Search, User, X } from 'lucide-react';
 import Link from '@/components/Link';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { useT } from '@/lib/i18n/operator';
 
 interface ServiceRow {
@@ -70,49 +72,47 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        {/* Search Input Box */}
-        <div className="relative max-w-md w-full">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-muted-foreground/60">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.637 10.637Z" />
-            </svg>
-          </span>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full max-w-md">
+          <Search
+            className="pointer-events-none absolute top-1/2 left-2.5 size-4 shrink-0 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
           <Input
             type="text"
-            className="pl-10 pr-10 text-xs"
+            className="pr-8 pl-8"
             placeholder={t('dashboard.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          {query && (
+          {query ? (
             <Button
               type="button"
               variant="ghost"
               size="icon-xs"
               onClick={() => setQuery('')}
-              className="absolute inset-y-0 right-0 text-muted-foreground hover:text-foreground"
+              className="absolute top-1/2 right-1 -translate-y-1/2 text-muted-foreground"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-              </svg>
+              <X className="size-4 shrink-0" aria-hidden />
             </Button>
-          )}
+          ) : null}
         </div>
-        <Button render={<Link href="/services/new" />} variant="default" className="shadow-sm rounded-xl cursor-pointer w-full sm:w-auto">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="size-4 mr-1 text-primary-foreground">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
+        <Link
+          href="/services/new"
+          className={cn(
+            buttonVariants({ variant: 'default' }),
+            'shrink-0 whitespace-nowrap'
+          )}
+        >
+          <Plus className="size-4 shrink-0" aria-hidden />
           {t('dashboard.newService')}
-        </Button>
+        </Link>
       </div>
 
       {filteredServices.length === 0 ? (
         <div className="border border-border/80 bg-card/45 backdrop-blur-md rounded-2xl p-12 text-center shadow-sm max-w-md mx-auto mt-6">
           <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4 border border-primary/20">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-            </svg>
+            <CircleAlert className="size-6 shrink-0" aria-hidden />
           </div>
           <h3 className="text-base font-bold text-foreground">{t('dashboard.emptyTitle')}</h3>
           <p className="text-xs text-muted-foreground mt-2 max-w-xs mx-auto">
@@ -151,9 +151,7 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
                       </h3>
                       {speaker && (
                         <p className="text-xs text-muted-foreground/90 font-medium flex items-center gap-1.5">
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5 text-muted-foreground/60">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                          </svg>
+                          <User className="size-4 shrink-0 text-muted-foreground/60" aria-hidden />
                           {speaker}
                         </p>
                       )}
