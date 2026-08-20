@@ -382,6 +382,7 @@ function serializeCanvas(
 export default function ArtifactEditor() {
   const { t } = useT();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasShellRef = useRef<HTMLDivElement | null>(null);
   const fabricCanvasRef = useRef<import('fabric').Canvas | null>(null);
   const [templates, setTemplates] = useState<ArtifactTemplateSummary[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -1180,6 +1181,36 @@ export default function ArtifactEditor() {
     template && draftLabel.trim() !== '' && draftLabel.trim() !== template.label
   );
 
+  // Fit the 960x540 reference canvas to whatever width its shell ends up with,
+  // never upscaling past 100%. Without this, panels narrower than the canvas
+  // (~992px once the 280px sidebar is subtracted) get a horizontal scrollbar
+  // that no operator wants — the canvas paints a fixed 960x540 surface and the
+  // scroll does not even reveal more artwork, just the cropped edge.
+  useEffect(() => {
+    const shell = canvasShellRef.current;
+    if (!shell) return;
+    const applyFit = () => {
+      const canvas = fabricCanvasRef.current;
+      if (!canvas) return;
+      const width = shell.clientWidth;
+      if (width <= 0) return;
+      const scale = Math.min(1, width / CANVAS_WIDTH);
+      canvas.setDimensions(
+        { width: CANVAS_WIDTH * scale, height: CANVAS_HEIGHT * scale },
+        { cssOnly: true }
+      );
+      canvas.setZoom(scale);
+      canvas.requestRenderAll();
+    };
+    applyFit();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(applyFit);
+    observer.observe(shell);
+    return () => {
+      observer.disconnect();
+    };
+  }, [template]);
+
   const kindChipClass =
     'inline-flex rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground';
 
@@ -1279,75 +1310,101 @@ export default function ArtifactEditor() {
           </Button>
         </form>
         <ul className="max-h-[70vh] space-y-1 overflow-x-hidden overflow-y-auto">
-          {templates.map((item) => (
-            <li key={item.id}>
-              <div className="flex items-stretch gap-1">
-                <Button
-                  type="button"
-                  variant={selectedId === item.id ? 'default' : 'ghost'}
+          {templates.map((item) => {
+            const isSelected = selectedId === item.id;
+            return (
+              <li key={item.id}>
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
-                  // Re-clicking the row that is already open is not a switch,
-                  // and must not prompt. A different row re-enters mountCanvas,
-                  // which throws the added-element map away and disposes the
-                  // canvas — every unsaved edit goes with it.
-                  if (item.id === selectedId) return;
-                  const proceed = mayDiscard(
-                    isDirty && isEditable,
-                    DISCARD_ON_SWITCH_CONFIRMATION,
-                    (message) => window.confirm(message)
-                  );
-                  if (!proceed) return;
-                  setSelectedId(item.id);
-                }}
-                  className={`min-w-0 h-auto flex-1 justify-start rounded-xl px-3 py-2 text-left text-sm font-normal ${
-                    selectedId === item.id ? '' : 'hover:bg-muted'
+                    // Re-clicking the row that is already open is not a switch,
+                    // and must not prompt. A different row re-enters mountCanvas,
+                    // which throws the added-element map away and disposes the
+                    // canvas — every unsaved edit goes with it.
+                    if (item.id === selectedId) return;
+                    const proceed = mayDiscard(
+                      isDirty && isEditable,
+                      DISCARD_ON_SWITCH_CONFIRMATION,
+                      (message) => window.confirm(message)
+                    );
+                    if (!proceed) return;
+                    setSelectedId(item.id);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    if (item.id === selectedId) return;
+                    const proceed = mayDiscard(
+                      isDirty && isEditable,
+                      DISCARD_ON_SWITCH_CONFIRMATION,
+                      (message) => window.confirm(message)
+                    );
+                    if (!proceed) return;
+                    setSelectedId(item.id);
+                  }}
+                  className={`cursor-pointer rounded-xl border px-2 py-1.5 transition-colors ${
+                    isSelected
+                      ? 'border-primary bg-primary/10'
+                      : 'border-transparent hover:bg-muted'
                   }`}
                 >
-                  <div className="min-w-0 font-medium truncate">{item.label}</div>
+                  <div className="flex items-center gap-1">
+                    <span className="min-w-0 flex-1 truncate font-medium">
+                      {item.label}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label={`${t('admin.artifacts.moveUp')} ${item.label}`}
+                      title={t('admin.artifacts.moveUp')}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleMoveTemplate(item, -1);
+                      }}
+                      disabled={busy || templates[0]?.id === item.id}
+                    >
+                      <ArrowUp />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label={`${t('admin.artifacts.moveDown')} ${item.label}`}
+                      title={t('admin.artifacts.moveDown')}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleMoveTemplate(item, 1);
+                      }}
+                      disabled={busy || templates.at(-1)?.id === item.id}
+                    >
+                      <ArrowDown />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label={`${t('admin.artifacts.delete')} ${item.label}`}
+                      title={t('admin.artifacts.delete')}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleDeleteTemplate(item);
+                      }}
+                      disabled={busy}
+                      className="border-destructive text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs opacity-80">
                     <span className={kindChipClass}>[{kindChipLabel(item.baseType)}]</span>
                     {!item.editable ? <span>{t('admin.artifacts.readOnly')}</span> : null}
                   </div>
-                </Button>
-                <div className="flex shrink-0 flex-col gap-1 py-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-sm"
-                    aria-label={`${t('admin.artifacts.moveUp')} ${item.label}`}
-                    title={t('admin.artifacts.moveUp')}
-                    onClick={() => void handleMoveTemplate(item, -1)}
-                    disabled={busy || templates[0]?.id === item.id}
-                  >
-                    <ArrowUp />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-sm"
-                    aria-label={`${t('admin.artifacts.moveDown')} ${item.label}`}
-                    title={t('admin.artifacts.moveDown')}
-                    onClick={() => void handleMoveTemplate(item, 1)}
-                    disabled={busy || templates.at(-1)?.id === item.id}
-                  >
-                    <ArrowDown />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-sm"
-                    aria-label={`${t('admin.artifacts.delete')} ${item.label}`}
-                    title={t('admin.artifacts.delete')}
-                    onClick={() => void handleDeleteTemplate(item)}
-                    disabled={busy}
-                    className="border-destructive text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 />
-                  </Button>
                 </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       </aside>
 
@@ -1579,7 +1636,10 @@ export default function ArtifactEditor() {
                     {t('admin.artifacts.styleHint')}
                   </span>
                 </div>
-                <div className="overflow-auto rounded-2xl border border-border bg-black/90 p-4">
+                <div
+                  ref={canvasShellRef}
+                  className="overflow-hidden rounded-2xl border border-border bg-black/90 p-4"
+                >
                   <canvas ref={canvasRef} />
                 </div>
               </>
