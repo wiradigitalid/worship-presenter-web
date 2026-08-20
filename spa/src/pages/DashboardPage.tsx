@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
+import OperatorPageShell from '@/components/OperatorPageShell';
 import ServicesList from '@/operator/ServicesList';
 
 type Session = { username: string; role: string };
@@ -44,11 +45,9 @@ export default function DashboardPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-8">
-      <div className="max-w-5xl mx-auto">
-        <Header isAdmin={session.role === 'admin'} username={session.username} />
-        <ServicesList services={services} />
-      </div>
-    </div>
+    <OperatorPageShell>
+      <Header isAdmin={session.role === 'admin'} username={session.username} />
+      <ServicesList services={services} />
+    </OperatorPageShell>
   );
 }

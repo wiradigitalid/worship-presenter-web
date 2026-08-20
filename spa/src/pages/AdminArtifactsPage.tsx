@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
+import OperatorPageShell from '@/components/OperatorPageShell';
 import ArtifactEditor from '@/components/admin/ArtifactEditor';
 import { NavigationBlockerProvider } from '@/components/navigation-blocker';
 
@@ -24,13 +25,11 @@ export default function AdminArtifactsPage() {
   }, [navigate]);
   if (!session) return null;
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="mx-auto max-w-6xl">
-        <NavigationBlockerProvider>
-          <Header isAdmin username={session.username} />
-          <ArtifactEditor />
-        </NavigationBlockerProvider>
-      </div>
-    </div>
+    <OperatorPageShell innerClassName="max-w-6xl">
+      <NavigationBlockerProvider>
+        <Header isAdmin username={session.username} />
+        <ArtifactEditor />
+      </NavigationBlockerProvider>
+    </OperatorPageShell>
   );
 }

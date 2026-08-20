@@ -35,6 +35,7 @@ export const I18N_KEYS = [
   'chrome.logout',
   'chrome.logout.busy',
   'login.title',
+  'login.subtitle',
   'login.username',
   'login.usernamePlaceholder',
   'login.password',

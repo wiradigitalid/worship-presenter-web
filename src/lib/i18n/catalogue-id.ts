@@ -38,6 +38,7 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'chrome.logout': 'Keluar',
   'chrome.logout.busy': 'Sedang keluar…',
   'login.title': 'Masuk',
+  'login.subtitle': 'Masuk untuk kelola slide presentasi',
   'login.username': 'Nama pengguna',
   'login.usernamePlaceholder': 'nama pengguna akun Anda',
   'login.password': 'Kata sandi',

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '@/components/Header';
+import OperatorPageShell from '@/components/OperatorPageShell';
 import EditForm from '@/operator/EditForm';
 
 export default function RunSheetPage() {
@@ -38,20 +39,18 @@ export default function RunSheetPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-5xl mx-auto">
-        <Header isAdmin={session.role === 'admin'} username={session.username} />
-        <EditForm
-          id={svc.id}
-          initialPayload={svc.raw_payload || ''}
-          initialParsed={svc.parsed_data}
-          initialSermonGraphicUrl={images.sermonGraphicUrl || ''}
-          initialFamilyPhotoUrl={images.familyPhotoUrl || ''}
-          initialYouthPhotoUrl={images.youthPhotoUrl || ''}
-          initialAnnouncements={serviceAnns}
-          initialUpdatedAt={svc.updated_at}
-        />
-      </div>
-    </div>
+    <OperatorPageShell>
+      <Header isAdmin={session.role === 'admin'} username={session.username} />
+      <EditForm
+        id={svc.id}
+        initialPayload={svc.raw_payload || ''}
+        initialParsed={svc.parsed_data}
+        initialSermonGraphicUrl={images.sermonGraphicUrl || ''}
+        initialFamilyPhotoUrl={images.familyPhotoUrl || ''}
+        initialYouthPhotoUrl={images.youthPhotoUrl || ''}
+        initialAnnouncements={serviceAnns}
+        initialUpdatedAt={svc.updated_at}
+      />
+    </OperatorPageShell>
   );
 }

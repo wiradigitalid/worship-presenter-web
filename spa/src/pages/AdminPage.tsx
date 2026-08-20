@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
+import OperatorPageShell from '@/components/OperatorPageShell';
 import AccountsManager from '@/operator/admin/AccountsManager';
 import RetentionSettings from '@/operator/admin/RetentionSettings';
 import TransitionSettings from '@/operator/admin/TransitionSettings';
@@ -33,18 +34,16 @@ export default function AdminPage() {
   }, [navigate]);
   if (!session || !settings) return null;
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-5xl mx-auto space-y-8">
-        <Header isAdmin username={session.username} />
-        <AccountsManager initialAccounts={accounts} />
-        <RetentionSettings initialDays={settings.pptx_retention_days} />
-        <TransitionSettings initialTransition={settings.slide_transition} />
-        <BibleTranslationSettings
-          initialCode={settings.default_bible_translation}
-          initialInstalled={Boolean(settings.default_bible_translation_installed)}
-        />
-        <UiLocaleSettings initialLocale={settings.ui_locale} />
-      </div>
-    </div>
+    <OperatorPageShell innerClassName="space-y-8">
+      <Header isAdmin username={session.username} />
+      <AccountsManager initialAccounts={accounts} />
+      <RetentionSettings initialDays={settings.pptx_retention_days} />
+      <TransitionSettings initialTransition={settings.slide_transition} />
+      <BibleTranslationSettings
+        initialCode={settings.default_bible_translation}
+        initialInstalled={Boolean(settings.default_bible_translation_installed)}
+      />
+      <UiLocaleSettings initialLocale={settings.ui_locale} />
+    </OperatorPageShell>
   );
 }

@@ -38,6 +38,7 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'chrome.logout': 'Log out',
   'chrome.logout.busy': 'Signing out…',
   'login.title': 'Sign in',
+  'login.subtitle': 'Sign in to manage presentation slides',
   'login.username': 'Username',
   'login.usernamePlaceholder': 'your account username',
   'login.password': 'Password',

@@ -80,7 +80,7 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
           />
           <Input
             type="text"
-            className="pr-8 pl-8"
+            className="h-auto rounded-xl border-border/80 bg-card/60 py-2.5 pr-8 pl-8 text-xs shadow-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
             placeholder={t('dashboard.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -101,7 +101,7 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
           href="/services/new"
           className={cn(
             buttonVariants({ variant: 'default' }),
-            'shrink-0 whitespace-nowrap'
+            'shrink-0 rounded-xl whitespace-nowrap shadow-sm hover:shadow-md'
           )}
         >
           <Plus className="size-4 shrink-0" aria-hidden />
