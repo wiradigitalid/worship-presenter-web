@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { Input } from '@/components/ui/input';
 import {
   coerceHymnIndexEntries,
   filterHymnIndex,
@@ -413,10 +414,10 @@ export function HymnNumberAutocomplete({
 
   return (
     <div className="relative">
-      <input
+      <Input
         ref={inputRef}
         type="text"
-        className="w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground"
+        className="text-xs"
         value={inputValue}
         onChange={(e) => {
           const next = e.target.value;

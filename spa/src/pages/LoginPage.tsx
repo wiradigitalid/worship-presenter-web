@@ -1,6 +1,17 @@
 import { FormEvent, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { LayoutDashboard } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { safeNextPath } from '@/lib/auth/safe-next';
 import { useT } from '@/lib/i18n/operator';
 
@@ -37,34 +48,52 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4 rounded-2xl border bg-card p-8 shadow-xl">
-        <h1 className="text-xl font-semibold">{t('login.title')}</h1>
-        <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {t('login.username')}
-          <input
-            className="mt-2 w-full rounded-xl border bg-background px-4 py-3 text-sm"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-            required
-          />
-        </label>
-        <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {t('login.password')}
-          <input
-            type="password"
-            className="mt-2 w-full rounded-xl border bg-background px-4 py-3 text-sm"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-          />
-        </label>
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <Button type="submit" disabled={busy} className="w-full">
-          {busy ? t('login.submitting') : t('login.submit')}
-        </Button>
-      </form>
+      <Card className="w-full max-w-sm shadow-lg">
+        <CardHeader className="space-y-3 text-center">
+          <div className="mx-auto flex size-11 items-center justify-center rounded-xl border border-border bg-muted/50 text-primary">
+            <LayoutDashboard className="size-5" aria-hidden />
+          </div>
+          <div className="space-y-1">
+            <CardTitle className="text-xl">{t('login.title')}</CardTitle>
+            <CardDescription>{t('chrome.brand.tagline')}</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="login-username">{t('login.username')}</Label>
+              <Input
+                id="login-username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                required
+                disabled={busy}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="login-password">{t('login.password')}</Label>
+              <Input
+                id="login-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+                disabled={busy}
+              />
+            </div>
+            {error ? (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            <Button type="submit" disabled={busy} className="w-full">
+              {busy ? t('login.submitting') : t('login.submit')}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

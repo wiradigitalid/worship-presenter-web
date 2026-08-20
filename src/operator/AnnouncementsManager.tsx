@@ -9,6 +9,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export type AnnouncementRow = {
   id: number;
@@ -220,9 +229,9 @@ export default function AnnouncementsManager({
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-semibold mb-2 block text-muted-foreground">{t('announcements.imageUrl')}</label>
-              <input
-                className="w-full p-3 font-mono text-sm bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40 text-foreground"
+              <Label className="mb-2 block">{t('announcements.imageUrl')}</Label>
+              <Input
+                className="font-mono text-sm"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder={t('announcements.imagePlaceholder')}
@@ -230,7 +239,7 @@ export default function AnnouncementsManager({
               />
             </div>
             <div>
-              <label className="text-sm font-semibold mb-2 block text-muted-foreground">{t('announcements.uploadLocal')}</label>
+              <Label className="mb-2 block">{t('announcements.uploadLocal')}</Label>
               <input
                 type="file"
                 accept="image/*"
@@ -242,26 +251,28 @@ export default function AnnouncementsManager({
           </div>
           <div className="flex flex-wrap gap-4 items-end pt-2">
             <div>
-              <label className="text-sm font-semibold mb-2 block text-muted-foreground">{t('announcements.scope')}</label>
-              <select
-                className="p-2.5 text-sm bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground cursor-pointer"
+              <Label className="mb-2 block">{t('announcements.scope')}</Label>
+              <Select
                 value={scope}
-                onChange={(e) =>
-                  setScope(e.target.value as 'recurring' | 'one_off')
-                }
+                onValueChange={(v) => setScope(v as 'recurring' | 'one_off')}
                 disabled={busy}
               >
-                <option value="recurring">{t('announcements.scope.recurring')}</option>
-                <option value="one_off">{t('announcements.scope.oneOff')}</option>
-              </select>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recurring">{t('announcements.scope.recurring')}</SelectItem>
+                  <SelectItem value="one_off">{t('announcements.scope.oneOff')}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             {scope === 'one_off' && (
               <div>
-                <label className="text-sm font-semibold mb-2 block text-muted-foreground">
+                <Label className="mb-2 block">
                   {t('announcements.serviceId')}
-                </label>
-                <input
-                  className="w-28 p-2.5 font-mono text-sm bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
+                </Label>
+                <Input
+                  className="w-28 font-mono text-sm"
                   value={serviceId}
                   onChange={(e) => setServiceId(e.target.value)}
                   placeholder="e.g. 5"
@@ -270,20 +281,12 @@ export default function AnnouncementsManager({
               </div>
             )}
             <div className="flex gap-2">
-              <button 
-                onClick={handleAdd} 
-                className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-sm transition-all duration-200 shadow-sm active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                disabled={busy || !url.trim()}
-              >
+              <Button onClick={handleAdd} disabled={busy || !url.trim()}>
                 {busy ? t('announcements.working') : t('announcements.add')}
-              </button>
-              <button
-                onClick={handleReplaceAll}
-                className="px-4 py-2.5 rounded-xl border border-border bg-card/50 hover:bg-card text-foreground font-semibold text-sm transition-all duration-200 shadow-sm active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                disabled={busy}
-              >
+              </Button>
+              <Button variant="outline" onClick={handleReplaceAll} disabled={busy}>
                 {t('announcements.replaceAll')}
-              </button>
+              </Button>
             </div>
           </div>
           {error && (
@@ -364,33 +367,36 @@ export default function AnnouncementsManager({
                     </div>
                   </div>
                   <div className="flex gap-1.5 shrink-0 justify-end">
-                    <button
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
                       disabled={busy || index === 0}
                       onClick={() => move(index, -1)}
-                      className="p-2 rounded-lg border border-border bg-background hover:bg-muted text-foreground transition-all disabled:opacity-30 cursor-pointer"
                       title={t('announcements.moveUp')}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" />
                       </svg>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
                       disabled={busy || index === items.length - 1}
                       onClick={() => move(index, 1)}
-                      className="p-2 rounded-lg border border-border bg-background hover:bg-muted text-foreground transition-all disabled:opacity-30 cursor-pointer"
                       title={t('announcements.moveDown')}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
                       </svg>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
                       disabled={busy}
                       onClick={() => handleDelete(item.id)}
-                      className="px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 text-destructive transition-all text-xs font-semibold cursor-pointer"
                     >
                       {t('announcements.remove')}
-                    </button>
+                    </Button>
                   </div>
                 </li>
               ))}

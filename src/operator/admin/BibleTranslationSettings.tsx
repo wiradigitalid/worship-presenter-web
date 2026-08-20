@@ -8,6 +8,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useT } from '@/lib/i18n/operator';
 
 type BibleTranslation = {
@@ -96,28 +104,31 @@ export default function BibleTranslationSettings({
       </CardHeader>
       <CardContent className="flex flex-wrap items-end gap-3">
         <div>
-          <label
-            className="mb-1.5 block text-sm font-medium"
+          <Label
+            className="mb-1.5 block"
             htmlFor="default-bible-translation"
           >
             {t('admin.bibleTranslation.label')}
-          </label>
-          <select
-            id="default-bible-translation"
-            className="w-56 rounded-lg border bg-muted px-3 py-2 text-sm"
+          </Label>
+          <Select
             value={code}
-            onChange={(e) => {
-              setCode(e.target.value);
-              setInstalled(translations.some((row) => row.code === e.target.value));
+            onValueChange={(v) => {
+              setCode(v);
+              setInstalled(translations.some((row) => row.code === v));
             }}
             disabled={saving || options.length === 0}
           >
-            {options.map((row) => (
-              <option key={row.code} value={row.code}>
-                {row.name ? `${row.name} (${row.code})` : row.code}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="default-bible-translation" className="w-56">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((row) => (
+                <SelectItem key={row.code} value={row.code}>
+                  {row.name ? `${row.name} (${row.code})` : row.code}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <Button onClick={() => void save()} disabled={saving || !code}>
           {saving

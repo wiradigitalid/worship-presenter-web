@@ -8,6 +8,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Role } from '@/lib/auth/session';
 import { useT } from '@/lib/i18n/operator';
 
@@ -138,27 +146,26 @@ export default function AccountsManager({
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-3">
-            <input
+            <Input
               placeholder={t('admin.accounts.username')}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             />
-            <input
+            <Input
               type="password"
               placeholder={t('admin.accounts.password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             />
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as Role)}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
-            >
-              <option value="operator">operator</option>
-              <option value="admin">admin</option>
-            </select>
+            <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="operator">operator</SelectItem>
+                <SelectItem value="admin">admin</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Button onClick={handleCreate} disabled={busy}>
             {t('admin.accounts.create')}
@@ -206,17 +213,19 @@ export default function AccountsManager({
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <select
+                    <Select
                       value={a.role}
                       disabled={busy}
-                      onChange={(e) =>
-                        handleRoleChange(a.id, e.target.value as Role)
-                      }
-                      className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+                      onValueChange={(v) => handleRoleChange(a.id, v as Role)}
                     >
-                      <option value="operator">operator</option>
-                      <option value="admin">admin</option>
-                    </select>
+                      <SelectTrigger size="sm" className="w-[120px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="operator">operator</SelectItem>
+                        <SelectItem value="admin">admin</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Button
                       variant="destructive"
                       size="sm"
@@ -228,7 +237,7 @@ export default function AccountsManager({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
-                  <input
+                  <Input
                     type="password"
                     placeholder={t('admin.accounts.newPassword')}
                     value={resetPw[a.id] || ''}
@@ -238,7 +247,7 @@ export default function AccountsManager({
                         [a.id]: e.target.value,
                       }))
                     }
-                    className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 min-w-[12rem]"
+                    className="min-w-48"
                   />
                   <Button
                     variant="outline"

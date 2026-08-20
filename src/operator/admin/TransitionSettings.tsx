@@ -8,6 +8,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   parseSlideTransition,
   SLIDE_TRANSITIONS,
@@ -61,25 +69,25 @@ export default function TransitionSettings({
       </CardHeader>
       <CardContent className="flex flex-wrap items-end gap-3">
         <div>
-          <label
-            className="mb-1.5 block text-sm font-medium"
-            htmlFor="slide-transition"
-          >
+          <Label className="mb-1.5 block" htmlFor="slide-transition">
             {t('admin.transition.label')}
-          </label>
-          <select
-            id="slide-transition"
-            className="w-44 rounded-lg border bg-muted px-3 py-2 text-sm"
+          </Label>
+          <Select
             value={transition}
-            onChange={(e) => setTransition(parseSlideTransition(e.target.value))}
+            onValueChange={(v) => setTransition(parseSlideTransition(v))}
             disabled={saving}
           >
-            {SLIDE_TRANSITIONS.map((id) => (
-              <option key={id} value={id}>
-                {SLIDE_TRANSITION_SPECS[id].label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="slide-transition" className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SLIDE_TRANSITIONS.map((id) => (
+                <SelectItem key={id} value={id}>
+                  {SLIDE_TRANSITION_SPECS[id].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <Button onClick={() => void save()} disabled={saving}>
           {saving ? t('admin.transition.saving') : t('admin.transition.save')}

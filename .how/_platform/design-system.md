@@ -20,7 +20,7 @@ Light: background `oklch(1 0 0)`, foreground `oklch(0.145 0 0)`, primary `oklch(
 
 Dark: background `oklch(0.145 0 0)`, foreground `oklch(0.985 0 0)`, primary `oklch(0.922 0 0)`, destructive `oklch(0.704 0.191 22.216)`.
 
-Typography: Geist Sans / Geist Mono. Radius `--radius: 0.625rem`.
+Typography: Geist Sans / Geist Mono via `@fontsource/geist-sans` and `@fontsource/geist-mono`, imported in `spa/src/styles.css` and bound through `:root --font-geist-sans` / `--font-geist-mono` in `src/globals.css`. Radius `--radius: 0.625rem`.
 
 ## Contrast on load-bearing combinations
 
@@ -52,4 +52,13 @@ Untokenized hues (amber, leftover red tints, emerald, indigo, sky) and non-text 
 
 ## Components
 
-Five shadcn primitives, unmodified. Slide geometry is Registry, not a `slide-surface` CSS class.
+shadcn/ui (base-nova), generated into `src/components/ui/`. Add primitives with `npx shadcn@latest add <name>`; `components.json` points at `src/globals.css` (`rsc: false`).
+
+**Installed:** `alert`, `badge`, `button`, `card`, `dialog`, `dropdown-menu`, `input`, `label`, `popover`, `select`, `separator`, `sonner`, `textarea`.
+
+**Operator chrome rule:** forms and controls on Hub / admin / service-edit surfaces use these primitives — not hand-rolled `<input>`, `<select>`, or modal markup. Exceptions stay native on purpose:
+
+- `<input type="file">` (browser file picker; see `ImageUploadField`)
+- Presenter deck `<select>` controls that call `.blur()` on change so arrow keys stay on the deck (`PresenterOperator`)
+
+Slide geometry is Registry, not a `slide-surface` CSS class.

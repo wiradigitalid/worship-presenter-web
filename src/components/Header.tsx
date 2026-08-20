@@ -1,10 +1,27 @@
 import { usePathname } from '@/lib/navigation';
 import { useState } from 'react';
+import { KeyRound, LogOut } from 'lucide-react';
 import LogoutButton from './LogoutButton';
 import ThemeToggle from './ThemeToggle';
 import { CustomLink } from './navigation-blocker';
 import { headerLinkClass, HEADER_CONTROL_BOX_BASE } from './header-chrome';
 import { useT } from '@/lib/i18n/operator';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface HeaderProps {
   username?: string;
@@ -14,7 +31,6 @@ interface HeaderProps {
 export default function Header({ isAdmin = false, username = 'Operator' }: HeaderProps) {
   const { t } = useT();
   const pathname = usePathname() || '';
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -22,8 +38,14 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
   const [pwSuccess, setPwSuccess] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Shared with `ThemeToggle` via `header-chrome`, not reproduced there.
   const getLinkClass = headerLinkClass;
+
+  const resetPasswordForm = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setPwError(null);
+    setPwSuccess(false);
+  };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,11 +77,6 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
   return (
     <header className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-border/80 pb-6 gap-4 relative">
       <div className="flex items-center gap-4">
-        {/* `CustomLink`, not `Link`, on all five: a surface below may be holding
-            unsaved work, and these are the operator's normal way off the page.
-            With no `NavigationBlockerProvider` above — which is every page but
-            `/admin/artifacts` — the context default is `isBlocked: false` and
-            these behave exactly as a plain `Link`. */}
         <CustomLink href="/" className="flex items-center gap-4 group">
           <div className="flex items-center justify-center w-10 h-10 rounded-xl border border-border bg-card shadow-md text-primary group-hover:border-primary/50 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -76,11 +93,6 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
           </div>
         </CustomLink>
       </div>
-      {/* `<nav>` ends where the links end. The theme control and the profile
-          menu are settings, not navigation, and a screen-reader operator should
-          not meet them inside the navigation landmark. `flex-wrap` on the row
-          because an admin already carries four pills plus the profile button,
-          and the toggle made it six controls on a row that could not wrap. */}
       <div className="flex flex-wrap items-center justify-end gap-2">
         <nav className="flex flex-wrap items-center gap-2">
           <CustomLink
@@ -117,15 +129,8 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
 
         <ThemeToggle />
 
-        {/* Profile Dropdown Menu */}
-        <div className="relative">
-          {/* The box comes from `header-chrome`, the tone stays here: this
-              trigger rests at `text-foreground` where the pills and the toggle
-              rest at `text-muted-foreground`. It used to state the whole box
-              inline — the third copy of it, after the other two were closed. */}
-          <button
-            type="button"
-            onClick={() => setDropdownOpen(!dropdownOpen)}
+        <DropdownMenu>
+          <DropdownMenuTrigger
             className={`flex items-center gap-2 text-xs font-semibold px-3 py-2.5 text-foreground ${HEADER_CONTROL_BOX_BASE}`}
           >
             <div className="w-4 h-4 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold text-[10px]">
@@ -135,89 +140,78 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-muted-foreground">
               <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
             </svg>
-          </button>
-          
-          {dropdownOpen && (
-            <>
-              {/* Overlay background to close dropdown when clicking outside */}
-              <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-              <div className="absolute right-0 mt-2 w-40 rounded-xl border border-border bg-card/95 backdrop-blur-md p-1.5 shadow-lg z-50 animate-in fade-in slide-in-from-top-1 duration-200">
-                <button
-                  type="button"
-                  onClick={() => { setDropdownOpen(false); setChangePasswordOpen(true); }}
-                  className="w-full text-left px-3 py-2 text-xs font-medium rounded-lg hover:bg-muted text-foreground transition-all cursor-pointer flex items-center gap-2"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-muted-foreground">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a3 3 0 0 1-3 3m-12-6a9 9 0 0 1 18 0v.75A2.25 2.25 0 0 1 19.5 12h-1.5a2.25 2.25 0 0 0-2.25 2.25v1.5a2.25 2.25 0 0 1-2.25 2.25h-1.5a2.25 2.25 0 0 0-2.25 2.25v1.5a2.25 2.25 0 0 1-2.25 2.25H3.75A2.25 2.25 0 0 1 1.5 21V9.75A2.25 2.25 0 0 1 3.75 7.5h12Z" />
-                  </svg>
-                  {t('chrome.password.change')}
-                </button>
-                <LogoutButton />
-              </div>
-            </>
-          )}
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={() => setChangePasswordOpen(true)}>
+              <KeyRound className="size-4" />
+              {t('chrome.password.change')}
+            </DropdownMenuItem>
+            <LogoutButton variant="menu" />
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Change Password Modal */}
-      {changePasswordOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm border border-border bg-card/95 p-6 rounded-2xl shadow-xl space-y-4 relative animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-base font-bold text-foreground">{t('chrome.password.title')}</h3>
-            <form onSubmit={handlePasswordChange} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('chrome.password.current')}</label>
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  className="w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground"
-                  placeholder={t('chrome.password.placeholderCurrent')}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('chrome.password.new')}</label>
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  className="w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground"
-                  placeholder={t('chrome.password.placeholderNew')}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  minLength={8}
-                  required
-                />
-              </div>
-              {pwError && <p className="text-xs text-destructive font-medium">{pwError}</p>}
-              {/* `emerald-600` holds at 4.91:1 on the dark card — it passes AA,
-                  but only just, and it is the same shade the slide-preview
-                  badges had to leave behind for the dark surface. `emerald-400`
-                  measures 9.25:1, so the success line reads as clearly as the
-                  failure line beside it under either theme. */}
-              {pwSuccess && <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium animate-pulse">{t('chrome.password.success')}</p>}
-              
-              <div className="flex gap-2 justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => { setChangePasswordOpen(false); setCurrentPassword(''); setNewPassword(''); setPwError(null); setPwSuccess(false); }}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg border border-border bg-background hover:bg-muted text-foreground cursor-pointer transition-all"
-                >
-                  {t('chrome.password.cancel')}
-                </button>
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-primary hover:bg-primary/95 text-primary-foreground cursor-pointer shadow-sm transition-all"
-                >
-                  {t('chrome.password.save')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Dialog
+        open={changePasswordOpen}
+        onOpenChange={(open) => {
+          setChangePasswordOpen(open);
+          if (!open) resetPasswordForm();
+        }}
+      >
+        <DialogContent showCloseButton className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('chrome.password.title')}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-password">{t('chrome.password.current')}</Label>
+              <Input
+                id="current-password"
+                type="password"
+                autoComplete="current-password"
+                placeholder={t('chrome.password.placeholderCurrent')}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">{t('chrome.password.new')}</Label>
+              <Input
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
+                placeholder={t('chrome.password.placeholderNew')}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                minLength={8}
+                required
+              />
+            </div>
+            {pwError ? <p className="text-sm text-destructive">{pwError}</p> : null}
+            {pwSuccess ? (
+              <p className="text-sm text-emerald-600 dark:text-emerald-400 animate-pulse">
+                {t('chrome.password.success')}
+              </p>
+            ) : null}
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setChangePasswordOpen(false);
+                  resetPasswordForm();
+                }}
+              >
+                {t('chrome.password.cancel')}
+              </Button>
+              <Button type="submit" disabled={busy}>
+                {t('chrome.password.save')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }

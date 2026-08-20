@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Link from '@/components/Link';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useT } from '@/lib/i18n/operator';
 
 interface ServiceRow {
@@ -77,9 +78,9 @@ export default function ServicesList({ services }: { services: ServiceRow[] }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.637 10.637Z" />
             </svg>
           </span>
-          <input
+          <Input
             type="text"
-            className="w-full p-2.5 pl-10 pr-10 text-xs bg-card/60 border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/50 text-foreground transition-all"
+            className="pl-10 pr-10 text-xs"
             placeholder={t('dashboard.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}

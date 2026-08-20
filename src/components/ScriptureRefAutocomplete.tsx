@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEventHandler } from 'react';
 import { createPortal } from 'react-dom';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { useT } from '@/lib/i18n/operator';
 
 type Suggestion = { name: string; short_name: string };
@@ -17,8 +19,7 @@ export function ScriptureRefAutocomplete({
   placeholder,
   disabled,
   translation,
-  inputClassName = 'w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground',
-  onKeyDown,
+  inputClassName,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -160,10 +161,10 @@ export function ScriptureRefAutocomplete({
 
   return (
     <div className="relative">
-      <input
+      <Input
         ref={inputRef}
         type="text"
-        className={inputClassName}
+        className={cn('text-xs', inputClassName)}
         value={value}
         onChange={(e) => {
           onChange(e.target.value);

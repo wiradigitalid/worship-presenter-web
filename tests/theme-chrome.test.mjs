@@ -2724,6 +2724,8 @@ test('Story 17.2: dark muted-foreground token and its passing pairs are unchange
 });
 
 const ROOT_TOKENS_UNCHANGED_BY_17_2 = {
+  '--font-geist-mono': '"Geist Mono", ui-monospace, monospace',
+  '--font-geist-sans': '"Geist Sans", ui-sans-serif, system-ui, sans-serif',
   '--background': 'oklch(1 0 0)',
   '--foreground': 'oklch(0.145 0 0)',
   '--card': 'oklch(1 0 0)',

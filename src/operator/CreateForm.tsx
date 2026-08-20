@@ -7,6 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import Link from '@/components/Link';
 import {
   flushPendingHymnCommits,
@@ -513,8 +515,8 @@ export default function CreateForm({
                 <label className="text-sm font-semibold mb-2 block text-muted-foreground">
                   {t('form.rundown.label')}
                 </label>
-                <textarea
-                  className="w-full h-72 p-4 font-mono text-xs bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/30 text-foreground"
+                <Textarea
+                  className="h-72 font-mono text-xs"
                   value={payload}
                   onChange={(e) => setPayload(e.target.value)}
                   placeholder={t('form.rundown.placeholder')}
@@ -603,8 +605,8 @@ export default function CreateForm({
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
                     {t('form.verseText')}
                   </label>
-                  <textarea
-                    className="w-full h-20 p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground"
+                  <Textarea
+                    className="h-20 text-xs"
                     value={fields.verseText}
                     onChange={(e) => setField('verseText', e.target.value)}
                     disabled={isSaving}
@@ -653,9 +655,9 @@ export default function CreateForm({
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
                     {t('form.specialSong')}
                   </label>
-                  <input
+                  <Input
                     type="text"
-                    className="w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground"
+                    className="text-xs"
                     value={fields.specialSong}
                     onChange={(e) => setField('specialSong', e.target.value)}
                     placeholder={t('form.specialSongPlaceholder')}
@@ -681,9 +683,9 @@ export default function CreateForm({
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
                     {t('form.sermonSpeaker')}
                   </label>
-                  <input
+                  <Input
                     type="text"
-                    className="w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground"
+                    className="text-xs"
                     value={fields.sermonSpeaker}
                     onChange={(e) => onSermonSpeakerChange(e.target.value)}
                     placeholder={t('form.sermonSpeakerPlaceholder')}
@@ -694,9 +696,9 @@ export default function CreateForm({
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
                     {t('form.closingPrayer')}
                   </label>
-                  <input
+                  <Input
                     type="text"
-                    className="w-full p-2.5 text-xs bg-background border border-border/80 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-foreground"
+                    className="text-xs"
                     value={fields.closingPrayerPerson}
                     onChange={(e) =>
                       setField('closingPrayerPerson', e.target.value)
@@ -736,8 +738,8 @@ export default function CreateForm({
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
                     {t('form.familyPrayer')}
                   </label>
-                  <textarea
-                    className="w-full h-20 p-3 text-xs bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
+                  <Textarea
+                    className="h-20 text-xs"
                     value={fields.familyPrayerRequest}
                     onChange={(e) =>
                       setField('familyPrayerRequest', e.target.value)
@@ -768,8 +770,8 @@ export default function CreateForm({
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
                     {t('form.youthPrayer')}
                   </label>
-                  <textarea
-                    className="w-full h-20 p-3 text-xs bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
+                  <Textarea
+                    className="h-20 text-xs"
                     value={fields.youthPrayerRequest}
                     onChange={(e) =>
                       setField('youthPrayerRequest', e.target.value)
@@ -916,10 +918,10 @@ export default function CreateForm({
                   <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">
                     {t('form.flyers.addUrl')}
                   </label>
-                  <input
+                  <Input
                     type="text"
                     id="new-flyer-url-input"
-                    className="w-full p-2 text-xs bg-background border border-border/80 rounded-lg outline-none focus:border-primary text-foreground"
+                    className="text-xs"
                     placeholder="https://example.com/flyer.png"
                   />
                 </div>

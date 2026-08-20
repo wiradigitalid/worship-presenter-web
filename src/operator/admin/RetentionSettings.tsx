@@ -8,6 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useT } from '@/lib/i18n/operator';
 
 export default function RetentionSettings({
@@ -56,13 +58,14 @@ export default function RetentionSettings({
       </CardHeader>
       <CardContent className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="mb-1.5 block text-sm font-medium">
+          <Label className="mb-1.5 block" htmlFor="retention-days">
             {t('admin.retention.label')}
-          </label>
-          <input
+          </Label>
+          <Input
+            id="retention-days"
             type="number"
             min={0}
-            className="w-32 rounded-lg border bg-muted px-3 py-2 text-sm"
+            className="w-32"
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
             disabled={saving}

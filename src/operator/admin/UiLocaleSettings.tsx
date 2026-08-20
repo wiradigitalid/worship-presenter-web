@@ -9,6 +9,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   resolveString,
   UI_LOCALE_ORDER,
@@ -71,31 +79,25 @@ export default function UiLocaleSettings({
       </CardHeader>
       <CardContent className="flex flex-wrap items-end gap-3">
         <div>
-          <label
-            className="mb-1.5 block text-sm font-medium"
-            htmlFor="ui-locale"
-          >
+          <Label className="mb-1.5 block" htmlFor="ui-locale">
             {t('admin.uiLocale.label')}
-          </label>
-          <select
-            id="ui-locale"
-            className="w-44 rounded-lg border bg-muted px-3 py-2 text-sm"
+          </Label>
+          <Select
             value={pendingLocale}
-            onChange={(e) => setPendingLocale(e.target.value as UiLocale)}
+            onValueChange={(v) => setPendingLocale(v as UiLocale)}
             disabled={saving}
           >
-            {/*
-              The key is derived from the locale code, not chosen by a branch:
-              a locale added to UI_LOCALE_ORDER with no catalogue entry renders
-              the defect marker instead of silently wearing another locale's
-              label. Story 24.2 inherits this idiom 100-150 times.
-            */}
-            {UI_LOCALE_ORDER.map((code) => (
-              <option key={code} value={code}>
-                {t(`admin.uiLocale.option.${code}`)}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="ui-locale" className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {UI_LOCALE_ORDER.map((code) => (
+                <SelectItem key={code} value={code}>
+                  {t(`admin.uiLocale.option.${code}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <Button onClick={() => void save()} disabled={saving}>
           {saving ? t('admin.uiLocale.saving') : t('admin.uiLocale.save')}

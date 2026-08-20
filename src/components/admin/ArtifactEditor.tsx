@@ -23,6 +23,16 @@ import {
 import { useNavigationBlocker } from '@/components/navigation-blocker';
 import { useT } from '@/lib/i18n/operator';
 import type { I18nKey } from '@/lib/i18n';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const CANVAS_WIDTH = 960;
 const CANVAS_HEIGHT = 540;
@@ -1249,7 +1259,7 @@ export default function ArtifactEditor() {
             void handleCreate();
           }}
         >
-          <input
+          <Input
             type="text"
             value={newLabel}
             onChange={(event) => setNewLabel(event.target.value)}
@@ -1257,15 +1267,15 @@ export default function ArtifactEditor() {
             placeholder={t('admin.artifacts.addPlaceholder')}
             aria-label={t('admin.artifacts.addLabel')}
             disabled={busy}
-            className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm"
+            className="min-w-0 flex-1"
           />
-          <button
+          <Button
             type="submit"
+            variant="outline"
             disabled={busy || !newLabel.trim()}
-            className="rounded-xl border border-border px-3 py-2 text-sm font-semibold disabled:opacity-50"
           >
             {status === 'creating' ? t('admin.artifacts.adding') : t('admin.artifacts.add')}
-          </button>
+          </Button>
         </form>
         <ul className="max-h-[70vh] space-y-1 overflow-y-auto">
           {templates.map((item) => (
@@ -1300,35 +1310,41 @@ export default function ArtifactEditor() {
                   </div>
                 </button>
                 <div className="flex flex-col gap-1 py-1">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     aria-label={`${t('admin.artifacts.moveUp')} ${item.label}`}
                     title={t('admin.artifacts.moveUp')}
                     onClick={() => void handleMoveTemplate(item, -1)}
                     disabled={busy || templates[0]?.id === item.id}
-                    className="rounded border border-border px-1 text-xs disabled:opacity-50"
+                    className="h-auto px-1 text-xs"
                   >
                     {t('admin.artifacts.moveUp')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     aria-label={`${t('admin.artifacts.moveDown')} ${item.label}`}
                     title={t('admin.artifacts.moveDown')}
                     onClick={() => void handleMoveTemplate(item, 1)}
                     disabled={busy || templates.at(-1)?.id === item.id}
-                    className="rounded border border-border px-1 text-xs disabled:opacity-50"
+                    className="h-auto px-1 text-xs"
                   >
                     {t('admin.artifacts.moveDown')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     aria-label={`${t('admin.artifacts.delete')} ${item.label}`}
                     onClick={() => void handleDeleteTemplate(item)}
                     disabled={busy}
-                    className="rounded border border-destructive px-1 text-xs text-destructive disabled:opacity-50"
+                    className="h-auto border-destructive px-1 text-xs text-destructive hover:bg-destructive/10"
                   >
                     {t('admin.artifacts.delete')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </li>
@@ -1357,17 +1373,17 @@ export default function ArtifactEditor() {
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <label className="sr-only" htmlFor="artifact-label">
+                <Label className="sr-only" htmlFor="artifact-label">
                   {t('admin.artifacts.label')}
-                </label>
-                <input
+                </Label>
+                <Input
                   id="artifact-label"
                   type="text"
                   value={draftLabel}
                   onChange={(event) => setDraftLabel(event.target.value)}
                   maxLength={80}
                   disabled={busy}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-lg font-semibold"
+                  className="text-lg font-semibold"
                 />
                 <p className="mt-1 text-sm text-muted-foreground">
                   <span className={kindChipClass}>[{kindChipLabel(template.baseType)}]</span>
@@ -1382,33 +1398,32 @@ export default function ArtifactEditor() {
                     {UNSAVED_INDICATOR_LABEL}
                   </span>
                 ) : null}
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => void handleRename()}
                   disabled={!labelDirty || busy}
-                  className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
                 >
                   {status === 'renaming'
                     ? t('admin.artifacts.renaming')
                     : t('admin.artifacts.rename')}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={handleSave}
                   disabled={!isEditable || busy}
-                  className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
                 >
                   {t('admin.artifacts.save')}
-                </button>
+                </Button>
                 {isResettable ? (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
                     onClick={handleReset}
                     disabled={busy}
-                    className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
                   >
                     {t('admin.artifacts.reset')}
-                  </button>
+                  </Button>
                 ) : null}
               </div>
             </div>
@@ -1437,54 +1452,63 @@ export default function ArtifactEditor() {
               <>
                 <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/40 p-4">
                   <span className="mr-1 text-sm font-medium">{t('admin.artifacts.elements')}</span>
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       void insertElement('text');
                     }}
                     disabled={busy}
-                    className="rounded-lg border border-border px-3 py-1.5 text-sm disabled:opacity-50"
                   >
                     {t('admin.artifacts.addText')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       void insertElement('shape');
                     }}
                     disabled={busy}
-                    className="rounded-lg border border-border px-3 py-1.5 text-sm disabled:opacity-50"
                   >
                     {t('admin.artifacts.addRect')}
-                  </button>
-                  <label className="flex items-center gap-2 text-sm">
-                    <span className="sr-only">{t('admin.artifacts.insertPlaceholder')}</span>
-                    <select
-                      value={insertPlaceholderKey}
-                      onChange={(event) => setInsertPlaceholderKey(event.target.value)}
-                      disabled={busy}
+                  </Button>
+                  <Select
+                    value={insertPlaceholderKey}
+                    onValueChange={setInsertPlaceholderKey}
+                    disabled={busy}
+                  >
+                    <SelectTrigger
+                      size="sm"
+                      className="w-[180px]"
                       aria-label={t('admin.artifacts.insertPlaceholder')}
-                      className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm disabled:opacity-50"
                     >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
                       {PLACEHOLDER_CATALOG.map((entry) => (
-                        <option key={entry.key} value={entry.key}>
+                        <SelectItem key={entry.key} value={entry.key}>
                           {t(placeholderLabelKey(entry.key))}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </select>
-                  </label>
-                  <button
+                    </SelectContent>
+                  </Select>
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       void insertPlaceholder(insertPlaceholderKey);
                     }}
                     disabled={busy}
-                    className="rounded-lg border border-border px-3 py-1.5 text-sm disabled:opacity-50"
                   >
                     {t('admin.artifacts.insertPlaceholder')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={handleDeleteSelected}
                     disabled={busy || !canDeleteSelection}
                     title={
@@ -1494,18 +1518,18 @@ export default function ArtifactEditor() {
                           ? t('admin.artifacts.deleteHintOk')
                           : t('admin.artifacts.deleteHintShipped')
                     }
-                    className="rounded-lg border border-destructive/60 px-3 py-1.5 text-sm text-destructive disabled:opacity-50"
+                    className="border-destructive/60 text-destructive hover:bg-destructive/10"
                   >
                     {t('admin.artifacts.deleteSelected')}
-                  </button>
+                  </Button>
                   <span className="text-xs text-muted-foreground">
                     {t('admin.artifacts.deleteOnlyAuthored')}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card/40 p-4">
-                  <label className="text-sm">
+                  <Label className="flex items-center gap-2 text-sm">
                     {t('admin.artifacts.text')}
-                    <input
+                    <Input
                       type="text"
                       value={textContent}
                       disabled={selectedTextCount !== 1}
@@ -1520,37 +1544,38 @@ export default function ArtifactEditor() {
                           ? t('admin.artifacts.textTitle')
                           : t('admin.artifacts.textTitleIdle')
                       }
-                      className="ml-2 w-64 rounded border border-border px-2 py-1 disabled:opacity-50"
+                      className="w-64"
                     />
-                  </label>
-                  <label className="text-sm">
+                  </Label>
+                  <Label className="flex items-center gap-2 text-sm">
                     {t('admin.artifacts.fontColor')}
                     <input
                       type="color"
                       value={fontColor}
                       onChange={(e) => setFontColor(e.target.value)}
-                      className="ml-2 align-middle"
+                      className="align-middle"
                     />
-                  </label>
-                  <label className="text-sm">
+                  </Label>
+                  <Label className="flex items-center gap-2 text-sm">
                     {t('admin.artifacts.fontSize')}
-                    <input
+                    <Input
                       type="number"
                       min={MIN_FONT_SIZE}
                       max={MAX_FONT_SIZE}
                       value={fontSizeInput}
                       onChange={(e) => handleFontSizeInput(e.target.value)}
                       onBlur={() => setFontSizeInput(String(fontSize))}
-                      className="ml-2 w-20 rounded border border-border px-2 py-1"
+                      className="w-20"
                     />
-                  </label>
-                  <button
+                  </Label>
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={applyTextStyle}
-                    className="rounded-lg border border-border px-3 py-1.5 text-sm"
                   >
                     {t('admin.artifacts.applyStyle')}
-                  </button>
+                  </Button>
                   <span className="text-xs text-muted-foreground">
                     {t('admin.artifacts.styleHint')}
                   </span>
