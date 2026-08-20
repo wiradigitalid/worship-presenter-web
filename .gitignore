@@ -17,7 +17,7 @@
 /.next/
 /out/
 
-# SPA production bundle (built in Docker / spa:build)
+# SPA production bundle (spa:build)
 /spa/dist
 
 
