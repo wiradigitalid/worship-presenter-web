@@ -711,32 +711,51 @@ test('AC-4: every Header link routes through the guard', () => {
   );
 });
 
-test('AC-4: the provider mounts on the page, never on the root layout', () => {
-  const page = ast('spa/src/pages/AdminArtifactsPage.tsx');
+test('AC-4: the provider mounts at the operator layout, never on the root', () => {
+  // Header (the reader) and ArtifactEditor (the writer, via the page that
+  // renders into <Outlet/>) share one NavigationBlockerProvider instance. The
+  // provider sits at the narrowest layout covering both — the operator shell
+  // — and not on App.tsx. The page that mounts ArtifactEditor is no longer
+  // required to render its own copy: the provider is one level up, and the
+  // Outlet renders the writer inside it.
+  const shell = ast('spa/src/pages/OperatorShell.tsx');
   const provider = nodes(
-    page,
+    shell,
     (node) =>
       ts.isJsxElement(node) &&
       node.openingElement.tagName.getText() === 'NavigationBlockerProvider'
   );
-  assert.equal(provider.length, 1, 'one provider, on the one page that needs it');
+  assert.equal(provider.length, 1, 'one provider, on the operator shell');
 
-  for (const tag of ['Header', 'ArtifactEditor']) {
-    const found = jsxTags(page, tag);
-    assert.equal(found.length, 1, `expected one <${tag} />`);
-    assert.ok(
-      found[0].getStart() > provider[0].getStart() && found[0].end < provider[0].end,
-      `<${tag} /> must render inside the provider — the writer and the readers ` +
-        'have to share one context instance'
-    );
-  }
+  const header = jsxTags(shell, 'Header');
+  assert.equal(header.length, 1, 'expected one <Header />');
+  assert.ok(
+    header[0].getStart() > provider[0].getStart() && header[0].end < provider[0].end,
+    '<Header /> must render inside the provider — the reader has to share ' +
+      'the writer\'s context instance'
+  );
+
+  const outlet = jsxTags(shell, 'Outlet');
+  assert.equal(outlet.length, 1, 'expected one <Outlet />');
+  assert.ok(
+    outlet[0].getStart() > provider[0].getStart() && outlet[0].end < provider[0].end,
+    '<Outlet /> must render inside the provider — the writer renders ' +
+      'through it, into the same context'
+  );
+
+  const page = ast('spa/src/pages/AdminArtifactsPage.tsx');
+  assert.equal(
+    identifiers(page, 'NavigationBlockerProvider').length,
+    0,
+    'the page does not own its own provider; it inherits from the shell'
+  );
 
   const app = ast('spa/src/App.tsx');
   assert.equal(
     identifiers(app, 'NavigationBlockerProvider').length,
     0,
     'AD-24: a provider mounts at the narrowest layout covering its consumers, ' +
-      'and both of this one\'s consumers live on a single page'
+      'and both of this one\'s consumers live under OperatorShell'
   );
 });
 

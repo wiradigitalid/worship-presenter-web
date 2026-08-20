@@ -1,27 +1,18 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
-import OperatorPageShell from '@/components/OperatorPageShell';
 import ServicesList from '@/operator/ServicesList';
 
-type Session = { username: string; role: string };
+type ServiceRow = {
+  id: number;
+  date: string;
+  parsed_data: string | null;
+  created_at: string;
+};
 
 export default function DashboardPage() {
-  const navigate = useNavigate();
-  const [session, setSession] = useState<Session | null>(null);
-  const [services, setServices] = useState<
-    { id: number; date: string; parsed_data: string | null; created_at: string }[]
-  >([]);
+  const [services, setServices] = useState<ServiceRow[]>([]);
 
   useEffect(() => {
     (async () => {
-      const me = await fetch('/api/session', { credentials: 'same-origin' });
-      if (me.status === 401) {
-        navigate('/login');
-        return;
-      }
-      const s = (await me.json()) as Session;
-      setSession(s);
       const res = await fetch('/api/services', { credentials: 'same-origin' });
       const data = (await res.json()) as {
         services: { id: number; date: string; parsed_data: unknown; created_at: string }[];
@@ -40,14 +31,7 @@ export default function DashboardPage() {
         }))
       );
     })();
-  }, [navigate]);
+  }, []);
 
-  if (!session) return null;
-
-  return (
-    <OperatorPageShell>
-      <Header isAdmin={session.role === 'admin'} username={session.username} />
-      <ServicesList services={services} />
-    </OperatorPageShell>
-  );
+  return <ServicesList services={services} />;
 }

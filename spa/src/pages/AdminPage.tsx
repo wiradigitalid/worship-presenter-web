@@ -1,41 +1,30 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
-import OperatorPageShell from '@/components/OperatorPageShell';
+import { Navigate } from 'react-router-dom';
 import AccountsManager from '@/operator/admin/AccountsManager';
 import RetentionSettings from '@/operator/admin/RetentionSettings';
 import TransitionSettings from '@/operator/admin/TransitionSettings';
 import BibleTranslationSettings from '@/operator/admin/BibleTranslationSettings';
 import UiLocaleSettings from '@/operator/admin/UiLocaleSettings';
+import { useSession } from '../lib/auth/SessionProvider';
 
 export default function AdminPage() {
-  const navigate = useNavigate();
-  const [session, setSession] = useState<{ username: string; role: string } | null>(null);
+  const { session } = useSession();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>(null);
   useEffect(() => {
+    if (!session || session.role !== 'admin') return;
     (async () => {
-      const me = await fetch('/api/session', { credentials: 'same-origin' });
-      if (me.status === 401 || me.status === 403) {
-        navigate('/login');
-        return;
-      }
-      const s = await me.json();
-      if (s.role !== 'admin') {
-        navigate('/');
-        return;
-      }
-      setSession(s);
       const acc = await fetch('/api/admin/accounts', { credentials: 'same-origin' });
       setAccounts(((await acc.json()) as { accounts: any[] }).accounts || []);
       const st = await fetch('/api/admin/settings', { credentials: 'same-origin' });
       setSettings(await st.json());
     })();
-  }, [navigate]);
-  if (!session || !settings) return null;
+  }, [session]);
+  if (!session) return null;
+  if (session.role !== 'admin') return <Navigate to="/" replace />;
+  if (!settings) return null;
   return (
-    <OperatorPageShell innerClassName="space-y-8">
-      <Header isAdmin username={session.username} />
+    <div className="space-y-8">
       <AccountsManager initialAccounts={accounts} />
       <RetentionSettings initialDays={settings.pptx_retention_days} />
       <TransitionSettings initialTransition={settings.slide_transition} />
@@ -44,6 +33,6 @@ export default function AdminPage() {
         initialInstalled={Boolean(settings.default_bible_translation_installed)}
       />
       <UiLocaleSettings initialLocale={settings.ui_locale} />
-    </OperatorPageShell>
+    </div>
   );
 }
