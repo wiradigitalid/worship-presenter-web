@@ -405,6 +405,22 @@ export default function ArtifactEditor() {
     new Map()
   );
   const insertCounterRef = useRef(0);
+
+  const fitCanvasToShell = useCallback(() => {
+    const shell = canvasShellRef.current;
+    const canvas = fabricCanvasRef.current;
+    if (!shell || !canvas) return;
+    const width = shell.clientWidth;
+    const height = shell.clientHeight;
+    if (width <= 0 || height <= 0) return;
+    const scale = Math.min(width / CANVAS_WIDTH, height / CANVAS_HEIGHT);
+    canvas.setDimensions(
+      { width: CANVAS_WIDTH * scale, height: CANVAS_HEIGHT * scale },
+      { cssOnly: true }
+    );
+    canvas.setZoom(scale);
+    canvas.requestRenderAll();
+  }, []);
   const [insertPlaceholderKey, setInsertPlaceholderKey] = useState(
     PLACEHOLDER_CATALOG[0]?.key ?? 'date'
   );
@@ -580,6 +596,7 @@ export default function ArtifactEditor() {
       if (disposeCanvasIfAborted()) return;
 
       canvas.requestRenderAll();
+      fitCanvasToShell();
     }
 
     mountCanvas().catch((err) => {
@@ -598,7 +615,7 @@ export default function ArtifactEditor() {
       fabricCanvasRef.current?.dispose();
       fabricCanvasRef.current = null;
     };
-  }, [template, syncSelection, markDirty]);
+  }, [template, syncSelection, markDirty, fitCanvasToShell]);
 
   const insertElement = useCallback(
     async (kind: 'text' | 'shape') => {
@@ -1181,38 +1198,19 @@ export default function ArtifactEditor() {
     template && draftLabel.trim() !== '' && draftLabel.trim() !== template.label
   );
 
-  // Fit the 960x540 reference canvas to whatever width its shell ends up with,
-  // never upscaling past 100%. Without this, panels narrower than the canvas
-  // (~992px once the 280px sidebar is subtracted) get a horizontal scrollbar
-  // that no operator wants — the canvas paints a fixed 960x540 surface and the
-  // scroll does not even reveal more artwork, just the cropped edge.
+  // Letterbox the 960×540 reference canvas inside its shell: scale to the smaller
+  // of width/height ratio so the stage always fills the card without scrollbars.
   useEffect(() => {
     const shell = canvasShellRef.current;
     if (!shell) return;
-    const applyFit = () => {
-      const canvas = fabricCanvasRef.current;
-      if (!canvas) return;
-      const width = shell.clientWidth;
-      if (width <= 0) return;
-      const scale = Math.min(1, width / CANVAS_WIDTH);
-      canvas.setDimensions(
-        { width: CANVAS_WIDTH * scale, height: CANVAS_HEIGHT * scale },
-        { cssOnly: true }
-      );
-      canvas.setZoom(scale);
-      canvas.requestRenderAll();
-    };
-    applyFit();
+    fitCanvasToShell();
     if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(applyFit);
+    const observer = new ResizeObserver(() => fitCanvasToShell());
     observer.observe(shell);
     return () => {
       observer.disconnect();
     };
-  }, [template]);
-
-  const kindChipClass =
-    'inline-flex rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground';
+  }, [template, fitCanvasToShell]);
 
   // The browser-level exits: closing the tab, reloading, typing a new URL. The
   // listener is the registration itself — armed only while an editable canvas
@@ -1398,7 +1396,7 @@ export default function ArtifactEditor() {
                     </Button>
                   </div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs opacity-80">
-                    <span className={kindChipClass}>[{kindChipLabel(item.baseType)}]</span>
+                    <span>[{kindChipLabel(item.baseType)}]</span>
                     {!item.editable ? <span>{t('admin.artifacts.readOnly')}</span> : null}
                   </div>
                 </div>
@@ -1442,7 +1440,7 @@ export default function ArtifactEditor() {
                   className="text-lg font-semibold"
                 />
                 <p className="mt-1 text-sm text-muted-foreground">
-                  <span className={kindChipClass}>[{kindChipLabel(template.baseType)}]</span>
+                  <span>[{kindChipLabel(template.baseType)}]</span>
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -1638,7 +1636,7 @@ export default function ArtifactEditor() {
                 </div>
                 <div
                   ref={canvasShellRef}
-                  className="overflow-hidden rounded-2xl border border-border bg-black/90 p-4"
+                  className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-2xl border border-border bg-black/90"
                 >
                   <canvas ref={canvasRef} />
                 </div>
