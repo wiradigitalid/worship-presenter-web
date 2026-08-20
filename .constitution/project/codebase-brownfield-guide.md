@@ -20,15 +20,15 @@ Preview (`POST /api/services/preview`) still reads the live map. A persisted Ser
 
 ## Store verbs that now exist
 
-`src/lib/registry/store.ts` exports list/get/update/reset/insertIfMissing **and** `deleteArtifactTemplate` / `reorderArtifactTemplates`. HTTP: `DELETE /api/admin/artifacts/[id]` with `{ updatedAt }`; `PUT /api/admin/artifacts/order` with `{ items: [{ id, updatedAt }, ...] }` covering every live row.
+`src/lib/registry/store.ts` exports list/get/update/reset/insertIfMissing **and** `deleteArtifactTemplate` / `reorderArtifactTemplates`, plus Story 20.3 `createAuthoredGeneralTemplate` / `renameArtifactTemplate`. HTTP: `POST /api/admin/artifacts` with `{ label }`; `PATCH /api/admin/artifacts/[id]` with `{ label, updatedAt }`; `DELETE /api/admin/artifacts/[id]` with `{ updatedAt }`; `PUT /api/admin/artifacts/order` with `{ items: [{ id, updatedAt }, ...] }` covering every live row.
 
 Delete and reorder bump every survivor's token and compact `position` to `0..N-1`.
 
-`updateArtifactTemplate` still never touches `position`.
+`updateArtifactTemplate` still never touches `position`. Create appends at `COUNT(*)`.
 
-## `assertStableAgainstSeed` is still seed-first
+## `assertStableAgainstSeed` skips authored rows
 
-Unreachable until a create verb exists (W1 Non-goal). Do not route delete or reorder through it.
+Authored origin is `seed_hash IS NULL`. Save does not call `getSeedTemplateById` on those rows. Reset on NULL is refused. Do not route delete or reorder through the seed check.
 
 ## Entry-key set is still three, not AD-19's six
 

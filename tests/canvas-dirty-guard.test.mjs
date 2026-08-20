@@ -293,8 +293,8 @@ test('AC-1: the dirty flag adds no network call of its own', () => {
 
   assert.equal(
     targets.length,
-    6,
-    'list, load, save, reset, confirmed delete, and whole-list reorder'
+    8,
+    'list, load, save, reset, confirmed delete, whole-list reorder, create, and rename'
   );
   for (const target of targets) {
     assert.match(
@@ -531,13 +531,15 @@ test('AC-3: switching template while dirty asks before it discards', () => {
   const setters = callsNamed(editor, 'setSelectedId');
   assert.equal(
     setters.length,
-    3,
-    'one guarded list switch plus successful and remote-delete selection clears'
+    4,
+    'one guarded list switch, one create select, plus successful and remote-delete selection clears'
   );
 
   const switchSetter = setters.find((setter) => setter.arguments[0]?.getText() === 'item.id');
+  const createSetter = setters.find((setter) => setter.arguments[0]?.getText() === 'data.id');
   const deleteClearers = setters.filter((setter) => setter.arguments[0]?.getText() === 'null');
   assert.ok(switchSetter, 'the sidebar row selects the clicked template');
+  assert.ok(createSetter, 'create selects the new template');
   assert.equal(deleteClearers.length, 2, 'both deletion outcomes clear a gone selection');
 
   // The nearest arrow function around the setter is the list row's onClick; the
@@ -559,6 +561,20 @@ test('AC-3: switching template while dirty asks before it discards', () => {
     handler.getText(),
     /item\.id === selectedId/,
     'AC-3 guards the actual switch: re-clicking the active row must not prompt'
+  );
+
+  let createHandler = createSetter.parent;
+  while (createHandler && !ts.isArrowFunction(createHandler)) {
+    createHandler = createHandler.parent;
+  }
+  assert.ok(createHandler, 'create selects after the POST succeeds');
+  assert.ok(
+    identifiers(createHandler, 'mayDiscard').length > 0,
+    'adding a template mounts a new canvas and must confirm before discarding unsaved work'
+  );
+  assert.ok(
+    identifiers(createHandler, 'DISCARD_ON_SWITCH_CONFIRMATION').length > 0,
+    'create uses the same switch wording as a list row click'
   );
 
   const deleteHandlers = deleteClearers.map((clearer) => {

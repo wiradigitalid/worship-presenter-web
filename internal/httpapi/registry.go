@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
@@ -10,24 +11,31 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/wiradigitalid/worship-presenter-web/internal/db"
 	"github.com/wiradigitalid/worship-presenter-web/internal/plan"
 )
 
+var kebabTemplateID = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+
+const maxTemplateLabelRunes = 80
+
 type artifactSummary struct {
-	ID        string `json:"id"`
-	Label     string `json:"label"`
-	BaseType  string `json:"baseType"`
-	UpdatedAt string `json:"updatedAt"`
-	Editable  bool   `json:"editable"`
+	ID         string `json:"id"`
+	Label      string `json:"label"`
+	BaseType   string `json:"baseType"`
+	UpdatedAt  string `json:"updatedAt"`
+	Editable   bool   `json:"editable"`
+	Resettable bool   `json:"resettable"`
 }
 
 func (s *Server) listArtifacts(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.DB.Query(
-		`SELECT id, label, base_type, updated_at FROM artifact_templates ORDER BY position`,
+		`SELECT id, label, base_type, updated_at, seed_hash FROM artifact_templates ORDER BY position`,
 	)
 	if err != nil {
 		log.Printf("Error listing artifact templates: %v", err)
@@ -38,11 +46,13 @@ func (s *Server) listArtifacts(w http.ResponseWriter, r *http.Request) {
 	list := []artifactSummary{}
 	for rows.Next() {
 		var it artifactSummary
-		if err := rows.Scan(&it.ID, &it.Label, &it.BaseType, &it.UpdatedAt); err != nil {
+		var seedHash sql.NullString
+		if err := rows.Scan(&it.ID, &it.Label, &it.BaseType, &it.UpdatedAt, &seedHash); err != nil {
 			writeError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
 		it.Editable = it.BaseType == "general"
+		it.Resettable = seedHash.Valid && seedHash.String != ""
 		list = append(list, it)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"templates": list})
@@ -78,6 +88,119 @@ func (s *Server) loadArtifactJSON(id string) ([]byte, error) {
 	}
 	obj["updatedAt"] = updatedAt
 	return json.Marshal(obj)
+}
+
+func normalizeTemplateLabel(raw any) (string, string) {
+	s, _ := raw.(string)
+	label := strings.TrimSpace(s)
+	if label == "" {
+		return "", "label is required"
+	}
+	if utf8.RuneCountInString(label) > maxTemplateLabelRunes {
+		return "", "label must be at most 80 characters"
+	}
+	return label, ""
+}
+
+func newAuthoredTemplateID() (string, error) {
+	var b [4]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", err
+	}
+	return "custom-" + hex.EncodeToString(b[:]), nil
+}
+
+func authoredGeneralPayload(id, label string) ([]byte, error) {
+	obj := map[string]any{
+		"schemaVersion": 1,
+		"id":            id,
+		"label":         label,
+		"baseType":      "general",
+		"placeholders":  []any{},
+		"layouts": map[string]any{
+			"default": map[string]any{
+				"aspectRatio":     "16:9",
+				"backgroundColor": "#000000",
+				"elements":        []any{},
+			},
+		},
+	}
+	return json.Marshal(obj)
+}
+
+func (s *Server) createArtifact(w http.ResponseWriter, r *http.Request) {
+	body, err, status, msg := readJSONObject(r, 1<<20)
+	if err != nil {
+		if msg == "Invalid body" {
+			writeError(w, http.StatusBadRequest, "Invalid JSON")
+			return
+		}
+		writeError(w, status, msg)
+		return
+	}
+	label, errMsg := normalizeTemplateLabel(body["label"])
+	if errMsg != "" {
+		writeError(w, http.StatusBadRequest, errMsg)
+		return
+	}
+	id, _ := body["id"].(string)
+	id = strings.TrimSpace(id)
+	if id == "" {
+		generated, genErr := newAuthoredTemplateID()
+		if genErr != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		id = generated
+	}
+	if id == "order" || !kebabTemplateID.MatchString(id) {
+		writeError(w, http.StatusBadRequest, "id must be kebab-case")
+		return
+	}
+
+	var exists int
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM artifact_templates WHERE id = ?`, id).Scan(&exists); err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if exists > 0 {
+		writeError(w, http.StatusConflict, "Template id already exists")
+		return
+	}
+
+	payload, err := authoredGeneralPayload(id, label)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	var pos int
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM artifact_templates`).Scan(&pos); err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	_, err = s.DB.Exec(
+		`INSERT INTO artifact_templates (id, label, base_type, payload, updated_at, seed_hash, position)
+		 VALUES (?, ?, 'general', ?, ?, NULL, ?)`,
+		id, label, string(payload), now, pos,
+	)
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "unique") {
+			writeError(w, http.StatusConflict, "Template id already exists")
+			return
+		}
+		log.Printf("Error creating artifact template: %v", err)
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	raw, err := s.loadArtifactJSON(id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_, _ = w.Write(raw)
 }
 
 func (s *Server) putArtifact(w http.ResponseWriter, r *http.Request) {
@@ -141,6 +264,81 @@ func (s *Server) putArtifact(w http.ResponseWriter, r *http.Request) {
 	res, err := s.DB.Exec(
 		`UPDATE artifact_templates SET label = ?, payload = ?, updated_at = ? WHERE id = ? AND updated_at = ?`,
 		newLabel, string(next), now, id, updatedAt,
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		writeError(w, http.StatusConflict, "Template was modified by another session")
+		return
+	}
+	raw, err := s.loadArtifactJSON(id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(raw)
+}
+
+func (s *Server) patchArtifact(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	body, err, status, msg := readJSONObject(r, 1<<20)
+	if err != nil {
+		if msg == "Invalid body" {
+			writeError(w, http.StatusBadRequest, "Invalid JSON")
+			return
+		}
+		writeError(w, status, msg)
+		return
+	}
+	updatedAt, _ := body["updatedAt"].(string)
+	if strings.TrimSpace(updatedAt) == "" {
+		writeError(w, http.StatusBadRequest, "updatedAt is required")
+		return
+	}
+	label, errMsg := normalizeTemplateLabel(body["label"])
+	if errMsg != "" {
+		writeError(w, http.StatusBadRequest, errMsg)
+		return
+	}
+
+	var storedUpdated, payload string
+	err = s.DB.QueryRow(
+		`SELECT updated_at, payload FROM artifact_templates WHERE id = ?`, id,
+	).Scan(&storedUpdated, &payload)
+	if err == sql.ErrNoRows {
+		writeError(w, http.StatusNotFound, "Unknown template: "+id)
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if storedUpdated != updatedAt {
+		writeError(w, http.StatusConflict, "Template was modified by another session")
+		return
+	}
+
+	var obj map[string]any
+	if err := json.Unmarshal([]byte(payload), &obj); err != nil {
+		log.Printf("Error parsing artifact payload for rename %s: %v", id, err)
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	obj["label"] = label
+	next, err := json.Marshal(obj)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	res, err := s.DB.Exec(
+		`UPDATE artifact_templates SET label = ?, payload = ?, updated_at = ? WHERE id = ? AND updated_at = ?`,
+		label, string(next), now, id, updatedAt,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -325,9 +523,18 @@ func (s *Server) resetArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var stored string
-	err = s.DB.QueryRow(`SELECT updated_at FROM artifact_templates WHERE id = ?`, id).Scan(&stored)
+	var seedHash sql.NullString
+	err = s.DB.QueryRow(`SELECT updated_at, seed_hash FROM artifact_templates WHERE id = ?`, id).Scan(&stored, &seedHash)
 	if err == sql.ErrNoRows {
 		writeError(w, http.StatusNotFound, "Template not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if !seedHash.Valid || seedHash.String == "" {
+		writeError(w, http.StatusBadRequest, "Authored templates cannot be reset")
 		return
 	}
 	if stored != updatedAt {

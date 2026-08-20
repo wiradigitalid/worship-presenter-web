@@ -10,7 +10,7 @@ import {
 import { isRegistryImageRef } from './asset-safety';
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
-const KEBAB_ID = /^[a-z][a-z0-9-]*$/;
+export const KEBAB_ID = /^[a-z][a-z0-9-]*$/;
 
 const ALLOWED_TEMPLATE_KEYS = new Set([
   'schemaVersion',

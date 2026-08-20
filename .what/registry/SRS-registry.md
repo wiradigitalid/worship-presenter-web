@@ -25,7 +25,7 @@ Changing the worship order must not wait for a deploy, and must not overwrite a 
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Admin | Structure editor | Layout, order, delete, Sync Artifact |
+| Admin | Structure editor | Layout, order, add, rename, delete, Sync Artifact |
 | Operator | Sees the result | Sees the Deck matching the payload; does not edit Registry |
 
 ## UC Catalogue · [G3]
@@ -47,7 +47,6 @@ Two surfaces: the Artifact Registry owns order, labels, and layout; Hub intake a
 
 - Fill weekly payload — Hub.
 - Live control — Presenter.
-- Add a new Artifact Template from Admin — development until a create verb ships (FR-21). `insertIfMissing` is bootstrap only (AD-17).
 
 ## Prerequisite · [G3]
 
@@ -62,7 +61,7 @@ A deleted entry stays deleted after restart. An old Service does not change unti
 ### Assumptions
 
 - OQ-24 — Registry `gone` is terminal. Reset is live→live only and does not undelete. Wrong: Admin ships undelete, or Reset on a gone id is undefined.
-- OQ-15 — Reset restores the shipped label (including a rename), and an authored row exposes no Reset; that as-built pair stands until Story 20.3. Wrong: two rows in one list keep offering different verbs.
+- OQ-15 — Reset restores the shipped label (including a rename), and an authored row exposes no Reset (`seed_hash` NULL; Story 20.3). Wrong: two rows in one list keep offering Reset on an authored General.
 - OQ-14 — Until AD-16 ships, a stale snapshot has no extra operator affordance. Wrong: Story 20.8 must add a badge.
 
 ### Risks

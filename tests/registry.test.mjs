@@ -21,8 +21,11 @@ const {
   getArtifactTemplate,
   updateArtifactTemplate,
   resetArtifactTemplate,
+  createAuthoredGeneralTemplate,
+  renameArtifactTemplate,
   RegistryStaleError,
   RegistryNotFoundError,
+  RegistryConflictError,
   listArtifactSummaries,
   assertContiguousPositions,
 } = await import(
@@ -40,37 +43,37 @@ test('getSeedTemplateById throws RegistryNotFoundError for missing seed', () => 
   assert.throws(() => getSeedTemplateById('not-in-seed-ever'), RegistryNotFoundError);
 });
 
-test('update rejects templates missing from seed file', () => {
+test('authored template (seed_hash NULL) can be saved without a seed row', () => {
   const db = getDb();
-  const orphan = {
-    schemaVersion: 1,
+  const created = createAuthoredGeneralTemplate(db, {
+    label: 'Authored General',
     id: 'orphan-db-only',
-    label: 'Orphan',
-    baseType: 'general',
-    placeholders: [],
-    layouts: {
-      default: {
-        aspectRatio: '16:9',
-        backgroundColor: '#000000',
-        elements: [],
-      },
-    },
-  };
-  const now = new Date().toISOString();
-  db.prepare(
-    `INSERT INTO artifact_templates (id, label, base_type, payload, updated_at)
-     VALUES (?, ?, ?, ?, ?)`
-  ).run(orphan.id, orphan.label, orphan.baseType, JSON.stringify(orphan), now);
+  });
+  try {
+    const summary = listArtifactSummaries(db).find((s) => s.id === created.id);
+    assert.equal(summary?.resettable, false);
+    assert.equal(summary?.editable, true);
 
-  assert.throws(
-    () => updateArtifactTemplate(db, orphan.id, orphan, now),
-    RegistryNotFoundError
-  );
+    const { updatedAt, ...body } = created;
+    const saved = updateArtifactTemplate(db, created.id, body, updatedAt);
+    assert.equal(saved.id, created.id);
+    assert.equal(saved.label, 'Authored General');
 
-  // Every case in this file shares one `getDb()` connection: leaving the
-  // orphan behind would corrupt the exact row-count and position-invariant
-  // assertions later cases in this file make (Story 20.1, AC-1).
-  db.prepare(`DELETE FROM artifact_templates WHERE id = ?`).run(orphan.id);
+    assert.throws(
+      () =>
+        resetArtifactTemplate(
+          db,
+          created.id,
+          { ...body, id: created.id },
+          saved.updatedAt
+        ),
+      (err) =>
+        err instanceof RegistryValidationError &&
+        err.message === 'Authored templates cannot be reset'
+    );
+  } finally {
+    db.prepare(`DELETE FROM artifact_templates WHERE id = ?`).run(created.id);
+  }
 });
 
 test('registry seed loads validated templates', () => {
@@ -522,6 +525,42 @@ test('positions stay contiguous after bootstrap and after a PUT', () => {
     `UPDATE artifact_templates SET position = 37 WHERE id = 'thank-you'`
   ).run();
   assertContiguousPositions(db);
+});
+
+test('seeded list rows are resettable; duplicate authored id is 409', () => {
+  const db = getDb();
+  const welcome = listArtifactSummaries(db).find((s) => s.id === 'welcome');
+  assert.equal(welcome?.resettable, true);
+
+  assert.throws(
+    () => createAuthoredGeneralTemplate(db, { label: 'Clash', id: 'welcome' }),
+    RegistryConflictError
+  );
+  assert.throws(
+    () => createAuthoredGeneralTemplate(db, { label: '   ' }),
+    (err) =>
+      err instanceof RegistryValidationError && err.message === 'label is required'
+  );
+});
+
+test('rename updates both the label column and payload.label', () => {
+  const db = getDb();
+  const before = getArtifactTemplate(db, 'song-set');
+  assert.ok(before);
+  const renamed = renameArtifactTemplate(
+    db,
+    'song-set',
+    'Song set (renamed)',
+    before.updatedAt
+  );
+  assert.equal(renamed.label, 'Song set (renamed)');
+  const row = db
+    .prepare(`SELECT label, payload FROM artifact_templates WHERE id = 'song-set'`)
+    .get();
+  assert.equal(row.label, 'Song set (renamed)');
+  assert.equal(JSON.parse(row.payload).label, 'Song set (renamed)');
+
+  renameArtifactTemplate(db, 'song-set', before.label, renamed.updatedAt);
 });
 
 test('seed bundled assets exist on disk', () => {

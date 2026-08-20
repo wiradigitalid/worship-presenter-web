@@ -61,6 +61,8 @@ type EditorStatus =
   | 'idle'
   | 'loading'
   | 'saving'
+  | 'creating'
+  | 'renaming'
   | 'resetting'
   | 'deleting'
   | 'reordering'
@@ -363,6 +365,8 @@ export default function ArtifactEditor() {
   const [templates, setTemplates] = useState<ArtifactTemplateSummary[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [template, setTemplate] = useState<StoredArtifactTemplate | null>(null);
+  const [draftLabel, setDraftLabel] = useState('');
+  const [newLabel, setNewLabel] = useState('');
   const [status, setStatus] = useState<EditorStatus>('loading');
   const [message, setMessage] = useState<string | null>(null);
   const [fontColor, setFontColor] = useState(DEFAULT_FONT_COLOR);
@@ -428,6 +432,7 @@ export default function ArtifactEditor() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || t('admin.artifacts.loadOneFailed'));
     setTemplate(data);
+    setDraftLabel(typeof data.label === 'string' ? data.label : '');
     // A new server copy remounts the canvas, and a freshly mounted canvas is
     // never dirty. This is the one place every remount comes through — the
     // first load, a template switch, and the reload behind a 409 — so it clears
@@ -744,6 +749,75 @@ export default function ArtifactEditor() {
     setFontSize(clampFontSize(parsed));
   };
 
+  const handleCreate = async () => {
+    const label = newLabel.trim();
+    if (!label) return;
+    const proceed = mayDiscard(
+      isDirty && isEditable,
+      DISCARD_ON_SWITCH_CONFIRMATION,
+      (message) => window.confirm(message)
+    );
+    if (!proceed) return;
+
+    setStatus('creating');
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/artifacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || t('admin.artifacts.addFailed'));
+      setNewLabel('');
+      await loadList();
+      setSelectedId(data.id);
+      setStatus('success');
+      setMessage(
+        t('admin.artifacts.created').replace('{label}', data.label || label)
+      );
+      toast(t('admin.artifacts.created').replace('{label}', data.label || label));
+    } catch (err) {
+      setStatus('error');
+      setMessage(err instanceof Error ? err.message : t('admin.artifacts.addFailed'));
+    }
+  };
+
+  const handleRename = async () => {
+    if (!template) return;
+    const label = draftLabel.trim();
+    if (!label) return;
+
+    setStatus('renaming');
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/admin/artifacts/${template.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label, updatedAt: template.updatedAt }),
+      });
+      const data = await res.json();
+      if (res.status === 409) {
+        await loadTemplate(template.id);
+        setStatus('conflict');
+        setMessage(data.error || t('admin.artifacts.modifiedElsewhere'));
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || t('admin.artifacts.renameFailed'));
+      setTemplate(data);
+      if (typeof data.label === 'string') setDraftLabel(data.label);
+      setStatus('success');
+      setMessage(t('admin.artifacts.renamed'));
+      toast(t('admin.artifacts.renamed'));
+      await loadList();
+    } catch (err) {
+      setStatus('error');
+      setMessage(
+        err instanceof Error ? err.message : t('admin.artifacts.renameFailed')
+      );
+    }
+  };
+
   const handleSave = async () => {
     if (!template) return;
     const layout = getEditableLayout(template);
@@ -770,6 +844,7 @@ export default function ArtifactEditor() {
       const { updatedAt, ...templateBody } = template;
       const payload = {
         ...templateBody,
+        label: draftLabel.trim() || template.label,
         layouts: {
           ...templateBody.layouts,
           default: {
@@ -804,6 +879,7 @@ export default function ArtifactEditor() {
       }
       if (!res.ok) throw new Error(data.error || t('admin.artifacts.saveFailed'));
       setTemplate(data);
+      if (typeof data.label === 'string') setDraftLabel(data.label);
       setIsDirty((current) => nextDirtyState(current, 'saved'));
       setStatus('success');
       setMessage(t('admin.artifacts.saved'));
@@ -846,6 +922,7 @@ export default function ArtifactEditor() {
       }
       if (!res.ok) throw new Error(data.error || t('admin.artifacts.resetFailed'));
       setTemplate(data);
+      if (typeof data.label === 'string') setDraftLabel(data.label);
       setIsDirty((current) => nextDirtyState(current, 'reset'));
       setStatus('success');
       setMessage(t('admin.artifacts.resetDone'));
@@ -932,8 +1009,8 @@ export default function ArtifactEditor() {
         await reconcileSelectedTemplate(summaries);
       }
       setStatus('success');
-      setMessage(`Deleted ${item.label}`);
-      toast(`Deleted ${item.label}`);
+      setMessage(t('admin.artifacts.deleted').replace('{label}', item.label));
+      toast(t('admin.artifacts.deleted').replace('{label}', item.label));
     } catch (err) {
       setStatus('error');
       setMessage(err instanceof Error ? err.message : t('admin.artifacts.deleteFailed'));
@@ -984,6 +1061,12 @@ export default function ArtifactEditor() {
   };
 
   const isEditable = template ? isCanvasAuthorable(template.baseType) : false;
+  const isResettable = Boolean(
+    template && templates.find((item) => item.id === template.id)?.resettable
+  );
+  const labelDirty = Boolean(
+    template && draftLabel.trim() !== '' && draftLabel.trim() !== template.label
+  );
 
   const kindChipClass =
     'inline-flex rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground';
@@ -1014,6 +1097,8 @@ export default function ArtifactEditor() {
   const busy =
     status === 'loading' ||
     status === 'saving' ||
+    status === 'creating' ||
+    status === 'renaming' ||
     status === 'resetting' ||
     status === 'deleting' ||
     status === 'reordering';
@@ -1056,6 +1141,31 @@ export default function ArtifactEditor() {
     <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
       <aside className="rounded-2xl border border-border bg-card/60 p-4 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold text-foreground">Templates</h2>
+        <form
+          className="mb-3 flex gap-1"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleCreate();
+          }}
+        >
+          <input
+            type="text"
+            value={newLabel}
+            onChange={(event) => setNewLabel(event.target.value)}
+            maxLength={80}
+            placeholder={t('admin.artifacts.addPlaceholder')}
+            aria-label={t('admin.artifacts.addLabel')}
+            disabled={busy}
+            className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm"
+          />
+          <button
+            type="submit"
+            disabled={busy || !newLabel.trim()}
+            className="rounded-xl border border-border px-3 py-2 text-sm font-semibold disabled:opacity-50"
+          >
+            {status === 'creating' ? t('admin.artifacts.adding') : t('admin.artifacts.add')}
+          </button>
+        </form>
         <ul className="max-h-[70vh] space-y-1 overflow-y-auto">
           {templates.map((item) => (
             <li key={item.id}>
@@ -1145,8 +1255,19 @@ export default function ArtifactEditor() {
         ) : (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">{template.label}</h2>
+              <div className="min-w-0 flex-1">
+                <label className="sr-only" htmlFor="artifact-label">
+                  {t('admin.artifacts.label')}
+                </label>
+                <input
+                  id="artifact-label"
+                  type="text"
+                  value={draftLabel}
+                  onChange={(event) => setDraftLabel(event.target.value)}
+                  maxLength={80}
+                  disabled={busy}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-lg font-semibold"
+                />
                 <p className="mt-1 text-sm text-muted-foreground">
                   <span className={kindChipClass}>[{kindChipLabel(template.baseType)}]</span>
                 </p>
@@ -1162,20 +1283,32 @@ export default function ArtifactEditor() {
                 ) : null}
                 <button
                   type="button"
+                  onClick={() => void handleRename()}
+                  disabled={!labelDirty || busy}
+                  className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                >
+                  {status === 'renaming'
+                    ? t('admin.artifacts.renaming')
+                    : t('admin.artifacts.rename')}
+                </button>
+                <button
+                  type="button"
                   onClick={handleSave}
                   disabled={!isEditable || busy}
                   className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
                 >
                   {t('admin.artifacts.save')}
                 </button>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  disabled={busy}
-                  className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
-                >
-                  {t('admin.artifacts.reset')}
-                </button>
+                {isResettable ? (
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    disabled={busy}
+                    className="rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                  >
+                    {t('admin.artifacts.reset')}
+                  </button>
+                ) : null}
               </div>
             </div>
 

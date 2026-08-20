@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import type Database from 'better-sqlite3';
 import type {
   ArtifactBaseType,
@@ -7,7 +7,11 @@ import type {
   StoredArtifactTemplate,
 } from './types';
 import { isCanvasAuthorable } from './types';
-import { RegistryValidationError, validateArtifactTemplate } from './validate';
+import {
+  KEBAB_ID,
+  RegistryValidationError,
+  validateArtifactTemplate,
+} from './validate';
 import { getSeedTemplateById } from './seed';
 
 export class RegistryNotFoundError extends Error {
@@ -24,12 +28,23 @@ export class RegistryStaleError extends Error {
   }
 }
 
+export class RegistryConflictError extends Error {
+  constructor(message = 'Template id already exists') {
+    super(message);
+    this.name = 'RegistryConflictError';
+  }
+}
+
+const RESERVED_TEMPLATE_IDS = new Set(['order']);
+const MAX_LABEL_LENGTH = 80;
+
 type Row = {
   id: string;
   label: string;
   base_type: string;
   payload: string;
   updated_at: string;
+  seed_hash?: string | null;
 };
 
 export type ArtifactTemplateOrderItem = {
@@ -62,7 +77,7 @@ export function listArtifactSummaries(
 ): ArtifactTemplateSummary[] {
   const rows = db
     .prepare(
-      `SELECT id, label, base_type, payload, updated_at
+      `SELECT id, label, base_type, payload, updated_at, seed_hash
        FROM artifact_templates
        ORDER BY position`
     )
@@ -74,6 +89,7 @@ export function listArtifactSummaries(
     baseType: row.base_type as ArtifactBaseType,
     updatedAt: row.updated_at,
     editable: isCanvasAuthorable(row.base_type as ArtifactBaseType),
+    resettable: Boolean(row.seed_hash),
   }));
 }
 
@@ -114,6 +130,45 @@ function nextRegistryUpdatedAt(db: Database.Database): string {
     .get() as { latest?: string | null };
   const latest = row.latest ? Date.parse(row.latest) : Number.NEGATIVE_INFINITY;
   return new Date(Math.max(Date.now(), latest + 1)).toISOString();
+}
+
+function normalizeTemplateLabel(raw: unknown): string {
+  if (typeof raw !== 'string') {
+    throw new RegistryValidationError('label is required');
+  }
+  const label = raw.trim();
+  if (!label) {
+    throw new RegistryValidationError('label is required');
+  }
+  if ([...label].length > MAX_LABEL_LENGTH) {
+    throw new RegistryValidationError('label must be at most 80 characters');
+  }
+  return label;
+}
+
+function newAuthoredTemplateId(): string {
+  return `custom-${randomBytes(4).toString('hex')}`;
+}
+
+function emptyGeneralTemplate(id: string, label: string): ArtifactTemplate {
+  return validateArtifactTemplate({
+    schemaVersion: 1,
+    id,
+    label,
+    baseType: 'general',
+    placeholders: [],
+    layouts: {
+      default: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [],
+      },
+    },
+  });
+}
+
+function isSeededHash(hash: string | null | undefined): boolean {
+  return Boolean(hash);
 }
 
 function validateWholeOrder(
@@ -335,7 +390,7 @@ export function updateArtifactTemplate(
 ): StoredArtifactTemplate {
   const row = db
     .prepare(
-      `SELECT id, label, base_type, payload, updated_at
+      `SELECT id, label, base_type, payload, updated_at, seed_hash
        FROM artifact_templates WHERE id = ?`
     )
     .get(id) as Row | undefined;
@@ -366,7 +421,7 @@ export function updateArtifactTemplate(
   if (validated.id !== id) {
     throw new RegistryValidationError('Template id in payload must match route id');
   }
-  if (!options?.allowReadOnly) {
+  if (!options?.allowReadOnly && isSeededHash(row.seed_hash)) {
     assertStableAgainstSeed(validated, existing);
   }
 
@@ -420,6 +475,15 @@ export function resetArtifactTemplate(
   seedTemplate: ArtifactTemplate,
   expectedUpdatedAt: string
 ): StoredArtifactTemplate {
+  const row = db
+    .prepare(`SELECT seed_hash FROM artifact_templates WHERE id = ?`)
+    .get(id) as { seed_hash?: string | null } | undefined;
+  if (!row) {
+    throw new RegistryNotFoundError(id);
+  }
+  if (!isSeededHash(row.seed_hash)) {
+    throw new RegistryValidationError('Authored templates cannot be reset');
+  }
   if (seedTemplate.id !== id) {
     throw new RegistryValidationError('Seed template id mismatch');
   }
@@ -427,6 +491,100 @@ export function resetArtifactTemplate(
     allowReadOnly: true,
     markAsSeeded: true,
   });
+}
+
+/**
+ * Admin-authored General (AD-22). `seed_hash` stays NULL so Save skips the
+ * seed-stability check and Reset is refused.
+ */
+export function createAuthoredGeneralTemplate(
+  db: Database.Database,
+  input: { label: unknown; id?: unknown }
+): StoredArtifactTemplate {
+  const label = normalizeTemplateLabel(input.label);
+  let id =
+    typeof input.id === 'string' ? input.id.trim() : '';
+  if (!id) {
+    id = newAuthoredTemplateId();
+  }
+  if (RESERVED_TEMPLATE_IDS.has(id) || !KEBAB_ID.test(id)) {
+    throw new RegistryValidationError('id must be kebab-case');
+  }
+
+  const exists = db
+    .prepare(`SELECT id FROM artifact_templates WHERE id = ?`)
+    .get(id);
+  if (exists) {
+    throw new RegistryConflictError();
+  }
+
+  const template = emptyGeneralTemplate(id, label);
+  const payload = serializeTemplate(template);
+  const now = nextRegistryUpdatedAt(db);
+  const position = (
+    db.prepare(`SELECT COUNT(*) AS n FROM artifact_templates`).get() as {
+      n: number;
+    }
+  ).n;
+
+  db.prepare(
+    `INSERT INTO artifact_templates (id, label, base_type, payload, updated_at, seed_hash, position)
+     VALUES (?, ?, ?, ?, ?, NULL, ?)`
+  ).run(template.id, template.label, template.baseType, payload, now, position);
+  assertContiguousPositions(db);
+
+  const created = getArtifactTemplate(db, template.id);
+  if (!created) {
+    throw new RegistryNotFoundError(template.id);
+  }
+  return created;
+}
+
+/**
+ * Rename any kind. Updates both the `label` column and `payload.label` in
+ * one statement (AD-18 two homes).
+ */
+export function renameArtifactTemplate(
+  db: Database.Database,
+  id: string,
+  label: unknown,
+  expectedUpdatedAt: string
+): StoredArtifactTemplate {
+  const nextLabel = normalizeTemplateLabel(label);
+  const row = db
+    .prepare(
+      `SELECT id, label, base_type, payload, updated_at
+       FROM artifact_templates WHERE id = ?`
+    )
+    .get(id) as Row | undefined;
+  if (!row) {
+    throw new RegistryNotFoundError(id);
+  }
+  if (row.updated_at !== expectedUpdatedAt) {
+    throw new RegistryStaleError();
+  }
+
+  const parsed = JSON.parse(row.payload) as ArtifactTemplate;
+  parsed.label = nextLabel;
+  const validated = validateArtifactTemplate(parsed);
+  const nextPayload = serializeTemplate(validated);
+  const now = nextRegistryUpdatedAt(db);
+  const result = db
+    .prepare(
+      `UPDATE artifact_templates
+       SET label = ?, payload = ?, updated_at = ?
+       WHERE id = ? AND updated_at = ?`
+    )
+    .run(validated.label, nextPayload, now, id, expectedUpdatedAt);
+  if (result.changes === 0) {
+    throw new RegistryStaleError();
+  }
+
+  const updated = getArtifactTemplate(db, id);
+  if (!updated) {
+    throw new RegistryNotFoundError(id);
+  }
+  return updated;
 }
 
 /**

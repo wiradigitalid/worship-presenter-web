@@ -167,6 +167,79 @@ describe('registry against Go', { concurrency: 1 }, () => {
     const templates = await list();
     assert.ok(templates.length > 1);
     assert.ok(templates.some((t) => t.id === 'song-set'));
+    const welcome = templates.find((t) => t.id === 'welcome');
+    assert.equal(welcome?.resettable, true);
+  });
+
+  test('Admin create is general, not resettable, and Save works', async () => {
+    const created = await json(`${base}/api/admin/artifacts`, 'POST', {
+      label: 'Custom board',
+      id: 'custom-story-20-3',
+    });
+    assert.equal(created.status, 201, JSON.stringify(created.body));
+    assert.equal(created.body.baseType, 'general');
+    assert.equal(created.body.label, 'Custom board');
+    assert.equal(created.body.id, 'custom-story-20-3');
+    assert.ok(Array.isArray(created.body.placeholders));
+    assert.equal(created.body.layouts?.default?.aspectRatio, '16:9');
+
+    const templates = await list();
+    const summary = templates.find((t) => t.id === 'custom-story-20-3');
+    assert.equal(summary?.resettable, false);
+    assert.equal(summary?.editable, true);
+
+    const saved = await json(
+      `${base}/api/admin/artifacts/custom-story-20-3`,
+      'PUT',
+      {
+        ...created.body,
+        label: 'Custom board',
+        updatedAt: created.body.updatedAt,
+      }
+    );
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+
+    const reset = await json(
+      `${base}/api/admin/artifacts/custom-story-20-3/reset`,
+      'POST',
+      { updatedAt: saved.body.updatedAt }
+    );
+    assert.equal(reset.status, 400);
+    assert.match(String(reset.body.error || ''), /Authored templates cannot be reset/);
+
+    const empty = await json(`${base}/api/admin/artifacts`, 'POST', { label: '   ' });
+    assert.equal(empty.status, 400);
+
+    const dup = await json(`${base}/api/admin/artifacts`, 'POST', {
+      label: 'Again',
+      id: 'custom-story-20-3',
+    });
+    assert.equal(dup.status, 409);
+  });
+
+  test('Admin rename updates every kind and both label homes', async () => {
+    const templates = await list();
+    const songSet = templates.find((t) => t.id === 'song-set');
+    assert.ok(songSet);
+    const renamed = await json(`${base}/api/admin/artifacts/song-set`, 'PATCH', {
+      label: 'Song set (go)',
+      updatedAt: songSet.updatedAt,
+    });
+    assert.equal(renamed.status, 200, JSON.stringify(renamed.body));
+    assert.equal(renamed.body.label, 'Song set (go)');
+
+    const loaded = await json(`${base}/api/admin/artifacts/song-set`);
+    assert.equal(loaded.status, 200);
+    assert.equal(loaded.body.label, 'Song set (go)');
+
+    const listed = await list();
+    assert.equal(listed.find((t) => t.id === 'song-set')?.label, 'Song set (go)');
+
+    const stale = await json(`${base}/api/admin/artifacts/song-set`, 'PATCH', {
+      label: 'stale',
+      updatedAt: songSet.updatedAt,
+    });
+    assert.equal(stale.status, 409);
   });
 
   test('Admin reorder reverses the list and refreshes tokens', async () => {
