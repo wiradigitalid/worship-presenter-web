@@ -67,36 +67,38 @@ export default function TransitionSettings({
         <CardTitle>{t('admin.transition.title')}</CardTitle>
         <CardDescription>{t('admin.transition.description')}</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-wrap items-end gap-3">
-        <div>
-          <Label className="mb-1.5 block" htmlFor="slide-transition">
-            {t('admin.transition.label')}
-          </Label>
-          <Select
-            value={transition}
-            onValueChange={(v) => setTransition(parseSlideTransition(v))}
-            disabled={saving}
-          >
-            <SelectTrigger id="slide-transition" className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SLIDE_TRANSITIONS.map((id) => (
-                <SelectItem key={id} value={id}>
-                  {SLIDE_TRANSITION_SPECS[id].label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex items-end gap-3">
+          <div className="shrink-0">
+            <Label className="mb-1.5 block" htmlFor="slide-transition">
+              {t('admin.transition.label')}
+            </Label>
+            <Select
+              value={transition}
+              onValueChange={(v) => setTransition(parseSlideTransition(v))}
+              disabled={saving}
+            >
+              <SelectTrigger id="slide-transition" className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SLIDE_TRANSITIONS.map((id) => (
+                  <SelectItem key={id} value={id}>
+                    {SLIDE_TRANSITION_SPECS[id].label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={() => void save()} disabled={saving} className="shrink-0">
+            {saving ? t('admin.transition.saving') : t('admin.transition.save')}
+          </Button>
         </div>
-        <Button onClick={() => void save()} disabled={saving}>
-          {saving ? t('admin.transition.saving') : t('admin.transition.save')}
-        </Button>
-        <p className="w-full text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {SLIDE_TRANSITION_SPECS[transition].hint}
         </p>
         {message && (
-          <p className="w-full text-sm text-muted-foreground">{message}</p>
+          <p className="text-sm text-muted-foreground">{message}</p>
         )}
       </CardContent>
     </Card>

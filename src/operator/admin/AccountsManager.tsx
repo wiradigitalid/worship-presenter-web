@@ -236,7 +236,7 @@ export default function AccountsManager({
                     </Button>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2 items-center">
+                <div className="flex items-center gap-2">
                   <Input
                     type="password"
                     placeholder={t('admin.accounts.newPassword')}
@@ -247,13 +247,14 @@ export default function AccountsManager({
                         [a.id]: e.target.value,
                       }))
                     }
-                    className="min-w-48"
+                    className="max-w-xs"
                   />
                   <Button
                     variant="outline"
                     size="sm"
                     disabled={busy}
                     onClick={() => handleResetPassword(a.id)}
+                    className="whitespace-nowrap"
                   >
                     {t('admin.accounts.resetPassword')}
                   </Button>

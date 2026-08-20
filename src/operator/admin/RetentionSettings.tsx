@@ -56,26 +56,28 @@ export default function RetentionSettings({
         <CardTitle>{t('admin.retention.title')}</CardTitle>
         <CardDescription>{t('admin.retention.description')}</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-wrap items-end gap-3">
-        <div>
-          <Label className="mb-1.5 block" htmlFor="retention-days">
-            {t('admin.retention.label')}
-          </Label>
-          <Input
-            id="retention-days"
-            type="number"
-            min={0}
-            className="w-32"
-            value={days}
-            onChange={(e) => setDays(Number(e.target.value))}
-            disabled={saving}
-          />
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex items-end gap-3">
+          <div className="shrink-0">
+            <Label className="mb-1.5 block" htmlFor="retention-days">
+              {t('admin.retention.label')}
+            </Label>
+            <Input
+              id="retention-days"
+              type="number"
+              min={0}
+              className="w-32"
+              value={days}
+              onChange={(e) => setDays(Number(e.target.value))}
+              disabled={saving}
+            />
+          </div>
+          <Button onClick={() => void save()} disabled={saving} className="shrink-0">
+            {saving ? t('admin.retention.saving') : t('admin.retention.save')}
+          </Button>
         </div>
-        <Button onClick={() => void save()} disabled={saving}>
-          {saving ? t('admin.retention.saving') : t('admin.retention.save')}
-        </Button>
         {message && (
-          <p className="w-full text-sm text-muted-foreground">{message}</p>
+          <p className="text-sm text-muted-foreground">{message}</p>
         )}
       </CardContent>
     </Card>

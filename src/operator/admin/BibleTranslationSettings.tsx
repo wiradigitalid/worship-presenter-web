@@ -102,46 +102,48 @@ export default function BibleTranslationSettings({
           {t('admin.bibleTranslation.description')}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-wrap items-end gap-3">
-        <div>
-          <Label
-            className="mb-1.5 block"
-            htmlFor="default-bible-translation"
-          >
-            {t('admin.bibleTranslation.label')}
-          </Label>
-          <Select
-            value={code}
-            onValueChange={(v) => {
-              setCode(v);
-              setInstalled(translations.some((row) => row.code === v));
-            }}
-            disabled={saving || options.length === 0}
-          >
-            <SelectTrigger id="default-bible-translation" className="w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((row) => (
-                <SelectItem key={row.code} value={row.code}>
-                  {row.name ? `${row.name} (${row.code})` : row.code}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex items-end gap-3">
+          <div className="shrink-0">
+            <Label
+              className="mb-1.5 block"
+              htmlFor="default-bible-translation"
+            >
+              {t('admin.bibleTranslation.label')}
+            </Label>
+            <Select
+              value={code}
+              onValueChange={(v) => {
+                setCode(v);
+                setInstalled(translations.some((row) => row.code === v));
+              }}
+              disabled={saving || options.length === 0}
+            >
+              <SelectTrigger id="default-bible-translation" className="w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {options.map((row) => (
+                  <SelectItem key={row.code} value={row.code}>
+                    {row.name ? `${row.name} (${row.code})` : row.code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={() => void save()} disabled={saving || !code} className="shrink-0">
+            {saving
+              ? t('admin.bibleTranslation.saving')
+              : t('admin.bibleTranslation.save')}
+          </Button>
         </div>
-        <Button onClick={() => void save()} disabled={saving || !code}>
-          {saving
-            ? t('admin.bibleTranslation.saving')
-            : t('admin.bibleTranslation.save')}
-        </Button>
         {!installed ? (
-          <p className="w-full text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {t('admin.bibleTranslation.notInstalled').replace('{code}', code)}
           </p>
         ) : null}
         {message && (
-          <p className="w-full text-sm text-muted-foreground">{message}</p>
+          <p className="text-sm text-muted-foreground">{message}</p>
         )}
       </CardContent>
     </Card>

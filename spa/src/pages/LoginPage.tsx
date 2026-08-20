@@ -1,19 +1,39 @@
 import { FormEvent, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { LayoutDashboard } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { safeNextPath } from '@/lib/auth/safe-next';
 import { useT } from '@/lib/i18n/operator';
+
+function BrandMark() {
+  return (
+    <div
+      className="flex size-14 items-center justify-center rounded-full border border-border bg-card text-primary shadow-sm"
+      aria-hidden
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        className="size-7"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0h.5m-.5 0h-10.5m.5 0h-1.5"
+        />
+      </svg>
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const { t } = useT();
@@ -47,53 +67,59 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-6">
-      <Card className="w-full max-w-sm shadow-lg">
-        <CardHeader className="space-y-3 text-center">
-          <div className="mx-auto flex size-11 items-center justify-center rounded-xl border border-border bg-muted/50 text-primary">
-            <LayoutDashboard className="size-5" aria-hidden />
-          </div>
-          <div className="space-y-1">
-            <CardTitle className="text-xl">{t('login.title')}</CardTitle>
-            <CardDescription>{t('chrome.brand.tagline')}</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="login-username">{t('login.username')}</Label>
-              <Input
-                id="login-username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-                required
-                disabled={busy}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="login-password">{t('login.password')}</Label>
-              <Input
-                id="login-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-                disabled={busy}
-              />
-            </div>
-            {error ? (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : null}
-            <Button type="submit" disabled={busy} className="w-full">
-              {busy ? t('login.submitting') : t('login.submit')}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <div className="flex min-h-screen flex-1 flex-col items-center justify-center bg-muted/40 px-4 py-12">
+      <div className="flex w-full max-w-sm flex-col items-center">
+        <BrandMark />
+        <p className="mt-4 text-sm font-medium text-muted-foreground">
+          {t('chrome.brand.title')}
+        </p>
+        <h1 className="mt-2 text-center text-2xl font-semibold tracking-tight text-foreground">
+          {t('login.title')}
+        </h1>
+
+        <Card className="mt-6 w-full">
+          <CardContent>
+            <form onSubmit={onSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="login-username">{t('login.username')}</Label>
+                <Input
+                  id="login-username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  placeholder={t('login.usernamePlaceholder')}
+                  required
+                  disabled={busy}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="login-password">{t('login.password')}</Label>
+                <Input
+                  id="login-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  placeholder={t('login.passwordPlaceholder')}
+                  required
+                  disabled={busy}
+                />
+              </div>
+
+              {error ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
+
+              <Button type="submit" disabled={busy} className="w-full">
+                {busy ? t('login.submitting') : t('login.submit')}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

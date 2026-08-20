@@ -77,33 +77,35 @@ export default function UiLocaleSettings({
         <CardTitle>{t('admin.uiLocale.title')}</CardTitle>
         <CardDescription>{t('admin.uiLocale.description')}</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-wrap items-end gap-3">
-        <div>
-          <Label className="mb-1.5 block" htmlFor="ui-locale">
-            {t('admin.uiLocale.label')}
-          </Label>
-          <Select
-            value={pendingLocale}
-            onValueChange={(v) => setPendingLocale(v as UiLocale)}
-            disabled={saving}
-          >
-            <SelectTrigger id="ui-locale" className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {UI_LOCALE_ORDER.map((code) => (
-                <SelectItem key={code} value={code}>
-                  {t(`admin.uiLocale.option.${code}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex items-end gap-3">
+          <div className="shrink-0">
+            <Label className="mb-1.5 block" htmlFor="ui-locale">
+              {t('admin.uiLocale.label')}
+            </Label>
+            <Select
+              value={pendingLocale}
+              onValueChange={(v) => setPendingLocale(v as UiLocale)}
+              disabled={saving}
+            >
+              <SelectTrigger id="ui-locale" className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {UI_LOCALE_ORDER.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {t(`admin.uiLocale.option.${code}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={() => void save()} disabled={saving} className="shrink-0">
+            {saving ? t('admin.uiLocale.saving') : t('admin.uiLocale.save')}
+          </Button>
         </div>
-        <Button onClick={() => void save()} disabled={saving}>
-          {saving ? t('admin.uiLocale.saving') : t('admin.uiLocale.save')}
-        </Button>
         {message && (
-          <p className="w-full text-sm text-muted-foreground">{message}</p>
+          <p className="text-sm text-muted-foreground">{message}</p>
         )}
       </CardContent>
     </Card>
