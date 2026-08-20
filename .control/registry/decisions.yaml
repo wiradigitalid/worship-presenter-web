@@ -46,6 +46,11 @@ decisions:
       - .what/_prd/operator-turn/addendum.md
       - .what/_prd/offline-deck/addendum.md
       - _bmad-output/prior-knowledge/README.md
+  - id: DEC-004
+    status: draft
+    title: Nested artifact registries, shared Song Set layouts, inline predefined fields
+    file: .control/decisions/DEC-004-nested-artifact-registries.md
+    touches: []
   - id: DEC-003
     status: applied
     title: Go API, React SPA, on-demand Node PPTX worker
