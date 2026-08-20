@@ -23,7 +23,7 @@ import {
   type SlideTransition,
 } from '@/lib/transitions';
 import { useT } from '@/lib/i18n/operator';
-import SettingsRow from './SettingsRow';
+import SettingsRow, { SETTINGS_CONTROL_CLASS } from './SettingsRow';
 
 type BibleTranslation = {
   code: string;
@@ -150,7 +150,10 @@ export default function WorshipSettings({
             onValueChange={(v) => setTransition(parseSlideTransition(v))}
             disabled={transitionSaving}
           >
-            <SelectTrigger id="slide-transition" className="w-44">
+            <SelectTrigger
+              id="slide-transition"
+              className={SETTINGS_CONTROL_CLASS}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -191,7 +194,10 @@ export default function WorshipSettings({
             }}
             disabled={bibleSaving || options.length === 0}
           >
-            <SelectTrigger id="default-bible-translation" className="w-56">
+            <SelectTrigger
+              id="default-bible-translation"
+              className={SETTINGS_CONTROL_CLASS}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

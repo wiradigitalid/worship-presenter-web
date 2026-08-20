@@ -25,7 +25,7 @@ import {
 } from '@/lib/i18n';
 import { useT } from '@/lib/i18n/operator';
 import { announceUiLocale } from '@/lib/ui-locale-document';
-import SettingsRow from './SettingsRow';
+import SettingsRow, { SETTINGS_CONTROL_CLASS } from './SettingsRow';
 
 export default function SystemSettings({
   initialDays,
@@ -126,7 +126,7 @@ export default function SystemSettings({
             id="retention-days"
             type="number"
             min={0}
-            className="w-32"
+            className={SETTINGS_CONTROL_CLASS}
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
             disabled={daysSaving}
@@ -151,7 +151,7 @@ export default function SystemSettings({
             onValueChange={(v) => setPendingLocale(v as UiLocale)}
             disabled={localeSaving}
           >
-            <SelectTrigger id="ui-locale" className="w-44">
+            <SelectTrigger id="ui-locale" className={SETTINGS_CONTROL_CLASS}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

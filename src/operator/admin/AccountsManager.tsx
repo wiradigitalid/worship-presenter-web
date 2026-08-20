@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import type { Role } from '@/lib/auth/session';
 import { useT } from '@/lib/i18n/operator';
+import { SETTINGS_CONTROL_CLASS } from './SettingsRow';
 
 export type AccountRow = {
   id: number;
@@ -157,7 +158,7 @@ export default function AccountsManager({
             onChange={(e) => setPassword(e.target.value)}
           />
           <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-            <SelectTrigger className="w-full sm:w-[120px]">
+            <SelectTrigger className={SETTINGS_CONTROL_CLASS}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -230,7 +231,7 @@ export default function AccountsManager({
                         disabled={busy}
                         onValueChange={(v) => handleRoleChange(a.id, v as Role)}
                       >
-                        <SelectTrigger size="sm" className="w-[120px]">
+                        <SelectTrigger size="sm" className={SETTINGS_CONTROL_CLASS}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

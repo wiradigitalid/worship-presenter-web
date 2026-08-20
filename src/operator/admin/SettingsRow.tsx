@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
 
+/** Fixed width for settings-row selects and matching inputs. */
+export const SETTINGS_CONTROL_CLASS = 'w-52';
+
 export default function SettingsRow({
   title,
   description,
