@@ -1,4 +1,5 @@
 import { toast } from 'sonner';
+import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   ArtifactLayout,
@@ -1249,8 +1250,8 @@ export default function ArtifactEditor() {
     );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-      <aside className="rounded-2xl border border-border bg-card/60 p-4 shadow-sm">
+    <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <aside className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card/60 p-4 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold text-foreground">Templates</h2>
         <form
           className="mb-3 flex gap-1"
@@ -1277,7 +1278,7 @@ export default function ArtifactEditor() {
             {status === 'creating' ? t('admin.artifacts.adding') : t('admin.artifacts.add')}
           </Button>
         </form>
-        <ul className="max-h-[70vh] space-y-1 overflow-y-auto">
+        <ul className="max-h-[70vh] space-y-1 overflow-x-hidden overflow-y-auto">
           {templates.map((item) => (
             <li key={item.id}>
               <div className="flex items-stretch gap-1">
@@ -1302,47 +1303,46 @@ export default function ArtifactEditor() {
                     selectedId === item.id ? '' : 'hover:bg-muted'
                   }`}
                 >
-                  <div className="font-medium">{item.label}</div>
+                  <div className="min-w-0 font-medium truncate">{item.label}</div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs opacity-80">
                     <span className={kindChipClass}>[{kindChipLabel(item.baseType)}]</span>
                     {!item.editable ? <span>{t('admin.artifacts.readOnly')}</span> : null}
                   </div>
                 </Button>
-                <div className="flex flex-col gap-1 py-1">
+                <div className="flex shrink-0 flex-col gap-1 py-1">
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
+                    size="icon-sm"
                     aria-label={`${t('admin.artifacts.moveUp')} ${item.label}`}
                     title={t('admin.artifacts.moveUp')}
                     onClick={() => void handleMoveTemplate(item, -1)}
                     disabled={busy || templates[0]?.id === item.id}
-                    className="h-auto px-1 text-xs"
                   >
-                    {t('admin.artifacts.moveUp')}
+                    <ArrowUp />
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
+                    size="icon-sm"
                     aria-label={`${t('admin.artifacts.moveDown')} ${item.label}`}
                     title={t('admin.artifacts.moveDown')}
                     onClick={() => void handleMoveTemplate(item, 1)}
                     disabled={busy || templates.at(-1)?.id === item.id}
-                    className="h-auto px-1 text-xs"
                   >
-                    {t('admin.artifacts.moveDown')}
+                    <ArrowDown />
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
+                    size="icon-sm"
                     aria-label={`${t('admin.artifacts.delete')} ${item.label}`}
+                    title={t('admin.artifacts.delete')}
                     onClick={() => void handleDeleteTemplate(item)}
                     disabled={busy}
-                    className="h-auto border-destructive px-1 text-xs text-destructive hover:bg-destructive/10"
+                    className="border-destructive text-destructive hover:bg-destructive/10"
                   >
-                    {t('admin.artifacts.delete')}
+                    <Trash2 />
                   </Button>
                 </div>
               </div>
@@ -1351,7 +1351,7 @@ export default function ArtifactEditor() {
         </ul>
       </aside>
 
-      <section className="space-y-4">
+      <section className="min-w-0 space-y-4">
         {!template ? (
           <>
             {message ? (
