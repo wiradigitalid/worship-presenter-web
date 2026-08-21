@@ -480,6 +480,12 @@ export const I18N_KEYS = [
   'admin.songBooks.noDefaultWarning',
   'form.songSets.book',
   'form.songSets.defaultBookBadge',
+  'sync.label',
+  'sync.syncing',
+  'sync.confirm',
+  'sync.success',
+  'sync.failed',
+  'sync.conflict',
 ] as const;
 
 export type I18nKey = (typeof I18N_KEYS)[number];

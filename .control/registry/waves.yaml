@@ -114,6 +114,7 @@ waves:
             satisfies: [UC-16]
             depends_on: ["2"]
             tests:
+              - tests/sync-artifact-button.test.mjs
               - tests/registry-sync-artifact.test.mjs
               - tests/no-router-refresh-guard.test.mjs
               - tests/i18n.test.mjs

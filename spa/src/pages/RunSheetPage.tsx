@@ -58,6 +58,18 @@ export default function RunSheetPage() {
     (a: { service_id: number | null }) => a.service_id == null || a.service_id === svc.id
   );
 
+  const reloadService = async () => {
+    try {
+      const res = await fetch(`/api/services/${id}`, { credentials: 'same-origin' });
+      if (res.ok) {
+        const data = await res.json();
+        setSvc(data);
+      }
+    } catch {
+      // non-blocking
+    }
+  };
+
   const actionClass = cn(buttonVariants({ variant: 'outline' }), 'h-auto px-3 py-2');
 
   return (
@@ -87,7 +99,11 @@ export default function RunSheetPage() {
             {t('edit.actions.present')}
           </Link>
           {isAdmin ? (
-            <SyncArtifactButton serviceId={svc.id} updatedAt={svc.updated_at} />
+            <SyncArtifactButton
+              serviceId={svc.id}
+              updatedAt={svc.updated_at}
+              onSuccess={reloadService}
+            />
           ) : null}
           <a
             href={`/api/services/${svc.id}/pptx`}

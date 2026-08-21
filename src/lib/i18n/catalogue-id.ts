@@ -540,4 +540,11 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'admin.songBooks.staleConflict': 'Buku lagu telah diubah oleh sesi lain. Daftar disegarkan.',
   'admin.songBooks.codeImmutable': 'Kode buku tidak dapat diubah setelah dibuat.',
   'admin.songBooks.noDefaultWarning': 'Belum ada buku lagu default yang dipilih.',
+  'sync.label': 'Sinkronisasi Artefak',
+  'sync.syncing': 'Menyinkronkan…',
+  'sync.confirm':
+    'Ganti struktur deck yang dibekukan pada Kebaktian ini dengan Registri Artefak aktif? Nomor lagu, nama, dan ayat yang dimasukkan akan tetap ada.',
+  'sync.success': 'Registri artefak berhasil disinkronkan',
+  'sync.failed': 'Sinkronisasi gagal',
+  'sync.conflict': 'Kebaktian telah diubah di sesi lain. Silakan muat ulang dan coba lagi.',
 };

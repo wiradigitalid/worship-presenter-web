@@ -538,4 +538,11 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'admin.songBooks.staleConflict': 'Song book was modified by another session. Refreshed list.',
   'admin.songBooks.codeImmutable': 'Book code cannot be changed after creation.',
   'admin.songBooks.noDefaultWarning': 'No default song book is currently selected.',
+  'sync.label': 'Sync Artifact',
+  'sync.syncing': 'Syncing…',
+  'sync.confirm':
+    'Replace this Service’s frozen deck structure with the live Artifact Registry? Entered hymn numbers, names, and verses stay.',
+  'sync.success': 'Artifact registry synced successfully',
+  'sync.failed': 'Sync failed',
+  'sync.conflict': 'Service was modified elsewhere. Please reload and try again.',
 };
