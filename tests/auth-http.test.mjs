@@ -4,7 +4,7 @@
  */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn, execFileSync } from 'child_process';
+import { spawn } from 'child_process';
 import { createHash } from 'crypto';
 import fs from 'fs';
 import http from 'http';
@@ -12,6 +12,7 @@ import net from 'net';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { stopProcess } from './helpers/go-api.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -84,6 +85,7 @@ function startServer(port) {
   const output = [];
   const proc = spawn('go', ['run', './cmd/api'], {
     cwd: root,
+    detached: process.platform !== 'win32',
     env: {
       ...process.env,
       PORT: String(port),
@@ -102,21 +104,6 @@ function startServer(port) {
   return { proc, output };
 }
 
-function stop(proc) {
-  if (!proc || proc.pid == null) return;
-  if (process.platform === 'win32') {
-    try {
-      execFileSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'], {
-        stdio: 'ignore',
-      });
-    } catch {
-      /* already gone */
-    }
-    return;
-  }
-  proc.kill('SIGTERM');
-}
-
 before(async () => {
   const failures = [];
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -128,7 +115,7 @@ before(async () => {
       base = `http://127.0.0.1:${port}`;
       return;
     } catch (err) {
-      stop(started.proc);
+      stopProcess(started.proc);
       failures.push(`attempt ${attempt} on port ${port}: ${err.message}\n${started.output.join('')}`);
     }
   }
@@ -136,7 +123,7 @@ before(async () => {
 });
 
 after(() => {
-  stop(child);
+  stopProcess(child);
   try {
     fs.rmSync(tmp, { recursive: true, force: true });
   } catch {

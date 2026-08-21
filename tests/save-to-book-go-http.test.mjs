@@ -7,7 +7,7 @@
  */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn, execFileSync } from 'child_process';
+import { spawn } from 'child_process';
 import { createHash } from 'crypto';
 import fs from 'fs';
 import http from 'http';
@@ -16,6 +16,7 @@ import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import Database from 'better-sqlite3';
+import { stopProcess } from './helpers/go-api.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -70,21 +71,6 @@ function reservePort() {
   });
 }
 
-function stop(proc) {
-  if (!proc || proc.pid == null) return;
-  if (process.platform === 'win32') {
-    try {
-      execFileSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'], {
-        stdio: 'ignore',
-      });
-    } catch {
-      /* already gone */
-    }
-    return;
-  }
-  proc.kill('SIGTERM');
-}
-
 function cookieFrom(headers) {
   const raw = headers['set-cookie'];
   if (!raw) return '';
@@ -101,6 +87,7 @@ before(async () => {
   const port = await reservePort();
   child = spawn('go', ['run', './cmd/api'], {
     cwd: root,
+    detached: process.platform !== 'win32',
     env: {
       ...process.env,
       PORT: String(port),
@@ -139,7 +126,7 @@ before(async () => {
 });
 
 after(() => {
-  stop(child);
+  stopProcess(child);
   try {
     fs.rmSync(tmp, { recursive: true, force: true });
   } catch {
