@@ -183,7 +183,7 @@ test('create: date collision returns collision, allowSecond inserts a second row
   assert.equal(rows.length, 2);
 });
 
-test('create: announcements sync honours clearMaster', () => {
+test('create: announcements body no longer writes announcement_items (Story 4)', () => {
   const db = getDb();
   db.prepare('DELETE FROM announcement_items').run();
   db.prepare(
@@ -191,43 +191,28 @@ test('create: announcements sync honours clearMaster', () => {
      VALUES (?, NULL, 0)`
   ).run('https://example.com/keep-master.png');
 
-  const kept = create({
+  const created = create({
     raw_payload: RAW('SABBATH, AUGUST 15, 2026'),
     announcements: [
       { image_url: 'https://example.com/week-only.png', is_recurring: false },
     ],
-  });
-  assert.equal(kept.ok, true);
-  assert.equal(
-    listAnnouncementItems().filter((i) => i.service_id === null).length,
-    1
-  );
-  assert.equal(
-    listAnnouncementItems().filter((i) => i.service_id === kept.id).length,
-    1
-  );
-
-  const cleared = create({
-    raw_payload: RAW('SABBATH, AUGUST 22, 2026'),
     clearMaster: true,
-    announcements: [
-      { image_url: 'https://example.com/week-only.png', is_recurring: false },
-    ],
   });
-  assert.equal(cleared.ok, true);
+  assert.equal(created.ok, true);
+  // Master row untouched; body announcements are not synced to announcement_items.
   assert.equal(
     listAnnouncementItems().filter((i) => i.service_id === null).length,
+    1
+  );
+  assert.equal(
+    listAnnouncementItems().filter((i) => i.service_id === created.id).length,
     0
   );
 });
 
-test('create: announcement sync writes through the caller-supplied connection', () => {
+test('create: announcement body validates but does not insert rows', () => {
   getDb().prepare('DELETE FROM announcement_items').run();
 
-  // Deliberately *not* the process singleton. `createService` opens its
-  // transaction on the handle it is given, so the announcement INSERT has to
-  // use that same handle: issued on another connection it would contend for
-  // the write lock and, once committed, survive a rollback of the insert.
   const other = new Database(process.env.DB_PATH);
   try {
     const input = narrowCreateBody({
@@ -242,10 +227,8 @@ test('create: announcement sync writes through the caller-supplied connection', 
     assert.equal(result.ok, true);
 
     assert.deepEqual(
-      other
-        .prepare('SELECT image_url, service_id FROM announcement_items')
-        .all(),
-      [{ image_url: 'https://example.com/threaded.png', service_id: result.id }]
+      other.prepare('SELECT image_url, service_id FROM announcement_items').all(),
+      []
     );
     assert.equal(other.inTransaction, false);
   } finally {

@@ -69,13 +69,14 @@ test('seed:demo creates one deck-ready synthetic service and then refuses withou
   assert.equal(services.length, 1);
 
   const [service] = services;
+  // Story 4 retires the Hub announcements[] → announcement_items write path.
   const announcements = db
     .prepare(
       `SELECT image_url, service_id, sort_order
        FROM announcement_items ORDER BY sort_order, id`
     )
     .all();
-  assert.equal(announcements.length, 1);
+  assert.equal(announcements.length, 0);
 
   const parsed = JSON.parse(service.parsed_data);
   assert.equal(parsed.failedHymnNumbers.length, 0);
@@ -86,8 +87,7 @@ test('seed:demo creates one deck-ready synthetic service and then refuses withou
   const media = resolveSlideMediaForService(service.id, service.images_payload);
   const plan = buildSlidePlan(service.date, parsed, media, { serviceId: service.id });
   assert.ok(plan.some((slide) => slide.id === 'verse-reading'));
-  assert.ok(plan.some((slide) => slide.id === 'announcements'));
-  assert.ok(plan.some((slide) => slide.id === 'flyer-0'));
+  assert.ok(plan.length > 10, 'demo service should produce a full deck');
 
   const beforeSecondRun = {
     services,

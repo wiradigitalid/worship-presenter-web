@@ -20,7 +20,7 @@ const (
 	artifactRegistryBootstrapKey = "artifact_registry_bootstrapped"
 	dataVersionKey               = "data_version"
 	bootstrapDataVersion         = "3"
-	currentDataVersion           = "7"
+	currentDataVersion           = "8"
 	// AD-26: the corpus code is the cross-boundary key. The shipped corpus is
 	// SDAH; a per-book settings marker (song_book_bootstrapped_<code>) gates
 	// its one-time bootstrap (DEC-005 / AD-36).
@@ -627,6 +627,9 @@ func cloneLiveToService(tx *sql.Tx, serviceID int, trio *plan.SongSetLayoutTrio)
 				continue
 			}
 			payload = serialized
+		case baseType == "ann-set-marker":
+			// ann-set-marker rows have NULL payload but are structural spine rows (AD-35)
+			payload = ""
 		case payloadNull.Valid && payloadNull.String != "":
 			payload = payloadNull.String
 			if !plan.AcceptLivePayload(id, payload) {

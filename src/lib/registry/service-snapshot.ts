@@ -81,6 +81,19 @@ function cloneValidLiveRows(db: Database.Database, serviceId: number): number {
       position += 1;
       continue;
     }
+    if (row.base_type === 'ann-set-marker') {
+      insert.run(
+        serviceId,
+        row.id,
+        position,
+        row.label,
+        row.base_type,
+        '',
+        row.updated_at
+      );
+      position += 1;
+      continue;
+    }
     const stored = parseStoredTemplateRow(row);
     if (!stored) continue;
     const { updatedAt: _token, ...template } = stored;

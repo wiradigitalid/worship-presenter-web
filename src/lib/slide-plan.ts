@@ -735,8 +735,10 @@ function mergeGeneralValues(
 function buildRequestPlan(
   orderedTemplateIds: readonly string[],
   ctx: PlanContext,
-  snapshot: RegistrySnapshot
+  snapshot: RegistrySnapshot,
+  db?: Database.Database
 ): RequestNode[] {
+  const database = db ?? getDb();
   const nodes: RequestNode[] = [];
   for (const id of orderedTemplateIds) {
     const handler = ROW_HANDLERS[id];
@@ -771,6 +773,40 @@ function buildRequestPlan(
         else if (template.id === 'ds-opening-song') prefix = 'ds-opening';
         else if (template.id === 'ds-closing-song') prefix = 'ds-closing';
         nodes.push(...songGroupNodes(hymn, prefix, template.id));
+      }
+      continue;
+    }
+    if (template.baseType === 'ann-set-marker') {
+      if (template.annSetId !== undefined && database) {
+        const slides = database
+          .prepare(
+            `SELECT id, ann_set_id, label, payload, position
+               FROM announcement_set_slides
+              WHERE ann_set_id = ?
+              ORDER BY position ASC, id ASC`
+          )
+          .all(template.annSetId) as {
+          id: number;
+          ann_set_id: number;
+          label: string;
+          payload: string;
+          position: number;
+        }[];
+        for (const slide of slides) {
+          const slideId = `ann-slide-${slide.id}`;
+          nodes.push(
+            leaf({
+              id: slideId,
+              templateId: slideId,
+              values: catalogValuesFromWeekly(catalogInputFromCtx(ctx)),
+              legacy: (instance) => ({
+                kind: 'body',
+                title: slide.label,
+                lines: derivedLines(instance, slide.label),
+              }),
+            })
+          );
+        }
       }
       continue;
     }
@@ -822,10 +858,39 @@ function hydrateLeafOrOmit(
   snapshot: RegistrySnapshot,
   request: SlideRequest,
   ctx: PlanContext,
-  group?: { id: string; label: string; role: 'title' | 'lyric' }
+  group?: { id: string; label: string; role: 'title' | 'lyric' },
+  db?: Database.Database
 ): ArtifactLeafNode | null {
-  if (!snapshot.has(request.templateId)) return null;
-  return hydrateLeaf(snapshot, request, ctx, group);
+  if (snapshot.has(request.templateId)) {
+    return hydrateLeaf(snapshot, request, ctx, group);
+  }
+  // If it's an announcement set slide (e.g. ann-slide-1), load its template
+  if (request.templateId.startsWith('ann-slide-')) {
+    const database = db ?? getDb();
+    const slideId = parseInt(request.templateId.replace('ann-slide-', ''), 10);
+    if (!isNaN(slideId)) {
+      const row = database
+        .prepare(`SELECT id, label, payload, updated_at FROM announcement_set_slides WHERE id = ?`)
+        .get(slideId) as { id: number; label: string; payload: string; updated_at: string } | undefined;
+      if (row && row.payload) {
+        try {
+          const parsed = JSON.parse(row.payload);
+          const customSnapshot = new Map<string, StoredArtifactTemplate>(snapshot);
+          customSnapshot.set(request.templateId, {
+            ...parsed,
+            id: request.templateId,
+            label: row.label,
+            baseType: 'general',
+            updatedAt: row.updated_at,
+          });
+          return hydrateLeaf(customSnapshot, request, ctx, group);
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 function hydrateRequestPlan(

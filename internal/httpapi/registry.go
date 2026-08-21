@@ -75,15 +75,34 @@ func (s *Server) getArtifact(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) loadArtifactJSON(id string) ([]byte, error) {
-	var payload, updatedAt string
+	var payloadNull sql.NullString
+	var label, baseType, updatedAt string
+	var annSetID sql.NullInt64
+	var varName sql.NullString
 	err := s.DB.QueryRow(
-		`SELECT payload, updated_at FROM artifact_templates WHERE id = ?`, id,
-	).Scan(&payload, &updatedAt)
+		`SELECT label, base_type, payload, updated_at, ann_set_id, variable_name FROM artifact_templates WHERE id = ?`, id,
+	).Scan(&label, &baseType, &payloadNull, &updatedAt, &annSetID, &varName)
 	if err != nil {
 		return nil, err
 	}
+	if !payloadNull.Valid || payloadNull.String == "" {
+		obj := map[string]any{
+			"schemaVersion": 1,
+			"id":            id,
+			"label":         label,
+			"baseType":      baseType,
+			"updatedAt":     updatedAt,
+		}
+		if annSetID.Valid {
+			obj["annSetId"] = int(annSetID.Int64)
+		}
+		if varName.Valid && varName.String != "" {
+			obj["variableName"] = varName.String
+		}
+		return json.Marshal(obj)
+	}
 	var obj map[string]any
-	if err := json.Unmarshal([]byte(payload), &obj); err != nil {
+	if err := json.Unmarshal([]byte(payloadNull.String), &obj); err != nil {
 		return nil, err
 	}
 	obj["updatedAt"] = updatedAt
@@ -179,10 +198,35 @@ func (s *Server) createArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
+	baseType := "general"
+	var annSetID any = nil
+	var payloadStr any = string(payload)
+
+	if bt, ok := body["baseType"].(string); ok && bt == "ann-set-marker" {
+		baseType = "ann-set-marker"
+		payloadStr = nil
+		rawAnnSetID, hasAnnSetID := body["annSetId"]
+		if !hasAnnSetID || rawAnnSetID == nil {
+			writeError(w, http.StatusBadRequest, "annSetId is required for ann-set-marker")
+			return
+		}
+		setID, ok := asPositiveInt(rawAnnSetID)
+		if !ok {
+			writeError(w, http.StatusBadRequest, "annSetId must be a positive integer")
+			return
+		}
+		var setCount int
+		if err := s.DB.QueryRow(`SELECT COUNT(*) FROM announcement_sets WHERE id = ?`, setID).Scan(&setCount); err != nil || setCount == 0 {
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("Announcement set %d not found", setID))
+			return
+		}
+		annSetID = setID
+	}
+
 	_, err = s.DB.Exec(
-		`INSERT INTO artifact_templates (id, label, base_type, payload, updated_at, seed_hash, position)
-		 VALUES (?, ?, 'general', ?, ?, NULL, ?)`,
-		id, label, string(payload), now, pos,
+		`INSERT INTO artifact_templates (id, label, base_type, payload, updated_at, seed_hash, position, ann_set_id)
+		 VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
+		id, label, baseType, payloadStr, now, pos, annSetID,
 	)
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "unique") {
@@ -341,10 +385,11 @@ func (s *Server) patchArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var storedUpdated, payload string
+	var storedUpdated string
+	var payloadNull sql.NullString
 	err = s.DB.QueryRow(
 		`SELECT updated_at, payload FROM artifact_templates WHERE id = ?`, id,
-	).Scan(&storedUpdated, &payload)
+	).Scan(&storedUpdated, &payloadNull)
 	if err == sql.ErrNoRows {
 		writeError(w, http.StatusNotFound, "Unknown template: "+id)
 		return
@@ -358,22 +403,27 @@ func (s *Server) patchArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var obj map[string]any
-	if err := json.Unmarshal([]byte(payload), &obj); err != nil {
-		log.Printf("Error parsing artifact payload for rename %s: %v", id, err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
-		return
+	var payloadStr any = nil
+	if payloadNull.Valid && payloadNull.String != "" {
+		var obj map[string]any
+		if err := json.Unmarshal([]byte(payloadNull.String), &obj); err != nil {
+			log.Printf("Error parsing artifact payload for rename %s: %v", id, err)
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		obj["label"] = label
+		next, err := json.Marshal(obj)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		payloadStr = string(next)
 	}
-	obj["label"] = label
-	next, err := json.Marshal(obj)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
-		return
-	}
+
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	res, err := s.DB.Exec(
 		`UPDATE artifact_templates SET label = ?, payload = ?, updated_at = ? WHERE id = ? AND updated_at = ?`,
-		label, string(next), now, id, updatedAt,
+		label, payloadStr, now, id, updatedAt,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -719,6 +769,9 @@ func (s *Server) syncArtifact(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			payload = serialized
+		case baseType == "ann-set-marker":
+			// ann-set-marker rows have NULL payload but are structural spine rows (AD-35)
+			payload = ""
 		case payloadNull.Valid && payloadNull.String != "":
 			payload = payloadNull.String
 			if !plan.AcceptLivePayload(tid, payload) {

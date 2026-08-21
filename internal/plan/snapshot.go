@@ -31,18 +31,19 @@ func AcceptLivePayload(id, payload string) bool {
 // loadTemplates builds a snapshot from open Rows. trio must be loaded before
 // opening rows — never query the DB from here (MaxOpenConns(1) deadlock).
 func loadTemplates(rows *sql.Rows, useTemplateID bool, trio *songSetLayoutTrio) Snapshot {
-	snap := Snapshot{ByID: map[string]Template{}, SongInputs: map[string]HymnItem{}}
+	snap := Snapshot{ByID: map[string]Template{}, SongInputs: map[string]HymnItem{}, AnnouncementSlides: map[int][]AnnouncementSlide{}}
 	for rows.Next() {
 		var id, label, baseType, updatedAt string
 		var varName sql.NullString
 		var payloadNull sql.NullString
+		var annSetIDNull sql.NullInt64
 		if useTemplateID {
 			if err := rows.Scan(&id, &label, &baseType, &payloadNull, &updatedAt); err != nil {
 				log.Printf("[registry] scan failed: %v", err)
 				continue
 			}
 		} else {
-			if err := rows.Scan(&id, &label, &baseType, &payloadNull, &updatedAt, &varName); err != nil {
+			if err := rows.Scan(&id, &label, &baseType, &payloadNull, &updatedAt, &varName, &annSetIDNull); err != nil {
 				log.Printf("[registry] scan failed: %v", err)
 				continue
 			}
@@ -52,6 +53,21 @@ func loadTemplates(rows *sql.Rows, useTemplateID bool, trio *songSetLayoutTrio) 
 			if varName.Valid && varName.String != "" {
 				s := varName.String
 				tmpl.VariableName = &s
+			}
+			snap.Order = append(snap.Order, id)
+			snap.ByID[id] = tmpl
+			continue
+		}
+		if baseType == "ann-set-marker" {
+			tmpl := Template{
+				SchemaVersion: 1,
+				ID:            id,
+				Label:         label,
+				BaseType:      "ann-set-marker",
+			}
+			if annSetIDNull.Valid {
+				v := int(annSetIDNull.Int64)
+				tmpl.AnnSetID = &v
 			}
 			snap.Order = append(snap.Order, id)
 			snap.ByID[id] = tmpl
@@ -69,6 +85,10 @@ func loadTemplates(rows *sql.Rows, useTemplateID bool, trio *songSetLayoutTrio) 
 		if varName.Valid && varName.String != "" {
 			s := varName.String
 			tmpl.VariableName = &s
+		}
+		if annSetIDNull.Valid {
+			v := int(annSetIDNull.Int64)
+			tmpl.AnnSetID = &v
 		}
 		snap.Order = append(snap.Order, id)
 		snap.ByID[id] = tmpl
@@ -124,7 +144,7 @@ func LoadSnapshot(db *sql.DB, serviceID int) (Snapshot, error) {
 		snap = loadTemplates(rows, true, trio)
 	} else {
 		rows, err := db.Query(
-			`SELECT id, label, base_type, payload, updated_at, variable_name FROM artifact_templates ORDER BY position`,
+			`SELECT id, label, base_type, payload, updated_at, variable_name, ann_set_id FROM artifact_templates ORDER BY position`,
 		)
 		if err != nil {
 			return Snapshot{}, err
@@ -133,11 +153,52 @@ func LoadSnapshot(db *sql.DB, serviceID int) (Snapshot, error) {
 		snap = loadTemplates(rows, false, trio)
 	}
 
+	if db != nil {
+		loadAnnouncementSlidesIntoSnapshot(db, serviceID, &snap)
+	}
+
 	if serviceID > 0 && db != nil {
 		loadSongSetInputsIntoSnapshot(db, serviceID, &snap)
 	}
 
 	return snap, nil
+}
+
+func loadAnnouncementSlidesIntoSnapshot(db *sql.DB, serviceID int, snap *Snapshot) {
+	if snap.AnnouncementSlides == nil {
+		snap.AnnouncementSlides = map[int][]AnnouncementSlide{}
+	}
+	rows, err := db.Query(
+		`SELECT id, ann_set_id, label, payload, position
+		   FROM announcement_set_slides
+		  ORDER BY position ASC, id ASC`,
+	)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, annSetID, pos int
+		var label, payloadStr string
+		if err := rows.Scan(&id, &annSetID, &label, &payloadStr, &pos); err != nil {
+			continue
+		}
+		var tmpl Template
+		if err := json.Unmarshal([]byte(payloadStr), &tmpl); err != nil {
+			continue
+		}
+		slideIDStr := fmt.Sprintf("ann-slide-%d", id)
+		tmpl.ID = slideIDStr
+		tmpl.Label = label
+		tmpl.BaseType = "general"
+		snap.AnnouncementSlides[annSetID] = append(snap.AnnouncementSlides[annSetID], AnnouncementSlide{
+			ID:       id,
+			AnnSetID: annSetID,
+			Label:    label,
+			Position: pos,
+			Template: tmpl,
+		})
+	}
 }
 
 func loadSongSetInputsIntoSnapshot(db *sql.DB, serviceID int, snap *Snapshot) {

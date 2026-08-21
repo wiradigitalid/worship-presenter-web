@@ -23,6 +23,7 @@ export type StoredTemplateRow = {
   base_type?: string;
   payload: string | null;
   updated_at: string;
+  ann_set_id?: number | null;
 };
 
 type SongSetLayoutTrio = {
@@ -170,7 +171,7 @@ export function loadRegistrySnapshot(db?: Database.Database): RegistrySnapshot {
   const trio = loadSongSetLayoutTrio(database);
   const rows = database
     .prepare(
-      `SELECT id, label, base_type, payload, updated_at, variable_name
+      `SELECT id, label, base_type, payload, updated_at, variable_name, ann_set_id
          FROM artifact_templates
          ORDER BY position`
     )
@@ -191,6 +192,19 @@ export function loadRegistrySnapshot(db?: Database.Database): RegistrySnapshot {
           trio
         )
       );
+      continue;
+    }
+    if (row.base_type === 'ann-set-marker') {
+      snapshot.set(row.id, {
+        schemaVersion: 1,
+        id: row.id,
+        label: row.label ?? row.id,
+        baseType: 'ann-set-marker',
+        annSetId: row.ann_set_id ?? undefined,
+        placeholders: [],
+        layouts: {},
+        updatedAt: row.updated_at,
+      });
       continue;
     }
     const stored = parseStoredTemplateRow(row);

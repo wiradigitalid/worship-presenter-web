@@ -82,9 +82,7 @@ export function createService(
         );
       serviceId = Number(result.lastInsertRowid);
 
-      if (announcements) {
-        syncWorshipAnnouncements(serviceId, announcements, { clearMaster }, db);
-      }
+      // Announcements master list write path is retired (DEC-004 / Story 4)
       cloneRegistryToNewService(db, serviceId);
     });
     commit();

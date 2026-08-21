@@ -492,6 +492,29 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 				}
 				return nil
 			}
+			if tmpl.BaseType == "ann-set-marker" {
+				if tmpl.AnnSetID == nil {
+					return nil
+				}
+				slides := snap.AnnouncementSlides[*tmpl.AnnSetID]
+				if len(slides) == 0 {
+					return nil
+				}
+				var out []node
+				fade := false
+				for _, sl := range slides {
+					out = append(out, node{
+						kind: "artifact",
+						req: request{
+							id:         sl.Template.ID,
+							templateID: sl.Template.ID,
+							values:     catalogValues(c),
+							fade:       &fade,
+						},
+					})
+				}
+				return out
+			}
 			if tmpl.BaseType == "general" {
 				return leaf(request{id: id, templateID: id, values: catalogValues(c)})
 			}
@@ -523,7 +546,23 @@ func hasSongForCue(cueID string, snap Snapshot) bool {
 func hydrateOne(snap Snapshot, r request, group *GroupRef, c ctx) (*DrawItem, error) {
 	tmpl, ok := snap.ByID[r.templateID]
 	if !ok {
-		return nil, nil
+		// Check AnnouncementSlides
+		found := false
+		for _, slides := range snap.AnnouncementSlides {
+			for _, sl := range slides {
+				if sl.Template.ID == r.templateID {
+					tmpl = sl.Template
+					found = true
+					break
+				}
+			}
+			if found {
+				break
+			}
+		}
+		if !found {
+			return nil, nil
+		}
 	}
 	values := r.values
 	if tmpl.BaseType == "general" {

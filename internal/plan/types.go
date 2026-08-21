@@ -35,6 +35,7 @@ type Template struct {
 	Label         string            `json:"label"`
 	BaseType      string            `json:"baseType"`
 	VariableName  *string           `json:"variableName,omitempty"`
+	AnnSetID      *int              `json:"annSetId,omitempty"`
 	Placeholders  []Placeholder     `json:"placeholders"`
 	Layouts       map[string]Layout `json:"layouts"`
 }
@@ -130,10 +131,19 @@ type HymnItem struct {
 	Incomplete bool
 }
 
+type AnnouncementSlide struct {
+	ID        int
+	AnnSetID  int
+	Label     string
+	Position  int
+	Template  Template
+}
+
 type Snapshot struct {
-	Order      []string
-	ByID       map[string]Template
-	SongInputs map[string]HymnItem
+	Order              []string
+	ByID               map[string]Template
+	SongInputs         map[string]HymnItem
+	AnnouncementSlides map[int][]AnnouncementSlide
 }
 
 func (s Snapshot) Has(id string) bool {

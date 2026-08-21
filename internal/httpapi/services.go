@@ -94,7 +94,7 @@ func (s *Server) createService(w http.ResponseWriter, r *http.Request) {
 	}
 	serviceDate := *parsed.Date
 
-	images, participants, announcements, errMsg := narrowCreatePayload(body)
+	images, participants, _, errMsg := narrowCreatePayload(body)
 	if errMsg != "" {
 		writeError(w, http.StatusBadRequest, errMsg)
 		return
@@ -148,13 +148,6 @@ func (s *Server) createService(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error creating service: %v", err)
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
-	}
-	if announcements != nil {
-		if err := syncWorshipAnnouncements(s.DB, int(id), announcements, boolFrom(body["clearMaster"])); err != nil {
-			log.Printf("Error creating service: %v", err)
-			writeError(w, http.StatusInternalServerError, "Internal Server Error")
-			return
-		}
 	}
 	if err := db.CloneRegistryToNewService(s.DB, int(id)); err != nil {
 		log.Printf("Error creating service: %v", err)
@@ -508,14 +501,11 @@ func (s *Server) updateService(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	var announcements []worshipAnnouncement
 	if _, has := body["announcements"]; has {
-		items, e := coerceWorshipAnnouncements(body["announcements"])
-		if e != nil {
+		if _, e := coerceWorshipAnnouncements(body["announcements"]); e != nil {
 			writeError(w, http.StatusBadRequest, e.Error())
 			return
 		}
-		announcements = items
 	}
 
 	storedRaw := existing.raw.String
@@ -595,13 +585,6 @@ func (s *Server) updateService(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error updating service: %v", err)
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
-	}
-	if announcements != nil {
-		if err := syncWorshipAnnouncements(s.DB, id, announcements, boolFrom(body["clearMaster"])); err != nil {
-			log.Printf("Error updating service: %v", err)
-			writeError(w, http.StatusInternalServerError, "Internal Server Error")
-			return
-		}
 	}
 	var updatedAt string
 	_ = s.DB.QueryRow(`SELECT COALESCE(updated_at, created_at) FROM services WHERE id = ?`, id).Scan(&updatedAt)
