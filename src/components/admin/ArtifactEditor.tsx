@@ -93,54 +93,6 @@ type EditorStatus =
   | 'error'
   | 'conflict';
 
-function pctToPx(value: number, total: number) {
-  return (value / 100) * total;
-}
-
-function pxToPct(value: number, total: number) {
-  return (value / total) * 100;
-}
-
-/** Normalize Fabric fill values to strict #RRGGBB for registry validation. */
-function toStrictHexColor(fill: unknown, fallback?: string): string | undefined {
-  if (typeof fill !== 'string' || !fill.trim()) return fallback;
-
-  const hexMatch = fill.match(/^#([0-9A-Fa-f]{6})$/);
-  if (hexMatch) return `#${hexMatch[1].toUpperCase()}`;
-
-  const rgbMatch = fill.match(
-    /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/
-  );
-  if (rgbMatch) {
-    const channels = [rgbMatch[1], rgbMatch[2], rgbMatch[3]].map(Number);
-    if (channels.every((n) => n >= 0 && n <= 255)) {
-      return `#${channels
-        .map((n) => n.toString(16).padStart(2, '0'))
-        .join('')
-        .toUpperCase()}`;
-    }
-  }
-
-  return fallback;
-}
-
-/** Font size typed by the admin: positive and inside the input's own bounds. */
-function clampFontSize(value: number) {
-  return Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, value));
-}
-
-/** Font size read back off the canvas: authored sizes are trusted as-is. */
-function normalizeFontSize(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0
-    ? value
-    : DEFAULT_FONT_SIZE;
-}
-
-function getEditableLayout(template: StoredArtifactTemplate): ArtifactLayout | null {
-  if (!isCanvasAuthorable(template.baseType)) return null;
-  return template.layouts.default ?? null;
-}
-
 function elementToFabricObject(
   fabric: FabricModule,
   element: CanvasElement,
@@ -1731,7 +1683,9 @@ export default function ArtifactEditor({
                   ) : null}
                   <Select
                     value={insertPlaceholderKey}
-                    onValueChange={setInsertPlaceholderKey}
+                    onValueChange={(val) => {
+                      if (val) setInsertPlaceholderKey(val);
+                    }}
                     disabled={busy}
                   >
                     <SelectTrigger

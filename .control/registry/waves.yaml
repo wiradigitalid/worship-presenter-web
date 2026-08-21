@@ -69,13 +69,17 @@ waves:
             touches: [api, pptx, slide-plan]
 
   - id: W3
-    status: open
+    status: closed
     release: dec004-completion
     prd: [offline-deck]
     fr: [FR-20, FR-21]
     size: M
     depends_on: []
     spec_folder: _bmad-output/specs/spec-w3-registry/
+    spec_reviewed:
+      date: '2026-08-21'
+      sha: '866c8a155f30d1975580dad373eb0febc99de149'
+      lenses: [structure, prose, edge-case-hunter]
     # Split per Product Component. wdi-build SKILL.md says one spec_folder per wave;
     # this project's bmad-spec override (_bmad/custom) says the slug MUST be
     # w<N>-<pc>, one run per (wave x Product Component). Both hold only when a wave
@@ -124,7 +128,7 @@ waves:
               - tests/registry.test.mjs
               - tests/copy-paste-share-by-reference.test.mjs
               - tests/canvas-dirty-guard.test.mjs
-            touches: [spa]
+            touches: [artifacts]
           - id: "2"
             spec_folder: _bmad-output/specs/spec-w3-registry/
             satisfies: [UC-20]
@@ -132,7 +136,7 @@ waves:
             tests:
               - tests/artifact-preview.test.mjs
               - tests/i18n.test.mjs
-            touches: [spa]
+            touches: [artifacts, slide-plan]
           - id: "3"
             spec_folder: _bmad-output/specs/spec-w3-registry/
             satisfies: [UC-16]
@@ -142,21 +146,28 @@ waves:
               - tests/registry-sync-artifact.test.mjs
               - tests/no-router-refresh-guard.test.mjs
               - tests/i18n.test.mjs
-            touches: [spa]
+            touches: [artifacts, services]
 
   - id: W4
-    status: open
+    status: closed
     release: dec004-completion
     prd: [operator-turn]
     fr: [FR-6]
     size: S
     depends_on: []
     spec_folder: _bmad-output/specs/spec-w4-hub/
+    spec_reviewed:
+      date: '2026-08-21'
+      sha: '866c8a155f30d1975580dad373eb0febc99de149'
+      lenses: [structure, prose, edge-case-hunter]
     # The Hub half of dec004-completion: the Family/Youth name inputs whose storage
     # landed in f393bfd with no input bound to them, and the S6 closing-prayer
     # checkbox that replaces today's silent shouldAutoFill overwrite.
     # PHASE 4 (2026-08-21) -- ran, did NOT complete. W4 stays `open`, same reason as W3.
-    #  1 registry catch-up: PASS. No new LC; `touches: [spa]` resolves.
+    #  1 registry catch-up: CORRECTED after V12. No new LC, but `touches: [spa]` was wrong -- V12
+    #    requires an `area` from an LC in components.yaml, and `spa` is a container, not an
+    #    area. Retargeted to artifacts / slide-plan / services. My first check scanned all ids
+    #    rather than the area set, so it passed something the validator rejects.
     #  2 inventories from code: RAN. Still 45 plan-versus-code gaps, unchanged by this
     #    wave (SPA-only story, no route added or removed). Reported, not patched; the
     #    three inventories belong to wdi-blueprint.
@@ -185,4 +196,4 @@ waves:
               - tests/worship-form-fields.test.mjs
               - tests/services-create.test.mjs
               - tests/i18n.test.mjs
-            touches: [spa]
+            touches: [services]
