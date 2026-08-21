@@ -225,7 +225,7 @@ func (s *Server) fallback(w http.ResponseWriter, r *http.Request) {
 		filepath.Join(s.Root, "spa", rel),
 	}
 	if rel == "" || rel == "login" || strings.HasPrefix(rel, "services") ||
-		rel == "announcements" || strings.HasPrefix(rel, "admin") || strings.HasSuffix(rel, "/") {
+		strings.HasPrefix(rel, "admin") || strings.HasSuffix(rel, "/") {
 		candidates = append([]string{
 			filepath.Join(s.Root, "spa", "dist", indexName),
 			filepath.Join(s.Root, "spa", indexName),

@@ -1,6 +1,6 @@
 /**
  * Guard: no route, nav item, or component references `/announcements` any more.
- * Scans `spa/src/` and `src/components/`.
+ * Scans `spa/src/`, `src/components/`, `src/operator/`, and Go files in `internal/`.
  *
  * Excludes `src/operator/CreateForm.tsx` for now;
  * a parallel slice removes that and this exclusion must then be deleted.
@@ -17,6 +17,7 @@ const SCAN_DIRS = [
   path.join(ROOT, 'spa', 'src'),
   path.join(ROOT, 'src', 'components'),
   path.join(ROOT, 'src', 'operator'),
+  path.join(ROOT, 'internal'),
 ];
 
 // Excluded: src/operator/CreateForm.tsx is removed by a parallel slice
@@ -31,8 +32,17 @@ function listSourceFiles(dir, out = []) {
       listSourceFiles(full, out);
       continue;
     }
-    if (entry.isFile() && (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts') || entry.name.endsWith('.jsx') || entry.name.endsWith('.js'))) {
-      out.push(full);
+    if (entry.isFile()) {
+      const ext = path.extname(entry.name);
+      if (
+        ext === '.tsx' ||
+        ext === '.ts' ||
+        ext === '.jsx' ||
+        ext === '.js' ||
+        (ext === '.go' && !entry.name.endsWith('_test.go'))
+      ) {
+        out.push(full);
+      }
     }
   }
   return out;
@@ -47,14 +57,31 @@ export function scanSource(source, rel) {
 
   const findings = [];
   const lines = source.split('\n');
+  const isGo = rel.endsWith('.go');
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lineNo = i + 1;
 
-    // Check for UI route or navigation/link references to the /announcements screen (excluding API endpoints like /api/announcements)
-    // Matches href="/announcements", path="/announcements", to="/announcements", or exact "/announcements"
-    if (/(['"`])\/announcements(?:\/|\1)/.test(line)) {
-      findings.push({ rel, lineNo, line: line.trim() });
+    if (isGo) {
+      // In Go files, check for route matching or SPA path checks on "announcements" or "/announcements".
+      // Excludes:
+      // - SQL table names like announcement_items, announcement_sets, announcement_set_slides
+      // - JSON request fields like "announcements" (e.g., webhook payload)
+      // - Plan request IDs or template IDs
+      if (
+        /(['"`])\/announcements(?:\/|\1)/.test(line) ||
+        /\brel\s*==\s*["']announcements["']/.test(line) ||
+        /["']\/announcements["']/.test(line)
+      ) {
+        findings.push({ rel, lineNo, line: line.trim() });
+      }
+    } else {
+      // Check for UI route or navigation/link references to the /announcements screen (excluding API endpoints like /api/announcements)
+      // Matches href="/announcements", path="/announcements", to="/announcements", or exact "/announcements"
+      if (/(['"`])\/announcements(?:\/|\1)/.test(line)) {
+        findings.push({ rel, lineNo, line: line.trim() });
+      }
     }
   }
   return findings;
@@ -85,6 +112,13 @@ test('no route, nav item, or component references /announcements', () => {
 test('guard proof: injected /announcements reference is detected', () => {
   const probe = '<CustomLink href="/announcements">Announcements</CustomLink>';
   const findings = scanSource(probe, 'src/components/Header.tsx');
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].lineNo, 1);
+});
+
+test('guard proof: injected Go route reference is detected', () => {
+  const probe = '\tif rel == "announcements" {\n\t\t// fallback\n\t}';
+  const findings = scanSource(probe, 'internal/httpapi/server.go');
   assert.equal(findings.length, 1);
   assert.equal(findings[0].lineNo, 1);
 });
