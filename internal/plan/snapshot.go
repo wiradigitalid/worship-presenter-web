@@ -201,16 +201,35 @@ func loadAnnouncementSlidesIntoSnapshot(db *sql.DB, serviceID int, snap *Snapsho
 	}
 }
 
+// resolveDefaultBook resolves the global default song book from the database,
+// falling back to "SDAH" as the shipped constant (DEC-004 S3).
+func resolveDefaultBook(db *sql.DB) string {
+	if db != nil {
+		var defaultBook string
+		err := db.QueryRow(`SELECT book_code FROM song_books WHERE is_default = 1 LIMIT 1`).Scan(&defaultBook)
+		if err == nil && strings.TrimSpace(defaultBook) != "" {
+			return strings.ToUpper(strings.TrimSpace(defaultBook))
+		}
+	}
+	return "SDAH"
+}
+
 func loadSongSetInputsIntoSnapshot(db *sql.DB, serviceID int, snap *Snapshot) {
 	if snap.SongInputs == nil {
 		snap.SongInputs = map[string]HymnItem{}
 	}
+	defaultBook := resolveDefaultBook(db)
+
 	rows, err := db.Query(
 		`SELECT ssi.variable_name, ssi.song_number, COALESCE(ssi.song_book_code, ''),
 		        COALESCE(h.title, ''), COALESCE(ssi.lyric_override, h.lyrics, '')
 		   FROM song_set_inputs ssi
 		   LEFT JOIN hymns h ON h.number = ssi.song_number
+		                    AND h.book_code = CASE WHEN ssi.song_book_code IS NOT NULL AND TRIM(ssi.song_book_code) != ''
+		                                           THEN UPPER(TRIM(ssi.song_book_code))
+		                                           ELSE ? END
 		  WHERE ssi.service_id = ? AND ssi.song_number IS NOT NULL AND ssi.song_number > 0`,
+		defaultBook,
 		serviceID,
 	)
 	if err != nil {
@@ -223,10 +242,15 @@ func loadSongSetInputsIntoSnapshot(db *sql.DB, serviceID int, snap *Snapshot) {
 		if err := rows.Scan(&vn, &num, &book, &title, &lyrics); err != nil {
 			continue
 		}
+		bookCode := strings.ToUpper(strings.TrimSpace(book))
+		if bookCode == "" {
+			bookCode = defaultBook
+		}
 		if title == "" {
-			title = fmt.Sprintf("SDAH %d", num)
+			title = fmt.Sprintf("%s %d", bookCode, num)
 		}
 		snap.SongInputs[vn] = HymnItem{
+			BookCode:   bookCode,
 			Number:     num,
 			Title:      title,
 			Lyrics:     lyrics,

@@ -2,6 +2,7 @@ package parse
 
 import (
 	"database/sql"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -144,21 +145,52 @@ func cleanLine(line string) string {
 	return stripTimings(stripPrefixes(line))
 }
 
-func LookupHymn(db *sql.DB, number int) (title, lyrics string, incomplete bool) {
+// resolveDefaultBook resolves the song book code from the database using the
+// DEC-004 S3 three-step fallback order:
+//  1. explicit weekly/provided bookCode
+//  2. global default book in song_books (is_default = 1)
+//  3. shipped DefaultSongBook ("SDAH")
+func resolveDefaultBook(db *sql.DB, explicitBook string) string {
+	explicit := strings.ToUpper(strings.TrimSpace(explicitBook))
+	if explicit != "" {
+		return explicit
+	}
+	if db != nil {
+		var defaultBook string
+		err := db.QueryRow(`SELECT book_code FROM song_books WHERE is_default = 1 LIMIT 1`).Scan(&defaultBook)
+		if err == nil && strings.TrimSpace(defaultBook) != "" {
+			return strings.ToUpper(strings.TrimSpace(defaultBook))
+		}
+	}
+	return "SDAH"
+}
+
+// LookupHymnInBook resolves a hymn on the pair (book_code, number) following the
+// DEC-004 S3 fallback order for book resolution.
+func LookupHymnInBook(db *sql.DB, bookCode string, number int) (title, lyrics string, incomplete bool) {
+	resolvedBook := resolveDefaultBook(db, bookCode)
+	if db == nil {
+		return fmt.Sprintf("Unknown %s %d", resolvedBook, number), "", true
+	}
 	var t, l sql.NullString
-	err := db.QueryRow(`SELECT title, lyrics FROM hymns WHERE number = ?`, number).Scan(&t, &l)
+	err := db.QueryRow(`SELECT title, lyrics FROM hymns WHERE book_code = ? AND number = ?`, resolvedBook, number).Scan(&t, &l)
 	if err != nil {
-		return "Unknown SDAH " + strconv.Itoa(number), "", true
+		return fmt.Sprintf("Unknown %s %d", resolvedBook, number), "", true
 	}
 	title = t.String
 	lyrics = l.String
 	if strings.TrimSpace(lyrics) == "" {
 		if title == "" {
-			title = "Unknown SDAH " + strconv.Itoa(number)
+			title = fmt.Sprintf("Unknown %s %d", resolvedBook, number)
 		}
 		return title, "", true
 	}
 	return title, lyrics, false
+}
+
+// LookupHymn resolves a hymn by number using the default resolved book.
+func LookupHymn(db *sql.DB, number int) (title, lyrics string, incomplete bool) {
+	return LookupHymnInBook(db, "", number)
 }
 
 func ParseScriptureValue(raw string) *Scripture {

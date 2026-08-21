@@ -20,17 +20,41 @@ const (
 	artifactRegistryBootstrapKey = "artifact_registry_bootstrapped"
 	dataVersionKey               = "data_version"
 	bootstrapDataVersion         = "3"
-	currentDataVersion           = "8"
+	currentDataVersionInt        = 10
+	currentDataVersion           = "10"
 	// AD-26: the corpus code is the cross-boundary key. The shipped corpus is
 	// SDAH; a per-book settings marker (song_book_bootstrapped_<code>) gates
 	// its one-time bootstrap (DEC-005 / AD-36).
 	DefaultSongBook              = "SDAH"
 )
 
-// songBookBootstrapKey is the per-book-code settings marker parallel to
+// ResolveSongBook resolves a hymn's book code following the DEC-004 S3 three-step fallback:
+//  1. The explicit/weekly book code if non-empty (e.g. from song_set_inputs.song_book_code)
+//  2. The global default book marked in song_books (is_default = 1)
+//  3. The shipped DefaultSongBook constant ("SDAH") as the last resort
+func ResolveSongBook(db *sql.DB, explicitBook string) string {
+	explicit := strings.ToUpper(strings.TrimSpace(explicitBook))
+	if explicit != "" {
+		return explicit
+	}
+	if db != nil {
+		var defaultBook string
+		err := db.QueryRow(`SELECT book_code FROM song_books WHERE is_default = 1 LIMIT 1`).Scan(&defaultBook)
+		if err == nil && strings.TrimSpace(defaultBook) != "" {
+			return strings.ToUpper(strings.TrimSpace(defaultBook))
+		}
+	}
+	return DefaultSongBook
+}
+
+// SongBookBootstrapKey is the per-book-code settings marker parallel to
 // artifactRegistryBootstrapKey (AD-17), extended to hymns by DEC-005/AD-36.
-func songBookBootstrapKey(bookCode string) string {
+func SongBookBootstrapKey(bookCode string) string {
 	return "song_book_bootstrapped_" + strings.ToUpper(strings.TrimSpace(bookCode))
+}
+
+func songBookBootstrapKey(bookCode string) string {
+	return SongBookBootstrapKey(bookCode)
 }
 
 func authBootstrap(handle *sql.DB) error {
@@ -67,6 +91,9 @@ func seedHub(handle *sql.DB, root string) error {
 	if err := migrateSongBookBootstrap(handle); err != nil {
 		return err
 	}
+	if err := migrateSongBookMetadata(handle, root); err != nil {
+		return err
+	}
 	if err := upsertHymns(handle, root); err != nil {
 		return err
 	}
@@ -80,6 +107,9 @@ func seedHub(handle *sql.DB, root string) error {
 		return err
 	}
 	if err := migrateSnapshots(handle); err != nil {
+		return err
+	}
+	if err := migrateAnnouncementItemsCascade(handle); err != nil {
 		return err
 	}
 	if err := ensureDataVersionCurrent(handle); err != nil {
@@ -541,7 +571,7 @@ func ensureDataVersionCurrent(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	if ver >= currentDataVersion {
+	if dataVersionAtLeast(ver, currentDataVersionInt) {
 		return nil
 	}
 	_, err = db.Exec(
@@ -560,7 +590,7 @@ func migrateSnapshots(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	if ver >= currentDataVersion {
+	if dataVersionAtLeast(ver, currentDataVersionInt) {
 		return nil
 	}
 	rows, err := db.Query(`SELECT id FROM services WHERE registry_snapshot_at IS NULL ORDER BY id`)

@@ -10,10 +10,32 @@ export type LyricSlide = {
 };
 
 export type HymnRecord = {
+  bookCode: string;
   number: number;
   title: string;
   lyrics: string;
 };
+
+/**
+ * Resolve the song book code following the DEC-004 S3 three-step fallback order:
+ *  1. explicit book code if non-empty
+ *  2. global default book in song_books (is_default = 1)
+ *  3. shipped DefaultSongBook constant ("SDAH")
+ */
+function resolveSongBookCode(explicitBook?: string): string {
+  const explicit = explicitBook?.trim().toUpperCase();
+  if (explicit) return explicit;
+  try {
+    const db = getDb();
+    const row = db
+      .prepare('SELECT book_code FROM song_books WHERE is_default = 1 LIMIT 1')
+      .get() as { book_code?: string } | undefined;
+    if (row?.book_code?.trim()) return row.book_code.trim().toUpperCase();
+  } catch {
+    // fallback if table does not exist or query fails
+  }
+  return 'SDAH';
+}
 
 function normalizeTitle(s: string): string {
   return s
@@ -23,29 +45,53 @@ function normalizeTitle(s: string): string {
     .trim();
 }
 
-/** Lookup hymn by SDAH number. */
-export function lookupHymnByNumber(number: number): HymnRecord | null {
+/** Lookup hymn on (bookCode, number) pair with fallback to default book. */
+export function lookupHymnByNumber(
+  number: number,
+  bookCode?: string
+): HymnRecord | null {
   if (!Number.isInteger(number) || number <= 0) return null;
+  const book = resolveSongBookCode(bookCode);
   const db = getDb();
   const row = db
-    .prepare('SELECT number, title, lyrics FROM hymns WHERE number = ?')
-    .get(number) as HymnRecord | undefined;
+    .prepare(
+      'SELECT book_code, number, title, lyrics FROM hymns WHERE book_code = ? AND number = ?'
+    )
+    .get(book, number) as
+    | { book_code: string; number: number; title: string; lyrics: string }
+    | undefined;
   if (!row?.lyrics?.trim()) return null;
-  return { number: row.number, title: row.title, lyrics: row.lyrics };
+  return {
+    bookCode: row.book_code,
+    number: row.number,
+    title: row.title,
+    lyrics: row.lyrics,
+  };
 }
 
 /**
- * Fuzzy title match against hymnal DB.
+ * Fuzzy title match against hymnal DB for a specific or default song book.
  * Prefers exact normalized match, then prefix/includes of the query.
  */
-export function lookupHymnByTitleFuzzy(query: string): HymnRecord | null {
+export function lookupHymnByTitleFuzzy(
+  query: string,
+  bookCode?: string
+): HymnRecord | null {
   const needle = normalizeTitle(query);
   if (!needle) return null;
+  const book = resolveSongBookCode(bookCode);
 
   const db = getDb();
   const rows = db
-    .prepare('SELECT number, title, lyrics FROM hymns')
-    .all() as HymnRecord[];
+    .prepare(
+      'SELECT book_code, number, title, lyrics FROM hymns WHERE book_code = ?'
+    )
+    .all(book) as {
+    book_code: string;
+    number: number;
+    title: string;
+    lyrics: string;
+  }[];
 
   let best: { score: number; hymn: HymnRecord } | null = null;
 
@@ -69,7 +115,15 @@ export function lookupHymnByTitleFuzzy(query: string): HymnRecord | null {
     }
 
     if (score > 0 && (!best || score > best.score)) {
-      best = { score, hymn: row };
+      best = {
+        score,
+        hymn: {
+          bookCode: row.book_code,
+          number: row.number,
+          title: row.title,
+          lyrics: row.lyrics,
+        },
+      };
     }
   }
 

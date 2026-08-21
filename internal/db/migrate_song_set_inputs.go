@@ -23,7 +23,7 @@ func migrateSongSetInputs(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	if ver >= "7" {
+	if dataVersionAtLeast(ver, 7) {
 		return nil
 	}
 

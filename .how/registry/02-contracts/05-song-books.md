@@ -29,6 +29,10 @@ default (S3).
 | PATCH `/api/admin/song-books/[book_code]` | Rename, mark this book the global default, or correct its `locale`/`licence`/`provenance` (`{ name?, locale?, licence?, provenance?, is_default? }`) — the same post-bootstrap correction path AD-36 already gives every song-book field, corpus-backed or admin-created alike | UC-25 |
 | DELETE `/api/admin/song-books/[book_code]` | Remove a book; rejected if any `hymns` row still carries that `book_code`, or if any `song_set_inputs.song_book_code` (Hub-owned) still references it | UC-25 |
 
+**Wire spelling.** The operation bodies above are written in the snake_case of the `song_books`
+columns. The shipped handler accepts both that spelling and the camelCase this API uses elsewhere
+(`bookCode`, `isDefault`, `updatedAt`); new clients SHOULD send camelCase.
+
 ## Five lanes
 
 | Lane | Answer |

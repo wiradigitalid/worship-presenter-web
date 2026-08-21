@@ -11,7 +11,12 @@ import { fileURLToPath, pathToFileURL } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 
-const { splitLyricsLabeled, splitLyricsIntoSlides } = await import(
+const {
+  splitLyricsLabeled,
+  splitLyricsIntoSlides,
+  lookupHymnByNumber,
+  lookupHymnByTitleFuzzy,
+} = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'lyrics.ts')).href
 );
 
@@ -237,4 +242,17 @@ test('S7 corpus claim: none of the 695 shipped hymns uses numbered refrains or b
   assert.equal(slides[0].label, '1/3');
   assert.equal(slides[1].label, '2/3');
   assert.equal(slides[2].label, '3/3');
+});
+
+test('lookupHymnByNumber and lookupHymnByTitleFuzzy resolve on (bookCode, number)', () => {
+  const h1 = lookupHymnByNumber(1);
+  if (h1) {
+    assert.equal(h1.bookCode, 'SDAH');
+    assert.equal(h1.number, 1);
+  }
+  const byTitle = lookupHymnByTitleFuzzy('Praise to the Lord');
+  if (byTitle) {
+    assert.equal(byTitle.bookCode, 'SDAH');
+    assert.equal(byTitle.number, 1);
+  }
 });

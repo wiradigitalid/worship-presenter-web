@@ -2,9 +2,24 @@ package db
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
+
+// dataVersionAtLeast reports whether the stored data_version string represents
+// an integer version at least targetVersion.
+//
+// An empty, non-numeric, or negative marker is treated as version 0 (older than
+// any migration), so a fresh, missing, or corrupt marker runs the migration
+// ladder rather than skipping it.
+func dataVersionAtLeast(ver string, targetVersion int) bool {
+	v, err := strconv.Atoi(strings.TrimSpace(ver))
+	if err != nil || v < 0 {
+		return false
+	}
+	return v >= targetVersion
+}
 
 // nowUTCString returns the migration-time stamp matching StampNowSQL's grain.
 // Used by migrate_song_set_shape.go and migrate_predefined_fields.go to

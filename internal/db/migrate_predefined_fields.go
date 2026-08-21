@@ -21,10 +21,10 @@ func migratePredefinedFields(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	if ver >= "5" {
+	if dataVersionAtLeast(ver, 5) {
 		return nil
 	}
-	if ver < "4" {
+	if !dataVersionAtLeast(ver, 4) {
 		// Song-set physical-shape migration must run first; refuse silently
 		// so the older migration gets a clean shot.
 		return nil

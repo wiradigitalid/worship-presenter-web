@@ -110,7 +110,8 @@ func validateSongSetNumbers(db *sql.DB, parsed *Rundown, v any) {
 		if n == nil {
 			continue
 		}
-		_, _, incomplete := LookupHymn(db, *n)
+		bookCode, _ := em["songBookCode"].(string)
+		_, _, incomplete := LookupHymnInBook(db, bookCode, *n)
 		if incomplete {
 			parsed.FailedHymnNumbers = appendUniqueInt(parsed.FailedHymnNumbers, *n)
 		} else {

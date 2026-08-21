@@ -23,7 +23,7 @@ func migrateSongBookBootstrap(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	if ver >= "6" {
+	if dataVersionAtLeast(ver, 6) {
 		return nil
 	}
 

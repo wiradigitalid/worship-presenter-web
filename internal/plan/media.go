@@ -139,7 +139,7 @@ func bucketHymns(items []ParsedItem) (bt, ds []HymnItem) {
 	hasBT, hasDS := false, false
 	for _, it := range items {
 		if it.Type == "hymn" {
-			all = append(all, HymnItem{it.Number, it.Title, it.Lyrics, it.Incomplete})
+			all = append(all, HymnItem{BookCode: "", Number: it.Number, Title: it.Title, Lyrics: it.Lyrics, Incomplete: it.Incomplete})
 		}
 		if it.Type == "section" {
 			t := it.Title
@@ -172,7 +172,7 @@ func bucketHymns(items []ParsedItem) (bt, ds []HymnItem) {
 		if it.Type != "hymn" {
 			continue
 		}
-		h := HymnItem{it.Number, it.Title, it.Lyrics, it.Incomplete}
+		h := HymnItem{BookCode: "", Number: it.Number, Title: it.Title, Lyrics: it.Lyrics, Incomplete: it.Incomplete}
 		if section == "bt" {
 			bt = append(bt, h)
 		} else if section == "ds" {

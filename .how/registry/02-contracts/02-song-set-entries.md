@@ -29,6 +29,11 @@ UC-24 (entry list), UC-14 (trio layout edit). Admin-only (AD-14).
 | PUT `/api/admin/song-set-layouts/[role]` | Save that layout | UC-14 |
 | POST `/api/admin/song-set-layouts/[role]/reset` | Restore that layout to seed | UC-14 |
 
+**Wire spelling.** This contract names the field `variable_name` throughout, which is the DB
+column name (`artifact_templates.variable_name`). On the wire the shipped handler reads and writes
+it as **`variableName`**, camelCase, like every other JSON field in this API. Both spellings name
+one thing; a client MUST send `variableName`.
+
 Add/remove/reorder of a Song Set entry's *position on the spine* reuses the existing
 `/api/admin/artifacts` order endpoint (`01-artifacts.md`) — an entry is still one spine row; this
 contract only adds the entry-identity fields the artifacts contract does not carry.

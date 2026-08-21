@@ -231,21 +231,42 @@ function parseRoleLine(line: string): { role: string; name: string } | null {
   return { role, name };
 }
 
-/** Resolve an SDAH number from the hymns table (lyrics + incomplete flag). */
-export function lookupHymn(number: number): {
+function resolveSongBookCode(explicitBook?: string): string {
+  const explicit = explicitBook?.trim().toUpperCase();
+  if (explicit) return explicit;
+  try {
+    const db = getDb();
+    const row = db
+      .prepare('SELECT book_code FROM song_books WHERE is_default = 1 LIMIT 1')
+      .get() as { book_code?: string } | undefined;
+    if (row?.book_code?.trim()) return row.book_code.trim().toUpperCase();
+  } catch {
+    // fallback if table does not exist or query fails
+  }
+  return 'SDAH';
+}
+
+/** Resolve a hymn on (bookCode, number) from the hymns table (lyrics + incomplete flag). */
+export function lookupHymn(
+  number: number,
+  bookCode?: string
+): {
   title: string;
   lyrics: string;
   incomplete?: boolean;
 } {
+  const book = resolveSongBookCode(bookCode);
   const db = getDb();
   const hymnRecord = db
-    .prepare('SELECT title, lyrics FROM hymns WHERE number = ?')
-    .get(number) as { title: string; lyrics: string } | undefined;
+    .prepare(
+      'SELECT title, lyrics FROM hymns WHERE book_code = ? AND number = ?'
+    )
+    .get(book, number) as { title: string; lyrics: string } | undefined;
 
   if (hymnRecord) {
     if (!hymnRecord.lyrics?.trim()) {
       return {
-        title: hymnRecord.title || `Unknown SDAH ${number}`,
+        title: hymnRecord.title || `Unknown ${book} ${number}`,
         lyrics: '',
         incomplete: true,
       };
@@ -254,7 +275,7 @@ export function lookupHymn(number: number): {
   }
 
   return {
-    title: `Unknown SDAH ${number}`,
+    title: `Unknown ${book} ${number}`,
     lyrics: '',
     incomplete: true,
   };

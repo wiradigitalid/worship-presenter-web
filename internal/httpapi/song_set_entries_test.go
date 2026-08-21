@@ -24,6 +24,7 @@ func newSongSetTestServer(t *testing.T) (*httptest.Server, *sql.DB, string) {
 		t.Fatal(err)
 	}
 	t.Setenv("WPW_USE_SHIPPED_REGISTRY", "1")
+	t.Setenv("AUTH_SECRET", "this-is-a-valid-auth-secret-for-testing")
 	t.Setenv("AUTH_BOOTSTRAP_USER", "admin")
 	t.Setenv("AUTH_BOOTSTRAP_PASSWORD", "test-password-123")
 

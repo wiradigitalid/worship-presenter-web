@@ -518,8 +518,7 @@ export function getDb() {
         service_id INTEGER,
         sort_order INTEGER NOT NULL DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT,
-        FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+        updated_at TEXT
       );
 
       CREATE TABLE IF NOT EXISTS accounts (
@@ -659,6 +658,9 @@ export function getDb() {
       CREATE TABLE IF NOT EXISTS song_books (
         book_code TEXT PRIMARY KEY,
         name TEXT,
+        locale TEXT,
+        licence TEXT,
+        provenance TEXT,
         is_default INTEGER NOT NULL DEFAULT 0,
         updated_at TEXT
       );
@@ -775,7 +777,9 @@ export function getDb() {
     migratePredefinedFieldsDec004(db);
     migrateServiceBoundSnapshots(db);
     migrateSongBookBootstrapDec005(db);
+    migrateSongBookMetadata(db);
     migrateSongSetInputsDec004(db);
+    migrateAnnouncementItemsCascade(db);
 
     // --- corpus load ---
     // DEC-005/AD-36: upsertHymns is a bootstrap-once seed and MUST run after
@@ -1275,6 +1279,135 @@ export function migrateSongSetInputsDec004(database: Database.Database): void {
   tx.immediate();
   console.info(
     `[registry] migration 6->7: backfilled ${migrated} song_set_inputs row(s)`
+  );
+}
+
+/**
+ * Song book metadata migration (AD-26 / data_version 8 -> 9). One-time pass that:
+ *   - adds locale, licence, provenance columns to song_books if missing,
+ *   - backfills existing rows with a non-NULL locale (sourced from corpus file if reachable,
+ *     falling back to shipped default "en" for SDAH),
+ *   - bumps data_version to 9.
+ *
+ * Mirrors `internal/db/migrate_song_book_metadata.go`.
+ */
+export function migrateSongBookMetadata(database: Database.Database): void {
+  const row = database
+    .prepare(`SELECT value FROM settings WHERE key = ?`)
+    .get(DATA_VERSION_KEY) as { value: string } | undefined;
+  const version = row ? Number(row.value) : 0;
+  if (!Number.isFinite(version) || version >= 9) return;
+
+  for (const col of ['locale TEXT', 'licence TEXT', 'provenance TEXT']) {
+    try {
+      database.prepare(`ALTER TABLE song_books ADD COLUMN ${col}`).run();
+    } catch (e) {
+      if (!/duplicate column/i.test(String(e))) throw e;
+    }
+  }
+
+  const existingRows = database
+    .prepare(
+      `SELECT book_code FROM song_books WHERE locale IS NULL OR locale = ''`
+    )
+    .all() as { book_code: string }[];
+
+  const tx = database.transaction(() => {
+    const update = database.prepare(
+      `UPDATE song_books SET locale = ? WHERE book_code = ?`
+    );
+
+    for (const r of existingRows) {
+      let locale = 'en';
+      try {
+        const corpusPath = songBookCorpusPath(r.book_code);
+        if (fs.existsSync(corpusPath)) {
+          const raw = JSON.parse(fs.readFileSync(corpusPath, 'utf8')) as Record<
+            string,
+            unknown
+          >;
+          const meta = (raw?.book ?? {}) as Record<string, unknown>;
+          const loc = String(meta.locale ?? meta.language ?? '').trim();
+          if (loc) locale = loc;
+        }
+      } catch {
+        locale = 'en';
+      }
+      update.run(locale, r.book_code);
+    }
+
+    database
+      .prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`)
+      .run(DATA_VERSION_KEY, '9');
+  });
+
+  tx.immediate();
+  console.info(
+    `[registry] migration 8->9: migrated song_books metadata columns and backfilled ${existingRows.length} row(s)`
+  );
+}
+
+/**
+ * Announcement-items cascade retirement migration (data_version 9 -> 10).
+ * One-time pass that:
+ *   - removes foreign key constraint from announcement_items(service_id),
+ *   - preserves all existing rows and column values intact,
+ *   - bumps data_version to 10.
+ *
+ * Note on foreign key: In SQLite with PRAGMA foreign_keys = ON, keeping
+ * FOREIGN KEY (service_id) REFERENCES services(id) without ON DELETE CASCADE
+ * defaults to RESTRICT / NO ACTION, which forbids deleting a services row if
+ * any announcement_items row references it. Since announcement_items must survive
+ * Service deletion while retaining service_id, the FK constraint itself is dropped.
+ *
+ * Mirrors `internal/db/migrate_announcement_items_cascade.go`.
+ */
+export function migrateAnnouncementItemsCascade(database: Database.Database): void {
+  const row = database
+    .prepare(`SELECT value FROM settings WHERE key = ?`)
+    .get(DATA_VERSION_KEY) as { value: string } | undefined;
+  const version = row ? Number(row.value) : 0;
+  if (!Number.isFinite(version) || version >= 10) return;
+
+  type FKRow = {
+    id: number;
+    seq: number;
+    table: string;
+    from: string;
+    to: string;
+    on_update: string;
+    on_delete: string;
+    match: string;
+  };
+  const fks = database.prepare(`PRAGMA foreign_key_list(announcement_items)`).all() as FKRow[];
+  const hasFK = fks.some((fk) => fk.from?.toLowerCase() === 'service_id');
+
+  const tx = database.transaction(() => {
+    if (hasFK) {
+      database.exec(`
+        CREATE TABLE announcement_items_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          image_url TEXT NOT NULL,
+          service_id INTEGER,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT
+        );
+        INSERT INTO announcement_items_new (id, image_url, service_id, sort_order, created_at, updated_at)
+          SELECT id, image_url, service_id, sort_order, created_at, updated_at FROM announcement_items;
+        DROP TABLE announcement_items;
+        ALTER TABLE announcement_items_new RENAME TO announcement_items;
+      `);
+    }
+
+    database
+      .prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`)
+      .run(DATA_VERSION_KEY, '10');
+  });
+
+  tx.immediate();
+  console.info(
+    `[registry] migration 9->10: retired foreign key on announcement_items (data_version=10)`
   );
 }
 

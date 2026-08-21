@@ -98,3 +98,27 @@ func asString(v any) string {
 	}
 	return string(b)
 }
+
+func asPositiveInt(v any) (int, bool) {
+	n, ok := asInt(v)
+	return n, ok && n > 0
+}
+
+func asInt(v any) (int, bool) {
+	switch n := v.(type) {
+	case float64:
+		if n == float64(int(n)) {
+			return int(n), true
+		}
+	case int:
+		return n, true
+	case jsonNumber:
+		return n.Int()
+	}
+	return 0, false
+}
+
+type jsonNumber struct{}
+
+func (jsonNumber) Int() (int, bool) { return 0, false }
+

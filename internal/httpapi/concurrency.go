@@ -9,7 +9,6 @@ import (
 
 const requiredUpdatedAtMsg = "updated_at is required for concurrent edit protection"
 const serviceConflictMsg = "Conflict: service was modified; refresh and retry"
-const announcementConflictMsg = "Conflict: announcement was modified; refresh and retry"
 const webhookDateConflictMsg = "Conflict: a service already exists for this date; send action=correct with updated_at to overwrite"
 
 func concurrencyToken(r *http.Request, body map[string]any) string {

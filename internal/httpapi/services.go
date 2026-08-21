@@ -94,7 +94,7 @@ func (s *Server) createService(w http.ResponseWriter, r *http.Request) {
 	}
 	serviceDate := *parsed.Date
 
-	images, participants, _, errMsg := narrowCreatePayload(body)
+	images, participants, errMsg := narrowCreatePayload(body)
 	if errMsg != "" {
 		writeError(w, http.StatusBadRequest, errMsg)
 		return
@@ -237,18 +237,18 @@ func upsertSongSetInputs(tx *sql.Tx, serviceID int64, sets map[string]any) error
 	return nil
 }
 
-func narrowCreatePayload(body map[string]any) (images map[string]any, participants any, announcements []worshipAnnouncement, errMsg string) {
+func narrowCreatePayload(body map[string]any) (images map[string]any, participants any, errMsg string) {
 	sermon, err := optionalImage(body, "sermonGraphicUrl")
 	if err != nil {
-		return nil, nil, nil, err.Error()
+		return nil, nil, err.Error()
 	}
 	family, err := optionalImage(body, "familyPhotoUrl")
 	if err != nil {
-		return nil, nil, nil, err.Error()
+		return nil, nil, err.Error()
 	}
 	youth, err := optionalImage(body, "youthPhotoUrl")
 	if err != nil {
-		return nil, nil, nil, err.Error()
+		return nil, nil, err.Error()
 	}
 	var urls []string
 	if arr, ok := body["images"].([]any); ok {
@@ -274,17 +274,10 @@ func narrowCreatePayload(body map[string]any) (images map[string]any, participan
 		case string:
 			participants = v
 		default:
-			return nil, nil, nil, "participantsRaw must be a string or null"
+			return nil, nil, "participantsRaw must be a string or null"
 		}
 	}
-	if _, has := body["announcements"]; has {
-		items, e := coerceWorshipAnnouncements(body["announcements"])
-		if e != nil {
-			return nil, nil, nil, e.Error()
-		}
-		announcements = items
-	}
-	return images, participants, announcements, ""
+	return images, participants, ""
 }
 
 func optionalImage(body map[string]any, field string) (any, error) {
@@ -501,13 +494,6 @@ func (s *Server) updateService(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if _, has := body["announcements"]; has {
-		if _, e := coerceWorshipAnnouncements(body["announcements"]); e != nil {
-			writeError(w, http.StatusBadRequest, e.Error())
-			return
-		}
-	}
-
 	storedRaw := existing.raw.String
 	if rawPayload != nil {
 		storedRaw = *rawPayload

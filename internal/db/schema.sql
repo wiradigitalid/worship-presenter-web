@@ -25,8 +25,7 @@ CREATE TABLE IF NOT EXISTS announcement_items (
   service_id INTEGER,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT,
-  FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+  updated_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS accounts (
@@ -155,6 +154,9 @@ CREATE TABLE IF NOT EXISTS background_library_images (
 CREATE TABLE IF NOT EXISTS song_books (
   book_code TEXT PRIMARY KEY,
   name TEXT,
+  locale TEXT,
+  licence TEXT,
+  provenance TEXT,
   is_default INTEGER NOT NULL DEFAULT 0,
   updated_at TEXT
 );

@@ -36,12 +36,12 @@ function hymnCount() {
   return db.prepare(`SELECT COUNT(*) AS n FROM hymns`).get().n;
 }
 
-test('fresh boot reaches data_version 8 with the SDAH book bootstrapped', () => {
+test('fresh boot reaches data_version 10 with the SDAH book bootstrapped', () => {
   const row = db
     .prepare(`SELECT value FROM settings WHERE key = ?`)
     .get(DATA_VERSION_KEY);
   assert.equal(row?.value, String(CURRENT_DATA_VERSION));
-  assert.equal(CURRENT_DATA_VERSION, 8);
+  assert.equal(CURRENT_DATA_VERSION, 10);
   const marker = db
     .prepare(`SELECT 1 AS ok FROM settings WHERE key = ?`)
     .get(songBookBootstrapKey('SDAH'));
@@ -117,6 +117,34 @@ test('the 5→6 migration stamps markers for books already present and bumps the
   assert.equal(version.value, '6');
 });
 
+test('the 8→9 migration adds metadata columns, backfills locale and bumps version', async () => {
+  const { migrateSongBookMetadata } = await import(
+    pathToFileURL(path.join(root, 'src', 'lib', 'db', 'index.ts')).href
+  );
+  // Simulate v8 database: version at 8, NULL locale on a test book
+  db.prepare(
+    `INSERT OR REPLACE INTO settings (key, value) VALUES ('data_version', '8')`
+  ).run();
+  db.prepare(
+    `INSERT OR REPLACE INTO song_books (book_code, name, locale, is_default, updated_at) VALUES ('TEST_V8', 'Test V8', NULL, 0, '2026-08-20T00:00:00Z')`
+  ).run();
+
+  migrateSongBookMetadata(db);
+
+  const ver = db
+    .prepare(`SELECT value FROM settings WHERE key = ?`)
+    .get(DATA_VERSION_KEY);
+  assert.equal(ver.value, '9');
+
+  const row = db
+    .prepare(`SELECT locale FROM song_books WHERE book_code = 'TEST_V8'`)
+    .get();
+  assert.ok(row?.locale, 'locale must be backfilled with non-NULL');
+
+  // Idempotency: second call does not fail
+  migrateSongBookMetadata(db);
+});
+
 test('the 5→6 migration is a no-op once data_version has reached 6', () => {
   db.prepare(
     `INSERT OR REPLACE INTO settings (key, value) VALUES ('data_version', '6')`
@@ -127,4 +155,67 @@ test('the 5→6 migration is a no-op once data_version has reached 6', () => {
     .prepare(`SELECT COUNT(*) AS n FROM settings WHERE key LIKE 'song_book_bootstrapped_%'`)
     .get();
   assert.equal(markers.n, 0, 'migration must not run again at version 6');
+});
+
+test('migration ladder does not downgrade or re-run when data_version reaches 10', async () => {
+  const { migrateSongBookMetadata } = await import(
+    pathToFileURL(path.join(root, 'src', 'lib', 'db', 'index.ts')).href
+  );
+  db.prepare(
+    `INSERT OR REPLACE INTO settings (key, value) VALUES ('data_version', '10')`
+  ).run();
+
+  migrateSongBookMetadata(db);
+
+  const ver = db
+    .prepare(`SELECT value FROM settings WHERE key = ?`)
+    .get(DATA_VERSION_KEY);
+  assert.equal(ver.value, '10', 'version 10 must not be downgraded by 8->9 migration');
+});
+
+test('the 9→10 migration removes ON DELETE CASCADE from announcement_items and preserves rows', async () => {
+  const { migrateAnnouncementItemsCascade } = await import(
+    pathToFileURL(path.join(root, 'src', 'lib', 'db', 'index.ts')).href
+  );
+
+  // Re-create table with cascade to simulate v9 state
+  db.exec(`
+    DROP TABLE IF EXISTS announcement_items;
+    CREATE TABLE announcement_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      image_url TEXT NOT NULL,
+      service_id INTEGER,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT,
+      FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+    );
+    INSERT OR REPLACE INTO settings (key, value) VALUES ('data_version', '9');
+  `);
+
+  const svcRes = db.prepare(`INSERT INTO services (date, raw_payload) VALUES ('2026-08-22', 'raw')`).run();
+  const svcId = svcRes.lastInsertRowid;
+
+  db.prepare(`
+    INSERT INTO announcement_items (id, image_url, service_id, sort_order, created_at, updated_at)
+    VALUES (201, '/api/uploads/ts_flyer.png', ?, 1, '2026-08-20 12:00:00', '2026-08-20 12:05:00')
+  `).run(svcId);
+
+  migrateAnnouncementItemsCascade(db);
+
+  const ver = db.prepare(`SELECT value FROM settings WHERE key = ?`).get(DATA_VERSION_KEY);
+  assert.equal(ver.value, '10');
+
+  const row = db.prepare(`SELECT * FROM announcement_items WHERE id = 201`).get();
+  assert.equal(row.image_url, '/api/uploads/ts_flyer.png');
+  assert.equal(row.service_id, svcId);
+  assert.equal(row.sort_order, 1);
+  assert.equal(row.created_at, '2026-08-20 12:00:00');
+  assert.equal(row.updated_at, '2026-08-20 12:05:00');
+
+  // Deleting service must NOT delete announcement_items
+  db.prepare(`DELETE FROM services WHERE id = ?`).run(svcId);
+  const afterDelete = db.prepare(`SELECT * FROM announcement_items WHERE id = 201`).get();
+  assert.ok(afterDelete, 'announcement_items row must survive service deletion');
+  assert.equal(afterDelete.service_id, svcId);
 });

@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/wiradigitalid/worship-presenter-web/internal/db"
 )
 
 func (s *Server) getHymns(w http.ResponseWriter, r *http.Request) {
@@ -13,48 +15,68 @@ func (s *Server) getHymns(w http.ResponseWriter, r *http.Request) {
 	all := q.Get("all") == "1" || q.Get("all") == "true"
 	search := strings.TrimSpace(q.Get("q"))
 	limit := parseHymnLimit(q.Get("limit"))
+
+	// Resolve book_code: query parameter if provided, otherwise the global default book.
+	reqBook := strings.TrimSpace(q.Get("book_code"))
+	if reqBook == "" {
+		reqBook = strings.TrimSpace(q.Get("bookCode"))
+	}
+	resolvedBook := db.ResolveSongBook(s.DB, reqBook)
+
 	type row struct {
-		Number int    `json:"number"`
-		Title  string `json:"title"`
-		Lyrics string `json:"lyrics,omitempty"`
+		BookCode string `json:"bookCode"`
+		Number   int    `json:"number"`
+		Title    string `json:"title"`
+		Lyrics   string `json:"lyrics,omitempty"`
 	}
 	var rows []row
 	var err error
 	if all {
-		err = s.queryHymns(`SELECT number, title, lyrics FROM hymns ORDER BY number ASC`, func(n int, t, l string) {
-			rows = append(rows, row{Number: n, Title: t, Lyrics: l})
-		})
+		err = s.queryHymnsArgs(
+			`SELECT book_code, number, title, lyrics FROM hymns WHERE book_code = ? ORDER BY number ASC`,
+			[]any{resolvedBook},
+			func(b string, n int, t, l string) {
+				rows = append(rows, row{BookCode: b, Number: n, Title: t, Lyrics: l})
+			},
+		)
 	} else if q.Has("numbers") {
 		nums := parseHymnNumbers(q.Get("numbers"))
 		if len(nums) == 0 {
 			rows = []row{}
 		} else {
 			placeholders := strings.TrimRight(strings.Repeat("?,", len(nums)), ",")
-			args := make([]any, len(nums))
-			for i, n := range nums {
-				args[i] = n
+			args := make([]any, 0, len(nums)+1)
+			args = append(args, resolvedBook)
+			for _, n := range nums {
+				args = append(args, n)
 			}
 			err = s.queryHymnsArgs(
-				`SELECT number, title, lyrics FROM hymns WHERE number IN (`+placeholders+`) ORDER BY number ASC`,
+				`SELECT book_code, number, title, lyrics FROM hymns WHERE book_code = ? AND number IN (`+placeholders+`) ORDER BY number ASC`,
 				args,
-				func(n int, t, l string) { rows = append(rows, row{Number: n, Title: t, Lyrics: l}) },
+				func(b string, n int, t, l string) {
+					rows = append(rows, row{BookCode: b, Number: n, Title: t, Lyrics: l})
+				},
 			)
 		}
 	} else if search != "" {
 		pattern := "%" + escapeLike(search) + "%"
 		err = s.queryHymnsArgs(
-			`SELECT number, title, lyrics FROM hymns
-			  WHERE CAST(number AS TEXT) LIKE ? ESCAPE '\'
-			     OR title LIKE ? ESCAPE '\'
+			`SELECT book_code, number, title, lyrics FROM hymns
+			  WHERE book_code = ?
+			    AND (CAST(number AS TEXT) LIKE ? ESCAPE '\' OR title LIKE ? ESCAPE '\')
 			  ORDER BY number ASC LIMIT ?`,
-			[]any{pattern, pattern, limit},
-			func(n int, t, l string) { rows = append(rows, row{Number: n, Title: t, Lyrics: l}) },
+			[]any{resolvedBook, pattern, pattern, limit},
+			func(b string, n int, t, l string) {
+				rows = append(rows, row{BookCode: b, Number: n, Title: t, Lyrics: l})
+			},
 		)
 	} else {
 		err = s.queryHymnsArgs(
-			`SELECT number, title, lyrics FROM hymns ORDER BY number ASC LIMIT ?`,
-			[]any{limit},
-			func(n int, t, l string) { rows = append(rows, row{Number: n, Title: t, Lyrics: l}) },
+			`SELECT book_code, number, title, lyrics FROM hymns WHERE book_code = ? ORDER BY number ASC LIMIT ?`,
+			[]any{resolvedBook, limit},
+			func(b string, n int, t, l string) {
+				rows = append(rows, row{BookCode: b, Number: n, Title: t, Lyrics: l})
+			},
 		)
 	}
 	if err != nil {
@@ -68,23 +90,19 @@ func (s *Server) getHymns(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"hymns": rows})
 }
 
-func (s *Server) queryHymns(sql string, fn func(int, string, string)) error {
-	return s.queryHymnsArgs(sql, nil, fn)
-}
-
-func (s *Server) queryHymnsArgs(sql string, args []any, fn func(int, string, string)) error {
+func (s *Server) queryHymnsArgs(sql string, args []any, fn func(string, int, string, string)) error {
 	rows, err := s.DB.Query(sql, args...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
+		var b, t, l string
 		var n int
-		var t, l string
-		if err := rows.Scan(&n, &t, &l); err != nil {
+		if err := rows.Scan(&b, &n, &t, &l); err != nil {
 			return err
 		}
-		fn(n, t, l)
+		fn(b, n, t, l)
 	}
 	return rows.Err()
 }

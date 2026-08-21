@@ -518,7 +518,9 @@ test('delete: unlinks this Service local uploads and keeps recurring ones', () =
 
   assert.equal(deleteService(getDb(), created.id), true);
   assert.equal(fs.existsSync(gonePath), false);
-  assert.equal(fs.existsSync(oneOffPath), false);
+  // Announcement flyer rows are no longer bound/deleted with Service (delete-service.md / DEC-004),
+  // and localUploadStillReferenced keeps flyer image referenced by announcement_items.
+  assert.equal(fs.existsSync(oneOffPath), true);
   assert.equal(fs.existsSync(keepPath), true);
 });
 

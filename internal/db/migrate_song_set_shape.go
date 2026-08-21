@@ -26,7 +26,7 @@ func migrateSongSetShape(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	if ver >= "4" {
+	if dataVersionAtLeast(ver, 4) {
 		return nil
 	}
 

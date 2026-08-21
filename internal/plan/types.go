@@ -125,6 +125,7 @@ type Media struct {
 }
 
 type HymnItem struct {
+	BookCode   string
 	Number     int
 	Title      string
 	Lyrics     string

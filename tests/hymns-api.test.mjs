@@ -228,3 +228,14 @@ test('all=0 is not a truthy flag and falls through to the default page', async (
   const hymns = await call('?all=0');
   assert.equal(hymns.length, DEFAULT_LIMIT);
 });
+
+test('GET /api/hymns returns bookCode and can filter by book_code', async () => {
+  const defaultList = await call('?limit=5');
+  assert.ok(defaultList.length > 0);
+  assert.equal(defaultList[0].bookCode, 'SDAH');
+
+  const filtered = await call('?book_code=SDAH&numbers=1');
+  assert.equal(filtered.length, 1);
+  assert.equal(filtered[0].bookCode, 'SDAH');
+  assert.equal(filtered[0].number, 1);
+});

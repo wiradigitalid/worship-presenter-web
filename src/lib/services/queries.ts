@@ -97,15 +97,6 @@ function collectServiceLocalUploads(
   for (const name of filenamesFromImagesJson(row.images_payload)) {
     names.add(name);
   }
-  const items = db
-    .prepare<[number], { image_url: string }>(
-      'SELECT image_url FROM announcement_items WHERE service_id = ?'
-    )
-    .all(serviceId);
-  for (const item of items) {
-    const name = localUploadFilename(item.image_url);
-    if (name) names.add(name);
-  }
   return names;
 }
 

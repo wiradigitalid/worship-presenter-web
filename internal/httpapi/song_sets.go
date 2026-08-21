@@ -74,10 +74,7 @@ func (s *Server) saveSongSetToBook(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Song Set entry has no resolvable song number")
 		return
 	}
-	resolvedBook := strings.ToUpper(strings.TrimSpace(bookCode.String))
-	if resolvedBook == "" {
-		resolvedBook = db.DefaultSongBook
-	}
+	resolvedBook := db.ResolveSongBook(s.DB, bookCode.String)
 
 	// SCN-4 precondition: refuse when the hymn moved under the Operator.
 	if expectedNumber != int(songNumber.Int64) ||

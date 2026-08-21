@@ -78,9 +78,13 @@ func leaf(r request) []node {
 
 func songGroup(hymn HymnItem, idPrefix, templateID string) []node {
 	var children []groupChild
-	subtitle := fmt.Sprintf("SDAH %d", hymn.Number)
+	prefix := hymn.BookCode
+	if prefix == "" {
+		prefix = "SDAH"
+	}
+	subtitle := fmt.Sprintf("%s %d", prefix, hymn.Number)
 	if hymn.Incomplete {
-		subtitle = fmt.Sprintf("SDAH %d (incomplete)", hymn.Number)
+		subtitle = fmt.Sprintf("%s %d (incomplete)", prefix, hymn.Number)
 	}
 	children = append(children, groupChild{
 		role: "title",
