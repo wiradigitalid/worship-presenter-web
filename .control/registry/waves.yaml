@@ -155,6 +155,26 @@ waves:
     # The Hub half of dec004-completion: the Family/Youth name inputs whose storage
     # landed in f393bfd with no input bound to them, and the S6 closing-prayer
     # checkbox that replaces today's silent shouldAutoFill overwrite.
+    # PHASE 4 (2026-08-21) -- ran, did NOT complete. W4 stays `open`, same reason as W3.
+    #  1 registry catch-up: PASS. No new LC; `touches: [spa]` resolves.
+    #  2 inventories from code: RAN. Still 45 plan-versus-code gaps, unchanged by this
+    #    wave (SPA-only story, no route added or removed). Reported, not patched; the
+    #    three inventories belong to wdi-blueprint.
+    #  3 structure maps: NOT refreshed. No base folder born; one new test file
+    #    (tests/worship-form-ui.test.mjs). Routes to wdi-init intent `structure`.
+    #  4 distillation: PASS, nothing left dangling. The one judgement call this wave
+    #    made -- the closing-prayer checkbox starts unchecked when speaker and
+    #    closing-prayer person are both empty -- left the spec folder into code as
+    #    `shouldClosingPrayerCheckboxStartChecked` in src/lib/worship-form-fields.ts,
+    #    pinned by AC-05 in tests/worship-form-fields.test.mjs.
+    #  5 retrospective: SKIPPED. Advisory at size S per V19; stated, not silent.
+    #  6 RTM green: FAIL -- V13 wants a `reviewed` trace with date and sha on this wave.
+    #    It comes from a wdi-review lens run over the SPEC and MUST NOT be stamped from
+    #    the coordinator's own self-validate.
+    #  7 status closed: NOT DONE, blocked by item 6.
+    # Flake noted, not masked: one `go test ./internal/...` run reported FAIL while the
+    # npm suite was still running its go-http tests in parallel. Re-run once, clean,
+    # all seven packages ok. Per wdi-build a second identical failure would be a defect.
     epics:
       - id: dec004-completion-hub
         stories:
