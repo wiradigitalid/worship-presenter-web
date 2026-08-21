@@ -4,7 +4,7 @@ type: 'feature'
 created: '2026-08-21'
 status: 'done'
 baseline_revision: '070cecb3a182e5828ced2addde4756516ed6f505'
-review_loop_iteration: 0
+review_loop_iteration: 1
 followup_review_recommended: false
 context:
   - '.how/_platform/ARCHITECTURE-SPINE.md'
@@ -77,6 +77,37 @@ deferred: []
 - Given the entire codebase, when searched, then no instance of the hardcoded literal `'Untitled Slide'` remains in `SlidePreviewList.tsx`.
 
 ## Spec Change Log
+
+### 2026-08-21 — coordinator review, return trip 1
+
+**Finding (must-fix): AC-03 has no test behind it.**
+
+AC-03 reads *"Given the entire codebase, when searched, then no instance of the hardcoded literal
+`'Untitled Slide'` remains in `SlidePreviewList.tsx`."* Nothing tests it. Proof: the coordinator
+replaced `t('form.preview.untitledSlide')` in `SlidePreviewList.tsx` with the hardcoded string
+`'Untitled Slide'` and ran `tests/artifact-preview.test.mjs` — **all 8 tests still passed.** The
+literal was then reverted.
+
+The assertion at `tests/artifact-preview.test.mjs:326` checks for `'Untitled slide'` — the English
+*catalogue value*. That proves the fallback renders; it says nothing about whether the source still
+carries a hardcoded literal, and it would keep passing after the regression it is assumed to cover.
+Per this wave's SPEC an absence-guard counts only once it has been seen to fail, and per wdi-build a
+test that cannot fail is a must-fix in its own right.
+
+**Required fix.** Add a real source-scanning guard for AC-03: read `src/components/SlidePreviewList.tsx`
+(and any sibling that renders a preview row) and assert no hardcoded user-facing title literal remains
+— at minimum `Untitled Slide` in any capitalisation. Scan the source text, not the rendered output;
+the two are different questions and only one of them is AC-03.
+
+**Prove it.** Inject the literal back, watch the new guard fail, revert, and report the failure output.
+A guard added in response to this finding and not seen to fail has not addressed it.
+
+Consider whether the guard belongs beside the existing i18n guard
+(`tests/operator-i18n-guard.test.mjs`) rather than in the preview test, since it is the same class of
+defect — a hardcoded user-facing string on a translated surface. Either home is acceptable; if you put
+it in a new file, it MUST also be added to `package.json`'s `test` script or it never runs. Note that
+`operator-i18n-guard.test.mjs` is itself currently unregistered — that registration is fastpath work
+outside this wave, so do not let your new guard depend on it running.
 
 ## Review Triage Log
 

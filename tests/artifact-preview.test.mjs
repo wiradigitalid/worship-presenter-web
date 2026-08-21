@@ -351,3 +351,27 @@ test('preview row title resolution prefers title -> entry.label -> entry.baseTyp
     'Fallback'
   );
 });
+
+test('AC-03 guard: SlidePreviewList and preview rendering components contain no hardcoded "Untitled Slide" literal', () => {
+  const PREVIEW_COMPONENTS = [
+    path.join(root, 'src', 'components', 'SlidePreviewList.tsx'),
+  ];
+
+  const UNTITLED_SLIDE_LITERAL_REGEX = /['"`]untitled\s+slide['"`]/i;
+
+  for (const filePath of PREVIEW_COMPONENTS) {
+    const rel = path.relative(root, filePath).split(path.sep).join('/');
+    const source = fs.readFileSync(filePath, 'utf8');
+    // Strip comments to inspect code & JSX literals
+    const cleanSource = source
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
+
+    const match = UNTITLED_SLIDE_LITERAL_REGEX.exec(cleanSource);
+    assert.ok(
+      !match,
+      `Hardcoded user-facing literal "${match?.[0]}" found in ${rel} (AC-03 violation)`
+    );
+  }
+});
+
