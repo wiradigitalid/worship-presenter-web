@@ -95,7 +95,7 @@ func songGroup(hymn HymnItem, idPrefix, templateID string) []node {
 		},
 	})
 	if !hymn.Incomplete && strings.TrimSpace(hymn.Lyrics) != "" {
-		for i, lyric := range SplitLyricsLabeled(hymn.Lyrics, 4) {
+		for i, lyric := range SplitLyricsLabeled(hymn.Lyrics) {
 			vals := map[string]interface{}{}
 			layoutKey := "verse"
 			if lyric.Label == "Reff" || lyric.Label == "Chorus" {

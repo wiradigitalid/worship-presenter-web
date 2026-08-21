@@ -1,23 +1,23 @@
+// Hand-mirrored port: internal/plan/lyrics.go <-> src/lib/lyrics.ts
+// A change to one is incomplete until the other matches. (DEC-004 S7)
+
 package plan
 
 import (
 	"regexp"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
 var (
-	sectionHeader = regexp.MustCompile(`(?i)^(Verse(?:\s+(\d+))?|Chorus|Reff|Refrain)\s*$`)
+	sectionHeader = regexp.MustCompile(`(?i)^(Verse(?:\s+(\d+))?|Chorus(?:\s+(\d+))?|Reff(?:\s+(\d+))?|Refrain(?:\s+(\d+))?)\s*$`)
 	terminalPunct = regexp.MustCompile(`[.!,?;:]["'` + "`" + `’”)\]]?$`)
 )
-
-const continuousCharBudget = 320
 
 type lyricSection struct {
 	kind       string
 	verseIndex int
-	lines      []string
+	paragraphs [][]string
 }
 
 type LyricSlide struct {
@@ -40,101 +40,37 @@ func joinLinesContinuous(lines []string) string {
 	return result
 }
 
-func chunkContinuousText(text string, maxChars int) []string {
-	if text == "" {
-		return nil
-	}
-	if len(text) <= maxChars {
-		return []string{text}
-	}
-	var chunks []string
-	remaining := text
-	seps := []string{"; ", ". ", "! ", "? ", ": "}
-	for len(remaining) > maxChars {
-		breakAt := -1
-		for _, sep := range seps {
-			idx := strings.LastIndex(remaining[:maxChars], sep)
-			for idx > 0 {
-				end := idx + len(sep)
-				if end <= maxChars && end < len(remaining) {
-					if end > breakAt {
-						breakAt = end
-					}
-					break
-				}
-				if idx == 0 {
-					break
-				}
-				prev := strings.LastIndex(remaining[:idx], sep)
-				if prev == idx {
-					break
-				}
-				idx = prev
-			}
-		}
-		if breakAt <= 0 {
-			spaceIdx := strings.LastIndex(remaining[:maxChars], " ")
-			if spaceIdx > 0 {
-				breakAt = spaceIdx + 1
-			} else {
-				breakAt = maxChars
-			}
-		}
-		chunks = append(chunks, strings.TrimRightFunc(remaining[:breakAt], unicode.IsSpace))
-		remaining = strings.TrimLeftFunc(remaining[breakAt:], unicode.IsSpace)
-	}
-	if remaining != "" {
-		chunks = append(chunks, remaining)
-	}
-	return chunks
-}
-
-func chunkLines(lines []string, maxLinesPerSlide int, preserve bool) []string {
-	if len(lines) == 0 {
-		return nil
-	}
-	if preserve {
-		var chunks []string
-		for i := 0; i < len(lines); i += maxLinesPerSlide {
-			end := i + maxLinesPerSlide
-			if end > len(lines) {
-				end = len(lines)
-			}
-			chunks = append(chunks, strings.Join(lines[i:end], "\n"))
-		}
-		return chunks
-	}
-	return chunkContinuousText(joinLinesContinuous(lines), continuousCharBudget)
-}
-
 func parseSections(lyrics string) []lyricSection {
 	normalized := strings.ReplaceAll(strings.ReplaceAll(lyrics, "\r\n", "\n"), "\r", "\n")
 	rawLines := strings.Split(normalized, "\n")
 	var sections []lyricSection
 	var current *lyricSection
+	var currentParagraph []string
 	autoVerse := 0
-	push := func() {
-		if current == nil {
-			return
-		}
-		var kept []string
-		for _, l := range current.lines {
-			l = strings.TrimSpace(l)
-			if l != "" {
-				kept = append(kept, l)
+
+	pushParagraph := func() {
+		if len(currentParagraph) > 0 {
+			if current == nil {
+				current = &lyricSection{kind: "body"}
 			}
+			current.paragraphs = append(current.paragraphs, currentParagraph)
+			currentParagraph = nil
 		}
-		if len(kept) > 0 {
-			current.lines = kept
-			sections = append(sections, *current)
-		}
-		current = nil
 	}
+
+	pushSection := func() {
+		pushParagraph()
+		if current != nil {
+			sections = append(sections, *current)
+			current = nil
+		}
+	}
+
 	for _, raw := range rawLines {
 		line := strings.TrimSpace(raw)
 		m := sectionHeader.FindStringSubmatch(line)
 		if m != nil {
-			push()
+			pushSection()
 			kindRaw := strings.ToLower(m[1])
 			cur := lyricSection{}
 			if strings.HasPrefix(kindRaw, "verse") {
@@ -155,89 +91,68 @@ func parseSections(lyrics string) []lyricSection {
 			current = &cur
 			continue
 		}
-		if current == nil {
-			current = &lyricSection{kind: "body"}
-		}
-		if line != "" {
-			current.lines = append(current.lines, line)
+
+		if line == "" {
+			pushParagraph()
+		} else {
+			currentParagraph = append(currentParagraph, line)
 		}
 	}
-	push()
+
+	pushSection()
 	return sections
 }
 
 func fillEmptyRefrains(sections []lyricSection) []lyricSection {
-	var template *lyricSection
-	for i := range sections {
-		s := &sections[i]
-		if (s.kind == "chorus" || s.kind == "reff") && len(s.lines) > 0 {
-			template = s
-			break
-		}
-	}
-	if template == nil {
-		return sections
-	}
+	var nearestRefrainParagraphs [][]string
 	out := make([]lyricSection, len(sections))
+
 	for i, s := range sections {
-		if (s.kind == "chorus" || s.kind == "reff") && len(s.lines) == 0 {
-			s.lines = append([]string{}, template.lines...)
+		if s.kind == "chorus" || s.kind == "reff" {
+			if len(s.paragraphs) > 0 {
+				nearestRefrainParagraphs = make([][]string, len(s.paragraphs))
+				for pi, p := range s.paragraphs {
+					nearestRefrainParagraphs[pi] = append([]string{}, p...)
+				}
+				out[i] = s
+				continue
+			} else if nearestRefrainParagraphs != nil {
+				copied := make([][]string, len(nearestRefrainParagraphs))
+				for pi, p := range nearestRefrainParagraphs {
+					copied[pi] = append([]string{}, p...)
+				}
+				s.paragraphs = copied
+				out[i] = s
+				continue
+			}
 		}
 		out[i] = s
 	}
 	return out
 }
 
-func expandTrailingRefrain(sections []lyricSection) []lyricSection {
-	var verses, refrains, bodies []lyricSection
-	for _, s := range sections {
-		switch s.kind {
-		case "verse":
-			verses = append(verses, s)
-		case "chorus", "reff":
-			refrains = append(refrains, s)
-		case "body":
-			bodies = append(bodies, s)
-		}
-	}
-	if len(verses) == 0 || len(refrains) == 0 {
-		return sections
-	}
-	var template *lyricSection
-	for i := range refrains {
-		if len(refrains[i].lines) > 0 {
-			template = &refrains[i]
-			break
-		}
-	}
-	if template == nil {
-		return sections
-	}
-	var expanded []lyricSection
-	for _, v := range verses {
-		copyRef := *template
-		copyRef.lines = append([]string{}, template.lines...)
-		expanded = append(expanded, v, copyRef)
-	}
-	expanded = append(expanded, bodies...)
-	return expanded
-}
-
-func SplitLyricsLabeled(lyrics string, maxLinesPerSlide int) []LyricSlide {
-	if maxLinesPerSlide <= 0 || strings.TrimSpace(lyrics) == "" {
+// SplitLyricsLabeled splits hymn lyrics into slides following DEC-004 S7 (L1-L6):
+// - L1: Recognize Verse, Chorus, Reff, Refrain (with or without numbers)
+// - L2: Distinct refrains per verse preserved verbatim
+// - L3: Bodyless refrain inherits nearest preceding non-empty refrain
+// - L4: Slide order matches written order; no reordering / interleaving
+// - L5: Blank lines inside a section are hard slide breaks (one paragraph, one slide)
+// - L6: No character-budget or line-count splitting
+// - Verse labels are n/total; refrains are labeled Reff or Chorus
+func SplitLyricsLabeled(lyrics string) []LyricSlide {
+	if strings.TrimSpace(lyrics) == "" {
 		return nil
 	}
-	sections := expandTrailingRefrain(fillEmptyRefrains(parseSections(lyrics)))
+	sections := fillEmptyRefrains(parseSections(lyrics))
 	verseTotal := 0
 	for _, s := range sections {
-		if s.kind == "verse" {
+		if s.kind == "verse" && len(s.paragraphs) > 0 {
 			verseTotal++
 		}
 	}
 	var slides []LyricSlide
 	for _, section := range sections {
-		chunks := chunkLines(section.lines, maxLinesPerSlide, false)
-		if len(chunks) == 0 {
+		if len(section.paragraphs) == 0 {
 			continue
 		}
 		label := ""
@@ -257,7 +172,11 @@ func SplitLyricsLabeled(lyrics string, maxLinesPerSlide int) []LyricSlide {
 		case "chorus":
 			label = "Chorus"
 		}
-		for _, text := range chunks {
+		for _, paragraph := range section.paragraphs {
+			if len(paragraph) == 0 {
+				continue
+			}
+			text := joinLinesContinuous(paragraph)
 			slides = append(slides, LyricSlide{Label: label, Text: text})
 		}
 	}
@@ -271,8 +190,8 @@ func SplitLyricsLabeled(lyrics string, maxLinesPerSlide int) []LyricSlide {
 					lines = append(lines, l)
 				}
 			}
-			for _, text := range chunkLines(lines, maxLinesPerSlide, false) {
-				slides = append(slides, LyricSlide{Text: text})
+			if len(lines) > 0 {
+				slides = append(slides, LyricSlide{Text: joinLinesContinuous(lines)})
 			}
 		}
 	}

@@ -163,7 +163,7 @@ function songGroupNodes(
   });
 
   if (!hymn.incomplete && hymn.lyrics?.trim()) {
-    const lyricSlides = splitLyricsLabeled(hymn.lyrics, 4);
+    const lyricSlides = splitLyricsLabeled(hymn.lyrics);
     let i = 0;
     for (const lyric of lyricSlides) {
       i += 1;

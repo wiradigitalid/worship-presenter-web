@@ -1,3 +1,6 @@
+// Hand-mirrored port: src/lib/lyrics.ts <-> internal/plan/lyrics.go
+// A change to one is incomplete until the other matches. (DEC-004 S7)
+
 import { getDb } from './db';
 
 export type LyricSlide = {
@@ -86,14 +89,11 @@ export const INTERCESSORY_STANDING_NUMBERS = [671, 684] as const;
 type LyricSection = {
   kind: 'verse' | 'chorus' | 'reff' | 'body';
   verseIndex?: number;
-  lines: string[];
+  paragraphs: string[][];
 };
 
 const SECTION_HEADER =
-  /^(Verse(?:\s+(\d+))?|Chorus|Reff|Refrain)\s*$/i;
-
-/** Soft readability budget for continuous prose on one lyric slide. */
-const CONTINUOUS_CHAR_BUDGET = 320;
+  /^(Verse(?:\s+(\d+))?|Chorus(?:\s+(\d+))?|Reff(?:\s+(\d+))?|Refrain(?:\s+(\d+))?)\s*$/i;
 
 /** Terminal punct, optionally followed by a closing quote/bracket. */
 const TERMINAL_PUNCTUATION = /[.!,?;:]["'`’”)\]]?$/;
@@ -112,207 +112,120 @@ function joinLinesContinuous(lines: string[]): string {
   return result;
 }
 
-/**
- * Split continuous prose under a character budget.
- * Prefers breaks after `"; "` or sentence endings; word-boundary before hard slice.
- */
-function chunkContinuousText(
-  text: string,
-  maxChars: number = CONTINUOUS_CHAR_BUDGET
-): string[] {
-  if (!text) return [];
-  if (text.length <= maxChars) return [text];
-
-  const chunks: string[] = [];
-  let remaining = text;
-
-  while (remaining.length > maxChars) {
-    let breakAt = -1;
-    for (const sep of ['; ', '. ', '! ', '? ', ': '] as const) {
-      let idx = remaining.lastIndexOf(sep, maxChars - 1);
-      while (idx > 0) {
-        const end = idx + sep.length;
-        if (end <= maxChars && end < remaining.length) {
-          breakAt = Math.max(breakAt, end);
-          break;
-        }
-        idx = remaining.lastIndexOf(sep, idx - 1);
-      }
-    }
-    if (breakAt <= 0) {
-      // Prefer last whitespace in budget so we do not mid-word hard-slice.
-      const spaceIdx = remaining.lastIndexOf(' ', maxChars - 1);
-      breakAt = spaceIdx > 0 ? spaceIdx + 1 : maxChars;
-    }
-
-    chunks.push(remaining.slice(0, breakAt).trimEnd());
-    remaining = remaining.slice(breakAt).trimStart();
-  }
-
-  if (remaining) chunks.push(remaining);
-  return chunks;
-}
-
-/**
- * Chunk a section for slides.
- * Default: continuous prose gated by {@link CONTINUOUS_CHAR_BUDGET}.
- * With `preserveLineBreaks`: keep `\n` joins and chunk by `maxLinesPerSlide`.
- */
-function chunkLines(
-  lines: string[],
-  maxLinesPerSlide: number,
-  preserveLineBreaks = false
-): string[] {
-  if (lines.length === 0) return [];
-  if (preserveLineBreaks) {
-    const chunks: string[] = [];
-    for (let i = 0; i < lines.length; i += maxLinesPerSlide) {
-      chunks.push(lines.slice(i, i + maxLinesPerSlide).join('\n'));
-    }
-    return chunks;
-  }
-  return chunkContinuousText(joinLinesContinuous(lines));
-}
-
 function parseSections(lyrics: string): LyricSection[] {
   const normalized = lyrics.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const rawLines = normalized.split('\n');
   const sections: LyricSection[] = [];
   let current: LyricSection | null = null;
+  let currentParagraph: string[] = [];
   let autoVerse = 0;
 
-  const pushCurrent = () => {
-    if (current && current.lines.some((l) => l.trim())) {
-      sections.push({
-        ...current,
-        lines: current.lines.map((l) => l.trim()).filter(Boolean),
-      });
+  const pushParagraph = () => {
+    if (currentParagraph.length > 0) {
+      if (!current) {
+        current = { kind: 'body', paragraphs: [] };
+      }
+      current.paragraphs.push(currentParagraph);
+      currentParagraph = [];
     }
-    current = null;
+  };
+
+  const pushSection = () => {
+    pushParagraph();
+    if (current) {
+      // Keep section even if paragraphs is empty so empty refrain placeholders exist
+      sections.push(current);
+      current = null;
+    }
   };
 
   for (const raw of rawLines) {
     const line = raw.trim();
     const header = line.match(SECTION_HEADER);
     if (header) {
-      pushCurrent();
+      pushSection();
       const kindRaw = header[1].toLowerCase();
       if (kindRaw.startsWith('verse')) {
         autoVerse += 1;
         const n = header[2] ? parseInt(header[2], 10) : autoVerse;
-        current = { kind: 'verse', verseIndex: n, lines: [] };
+        current = { kind: 'verse', verseIndex: n, paragraphs: [] };
       } else if (kindRaw.startsWith('chorus')) {
-        current = { kind: 'chorus', lines: [] };
+        current = { kind: 'chorus', paragraphs: [] };
       } else {
-        current = { kind: 'reff', lines: [] };
+        current = { kind: 'reff', paragraphs: [] };
       }
       continue;
     }
 
-    if (!current) {
-      current = { kind: 'body', lines: [] };
+    if (line === '') {
+      pushParagraph();
+    } else {
+      currentParagraph.push(line);
     }
-
-    // Preserve blank lines as stanza breaks inside a section by ignoring
-    // empties here; blank lines just separate text within the block.
-    if (line) current.lines.push(line);
   }
 
-  pushCurrent();
+  pushSection();
   return sections;
 }
 
 /**
- * Fill empty Chorus/Reff placeholders with the first non-empty refrain text.
+ * Inherit nearest preceding non-empty refrain for bodyless refrains (L3).
  */
 function fillEmptyRefrains(sections: LyricSection[]): LyricSection[] {
-  const template =
-    sections.find(
-      (s) =>
-        (s.kind === 'chorus' || s.kind === 'reff') && s.lines.length > 0
-    ) ?? null;
-
-  if (!template) return sections;
+  let nearestRefrainParagraphs: string[][] | null = null;
 
   return sections.map((s) => {
-    if ((s.kind === 'chorus' || s.kind === 'reff') && s.lines.length === 0) {
-      return { ...s, lines: [...template.lines] };
+    if (s.kind === 'chorus' || s.kind === 'reff') {
+      if (s.paragraphs.length > 0) {
+        nearestRefrainParagraphs = s.paragraphs.map((p) => [...p]);
+        return s;
+      } else if (nearestRefrainParagraphs) {
+        return {
+          ...s,
+          paragraphs: nearestRefrainParagraphs.map((p) => [...p]),
+        };
+      }
     }
     return s;
   });
 }
 
-/**
- * Always emit Verse→Chorus after every verse when ≥1 verse and ≥1 refrain exist.
- * Uses the first non-empty Chorus/Reff/Refrain as the template; appends body last.
- */
-function expandTrailingRefrain(sections: LyricSection[]): LyricSection[] {
-  const verses = sections.filter((s) => s.kind === 'verse');
-  const refrains = sections.filter(
-    (s) => s.kind === 'chorus' || s.kind === 'reff'
-  );
-  const bodies = sections.filter((s) => s.kind === 'body');
-
-  if (verses.length === 0 || refrains.length === 0) {
-    return sections;
-  }
-
-  const template = refrains.find((r) => r.lines.length > 0);
-  if (!template) {
-    return sections;
-  }
-
-  const expanded: LyricSection[] = [];
-  for (const verse of verses) {
-    expanded.push(verse, { ...template, lines: [...template.lines] });
-  }
-  expanded.push(...bodies);
-  return expanded;
-}
-
 export type SplitLyricsOptions = {
   /**
-   * When true, keep original line breaks (`\n`) instead of CAP-1 continuous
-   * prose joining (`; ` / space). Chunks by `maxLinesPerSlide`.
+   * When true, keep original line breaks (`\n`) instead of continuous
+   * prose joining (`; ` / space).
    */
   preserveLineBreaks?: boolean;
 };
 
 /**
- * Split lyrics into labeled slides. Verse/Chorus/Reff aware:
- * - empty Chorus/Reff placeholders inherit the first refrain text
- * - any song with ≥1 verse and ≥1 refrain emits Verse→Chorus after every verse
- * - section lines join into continuous prose (punctuation-aware); long text splits by char budget
- * - with `preserveLineBreaks`, lines stay newline-separated and chunk by maxLinesPerSlide
- * - verse labels are `n/total`; refrain slides use `Reff` or `Chorus`
+ * Split lyrics into labeled slides following DEC-004 S7 (L1-L6):
+ * - L1: Recognize Verse, Chorus, Reff, Refrain (with or without numbers)
+ * - L2: Distinct refrains per verse preserved verbatim
+ * - L3: Bodyless refrain inherits nearest preceding non-empty refrain
+ * - L4: Slide order matches written order; no reordering / interleaving
+ * - L5: Blank lines inside a section are hard slide breaks (one paragraph, one slide)
+ * - L6: No character-budget or line-count splitting
+ * - Verse labels are `n/total`; refrains are labeled `Reff` or `Chorus`
  */
 export function splitLyricsLabeled(
   lyrics: string,
-  maxLinesPerSlide: number = 4,
   options?: SplitLyricsOptions
 ): LyricSlide[] {
-  if (maxLinesPerSlide <= 0) {
-    throw new Error('maxLinesPerSlide must be > 0');
-  }
-
   if (!lyrics?.trim()) return [];
 
   const preserveLineBreaks = options?.preserveLineBreaks === true;
 
   let sections = parseSections(lyrics);
   sections = fillEmptyRefrains(sections);
-  sections = expandTrailingRefrain(sections);
 
-  const verseTotal = sections.filter((s) => s.kind === 'verse').length;
+  const verseTotal = sections.filter(
+    (s) => s.kind === 'verse' && s.paragraphs.length > 0
+  ).length;
   const slides: LyricSlide[] = [];
 
   for (const section of sections) {
-    const chunks = chunkLines(
-      section.lines,
-      maxLinesPerSlide,
-      preserveLineBreaks
-    );
-    if (chunks.length === 0) continue;
+    if (section.paragraphs.length === 0) continue;
 
     let label = '';
     if (section.kind === 'verse') {
@@ -324,7 +237,11 @@ export function splitLyricsLabeled(
       label = 'Chorus';
     }
 
-    for (const text of chunks) {
+    for (const paragraph of section.paragraphs) {
+      if (paragraph.length === 0) continue;
+      const text = preserveLineBreaks
+        ? paragraph.join('\n')
+        : joinLinesContinuous(paragraph);
       slides.push({ label, text });
     }
   }
@@ -341,11 +258,10 @@ export function splitLyricsLabeled(
         .split('\n')
         .map((l) => l.trim())
         .filter(Boolean);
-      for (const text of chunkLines(
-        lines,
-        maxLinesPerSlide,
-        preserveLineBreaks
-      )) {
+      if (lines.length > 0) {
+        const text = preserveLineBreaks
+          ? lines.join('\n')
+          : joinLinesContinuous(lines);
         slides.push({ label: '', text });
       }
     }
@@ -357,10 +273,7 @@ export function splitLyricsLabeled(
 /** Backward-compatible plain text slides (no labels). */
 export function splitLyricsIntoSlides(
   lyrics: string,
-  maxLinesPerSlide: number = 4,
   options?: SplitLyricsOptions
 ): string[] {
-  return splitLyricsLabeled(lyrics, maxLinesPerSlide, options).map(
-    (s) => s.text
-  );
+  return splitLyricsLabeled(lyrics, options).map((s) => s.text);
 }

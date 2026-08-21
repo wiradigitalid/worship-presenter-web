@@ -57,7 +57,7 @@ Does not add a new UJ. UJ-4 (brief) for *presenting* the PPTX; UJ-2 for the revi
 
 #### FR-5: Render a song block into readable lyric slides
 
-**Proof of done:** From the pew, verse and chorus are readable; not cramped. NFR-3. Verse lines join into continuous prose (terminal punctuation → space; otherwise `"; "`). A song with at least one verse and one refrain emits Verse then Chorus after every verse. A long verse still splits when it exceeds the plan's character budget.
+**Proof of done:** From the pew, verse and chorus are readable; not cramped. NFR-3. Verse lines join into continuous prose (terminal punctuation → space; otherwise `"; "`). Sections are emitted in the order the lyric text writes them, a refrain with its own body is used verbatim and a bodyless one inherits the nearest preceding refrain, and a blank line inside a section is a hard slide break — DEC-004 Supplement S7 (L1–L6). Character-count splitting is retired: the lyric text alone decides where a slide ends.
 
 #### FR-6: Render non-song variable content
 
