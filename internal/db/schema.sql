@@ -170,3 +170,19 @@ CREATE TABLE IF NOT EXISTS service_registry_snapshots (
   PRIMARY KEY (service_id, template_id),
   FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
 );
+
+-- DEC-004 / FR-32 / FR-34: per-Service weekly Song Set input and lyric
+-- override, one row per Song Set entry. variable_name softly references the
+-- Registry's song-set-entry identity — no FK, the entry list is Registry-owned
+-- data; writes are upserts, never insert-only.
+CREATE TABLE IF NOT EXISTS song_set_inputs (
+  service_id INTEGER NOT NULL,
+  variable_name TEXT NOT NULL,
+  song_number INTEGER,
+  song_book_code TEXT,
+  background_id TEXT,
+  lyric_override TEXT,
+  updated_at TEXT,
+  PRIMARY KEY (service_id, variable_name),
+  FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+);

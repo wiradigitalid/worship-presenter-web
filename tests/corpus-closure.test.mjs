@@ -90,6 +90,11 @@ function writePattern(table) {
   );
 }
 
+/** DEC-005 / AD-36: the explicit save-to-book route is the one sanctioned operator write into hymns. */
+const ALLOWED_CORPUS_WRITES = new Set([
+  'internal/httpapi/song_sets.go writes hymns',
+]);
+
 test('no operator or administrator write path into a corpus table', () => {
   const offenders = [];
   const scan = (abs, skipRel) => {
@@ -98,7 +103,8 @@ test('no operator or administrator write path into a corpus table', () => {
     const code = stripComments(fs.readFileSync(abs, 'utf8'));
     for (const table of corpusTables) {
       if (writePattern(table).test(code)) {
-        offenders.push(`${rel} writes ${table}`);
+        const hit = `${rel} writes ${table}`;
+        if (!ALLOWED_CORPUS_WRITES.has(hit)) offenders.push(hit);
       }
     }
   };
@@ -109,12 +115,24 @@ test('no operator or administrator write path into a corpus table', () => {
 
 const localePredicate = /WHERE[\s\S]*?\blocale\b\s*(=|LIKE|IN\b|<>|!=)/i;
 
+function hasLocaleListingFilter(code) {
+  let idx = 0;
+  while (true) {
+    const hit = localePredicate.exec(code.slice(idx));
+    if (!hit) return false;
+    const between = hit[0];
+    // UPSERT … ON CONFLICT DO UPDATE SET locale = excluded.locale is not a listing filter.
+    if (!/DO\s+UPDATE\s+SET/i.test(between)) return true;
+    idx += hit.index + hit[0].length;
+  }
+}
+
 test('listing endpoints never filter corpus rows by locale', () => {
   const offenders = [];
   const scan = (abs) => {
     const rel = path.relative(repoRoot, abs).replace(/\\/g, '/');
     const code = stripComments(fs.readFileSync(abs, 'utf8'));
-    if (localePredicate.test(code)) offenders.push(rel);
+    if (hasLocaleListingFilter(code)) offenders.push(rel);
   };
   for (const abs of walkFiles('internal/httpapi', /\.go$/)) scan(abs);
   for (const rel of ['src/lib/corpus.ts', 'src/lib/scripture.ts', dbIndexRel]) {

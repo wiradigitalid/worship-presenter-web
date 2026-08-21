@@ -19,9 +19,18 @@ import (
 const (
 	artifactRegistryBootstrapKey = "artifact_registry_bootstrapped"
 	dataVersionKey               = "data_version"
-	currentDataVersion           = "5"
-	defaultSongBook              = "SDAH"
+	currentDataVersion           = "6"
+	// AD-26: the corpus code is the cross-boundary key. The shipped corpus is
+	// SDAH; a per-book settings marker (song_book_bootstrapped_<code>) gates
+	// its one-time bootstrap (DEC-005 / AD-36).
+	DefaultSongBook              = "SDAH"
 )
+
+// songBookBootstrapKey is the per-book-code settings marker parallel to
+// artifactRegistryBootstrapKey (AD-17), extended to hymns by DEC-005/AD-36.
+func songBookBootstrapKey(bookCode string) string {
+	return "song_book_bootstrapped_" + strings.ToUpper(strings.TrimSpace(bookCode))
+}
 
 func authBootstrap(handle *sql.DB) error {
 	return auth.BootstrapAdmin(handle)
@@ -41,12 +50,6 @@ func seedHub(handle *sql.DB, root string) error {
 	if err := repairPreThreeKind(handle); err != nil {
 		return err
 	}
-	if err := upsertHymns(handle, root); err != nil {
-		return err
-	}
-	if err := reconcileBible(handle, root); err != nil {
-		return err
-	}
 	if err := bootstrapRegistry(handle, root); err != nil {
 		return err
 	}
@@ -54,6 +57,19 @@ func seedHub(handle *sql.DB, root string) error {
 		return err
 	}
 	if err := migratePredefinedFields(handle); err != nil {
+		return err
+	}
+	// DEC-005/AD-36: the song-book bootstrap-once migration must run before
+	// upsertHymns so an existing install's books are marked bootstrapped and
+	// never re-seeded; upsertHymns itself must run after the migrations for
+	// the same reason. The bible reconcile (AD-25) is untouched by DEC-005.
+	if err := migrateSongBookBootstrap(handle); err != nil {
+		return err
+	}
+	if err := upsertHymns(handle, root); err != nil {
+		return err
+	}
+	if err := reconcileBible(handle, root); err != nil {
 		return err
 	}
 	return migrateSnapshots(handle)
@@ -83,9 +99,11 @@ func repairPreCounter(db *sql.DB) error {
 }
 
 var allowedBaseTypes = map[string]struct{}{
-	"general":      {},
-	"song-set":     {},
-	"announcement": {},
+	"general":        {},
+	"song-set":       {},
+	"song-set-entry": {},
+	"ann-set-marker": {},
+	"announcement":   {},
 }
 
 func repairPreThreeKind(db *sql.DB) error {
@@ -144,8 +162,16 @@ type hymnSeed struct {
 	Lyrics string `json:"lyrics"`
 }
 
+// upsertHymns is a bootstrap, not a reconcile (DEC-005 / AD-36): the corpus
+// file at data/song-book/<code>.json seeds a book the first time it is seen
+// and never again. Gated by the per-book marker parallel to AD-17's registry
+// marker; when the marker is absent it inserts only rows absent from the
+// table (ON CONFLICT DO NOTHING) and stamps the marker in the same
+// transaction. Once a book is bootstrapped its rows are administrator-owned:
+// no boot path may overwrite title or lyrics, and a gap is never refilled.
+// The bible family stays under AD-25's full reconcile (reconcileBible).
 func upsertHymns(db *sql.DB, root string) error {
-	path := filepath.Join(root, "data", "song-book", strings.ToLower(defaultSongBook)+".json")
+	path := filepath.Join(root, "data", "song-book", strings.ToLower(DefaultSongBook)+".json")
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -164,7 +190,15 @@ func upsertHymns(db *sql.DB, root string) error {
 	}
 	code := strings.ToUpper(strings.TrimSpace(file.Book.Code))
 	if code == "" {
-		code = defaultSongBook
+		code = DefaultSongBook
+	}
+	marker := songBookBootstrapKey(code)
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM settings WHERE key = ?`, marker).Scan(&n); err != nil {
+		return err
+	}
+	if n > 0 {
+		return nil
 	}
 	tx, err := db.Begin()
 	if err != nil {
@@ -174,9 +208,7 @@ func upsertHymns(db *sql.DB, root string) error {
 	stmt, err := tx.Prepare(`
 		INSERT INTO hymns (book_code, number, title, lyrics)
 		VALUES (?, ?, ?, ?)
-		ON CONFLICT(book_code, number) DO UPDATE SET
-		  title = excluded.title,
-		  lyrics = excluded.lyrics`)
+		ON CONFLICT(book_code, number) DO NOTHING`)
 	if err != nil {
 		return err
 	}
@@ -185,6 +217,12 @@ func upsertHymns(db *sql.DB, root string) error {
 		if _, err := stmt.Exec(code, h.Number, h.Title, h.Lyrics); err != nil {
 			return err
 		}
+	}
+	if _, err := tx.Exec(
+		`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+		marker, "1",
+	); err != nil {
+		return err
 	}
 	return tx.Commit()
 }

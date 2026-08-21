@@ -41,13 +41,13 @@ const OLD_KEYS = new Set([
   'youthPhoto',
 ]);
 
-test('fresh boot reaches data_version 5', () => {
+test('fresh boot reaches data_version 6', () => {
   const db = getDb();
   const row = db
     .prepare(`SELECT value FROM settings WHERE key = ?`)
     .get(DATA_VERSION_KEY);
   assert.equal(row?.value, String(CURRENT_DATA_VERSION));
-  assert.equal(CURRENT_DATA_VERSION, 5);
+  assert.equal(CURRENT_DATA_VERSION, 6);
 });
 
 test('after migration, no artifact_templates row has base_type "song-set"', () => {

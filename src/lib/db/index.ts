@@ -23,6 +23,18 @@ import { STAMP_NOW_SQL } from './stamp';
 let db: Database.Database | null = null;
 
 /**
+ * DEC-005 / AD-36: per-book-code settings marker parallel to
+ * ARTIFACT_REGISTRY_BOOTSTRAP_KEY (AD-17), extended to hymns. A book whose
+ * marker exists has been bootstrapped once; its rows are administrator-owned
+ * from then on and are never re-read from the corpus file.
+ */
+export const SONG_BOOK_BOOTSTRAP_KEY_PREFIX = 'song_book_bootstrapped_';
+
+export function songBookBootstrapKey(bookCode: string): string {
+  return SONG_BOOK_BOOTSTRAP_KEY_PREFIX + bookCode.trim().toUpperCase();
+}
+
+/**
  * `hymns` was created with `number INTEGER NOT NULL UNIQUE` — globally unique,
  * and every song book has a #1, so a second book could not be stored. SQLite
  * cannot add or drop a table constraint in place, so the table is rebuilt once.
@@ -57,30 +69,46 @@ function migrateHymnsForSongBooks(database: Database.Database) {
 }
 
 /**
- * Song book corpus rides the boot upsert it has always ridden: title and lyrics
- * are re-applied from the committed file on every boot. Whether a shipped
- * reference corpus should keep that channel is an open architecture question
- * (no AD governs it yet) — this function does not answer it, it only stops
- * reading the old un-keyed path.
+ * Song book corpus bootstrap (DEC-005 / AD-36): the corpus file at
+ * `data/song-book/<code>.json` seeds a book the first time it is seen and
+ * never again. Gated by the per-book marker; when the marker is absent it
+ * inserts only rows absent from the table (`ON CONFLICT DO NOTHING`) and
+ * stamps the marker in the same transaction. Once a book is bootstrapped its
+ * rows are administrator-owned: no boot path may overwrite `title` or
+ * `lyrics`, and a gap is never refilled — that is what lets an operator's
+ * saved lyric correction (UC-28) survive a restart. The bible family stays
+ * under AD-25's full reconcile ({@link reconcileBibleCorpus}).
+ *
+ * Exported for `tests/dec005-song-book.test.mjs`, which proves the
+ * no-resurrection and no-overwrite guarantees directly.
  */
-function upsertHymns(database: Database.Database) {
+export function upsertHymns(database: Database.Database) {
   const corpus = loadSongBookCorpus(DEFAULT_SONG_BOOK);
+  const marker = songBookBootstrapKey(corpus.code);
 
-  const upsert = database.prepare(`
+  const already = database
+    .prepare(`SELECT 1 FROM settings WHERE key = ?`)
+    .get(marker);
+  if (already) return;
+
+  const insertIfAbsent = database.prepare(`
     INSERT INTO hymns (book_code, number, title, lyrics)
     VALUES (@book_code, @number, @title, @lyrics)
-    ON CONFLICT(book_code, number) DO UPDATE SET
-      title = excluded.title,
-      lyrics = excluded.lyrics
+    ON CONFLICT(book_code, number) DO NOTHING
   `);
 
   const tx = database.transaction((rows: HymnSeed[]) => {
     for (const hymn of rows) {
-      upsert.run({ ...hymn, book_code: corpus.code });
+      insertIfAbsent.run({ ...hymn, book_code: corpus.code });
     }
+    database
+      .prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`)
+      .run(marker, '1');
   });
-
-  tx(corpus.hymns);
+  tx.immediate(corpus.hymns);
+  console.info(
+    `[corpus] bootstrapped ${corpus.hymns.length} ${corpus.code} hymn(s) from the corpus file (DEC-005/AD-36 bootstrap-once)`
+  );
 }
 
 /**
@@ -648,6 +676,22 @@ export function getDb() {
         PRIMARY KEY (service_id, template_id),
         FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
       );
+
+      -- DEC-004 / FR-32 / FR-34: per-Service weekly Song Set input and lyric
+      -- override, one row per Song Set entry. variable_name softly references
+      -- the Registry's song-set-entry identity — no FK, the entry list is
+      -- Registry-owned data; writes are upserts, never insert-only.
+      CREATE TABLE IF NOT EXISTS song_set_inputs (
+        service_id INTEGER NOT NULL,
+        variable_name TEXT NOT NULL,
+        song_number INTEGER,
+        song_book_code TEXT,
+        background_id TEXT,
+        lyric_override TEXT,
+        updated_at TEXT,
+        PRIMARY KEY (service_id, variable_name),
+        FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+      );
     `);
 
     // Migrate older DBs that predate images_payload / updated_at / participants_payload
@@ -725,15 +769,21 @@ export function getDb() {
     repairPreCounterArtifactRegistry(db);
     repairPreThreeKindArtifactRegistry(db);
 
-    // --- corpus reconcile (AD-25) ---
-    upsertHymns(db);
-    reconcileBibleCorpus(db);
-
     // --- first-boot bootstrap (AD-17) ---
     bootstrapArtifactRegistry(db);
     migrateSongSetShapeDec004(db);
     migratePredefinedFieldsDec004(db);
     migrateServiceBoundSnapshots(db);
+    migrateSongBookBootstrapDec005(db);
+
+    // --- corpus load ---
+    // DEC-005/AD-36: upsertHymns is a bootstrap-once seed and MUST run after
+    // migrateSongBookBootstrapDec005, so an existing install's books are
+    // marked first and never re-seeded. The bible reconcile (AD-25) is
+    // untouched by DEC-005.
+    upsertHymns(db);
+    reconcileBibleCorpus(db);
+
     migrateDataVersionToCurrent(db);
 
     bootstrapAdminIfEmpty(db);
@@ -1080,6 +1130,47 @@ function migratePredefinedFieldsDec004(database: Database.Database): void {
     }
   });
   tx.immediate();
+}
+
+/**
+ * DEC-005 data migration (data_version 5 → 6): stamp a per-book bootstrap
+ * marker for every book already present in `hymns`, so an existing install is
+ * never re-bootstrapped and its gaps are never refilled from the corpus file
+ * (AD-17 extended to hymns by DEC-005/AD-36). A fresh database holds no hymn
+ * rows, so no marker is stamped here; {@link upsertHymns} then seeds the book
+ * from zero and stamps the marker itself. Runs once, gated by
+ * settings.data_version.
+ *
+ * Mirrors `internal/db/migrate_song_book_bootstrap.go`.
+ *
+ * Exported for `tests/dec005-song-book.test.mjs`, same as the two repair
+ * transitions above.
+ */
+export function migrateSongBookBootstrapDec005(
+  database: Database.Database
+): void {
+  const row = database
+    .prepare(`SELECT value FROM settings WHERE key = ?`)
+    .get(DATA_VERSION_KEY) as { value: string } | undefined;
+  const version = row ? Number(row.value) : 0;
+  if (!Number.isFinite(version) || version >= 6) return;
+
+  let stamped = 0;
+  const tx = database.transaction(() => {
+    const codes = database
+      .prepare(`SELECT DISTINCT book_code FROM hymns ORDER BY book_code`)
+      .all() as { book_code: string }[];
+    stamped = codes.length;
+    const stamp = database.prepare(
+      `INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`
+    );
+    for (const c of codes) stamp.run(songBookBootstrapKey(c.book_code), '1');
+    stamp.run(DATA_VERSION_KEY, '6');
+  });
+  tx.immediate();
+  console.info(
+    `[corpus] migration 5->6: stamped ${stamped} song-book bootstrap marker(s) (DEC-005/AD-36)`
+  );
 }
 
 /** Story 25.2: stamp the write-path grain change without rewriting rows. */

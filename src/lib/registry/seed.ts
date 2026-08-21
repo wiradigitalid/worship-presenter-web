@@ -17,14 +17,15 @@ export const DATA_VERSION_KEY = 'data_version';
 
 /** W1 ships the AD-16 snapshot table as data version 2; Story 25.2 is 3.
  * DEC-004 lands the song-set physical-shape migration (3→4) and the
- * predefined-field vocabulary migration (4→5) — the bootstrap stamps the
- * shipped seed at `BOOTSTRAP_DATA_VERSION`, then the two migrations bump
- * the counter to `CURRENT_DATA_VERSION` (5) in the same boot.
+ * predefined-field vocabulary migration (4→5); DEC-005 lands the song-book
+ * bootstrap-once migration (5→6). The bootstrap stamps the shipped seed at
+ * `BOOTSTRAP_DATA_VERSION`, then the migrations bump the counter to
+ * `CURRENT_DATA_VERSION` in the same boot.
  */
 export const BOOTSTRAP_DATA_VERSION = 3;
 
-/** The full target version after every DEC-004 migration has landed. */
-export const CURRENT_DATA_VERSION = 5;
+/** The full target version after every DEC-004/DEC-005 migration has landed. */
+export const CURRENT_DATA_VERSION = 6;
 
 const SEED_PATH = path.join(process.cwd(), 'data', 'default-registry.json');
 

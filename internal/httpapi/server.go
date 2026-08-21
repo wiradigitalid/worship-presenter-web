@@ -38,6 +38,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/services/{id}", s.getService)
 	mux.HandleFunc("PUT /api/services/{id}", s.updateService)
 	mux.HandleFunc("DELETE /api/services/{id}", s.deleteService)
+	mux.HandleFunc("POST /api/services/{id}/song-sets/{variableName}/save-to-book", s.saveSongSetToBook)
 	mux.HandleFunc("GET /api/announcements", s.listAnnouncements)
 	mux.HandleFunc("POST /api/announcements", s.addAnnouncement)
 	mux.HandleFunc("PUT /api/announcements", s.replaceAnnouncements)
