@@ -1,0 +1,476 @@
+package httpapi
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"regexp"
+	"strings"
+	"time"
+	"unicode/utf8"
+
+	"github.com/wiradigitalid/worship-presenter-web/internal/db"
+	"github.com/wiradigitalid/worship-presenter-web/internal/plan"
+)
+
+// timeNowRFC3339Nano matches the updated_at convention used across the
+// registry endpoints (registry.go).
+func timeNowRFC3339Nano() string {
+	return time.Now().UTC().Format(time.RFC3339Nano)
+}
+
+// LC-11 admin CRUD for the song-set spine and the shared layout trio
+// (DEC-004 S2 / AD-31/AD-33). All routes live under /api/admin so the AD-5
+// gate plus requireAdmin cover authorization.
+
+var songSetVariableNameRE = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,79}$`)
+
+const maxSongSetTitleRunes = 120
+
+var songSetLayoutRoles = map[string]struct{}{"title": {}, "verse": {}, "reff": {}}
+
+type songSetEntry struct {
+	VariableName string `json:"variableName"`
+	Title        string `json:"title"`
+	Position     int    `json:"position"`
+	UpdatedAt    string `json:"updatedAt"`
+}
+
+func validSongSetTitle(title string) bool {
+	n := utf8.RuneCountInString(strings.TrimSpace(title))
+	return n >= 1 && n <= maxSongSetTitleRunes
+}
+
+func (s *Server) listSongSetEntries(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
+	rows, err := s.DB.Query(
+		`SELECT variable_name, label, position, updated_at FROM artifact_templates
+		  WHERE base_type = 'song-set-entry' AND variable_name IS NOT NULL
+		  ORDER BY position ASC, id ASC`,
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	defer rows.Close()
+	entries := []songSetEntry{}
+	for rows.Next() {
+		var e songSetEntry
+		if err := rows.Scan(&e.VariableName, &e.Title, &e.Position, &e.UpdatedAt); err != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		entries = append(entries, e)
+	}
+	if err := rows.Err(); err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"entries": entries})
+}
+
+// listSongSetEntriesForOperator serves GET /api/song-set-entries for any
+// signed-in Hub user (FR-32): the create/edit forms render one Song Set group
+// per Registry entry in spine order. Session-gated by the AD-5 middleware —
+// deliberately NOT admin-only, unlike the CRUD above.
+func (s *Server) listSongSetEntriesForOperator(w http.ResponseWriter, r *http.Request) {
+	if sessionFrom(r) == nil {
+		writeError(w, http.StatusForbidden, "Forbidden")
+		return
+	}
+	rows, err := s.DB.Query(
+		`SELECT variable_name, label FROM artifact_templates
+		  WHERE base_type = 'song-set-entry' AND variable_name IS NOT NULL
+		  ORDER BY position ASC, id ASC`,
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	defer rows.Close()
+	type entry struct {
+		VariableName string `json:"variableName"`
+		Title        string `json:"title"`
+	}
+	entries := []entry{}
+	for rows.Next() {
+		var e entry
+		if err := rows.Scan(&e.VariableName, &e.Title); err != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		entries = append(entries, e)
+	}
+	if err := rows.Err(); err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"entries": entries})
+}
+
+func (s *Server) createSongSetEntry(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
+	body, err, status, msg := readJSONObject(r, 1<<20)
+	if err != nil {
+		writeError(w, status, msg)
+		return
+	}
+	variableName := strings.TrimSpace(asString(body["variableName"]))
+	title := asString(body["title"])
+	if !songSetVariableNameRE.MatchString(variableName) {
+		writeError(w, http.StatusBadRequest, "Invalid variableName")
+		return
+	}
+	if !validSongSetTitle(title) {
+		writeError(w, http.StatusBadRequest, "Invalid title")
+		return
+	}
+
+	var count int
+	if err := s.DB.QueryRow(
+		`SELECT COUNT(*) FROM artifact_templates
+		  WHERE base_type = 'song-set-entry' AND variable_name = ?`,
+		variableName,
+	).Scan(&count); err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if count > 0 {
+		writeError(w, http.StatusConflict, "variableName already exists")
+		return
+	}
+
+	var maxPos sql.NullInt64
+	if err := s.DB.QueryRow(
+		`SELECT MAX(position) FROM artifact_templates`,
+	).Scan(&maxPos); err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	position := int(maxPos.Int64) + 1
+
+	id, err := s.songSetEntryID(variableName)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	now := timeNowRFC3339Nano()
+	if _, err := s.DB.Exec(
+		`INSERT INTO artifact_templates (id, label, base_type, payload, updated_at, seed_hash, position, variable_name)
+		 VALUES (?, ?, 'song-set-entry', NULL, ?, NULL, ?, ?)`,
+		id, strings.TrimSpace(title), now, position, variableName,
+	); err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	writeJSON(w, http.StatusCreated, songSetEntry{
+		VariableName: variableName,
+		Title:        strings.TrimSpace(title),
+		Position:     position,
+		UpdatedAt:    now,
+	})
+}
+
+// songSetEntryID derives a unique kebab row id for a new entry. The spine is
+// keyed by variable_name; id only has to be unique across all templates.
+func (s *Server) songSetEntryID(variableName string) (string, error) {
+	base := "song-" + strings.ReplaceAll(variableName, "_", "-")
+	candidate := base
+	for n := 2; ; n++ {
+		var count int
+		err := s.DB.QueryRow(
+			`SELECT COUNT(*) FROM artifact_templates WHERE id = ?`, candidate,
+		).Scan(&count)
+		if err != nil {
+			return "", err
+		}
+		if count == 0 {
+			return candidate, nil
+		}
+		candidate = fmt.Sprintf("%s-%d", base, n)
+	}
+}
+
+func (s *Server) patchSongSetEntry(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
+	variableName := r.PathValue("variableName")
+	body, err, status, msg := readJSONObject(r, 1<<20)
+	if err != nil {
+		writeError(w, status, msg)
+		return
+	}
+	if raw, ok := body["variableName"]; ok && strings.TrimSpace(asString(raw)) != variableName {
+		writeError(w, http.StatusBadRequest, "variableName is immutable")
+		return
+	}
+	updatedAt, _ := body["updatedAt"].(string)
+	if strings.TrimSpace(updatedAt) == "" {
+		writeError(w, http.StatusBadRequest, "updatedAt is required")
+		return
+	}
+	title := asString(body["title"])
+	if !validSongSetTitle(title) {
+		writeError(w, http.StatusBadRequest, "Invalid title")
+		return
+	}
+
+	var storedUpdated string
+	err = s.DB.QueryRow(
+		`SELECT updated_at FROM artifact_templates
+		  WHERE base_type = 'song-set-entry' AND variable_name = ?`,
+		variableName,
+	).Scan(&storedUpdated)
+	if err == sql.ErrNoRows {
+		writeError(w, http.StatusNotFound, "Not Found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if storedUpdated != updatedAt {
+		writeError(w, http.StatusConflict, "Song set entry was modified by another session")
+		return
+	}
+
+	now := timeNowRFC3339Nano()
+	res, err := s.DB.Exec(
+		`UPDATE artifact_templates SET label = ?, updated_at = ?
+		  WHERE base_type = 'song-set-entry' AND variable_name = ? AND updated_at = ?`,
+		strings.TrimSpace(title), now, variableName, updatedAt,
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		writeError(w, http.StatusConflict, "Song set entry was modified by another session")
+		return
+	}
+	var position int
+	_ = s.DB.QueryRow(
+		`SELECT position FROM artifact_templates WHERE base_type = 'song-set-entry' AND variable_name = ?`,
+		variableName,
+	).Scan(&position)
+	writeJSON(w, http.StatusOK, songSetEntry{
+		VariableName: variableName,
+		Title:        strings.TrimSpace(title),
+		Position:     position,
+		UpdatedAt:    now,
+	})
+}
+
+func (s *Server) deleteSongSetEntry(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
+	variableName := r.PathValue("variableName")
+	body, err, status, msg := readJSONObjectOptional(r, 1<<20)
+	if err != nil {
+		writeError(w, status, msg)
+		return
+	}
+	updatedAt, _ := body["updatedAt"].(string)
+	if strings.TrimSpace(updatedAt) == "" {
+		updatedAt = r.URL.Query().Get("updated_at")
+	}
+	if strings.TrimSpace(updatedAt) == "" {
+		writeError(w, http.StatusBadRequest, "updatedAt is required")
+		return
+	}
+
+	var storedUpdated string
+	err = s.DB.QueryRow(
+		`SELECT updated_at FROM artifact_templates
+		  WHERE base_type = 'song-set-entry' AND variable_name = ?`,
+		variableName,
+	).Scan(&storedUpdated)
+	if err == sql.ErrNoRows {
+		writeError(w, http.StatusNotFound, "Not Found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if storedUpdated != updatedAt {
+		writeError(w, http.StatusConflict, "Song set entry was modified by another session")
+		return
+	}
+
+	// Hub weekly values in song_set_inputs are deliberately left in place:
+	// per LC-11 they stay stored-but-inert until the name is reused.
+	res, err := s.DB.Exec(
+		`DELETE FROM artifact_templates
+		  WHERE base_type = 'song-set-entry' AND variable_name = ? AND updated_at = ?`,
+		variableName, updatedAt,
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		writeError(w, http.StatusConflict, "Song set entry was modified by another session")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"deleted": true, "variableName": variableName})
+}
+
+func songSetRoleOr404(w http.ResponseWriter, role string) bool {
+	if _, ok := songSetLayoutRoles[role]; ok {
+		return true
+	}
+	writeError(w, http.StatusNotFound, "Unknown song set layout role")
+	return false
+}
+
+func (s *Server) getSongSetLayout(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
+	role := r.PathValue("role")
+	if !songSetRoleOr404(w, role) {
+		return
+	}
+	var payload, updatedAt string
+	err := s.DB.QueryRow(
+		`SELECT payload, updated_at FROM song_set_layouts WHERE role = ?`, role,
+	).Scan(&payload, &updatedAt)
+	if err == sql.ErrNoRows {
+		writeError(w, http.StatusNotFound, "Not Found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	var layout any
+	if err := json.Unmarshal([]byte(payload), &layout); err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"role": role, "layout": layout, "updatedAt": updatedAt})
+}
+
+func (s *Server) putSongSetLayout(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
+	role := r.PathValue("role")
+	if !songSetRoleOr404(w, role) {
+		return
+	}
+	body, err, status, msg := readJSONObject(r, 1<<20)
+	if err != nil {
+		writeError(w, status, msg)
+		return
+	}
+	updatedAt, _ := body["updatedAt"].(string)
+	if strings.TrimSpace(updatedAt) == "" {
+		writeError(w, http.StatusBadRequest, "updatedAt is required")
+		return
+	}
+	rawLayout, ok := body["layout"].(map[string]any)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "layout must be an object")
+		return
+	}
+	layoutBytes, err := json.Marshal(rawLayout)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid JSON")
+		return
+	}
+	cleaned, err := plan.ValidateSongSetLayout(layoutBytes, role, s.Root)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	var storedUpdated string
+	err = s.DB.QueryRow(
+		`SELECT updated_at FROM song_set_layouts WHERE role = ?`, role,
+	).Scan(&storedUpdated)
+	if err == sql.ErrNoRows {
+		writeError(w, http.StatusNotFound, "Not Found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if storedUpdated != updatedAt {
+		writeError(w, http.StatusConflict, "Song set layout was modified by another session")
+		return
+	}
+
+	now := timeNowRFC3339Nano()
+	res, err := s.DB.Exec(
+		`UPDATE song_set_layouts SET payload = ?, updated_at = ? WHERE role = ? AND updated_at = ?`,
+		string(cleaned), now, role, updatedAt,
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		writeError(w, http.StatusConflict, "Song set layout was modified by another session")
+		return
+	}
+	var out any
+	_ = json.Unmarshal(cleaned, &out)
+	writeJSON(w, http.StatusOK, map[string]any{"role": role, "layout": out, "updatedAt": now})
+}
+
+func (s *Server) resetSongSetLayout(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
+	role := r.PathValue("role")
+	if !songSetRoleOr404(w, role) {
+		return
+	}
+	var seedHash sql.NullString
+	err := s.DB.QueryRow(
+		`SELECT seed_hash FROM song_set_layouts WHERE role = ?`, role,
+	).Scan(&seedHash)
+	if err == sql.ErrNoRows {
+		writeError(w, http.StatusNotFound, "Not Found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if !seedHash.Valid {
+		writeError(w, http.StatusConflict, "Song set layout has no recorded seed")
+		return
+	}
+	seeds, err := db.LoadSongSetLayoutSeeds(s.Root)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	payload, ok := seeds[role]
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	now := timeNowRFC3339Nano()
+	if _, err := s.DB.Exec(
+		`UPDATE song_set_layouts SET payload = ?, updated_at = ? WHERE role = ?`,
+		string(payload), now, role,
+	); err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	var out any
+	_ = json.Unmarshal(payload, &out)
+	writeJSON(w, http.StatusOK, map[string]any{"role": role, "layout": out, "updatedAt": now})
+}

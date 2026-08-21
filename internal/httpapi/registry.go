@@ -683,6 +683,9 @@ func (s *Server) syncArtifact(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	// The trio is read before the transaction opens — MaxOpenConns(1) means a
+	// query inside the tx loop would deadlock against the open rows cursor.
+	trio, _ := plan.LoadSongSetLayoutTrio(s.DB)
 	tx, err := s.DB.Begin()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -700,13 +703,28 @@ func (s *Server) syncArtifact(w http.ResponseWriter, r *http.Request) {
 	}
 	pos := 0
 	for rows.Next() {
-		var tid, label, baseType, payload, at string
-		if err := rows.Scan(&tid, &label, &baseType, &payload, &at); err != nil {
+		var tid, label, baseType, at string
+		var payloadNull sql.NullString
+		if err := rows.Scan(&tid, &label, &baseType, &payloadNull, &at); err != nil {
 			rows.Close()
 			writeError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
-		if !plan.AcceptLivePayload(tid, payload) {
+		var payload string
+		switch {
+		case baseType == "song-set-entry" && trio != nil:
+			serialized, err := plan.SongSetEntryPayloadJSON(tid, label, trio)
+			if err != nil {
+				log.Printf("[registry] template %q: song-set-entry sync skipped: %v", tid, err)
+				continue
+			}
+			payload = serialized
+		case payloadNull.Valid && payloadNull.String != "":
+			payload = payloadNull.String
+			if !plan.AcceptLivePayload(tid, payload) {
+				continue
+			}
+		default:
 			continue
 		}
 		if _, err := tx.Exec(
@@ -722,6 +740,22 @@ func (s *Server) syncArtifact(w http.ResponseWriter, r *http.Request) {
 		pos++
 	}
 	rows.Close()
+	// AD-33: freeze the live trio next to the snapshot rows so this Service's
+	// entry payloads keep rendering against the canvases they were synced with.
+	if _, err := tx.Exec(
+		`DELETE FROM service_song_set_layouts WHERE service_id = ?`, id,
+	); err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	if _, err := tx.Exec(
+		`INSERT INTO service_song_set_layouts (service_id, role, payload, updated_at)
+		 SELECT ?, role, payload, updated_at FROM song_set_layouts`,
+		id,
+	); err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
 	res, err := tx.Exec(
 		`UPDATE services SET updated_at = `+db.StampNowSQL+`, registry_snapshot_at = `+db.StampNowSQL+`
 		  WHERE id = ? AND COALESCE(updated_at, created_at) = ?`,

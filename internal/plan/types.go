@@ -34,6 +34,7 @@ type Template struct {
 	ID            string            `json:"id"`
 	Label         string            `json:"label"`
 	BaseType      string            `json:"baseType"`
+	VariableName  *string           `json:"variableName,omitempty"`
 	Placeholders  []Placeholder     `json:"placeholders"`
 	Layouts       map[string]Layout `json:"layouts"`
 }
@@ -130,8 +131,9 @@ type HymnItem struct {
 }
 
 type Snapshot struct {
-	Order []string
-	ByID  map[string]Template
+	Order      []string
+	ByID       map[string]Template
+	SongInputs map[string]HymnItem
 }
 
 func (s Snapshot) Has(id string) bool {

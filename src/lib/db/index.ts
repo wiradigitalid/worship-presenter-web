@@ -775,6 +775,7 @@ export function getDb() {
     migratePredefinedFieldsDec004(db);
     migrateServiceBoundSnapshots(db);
     migrateSongBookBootstrapDec005(db);
+    migrateSongSetInputsDec004(db);
 
     // --- corpus load ---
     // DEC-005/AD-36: upsertHymns is a bootstrap-once seed and MUST run after
@@ -1170,6 +1171,110 @@ export function migrateSongBookBootstrapDec005(
   tx.immediate();
   console.info(
     `[corpus] migration 5->6: stamped ${stamped} song-book bootstrap marker(s) (DEC-005/AD-36)`
+  );
+}
+
+/**
+ * DEC-004 S2 migration (data_version 6 -> 7): backfill song_set_inputs for the
+ * four default entries from each Service's stored parsed_data hymn buckets:
+ *
+ *   bt[0] -> opening_song_bt   bt[1] -> closing_song_bt
+ *   ds[0] -> opening_song_dw   ds[1] -> closing_song_dw
+ *
+ * Mirrors internal/db/migrate_song_set_inputs.go.
+ */
+export function migrateSongSetInputsDec004(database: Database.Database): void {
+  const row = database
+    .prepare(`SELECT value FROM settings WHERE key = ?`)
+    .get(DATA_VERSION_KEY) as { value: string } | undefined;
+  const version = row ? Number(row.value) : 0;
+  if (!Number.isFinite(version) || version >= 7) return;
+
+  const services = database
+    .prepare(
+      `SELECT id, parsed_data FROM services
+       WHERE parsed_data IS NOT NULL AND parsed_data != ''
+       ORDER BY id`
+    )
+    .all() as { id: number; parsed_data: string }[];
+
+  const liveRows = database
+    .prepare(
+      `SELECT variable_name FROM artifact_templates
+       WHERE base_type = 'song-set-entry' AND variable_name IS NOT NULL`
+    )
+    .all() as { variable_name: string }[];
+  const live = new Set(liveRows.map((r) => r.variable_name));
+
+  let migrated = 0;
+  const tx = database.transaction(() => {
+    const upsert = database.prepare(`
+      INSERT OR REPLACE INTO song_set_inputs
+        (service_id, variable_name, song_number, song_book_code, background_id, lyric_override, updated_at)
+      VALUES (?, ?, ?, '', NULL, NULL, ${STAMP_NOW_SQL})
+    `);
+
+    for (const svc of services) {
+      let parsed: { items?: Array<{ type: string; title?: string; number?: number }> };
+      try {
+        parsed = JSON.parse(svc.parsed_data);
+      } catch {
+        continue;
+      }
+      const items = Array.isArray(parsed.items) ? parsed.items : [];
+      let current: 'bt' | 'ds' | null = null;
+      const bt: number[] = [];
+      const ds: number[] = [];
+      const all: number[] = [];
+      let hasBT = false;
+      let hasDS = false;
+
+      for (const item of items) {
+        if (item.type === 'section' && typeof item.title === 'string') {
+          if (/^BIBLE\s+TALK\b/i.test(item.title)) {
+            current = 'bt';
+            hasBT = true;
+          } else if (/^DIVINE\s+SERVICE\b/i.test(item.title)) {
+            current = 'ds';
+            hasDS = true;
+          } else {
+            current = null;
+          }
+          continue;
+        }
+        if (item.type === 'hymn' && typeof item.number === 'number' && item.number > 0) {
+          all.push(item.number);
+          if (current === 'bt') bt.push(item.number);
+          else if (current === 'ds') ds.push(item.number);
+        }
+      }
+
+      const finalBt = hasBT || hasDS ? bt : all.slice(0, 2);
+      const finalDs = hasBT || hasDS ? ds : all.slice(2);
+
+      const pairs = [
+        { idx: 0, vn: 'opening_song_bt', nums: finalBt },
+        { idx: 1, vn: 'closing_song_bt', nums: finalBt },
+        { idx: 0, vn: 'opening_song_dw', nums: finalDs },
+        { idx: 1, vn: 'closing_song_dw', nums: finalDs },
+      ];
+
+      for (const p of pairs) {
+        if (p.idx < p.nums.length && live.has(p.vn)) {
+          upsert.run(svc.id, p.vn, p.nums[p.idx]);
+          migrated++;
+        }
+      }
+    }
+
+    database
+      .prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`)
+      .run(DATA_VERSION_KEY, '7');
+  });
+
+  tx.immediate();
+  console.info(
+    `[registry] migration 6->7: backfilled ${migrated} song_set_inputs row(s)`
   );
 }
 

@@ -1,0 +1,139 @@
+{
+  "title": {
+    "aspectRatio": "16:9",
+    "backgroundColor": "#000000",
+    "elements": [
+      {
+        "id": "e1",
+        "type": "shape",
+        "required": false,
+        "x": 0,
+        "y": 0,
+        "w": 100,
+        "h": 66.67,
+        "zIndex": 0,
+        "style": {
+          "fillColor": "#5C2E16"
+        }
+      },
+      {
+        "id": "e2",
+        "type": "image",
+        "required": false,
+        "x": 0,
+        "y": 60.39,
+        "w": 100,
+        "h": 39.61,
+        "zIndex": 0,
+        "imageRef": "/assets/song-title-bottom.jpeg"
+      },
+      {
+        "id": "e3",
+        "type": "text",
+        "required": false,
+        "x": 26.67,
+        "y": 21.04,
+        "w": 46.67,
+        "h": 11.45,
+        "zIndex": 1,
+        "placeholderKey": "song_number",
+        "style": {
+          "fontSize": 47.66,
+          "fontColor": "#FFFFFF",
+          "textAlign": "center"
+        }
+      },
+      {
+        "id": "e4",
+        "type": "text",
+        "required": false,
+        "x": 8.29,
+        "y": 33.12,
+        "w": 83.43,
+        "h": 8.98,
+        "zIndex": 1,
+        "placeholderKey": "song_title",
+        "style": {
+          "fontSize": 40,
+          "fontColor": "#FFFFFF",
+          "textAlign": "center"
+        }
+      }
+    ]
+  },
+  "verse": {
+    "aspectRatio": "16:9",
+    "backgroundColor": "#5C2E16",
+    "elements": [
+      {
+        "id": "e1",
+        "type": "text",
+        "required": false,
+        "x": 43.79,
+        "y": 3.33,
+        "w": 12.42,
+        "h": 9.09,
+        "zIndex": 1,
+        "placeholderKey": "verse_number",
+        "style": {
+          "fontSize": 36.57,
+          "fontColor": "#F0EEEB",
+          "textAlign": "center"
+        }
+      },
+      {
+        "id": "e2",
+        "type": "text",
+        "required": false,
+        "x": 2.08,
+        "y": 20.37,
+        "w": 95.83,
+        "h": 52.36,
+        "zIndex": 1,
+        "placeholderKey": "verse_content[]",
+        "style": {
+          "fontSize": 46.67,
+          "textAlign": "center"
+        }
+      }
+    ],
+    "backgroundImage": "/assets/song-lyric-bg.jpeg"
+  },
+  "reff": {
+    "aspectRatio": "16:9",
+    "backgroundColor": "#5C2E16",
+    "elements": [
+      {
+        "id": "e1",
+        "type": "text",
+        "required": false,
+        "x": 43.79,
+        "y": 3.33,
+        "w": 12.42,
+        "h": 9.09,
+        "zIndex": 1,
+        "style": {
+          "fontSize": 36.57,
+          "fontColor": "#F0EEEB",
+          "textAlign": "center"
+        }
+      },
+      {
+        "id": "e2",
+        "type": "text",
+        "required": false,
+        "x": 2.08,
+        "y": 20.37,
+        "w": 95.83,
+        "h": 52.36,
+        "zIndex": 1,
+        "placeholderKey": "reff[]",
+        "style": {
+          "fontSize": 46.67,
+          "textAlign": "center"
+        }
+      }
+    ],
+    "backgroundImage": "/assets/song-lyric-bg.jpeg"
+  }
+}

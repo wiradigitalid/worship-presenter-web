@@ -41,13 +41,21 @@ const OLD_KEYS = new Set([
   'youthPhoto',
 ]);
 
-test('fresh boot reaches data_version 6', () => {
+test('fresh boot reaches data_version 7', () => {
   const db = getDb();
   const row = db
     .prepare(`SELECT value FROM settings WHERE key = ?`)
     .get(DATA_VERSION_KEY);
   assert.equal(row?.value, String(CURRENT_DATA_VERSION));
-  assert.equal(CURRENT_DATA_VERSION, 6);
+  assert.equal(CURRENT_DATA_VERSION, 7);
+});
+
+test('fresh boot leaves no song_set_inputs rows (nothing to backfill)', () => {
+  const db = getDb();
+  const row = db
+    .prepare(`SELECT COUNT(*) AS n FROM song_set_inputs`)
+    .get();
+  assert.equal(row.n, 0, 'a fresh install has no services to backfill from');
 });
 
 test('after migration, no artifact_templates row has base_type "song-set"', () => {

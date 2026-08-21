@@ -11,7 +11,7 @@ import (
 var structuredKeys = []string{
 	"themeVerse", "verseReading", "familyYouth", "familyPrayerRequest",
 	"youthPrayerRequest", "sermon", "specialSong", "closingPrayerPerson",
-	"song1Number", "song2Number", "song3Number", "song4Number",
+	"songSets",
 	"sermonSpeaker", "sermonTitle",
 }
 
@@ -84,12 +84,37 @@ func ApplyStructuredFields(db *sql.DB, parsed *Rundown, body map[string]any) {
 		applyClosingItem(parsed)
 	}
 	if db != nil {
-		for i, key := range []string{"song1Number", "song2Number", "song3Number", "song4Number"} {
-			if v, ok := src[key]; ok {
-				if n := CoerceSongNumber(v); n != nil {
-					applySongOverlay(db, parsed, i, *n)
-				}
-			}
+		if v, ok := src["songSets"]; ok {
+			validateSongSetNumbers(db, parsed, v)
+		}
+	}
+}
+
+// validateSongSetNumbers checks each Song Set entry's song number against the
+// hymn corpus (DEC-004 / FR-32). The weekly inputs themselves are persisted by
+// the Hub write path into song_set_inputs, keyed by variable_name — parsed_data
+// no longer carries positional hymn overlays. A number whose lyrics cannot be
+// resolved is reported through FailedHymnNumbers; a number that resolves is
+// cleared from that list so a corrected entry stops warning.
+func validateSongSetNumbers(db *sql.DB, parsed *Rundown, v any) {
+	m, ok := v.(map[string]any)
+	if !ok {
+		return
+	}
+	for _, entry := range m {
+		em, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		n := CoerceSongNumber(em["songNumber"])
+		if n == nil {
+			continue
+		}
+		_, _, incomplete := LookupHymn(db, *n)
+		if incomplete {
+			parsed.FailedHymnNumbers = appendUniqueInt(parsed.FailedHymnNumbers, *n)
+		} else {
+			parsed.FailedHymnNumbers = withoutInt(parsed.FailedHymnNumbers, *n)
 		}
 	}
 }
@@ -255,163 +280,6 @@ func CoerceSongNumber(v any) *int {
 		}
 	}
 	return nil
-}
-
-func applySongOverlay(db *sql.DB, parsed *Rundown, slot, number int) {
-	title, lyrics, incomplete := LookupHymn(db, number)
-	hymn := Item{Type: "hymn", Number: number, Title: title, Lyrics: lyrics, Incomplete: incomplete}
-	bt, ds := bucketHymns(parsed.Items)
-	target := ds
-	idxInBucket := slot % 2
-	if slot < 2 {
-		target = bt
-	}
-	if idxInBucket < len(target) {
-		old := target[idxInBucket]
-		for i := range parsed.Items {
-			if parsed.Items[i].Type == "hymn" && parsed.Items[i].Number == old.Number && parsed.Items[i].Title == old.Title {
-				hymn.Timing = parsed.Items[i].Timing
-				parsed.Items[i] = hymn
-				if old.Number != number {
-					parsed.FailedHymnNumbers = withoutInt(parsed.FailedHymnNumbers, old.Number)
-				}
-				if incomplete {
-					parsed.FailedHymnNumbers = appendUniqueInt(parsed.FailedHymnNumbers, number)
-				} else {
-					parsed.FailedHymnNumbers = withoutInt(parsed.FailedHymnNumbers, number)
-				}
-				return
-			}
-		}
-	}
-	if incomplete {
-		parsed.FailedHymnNumbers = appendUniqueInt(parsed.FailedHymnNumbers, number)
-	} else {
-		parsed.FailedHymnNumbers = withoutInt(parsed.FailedHymnNumbers, number)
-	}
-	section := "ds"
-	if slot < 2 {
-		section = "bt"
-	}
-	insertHymnInSection(&parsed.Items, section, idxInBucket, hymn)
-}
-
-type hymnRef struct {
-	Number int
-	Title  string
-}
-
-func bucketHymns(items []Item) (bt, ds []hymnRef) {
-	hasBT, hasDS := false, false
-	var all []hymnRef
-	for _, it := range items {
-		if it.Type == "hymn" {
-			all = append(all, hymnRef{it.Number, it.Title})
-		}
-		if it.Type == "section" {
-			if regexp.MustCompile(`(?i)^BIBLE\s+TALK\b`).MatchString(it.Title) {
-				hasBT = true
-			}
-			if regexp.MustCompile(`(?i)^DIVINE\s+SERVICE\b`).MatchString(it.Title) {
-				hasDS = true
-			}
-		}
-	}
-	if !hasBT && !hasDS {
-		if len(all) > 2 {
-			return all[:2], all[2:]
-		}
-		return all, nil
-	}
-	section := ""
-	for _, it := range items {
-		if it.Type == "section" {
-			if regexp.MustCompile(`(?i)^BIBLE\s+TALK\b`).MatchString(it.Title) {
-				section = "bt"
-			} else if regexp.MustCompile(`(?i)^DIVINE\s+SERVICE\b`).MatchString(it.Title) {
-				section = "ds"
-			} else {
-				section = ""
-			}
-			continue
-		}
-		if it.Type != "hymn" {
-			continue
-		}
-		ref := hymnRef{it.Number, it.Title}
-		if section == "bt" {
-			bt = append(bt, ref)
-		} else if section == "ds" {
-			ds = append(ds, ref)
-		}
-	}
-	return bt, ds
-}
-
-func insertHymnInSection(items *[]Item, section string, slot int, hymn Item) {
-	list := *items
-	current := ""
-	hymnsInSection := 0
-	for i, it := range list {
-		if it.Type == "section" {
-			if regexp.MustCompile(`(?i)^BIBLE\s+TALK\b`).MatchString(it.Title) {
-				current = "bt"
-			} else if regexp.MustCompile(`(?i)^DIVINE\s+SERVICE\b`).MatchString(it.Title) {
-				current = "ds"
-			} else {
-				current = ""
-			}
-			continue
-		}
-		if it.Type != "hymn" || current != section {
-			continue
-		}
-		if hymnsInSection == slot {
-			*items = append(list[:i], append([]Item{hymn}, list[i:]...)...)
-			return
-		}
-		hymnsInSection++
-	}
-	sectionTitle := "DIVINE SERVICE"
-	if section == "bt" {
-		sectionTitle = "BIBLE TALK"
-	}
-	hasSection := false
-	for _, it := range list {
-		if it.Type == "section" && strings.EqualFold(it.Title, sectionTitle) {
-			hasSection = true
-			break
-		}
-	}
-	if !hasSection {
-		list = append(list, Item{Type: "section", Title: sectionTitle})
-	}
-	last := -1
-	current = ""
-	for i, it := range list {
-		if it.Type == "section" {
-			if regexp.MustCompile(`(?i)^BIBLE\s+TALK\b`).MatchString(it.Title) {
-				current = "bt"
-			} else if regexp.MustCompile(`(?i)^DIVINE\s+SERVICE\b`).MatchString(it.Title) {
-				current = "ds"
-			} else {
-				current = ""
-			}
-			if current == section {
-				last = i
-			}
-			continue
-		}
-		if current == section {
-			last = i
-		}
-	}
-	if last >= 0 {
-		list = append(list[:last+1], append([]Item{hymn}, list[last+1:]...)...)
-	} else {
-		list = append(list, hymn)
-	}
-	*items = list
 }
 
 func withoutInt(xs []int, n int) []int {

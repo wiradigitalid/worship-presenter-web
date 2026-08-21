@@ -84,6 +84,8 @@ export default function RunSheetPage() {
         id={svc.id}
         initialPayload={svc.raw_payload || ''}
         initialParsed={svc.parsed_data}
+        initialSongSets={svc.songSets}
+        hymnIndex={[]}
         initialSermonGraphicUrl={images.sermonGraphicUrl || ''}
         initialFamilyPhotoUrl={images.familyPhotoUrl || ''}
         initialYouthPhotoUrl={images.youthPhotoUrl || ''}

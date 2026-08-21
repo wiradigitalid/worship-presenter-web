@@ -46,7 +46,7 @@ after(() => {
   }
 });
 
-test('fieldsFromParsed hydrates songs, sermon, and verse from ParsedRundown', () => {
+test('fieldsFromParsed hydrates sermon and verse from ParsedRundown', () => {
   const raw = `SABBATH, JULY 25, 2026
 BIBLE TALK
 Opening Song: SDAH #1
@@ -63,21 +63,18 @@ Family of the Week: Pray for the Smiths`;
   const parsed = normalizeParsedRundown(parseRundown(raw));
   const fields = fieldsFromParsed(parsed);
 
-  assert.equal(fields.song1Number, '1');
-  assert.equal(fields.song2Number, '2');
-  assert.equal(fields.song3Number, '3');
-  assert.equal(fields.song4Number, '4');
+  assert.deepEqual(fields.songSets, {});
   assert.equal(fields.sermonSpeaker, 'Pastor Adam');
   assert.ok(fields.verseReference.includes('Acts') || fields.verseReference.length >= 0);
   assert.equal(fields.specialSong, 'Youth Choir');
 });
 
-test('buildFieldsPayload empty songs are null; empty sermon is null', () => {
+test('buildFieldsPayload serializes songSets; empty sermon is null', () => {
   const payload = buildFieldsPayload({
-    song1Number: '',
-    song2Number: '  ',
-    song3Number: '12',
-    song4Number: '',
+    songSets: {
+      opening_song_bt: { songNumber: '1', songBookCode: '', background: '', lyricText: '' },
+      closing_song_bt: { songNumber: '', songBookCode: '', background: '', lyricText: '' },
+    },
     verseReference: '',
     verseText: '',
     verseTranslation: '',
@@ -87,19 +84,15 @@ test('buildFieldsPayload empty songs are null; empty sermon is null', () => {
     familyPrayerRequest: '',
     youthPrayerRequest: '',
   });
-  assert.equal(payload.song1Number, null);
-  assert.equal(payload.song2Number, null);
-  assert.equal(payload.song3Number, '12');
+  assert.equal(payload.songSets.opening_song_bt.songNumber, 1);
+  assert.equal(payload.songSets.closing_song_bt.songNumber, null);
   assert.equal(payload.sermon, null);
 });
 
 test('buildFieldsPayload persists the translation beside a resolved passage', () => {
   const payload = buildFieldsPayload({
     ...{
-      song1Number: '',
-      song2Number: '',
-      song3Number: '',
-      song4Number: '',
+      songSets: {},
       verseReference: 'John 3:16',
       verseText: 'For God so loved the world',
       verseTranslation: 'kjv',
@@ -114,7 +107,7 @@ test('buildFieldsPayload persists the translation beside a resolved passage', ()
   assert.equal(payload.verseReading.translation, 'KJV');
 });
 
-test('empty song overlays do not remove hymns from raw parse', () => {
+test('empty songSets do not remove hymns from raw parse', () => {
   const raw = `SABBATH, JULY 25, 2026
 DIVINE SERVICE
 Opening Song: SDAH #159
@@ -125,15 +118,41 @@ Sermon: Pastor Adam`;
   assert.ok(beforeCount >= 1);
 
   parsed = applyStructuredFields(parsed, {
-    song1Number: null,
-    song2Number: null,
-    song3Number: null,
-    song4Number: null,
+    songSets: {},
     sermon: null,
   });
   const afterHymns = parsed.items.filter((i) => i.type === 'hymn');
   assert.equal(afterHymns.length, beforeCount);
   assert.equal(parsed.sermon, null);
+});
+
+test('applyStructuredFields reports unresolved song-set numbers and clears resolved ones', () => {
+  const raw = `SABBATH, JULY 25, 2026
+DIVINE SERVICE
+Sermon: Pastor Adam`;
+
+  const parsed = normalizeParsedRundown(parseRundown(raw));
+  // A stale failure from an earlier save must be cleared once the number resolves.
+  parsed.failedHymnNumbers = [159, 9999];
+
+  applyStructuredFields(parsed, {
+    songSets: {
+      opening_song_dw: {
+        songNumber: 159,
+        songBookCode: null,
+        background: null,
+        lyricText: null,
+      },
+      closing_song_dw: {
+        songNumber: '9999',
+        songBookCode: null,
+        background: null,
+        lyricText: null,
+      },
+    },
+  });
+
+  assert.deepEqual(parsed.failedHymnNumbers, [9999]);
 });
 
 test('filterHymnIndex matches number or title', () => {
@@ -315,7 +334,12 @@ test('a failed hymn lookup does not erase what the operator typed', () => {
 test('coerceHydrateFields rejects non-objects', () => {
   assert.equal(coerceHydrateFields(null), null);
   assert.equal(coerceHydrateFields('x'), null);
-  const h = coerceHydrateFields({ song1Number: '10', sermonSpeaker: 'Ada' });
-  assert.equal(h?.song1Number, '10');
+  const h = coerceHydrateFields({
+    songSets: {
+      opening_song_bt: { songNumber: 10, songBookCode: '', background: '', lyricText: '' },
+    },
+    sermonSpeaker: 'Ada',
+  });
+  assert.equal(h?.songSets?.opening_song_bt?.songNumber, '10');
   assert.equal(h?.sermonSpeaker, 'Ada');
 });

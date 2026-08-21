@@ -166,7 +166,10 @@ describe('registry against Go', { concurrency: 1 }, () => {
   test('Admin list is the bootstrapped ordered registry', async () => {
     const templates = await list();
     assert.ok(templates.length > 1);
-    assert.ok(templates.some((t) => t.id === 'song-set'));
+    assert.ok(
+      templates.some((t) => t.baseType === 'song-set-entry' && t.id === 'bt-opening-song'),
+      'expected a default song-set-entry spine row after migration'
+    );
     const welcome = templates.find((t) => t.id === 'welcome');
     assert.equal(welcome?.resettable, true);
   });
@@ -280,28 +283,30 @@ describe('registry against Go', { concurrency: 1 }, () => {
     );
   });
 
-  test('Admin rename updates every kind and both label homes', async () => {
-    const templates = await list();
-    const songSet = templates.find((t) => t.id === 'song-set');
-    assert.ok(songSet);
-    const renamed = await json(`${base}/api/admin/artifacts/song-set`, 'PATCH', {
-      label: 'Song set (go)',
-      updatedAt: songSet.updatedAt,
-    });
+  test('Admin rename updates song-set entry title via LC-11', async () => {
+    const entries = await json(`${base}/api/admin/song-set-entries`);
+    assert.equal(entries.status, 200);
+    const opening = entries.body.entries?.find((e) => e.variableName === 'opening_song_bt');
+    assert.ok(opening, 'expected opening_song_bt entry');
+    const renamed = await json(
+      `${base}/api/admin/song-set-entries/opening_song_bt`,
+      'PATCH',
+      { title: 'Opening song (go)', updatedAt: opening.updatedAt }
+    );
     assert.equal(renamed.status, 200, JSON.stringify(renamed.body));
-    assert.equal(renamed.body.label, 'Song set (go)');
+    assert.equal(renamed.body.title, 'Opening song (go)');
 
-    const loaded = await json(`${base}/api/admin/artifacts/song-set`);
-    assert.equal(loaded.status, 200);
-    assert.equal(loaded.body.label, 'Song set (go)');
+    const listed = await json(`${base}/api/admin/song-set-entries`);
+    assert.equal(
+      listed.body.entries?.find((e) => e.variableName === 'opening_song_bt')?.title,
+      'Opening song (go)'
+    );
 
-    const listed = await list();
-    assert.equal(listed.find((t) => t.id === 'song-set')?.label, 'Song set (go)');
-
-    const stale = await json(`${base}/api/admin/artifacts/song-set`, 'PATCH', {
-      label: 'stale',
-      updatedAt: songSet.updatedAt,
-    });
+    const stale = await json(
+      `${base}/api/admin/song-set-entries/opening_song_bt`,
+      'PATCH',
+      { title: 'stale', updatedAt: opening.updatedAt }
+    );
     assert.equal(stale.status, 409);
   });
 
@@ -325,20 +330,24 @@ describe('registry against Go', { concurrency: 1 }, () => {
     }
   });
 
-  test('Admin delete removes song-set and keeps a compact list', async () => {
-    const before = await list();
-    const songSet = before.find((t) => t.id === 'song-set');
-    assert.ok(songSet);
-    const res = await json(`${base}/api/admin/artifacts/${songSet.id}`, 'DELETE', {
-      updatedAt: songSet.updatedAt,
-    });
-    assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.ok(!res.body.templates.some((t) => t.id === 'song-set'));
-    const after = await list();
-    assert.deepEqual(
-      after.map((t) => t.id),
-      res.body.templates.map((t) => t.id)
+  test('Admin delete removes a song-set entry and keeps a compact list', async () => {
+    const before = await json(`${base}/api/admin/song-set-entries`);
+    assert.equal(before.status, 200);
+    const target = before.body.entries?.find((e) => e.variableName === 'closing_song_dw');
+    assert.ok(target, 'expected closing_song_dw entry');
+    const res = await json(
+      `${base}/api/admin/song-set-entries/closing_song_dw`,
+      'DELETE',
+      { updatedAt: target.updatedAt }
     );
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.ok(
+      !res.body.entries?.some((e) => e.variableName === 'closing_song_dw'),
+      'deleted entry must leave the list'
+    );
+    const after = await json(`${base}/api/admin/song-set-entries`);
+    assert.equal(after.status, 200);
+    assert.ok(!after.body.entries?.some((e) => e.variableName === 'closing_song_dw'));
   });
 
   test('stale delete token is 409', async () => {

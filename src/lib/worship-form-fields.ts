@@ -1,12 +1,29 @@
 import type { ParsedRundown } from './parser';
-import { bucketHymnsBySection } from './hymn-sections';
+
+/**
+ * One Song Set weekly input group, keyed by the Registry entry's
+ * `variable_name` (DEC-004 / FR-32). Numbers stay strings in form state and
+ * become numbers only in the API payload.
+ */
+export type SongSetEntryInput = {
+  songNumber: string;
+  songBookCode: string;
+  background: string;
+  lyricText: string;
+};
+
+export type SongSetInputs = Record<string, SongSetEntryInput>;
+
+export const EMPTY_SONG_SET_ENTRY: SongSetEntryInput = {
+  songNumber: '',
+  songBookCode: '',
+  background: '',
+  lyricText: '',
+};
 
 /** Client-safe worship form field state (overlays only). */
 export type WorshipFormFields = {
-  song1Number: string;
-  song2Number: string;
-  song3Number: string;
-  song4Number: string;
+  songSets: SongSetInputs;
   verseReference: string;
   verseText: string;
   verseTranslation: string;
@@ -20,10 +37,7 @@ export type WorshipFormFields = {
 export type HymnIndexEntry = { number: number; title: string };
 
 export const EMPTY_WORSHIP_FORM_FIELDS: WorshipFormFields = {
-  song1Number: '',
-  song2Number: '',
-  song3Number: '',
-  song4Number: '',
+  songSets: {},
   verseReference: '',
   verseText: '',
   verseTranslation: '',
@@ -34,48 +48,15 @@ export const EMPTY_WORSHIP_FORM_FIELDS: WorshipFormFields = {
   youthPrayerRequest: '',
 };
 
-/**
- * Read song overlay numbers from parsed hymn buckets (for form hydrate).
- * Safe for client bundles — no SQLite / parseRundown.
- */
-export function songNumbersFromParsed(parsed: ParsedRundown | null): {
-  song1Number: string;
-  song2Number: string;
-  song3Number: string;
-  song4Number: string;
-} {
-  if (!parsed) {
-    return {
-      song1Number: '',
-      song2Number: '',
-      song3Number: '',
-      song4Number: '',
-    };
-  }
-  const buckets = bucketHymnsBySection(parsed.items);
-  return {
-    song1Number: buckets.bibleTalkHymns[0]
-      ? String(buckets.bibleTalkHymns[0].number)
-      : '',
-    song2Number: buckets.bibleTalkHymns[1]
-      ? String(buckets.bibleTalkHymns[1].number)
-      : '',
-    song3Number: buckets.divineServiceHymns[0]
-      ? String(buckets.divineServiceHymns[0].number)
-      : '',
-    song4Number: buckets.divineServiceHymns[1]
-      ? String(buckets.divineServiceHymns[1].number)
-      : '',
-  };
-}
-
 /** Map ParsedRundown → overlay form fields (Parse hydrate / edit initial). */
 export function fieldsFromParsed(
   parsed: ParsedRundown | null
 ): WorshipFormFields {
-  const songs = songNumbersFromParsed(parsed);
+  // Song sets are weekly inputs owned by song_set_inputs (DEC-004), not
+  // parsed_data overlays — parsed hydrate starts them empty and the edit form
+  // fills them from the Service's own stored rows instead.
   return {
-    ...songs,
+    songSets: {},
     verseReference: parsed?.verseReading?.reference ?? '',
     verseText: parsed?.verseReading?.text ?? '',
     verseTranslation: parsed?.verseReading?.translation ?? '',
@@ -109,11 +90,40 @@ export function buildFieldsPayload(fields: WorshipFormFields) {
       : null,
     specialSong: fields.specialSong.trim() || null,
     closingPrayerPerson: fields.closingPrayerPerson.trim() || null,
-    song1Number: fields.song1Number.trim() || null,
-    song2Number: fields.song2Number.trim() || null,
-    song3Number: fields.song3Number.trim() || null,
-    song4Number: fields.song4Number.trim() || null,
+    songSets: songSetsToPayload(fields.songSets),
   };
+}
+
+/**
+ * Form state → API shape for `fields.songSets`. Every rendered entry is sent,
+ * including fully-cleared ones, so an upsert stores NULLs and a previously
+ * saved number stops resolving (LC-12). A non-integer draft never becomes a
+ * number — free text is not a hymn number.
+ */
+export function songSetsToPayload(
+  inputs: SongSetInputs
+): Record<
+  string,
+  {
+    songNumber: number | null;
+    songBookCode: string | null;
+    background: string | null;
+    lyricText: string | null;
+  }
+> {
+  const out: ReturnType<typeof songSetsToPayload> = {};
+  for (const [name, entry] of Object.entries(inputs)) {
+    const trimmedName = name.trim();
+    if (!trimmedName) continue;
+    const raw = (entry?.songNumber ?? '').trim();
+    out[trimmedName] = {
+      songNumber: /^\d+$/.test(raw) ? Number(raw) : null,
+      songBookCode: entry?.songBookCode.trim() || null,
+      background: entry?.background.trim() || null,
+      lyricText: entry?.lyricText.trim() || null,
+    };
+  }
+  return out;
 }
 
 /** Display label for hymn inputs: `159 - O Worship the King`. */
@@ -222,8 +232,8 @@ export type HymnDraftResolution =
   | { kind: 'keep' };
 
 /**
- * Decide what a blurred hymn draft writes into `song*Number`. Pure, so the
- * failure branches are unit-testable without a DOM.
+ * Decide what a blurred hymn draft writes into a hymn number input. Pure, so
+ * the failure branches are unit-testable without a DOM.
  *
  * `fetched` carries the state of the `/api/hymns` title lookup:
  * - `undefined` — not attempted yet; a free-text draft answers
@@ -275,16 +285,46 @@ export function resolveHymnDraft({
   return { kind: 'commit', value: /^\d+$/.test(current) ? current : '' };
 }
 
+/** Coerce one stored song-set entry (unknown-safe) into form state. */
+export function coerceSongSetEntry(raw: unknown): SongSetEntryInput {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ...EMPTY_SONG_SET_ENTRY };
+  }
+  const o = raw as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === 'string' ? v : '');
+  const number = o.songNumber;
+  return {
+    songNumber:
+      typeof number === 'number' && Number.isSafeInteger(number)
+        ? String(number)
+        : str(number),
+    songBookCode: str(o.songBookCode),
+    background: str(o.background),
+    lyricText: str(o.lyricText),
+  };
+}
+
+/** Coerce a `songSets` map (unknown-safe) into form state, keyed by variableName. */
+export function coerceSongSetInputs(raw: unknown): SongSetInputs {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out: SongSetInputs = {};
+  for (const [name, value] of Object.entries(
+    raw as Record<string, unknown>
+  )) {
+    const trimmed = name.trim();
+    if (!trimmed) continue;
+    out[trimmed] = coerceSongSetEntry(value);
+  }
+  return out;
+}
+
 /** Coerce API hydrate object into WorshipFormFields (unknown-safe). */
 export function coerceHydrateFields(raw: unknown): WorshipFormFields | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const o = raw as Record<string, unknown>;
   const str = (v: unknown) => (typeof v === 'string' ? v : '');
   return {
-    song1Number: str(o.song1Number),
-    song2Number: str(o.song2Number),
-    song3Number: str(o.song3Number),
-    song4Number: str(o.song4Number),
+    songSets: coerceSongSetInputs(o.songSets),
     verseReference: str(o.verseReference),
     verseText: str(o.verseText),
     verseTranslation: str(o.verseTranslation),

@@ -96,16 +96,23 @@ func songGroup(hymn HymnItem, idPrefix, templateID string) []node {
 	})
 	if !hymn.Incomplete && strings.TrimSpace(hymn.Lyrics) != "" {
 		for i, lyric := range SplitLyricsLabeled(hymn.Lyrics, 4) {
-			vals := map[string]interface{}{"verse_content[]": lyric.Text}
-			if lyric.Label != "" {
-				vals["verse_number"] = lyric.Label
+			vals := map[string]interface{}{}
+			layoutKey := "verse"
+			if lyric.Label == "Reff" || lyric.Label == "Chorus" {
+				layoutKey = "reff"
+				vals["reff[]"] = lyric.Text
+			} else {
+				vals["verse_content[]"] = lyric.Text
+				if lyric.Label != "" {
+					vals["verse_number"] = lyric.Label
+				}
 			}
 			children = append(children, groupChild{
 				role: "lyric",
 				req: request{
 					id:         fmt.Sprintf("%s-lyric-%d", idPrefix, i+1),
 					templateID: templateID,
-					layoutKey:  "lyric",
+					layoutKey:  layoutKey,
 					values:     vals,
 				},
 			})
@@ -284,15 +291,25 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 	case "prayer-partners":
 		return leaf(request{id: "prayer-partners", templateID: "prayer-partners"})
 	case "bt-opening-song-cue":
-		if len(c.bibleTalkHymns) == 0 {
+		if !hasSongForCue(id, snap) && len(c.bibleTalkHymns) == 0 {
 			return nil
 		}
 		return leaf(request{id: "bt-opening-song-cue", templateID: "bt-opening-song-cue"})
-	case "bt-opening-song":
-		if len(c.bibleTalkHymns) == 0 {
+	case "bt-closing-song-cue":
+		if !hasSongForCue(id, snap) && len(c.bibleTalkHymns) < 2 {
 			return nil
 		}
-		return songGroup(c.bibleTalkHymns[0], "bt-opening", "bt-opening-song")
+		return leaf(request{id: "bt-closing-song-cue", templateID: "bt-closing-song-cue"})
+	case "ds-opening-song-cue":
+		if !hasSongForCue(id, snap) && c.dsOpening == nil {
+			return nil
+		}
+		return leaf(request{id: "ds-opening-song-cue", templateID: "ds-opening-song-cue"})
+	case "ds-closing-song-cue":
+		if !hasSongForCue(id, snap) && c.dsClosing == nil {
+			return nil
+		}
+		return leaf(request{id: "ds-closing-song-cue", templateID: "ds-closing-song-cue"})
 	case "verse-reading":
 		if c.verseReading == nil {
 			return nil
@@ -308,16 +325,6 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 		return leaf(request{id: "bt-opening-prayer", templateID: "opening-prayer"})
 	case "bible-talk":
 		return leaf(request{id: "bible-talk", templateID: "bible-talk"})
-	case "bt-closing-song-cue":
-		if len(c.bibleTalkHymns) < 2 {
-			return nil
-		}
-		return leaf(request{id: "bt-closing-song-cue", templateID: "bt-closing-song-cue"})
-	case "bt-closing-song":
-		if len(c.bibleTalkHymns) < 2 {
-			return nil
-		}
-		return songGroup(c.bibleTalkHymns[1], "bt-closing", "bt-closing-song")
 	case "closing-prayer":
 		return leaf(request{id: "bt-closing-prayer", templateID: "closing-prayer"})
 	case "break-time":
@@ -333,16 +340,6 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 		return leaf(request{
 			id: "theme-verse", templateID: "bible-verse-contemplation", values: vals,
 		})
-	case "ds-opening-song-cue":
-		if c.dsOpening == nil {
-			return nil
-		}
-		return leaf(request{id: "ds-opening-song-cue", templateID: "ds-opening-song-cue"})
-	case "ds-opening-song":
-		if c.dsOpening == nil {
-			return nil
-		}
-		return songGroup(*c.dsOpening, "ds-opening", "ds-opening-song")
 	case "intercessory-prayer":
 		return leaf(request{id: "intercessory-prayer", templateID: "intercessory-prayer"})
 	case "intercessory-671-lyric-1":
@@ -351,12 +348,6 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 		return leaf(request{id: "intercessory-prayer-during", templateID: "intercessory-prayer-during"})
 	case "intercessory-684-lyric-1":
 		return fixedLyric("intercessory-684-lyric-1")
-	case "song-set":
-		var out []node
-		for i, h := range c.dsMiddle {
-			out = append(out, songGroup(h, fmt.Sprintf("ds-middle-%d", i), "song-set")...)
-		}
-		return out
 	case "special-song":
 		if c.specialSong == "" {
 			return nil
@@ -383,16 +374,6 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 			values: map[string]interface{}{"sermon_poster": *c.sermonGraphic},
 			fade:   &fade,
 		})
-	case "ds-closing-song-cue":
-		if c.dsClosing == nil {
-			return nil
-		}
-		return leaf(request{id: "ds-closing-song-cue", templateID: "ds-closing-song-cue"})
-	case "ds-closing-song":
-		if c.dsClosing == nil {
-			return nil
-		}
-		return songGroup(*c.dsClosing, "ds-closing", "ds-closing-song")
 	case "closing-prayer-ds":
 		if c.closingPrayer == "" {
 			return nil
@@ -464,11 +445,79 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 		return leaf(request{id: "thank-you", templateID: "thank-you"})
 	default:
 		tmpl, ok := snap.ByID[id]
-		if ok && tmpl.BaseType == "general" {
-			return leaf(request{id: id, templateID: id, values: catalogValues(c)})
+		if ok {
+			if tmpl.BaseType == "song-set-entry" {
+				vn := tmpl.ID
+				if tmpl.VariableName != nil && *tmpl.VariableName != "" {
+					vn = *tmpl.VariableName
+				}
+				hymn, hasSong := snap.SongInputs[vn]
+				if !hasSong {
+					// Fallback to legacy parsed rundown bucket if available for default positions
+					switch vn {
+					case "opening_song_bt":
+						if len(c.bibleTalkHymns) > 0 {
+							hymn = c.bibleTalkHymns[0]
+							hasSong = true
+						}
+					case "closing_song_bt":
+						if len(c.bibleTalkHymns) > 1 {
+							hymn = c.bibleTalkHymns[1]
+							hasSong = true
+						}
+					case "opening_song_dw":
+						if c.dsOpening != nil {
+							hymn = *c.dsOpening
+							hasSong = true
+						}
+					case "closing_song_dw":
+						if c.dsClosing != nil {
+							hymn = *c.dsClosing
+							hasSong = true
+						}
+					}
+				}
+				if hasSong {
+					prefix := "song-" + strings.ReplaceAll(vn, "_", "-")
+					if tmpl.ID == "bt-opening-song" {
+						prefix = "bt-opening"
+					} else if tmpl.ID == "bt-closing-song" {
+						prefix = "bt-closing"
+					} else if tmpl.ID == "ds-opening-song" {
+						prefix = "ds-opening"
+					} else if tmpl.ID == "ds-closing-song" {
+						prefix = "ds-closing"
+					}
+					return songGroup(hymn, prefix, tmpl.ID)
+				}
+				return nil
+			}
+			if tmpl.BaseType == "general" {
+				return leaf(request{id: id, templateID: id, values: catalogValues(c)})
+			}
 		}
 		return nil
 	}
+}
+
+func hasSongForCue(cueID string, snap Snapshot) bool {
+	var targetVn string
+	switch cueID {
+	case "bt-opening-song-cue":
+		targetVn = "opening_song_bt"
+	case "bt-closing-song-cue":
+		targetVn = "closing_song_bt"
+	case "ds-opening-song-cue":
+		targetVn = "opening_song_dw"
+	case "ds-closing-song-cue":
+		targetVn = "closing_song_dw"
+	}
+	if targetVn != "" {
+		if _, ok := snap.SongInputs[targetVn]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func hydrateOne(snap Snapshot, r request, group *GroupRef, c ctx) (*DrawItem, error) {

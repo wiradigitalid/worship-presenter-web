@@ -35,6 +35,7 @@ import {
 import {
   buildFieldsPayload,
   coerceHydrateFields,
+  coerceSongSetInputs,
   fieldsFromParsed,
   type HymnIndexEntry,
   type WorshipFormFields,
@@ -69,6 +70,7 @@ export default function EditForm({
   id,
   initialPayload,
   initialParsed = null,
+  initialSongSets = null,
   initialSermonGraphicUrl = '',
   initialFamilyPhotoUrl = '',
   initialYouthPhotoUrl = '',
@@ -81,6 +83,8 @@ export default function EditForm({
   id: number;
   initialPayload: string;
   initialParsed?: ParsedRundown | null;
+  /** Stored weekly inputs from the Service payload (song_set_inputs rows). */
+  initialSongSets?: unknown;
   initialSermonGraphicUrl?: string;
   initialFamilyPhotoUrl?: string;
   initialYouthPhotoUrl?: string;
@@ -105,9 +109,36 @@ export default function EditForm({
     () => mapAnnouncements(initialAnnouncements)
   );
 
-  const [fields, setFields] = useState<WorshipFormFields>(() =>
-    fieldsFromParsed(initialParsed)
-  );
+  const [fields, setFields] = useState<WorshipFormFields>(() => ({
+    ...fieldsFromParsed(initialParsed),
+    // Parsed hydrate starts song sets empty (DEC-004: weekly inputs live in
+    // song_set_inputs, not parsed_data) — fill them from the Service payload.
+    songSets: coerceSongSetInputs(initialSongSets),
+  }));
+  const [songSetEntries, setSongSetEntries] = useState<
+    Array<{ variableName: string; title: string }>
+  >([]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const res = await fetch('/api/song-set-entries');
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          entries?: Array<{ variableName: string; title: string }>;
+        };
+        if (active && Array.isArray(data.entries)) {
+          setSongSetEntries(data.entries);
+        }
+      } catch {
+        // Non-blocking fallback
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
   const [updatedAt, setUpdatedAt] = useState(initialUpdatedAt);
   const [isSaving, setIsSaving] = useState(false);
   const [parseLoading, setParseLoading] = useState(false);
@@ -148,7 +179,12 @@ export default function EditForm({
   }, [initialAnnouncements]);
 
   useEffect(() => {
-    setFields(fieldsFromParsed(initialParsed));
+    setFields({
+      ...fieldsFromParsed(initialParsed),
+      songSets: coerceSongSetInputs(initialSongSets),
+    });
+    // initialSongSets rides with the same server payload as initialParsed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialParsed]);
 
   // CAP-5 live preview whenever payload is non-empty (create-parity; not gated)
@@ -238,6 +274,27 @@ export default function EditForm({
   useEffect(() => {
     fieldsRef.current = fields;
   }, [fields]);
+
+  const setSongSetField = (
+    variableName: string,
+    subField: 'songNumber' | 'songBookCode' | 'background' | 'lyricText',
+    value: string
+  ) => {
+    setFields((prev) => {
+      const current = prev.songSets[variableName] || {
+        songNumber: '',
+        songBookCode: '',
+        background: '',
+        lyricText: '',
+      };
+      const updated = {
+        ...prev.songSets,
+        [variableName]: { ...current, [subField]: value },
+      };
+      fieldsRef.current = { ...fieldsRef.current, songSets: updated };
+      return { ...prev, songSets: updated };
+    });
+  };
 
   const setField = <K extends keyof WorshipFormFields>(
     key: K,
@@ -585,6 +642,51 @@ export default function EditForm({
           <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
             <CardHeader>
               <CardTitle className="text-lg font-bold">
+                Song Sets
+              </CardTitle>
+              <CardDescription>
+                Weekly song assignments across service sections.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {songSetEntries.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">
+                  No song set entries configured in registry.
+                </p>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {songSetEntries.map((entry) => {
+                    const current = fields.songSets[entry.variableName] || {
+                      songNumber: '',
+                      songBookCode: '',
+                      background: '',
+                      lyricText: '',
+                    };
+                    return (
+                      <div key={entry.variableName}>
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                          {entry.title}
+                        </label>
+                        <HymnNumberAutocomplete
+                          value={current.songNumber}
+                          onChange={(v) =>
+                            setSongSetField(entry.variableName, 'songNumber', v)
+                          }
+                          hymnIndex={hymnIndex}
+                          placeholder={t('form.hymnPlaceholder')}
+                          disabled={isSaving}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold">
                 {t('form.bibleTalk.title')}
               </CardTitle>
               <CardDescription>
@@ -592,32 +694,6 @@ export default function EditForm({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                      {t('form.openingSong')}
-                  </label>
-                  <HymnNumberAutocomplete
-                    value={fields.song1Number}
-                    onChange={(v) => setField('song1Number', v)}
-                    hymnIndex={hymnIndex}
-                    placeholder={t('form.hymnPlaceholder')}
-                    disabled={isSaving}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                      {t('form.closingSong')}
-                  </label>
-                  <HymnNumberAutocomplete
-                    value={fields.song2Number}
-                    onChange={(v) => setField('song2Number', v)}
-                    hymnIndex={hymnIndex}
-                    placeholder={t('form.hymnPlaceholder')}
-                    disabled={isSaving}
-                  />
-                </div>
-              </div>
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="sm:col-span-1">
                   <div className="flex justify-between items-center mb-1.5">
@@ -666,32 +742,8 @@ export default function EditForm({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4">
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                      {t('form.openingSong')}
-                  </label>
-                  <HymnNumberAutocomplete
-                    value={fields.song3Number}
-                    onChange={(v) => setField('song3Number', v)}
-                    hymnIndex={hymnIndex}
-                    placeholder={t('form.hymnPlaceholder')}
-                    disabled={isSaving}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                      {t('form.closingSong')}
-                  </label>
-                  <HymnNumberAutocomplete
-                    value={fields.song4Number}
-                    onChange={(v) => setField('song4Number', v)}
-                    hymnIndex={hymnIndex}
-                    placeholder={t('form.hymnPlaceholder')}
-                    disabled={isSaving}
-                  />
-                </div>
-                <div className="sm:col-span-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
                     {t('form.specialSong')}
                   </label>

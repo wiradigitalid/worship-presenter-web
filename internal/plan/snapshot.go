@@ -3,7 +3,9 @@ package plan
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
+	"strings"
 )
 
 // AcceptLivePayload reports whether a live registry row may be cloned into a
@@ -29,9 +31,10 @@ func AcceptLivePayload(id, payload string) bool {
 // loadTemplates builds a snapshot from open Rows. trio must be loaded before
 // opening rows — never query the DB from here (MaxOpenConns(1) deadlock).
 func loadTemplates(rows *sql.Rows, useTemplateID bool, trio *songSetLayoutTrio) Snapshot {
-	snap := Snapshot{ByID: map[string]Template{}}
+	snap := Snapshot{ByID: map[string]Template{}, SongInputs: map[string]HymnItem{}}
 	for rows.Next() {
 		var id, label, baseType, updatedAt string
+		var varName sql.NullString
 		var payloadNull sql.NullString
 		if useTemplateID {
 			if err := rows.Scan(&id, &label, &baseType, &payloadNull, &updatedAt); err != nil {
@@ -39,13 +42,17 @@ func loadTemplates(rows *sql.Rows, useTemplateID bool, trio *songSetLayoutTrio) 
 				continue
 			}
 		} else {
-			if err := rows.Scan(&id, &label, &baseType, &payloadNull, &updatedAt); err != nil {
+			if err := rows.Scan(&id, &label, &baseType, &payloadNull, &updatedAt, &varName); err != nil {
 				log.Printf("[registry] scan failed: %v", err)
 				continue
 			}
 		}
 		if baseType == "song-set-entry" && trio != nil {
 			tmpl := composeSongSetEntryTemplate(id, label, trio)
+			if varName.Valid && varName.String != "" {
+				s := varName.String
+				tmpl.VariableName = &s
+			}
 			snap.Order = append(snap.Order, id)
 			snap.ByID[id] = tmpl
 			continue
@@ -59,14 +66,42 @@ func loadTemplates(rows *sql.Rows, useTemplateID bool, trio *songSetLayoutTrio) 
 		}
 		var tmpl Template
 		_ = json.Unmarshal([]byte(payload), &tmpl)
+		if varName.Valid && varName.String != "" {
+			s := varName.String
+			tmpl.VariableName = &s
+		}
 		snap.Order = append(snap.Order, id)
 		snap.ByID[id] = tmpl
 	}
 	return snap
 }
 
+// loadSongSetLayoutTrioFor prefers the Service's frozen AD-33 trio over the
+// live one: once a Service has been cloned (or Sync Artifact has run), its
+// song-set-entry payloads must keep rendering against the canvases they were
+// frozen with, even after an admin edits the live trio. Services without a
+// freeze — and the live preview, serviceID 0 — read the live trio.
+func loadSongSetLayoutTrioFor(db *sql.DB, serviceID int) (*songSetLayoutTrio, error) {
+	if serviceID > 0 {
+		var n int
+		err := db.QueryRow(
+			`SELECT COUNT(*) FROM service_song_set_layouts WHERE service_id = ?`,
+			serviceID,
+		).Scan(&n)
+		if err == nil && n > 0 {
+			return loadSongSetLayoutTrioQuery(
+				db,
+				`SELECT role, payload FROM service_song_set_layouts WHERE service_id = ?`,
+				serviceID,
+			)
+		}
+	}
+	return loadSongSetLayoutTrio(db)
+}
+
 func LoadSnapshot(db *sql.DB, serviceID int) (Snapshot, error) {
-	trio, _ := loadSongSetLayoutTrio(db)
+	trio, _ := loadSongSetLayoutTrioFor(db, serviceID)
+	var snap Snapshot
 	var n int
 	if err := db.QueryRow(
 		`SELECT COUNT(*) FROM service_registry_snapshots WHERE service_id = ?`,
@@ -86,16 +121,57 @@ func LoadSnapshot(db *sql.DB, serviceID int) (Snapshot, error) {
 			return Snapshot{}, err
 		}
 		defer rows.Close()
-		return loadTemplates(rows, true, trio), rows.Err()
+		snap = loadTemplates(rows, true, trio)
+	} else {
+		rows, err := db.Query(
+			`SELECT id, label, base_type, payload, updated_at, variable_name FROM artifact_templates ORDER BY position`,
+		)
+		if err != nil {
+			return Snapshot{}, err
+		}
+		defer rows.Close()
+		snap = loadTemplates(rows, false, trio)
+	}
+
+	if serviceID > 0 && db != nil {
+		loadSongSetInputsIntoSnapshot(db, serviceID, &snap)
+	}
+
+	return snap, nil
+}
+
+func loadSongSetInputsIntoSnapshot(db *sql.DB, serviceID int, snap *Snapshot) {
+	if snap.SongInputs == nil {
+		snap.SongInputs = map[string]HymnItem{}
 	}
 	rows, err := db.Query(
-		`SELECT id, label, base_type, payload, updated_at FROM artifact_templates ORDER BY position`,
+		`SELECT ssi.variable_name, ssi.song_number, COALESCE(ssi.song_book_code, ''),
+		        COALESCE(h.title, ''), COALESCE(ssi.lyric_override, h.lyrics, '')
+		   FROM song_set_inputs ssi
+		   LEFT JOIN hymns h ON h.number = ssi.song_number
+		  WHERE ssi.service_id = ? AND ssi.song_number IS NOT NULL AND ssi.song_number > 0`,
+		serviceID,
 	)
 	if err != nil {
-		return Snapshot{}, err
+		return
 	}
 	defer rows.Close()
-	return loadTemplates(rows, false, trio), rows.Err()
+	for rows.Next() {
+		var vn, book, title, lyrics string
+		var num int
+		if err := rows.Scan(&vn, &num, &book, &title, &lyrics); err != nil {
+			continue
+		}
+		if title == "" {
+			title = fmt.Sprintf("SDAH %d", num)
+		}
+		snap.SongInputs[vn] = HymnItem{
+			Number:     num,
+			Title:      title,
+			Lyrics:     lyrics,
+			Incomplete: strings.TrimSpace(lyrics) == "",
+		}
+	}
 }
 
 func LoadMedia(db *sql.DB, serviceID int, imagesPayload sql.NullString) Media {

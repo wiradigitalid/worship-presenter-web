@@ -1,11 +1,19 @@
-import type {
-  ParsedItem,
+﻿import type {
   ParsedRundown,
   ParsedScripture,
   ParsedSermon,
 } from './parser';
 import { lookupHymn, parseScriptureValue } from './parser';
-import { bucketHymnsBySection } from './hymn-sections';
+
+/** One Song Set weekly input as sent by the Hub form (DEC-004 / FR-32). */
+export type SongSetEntryPayload = {
+  songNumber?: number | string | null;
+  songBookCode?: string | null;
+  background?: string | null;
+  lyricText?: string | null;
+};
+
+export type SongSetPayloadMap = Record<string, SongSetEntryPayload>;
 
 export type StructuredServiceFields = {
   themeVerse?: ParsedScripture | null;
@@ -17,10 +25,8 @@ export type StructuredServiceFields = {
   sermon?: ParsedSermon | null;
   specialSong?: string | null;
   closingPrayerPerson?: string | null;
-  song1Number?: string | null;
-  song2Number?: string | null;
-  song3Number?: string | null;
-  song4Number?: string | null;
+  /** Weekly inputs keyed by Registry variable_name â€” persisted via song_set_inputs. */
+  songSets?: SongSetPayloadMap | null;
 };
 
 function coerceScripture(value: unknown): ParsedScripture | null | undefined {
@@ -49,7 +55,7 @@ function coerceSpecialSong(value: unknown): string | null | undefined {
   if (value === null) return null;
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
-  if (!trimmed || trimmed === '-' || trimmed === '—' || /^none$/i.test(trimmed)) {
+  if (!trimmed || trimmed === '-' || trimmed === 'â€”' || /^none$/i.test(trimmed)) {
     return null;
   }
   return trimmed;
@@ -62,23 +68,43 @@ function coerceNullableString(value: unknown): string | null | undefined {
   return value.trim() || null;
 }
 
-function coerceSongNumber(value: unknown): string | null | undefined {
-  if (value === undefined) return undefined;
-  if (value === null) return null;
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(Math.trunc(value));
-  }
-  if (typeof value !== 'string') return undefined;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const m = trimmed.match(/(\d{1,4})/);
-  return m ? m[1] : null;
+function coerceNullableTrimmed(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  return value.trim() || null;
 }
 
-function parseSongNumber(value: string | null | undefined): number | null {
-  if (!value) return null;
-  const n = Number.parseInt(value, 10);
+/** A non-integer draft never becomes a number â€” free text is not a hymn number. */
+function coerceEntrySongNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const n = Math.trunc(value);
+    return n > 0 ? n : null;
+  }
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const n = Number.parseInt(trimmed, 10);
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function coerceSongSets(value: unknown): SongSetPayloadMap | null {
+  if (value === null) return null;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const out: SongSetPayloadMap = {};
+  for (const [name, raw] of Object.entries(value as Record<string, unknown>)) {
+    const trimmed = name.trim();
+    if (!trimmed) continue;
+    const entry =
+      raw && typeof raw === 'object' && !Array.isArray(raw)
+        ? (raw as SongSetEntryPayload)
+        : {};
+    out[trimmed] = {
+      songNumber: coerceEntrySongNumber(entry.songNumber),
+      songBookCode: coerceNullableTrimmed(entry.songBookCode),
+      background: coerceNullableTrimmed(entry.background),
+      lyricText: coerceNullableTrimmed(entry.lyricText),
+    };
+  }
+  return out;
 }
 
 /** Parse optional structured patch fields from a PUT/POST body. */
@@ -167,19 +193,11 @@ export function coerceStructuredFields(
     }
   }
 
-  for (const key of [
-    'song1Number',
-    'song2Number',
-    'song3Number',
-    'song4Number',
-  ] as const) {
-    if (Object.prototype.hasOwnProperty.call(src, key)) {
-      const v = coerceSongNumber((src as Record<string, unknown>)[key]);
-      if (v !== undefined) {
-        fields[key] = v;
-        any = true;
-      }
-    }
+  if (Object.prototype.hasOwnProperty.call(src, 'songSets')) {
+    fields.songSets = coerceSongSets((src as { songSets?: unknown }).songSets);
+    // Presence alone counts: an empty map still drives the song_set_inputs
+    // upsert (clearing stored rows) on the server write path.
+    any = true;
   }
 
   const flat = src as {
@@ -202,128 +220,33 @@ export function coerceStructuredFields(
   return any ? fields : null;
 }
 
-function isBibleTalkSection(title: string): boolean {
-  return /^BIBLE\s+TALK\b/i.test(title);
-}
-
-function isDivineServiceSection(title: string): boolean {
-  return /^DIVINE\s+SERVICE\b/i.test(title);
-}
-
-/** Insert hymn after the Nth hymn already in the target section (0-based slot). */
-function insertHymnInSection(
-  items: ParsedItem[],
-  section: 'bt' | 'ds',
-  slotInSection: number,
-  hymnItem: Extract<ParsedItem, { type: 'hymn' }>
-): void {
-  let current: 'bt' | 'ds' | null = null;
-  let hymnsInSection = 0;
-  let insertAt = items.length;
-
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    if (item.type === 'section') {
-      if (isBibleTalkSection(item.title)) current = 'bt';
-      else if (isDivineServiceSection(item.title)) current = 'ds';
-      else current = null;
-      continue;
-    }
-    if (item.type !== 'hymn' || current !== section) continue;
-    if (hymnsInSection === slotInSection) {
-      insertAt = i;
-      items.splice(insertAt, 0, hymnItem);
-      return;
-    }
-    hymnsInSection += 1;
-    insertAt = i + 1;
-  }
-
-  // Section missing or fewer hymns than slot: ensure section marker then append.
-  const sectionTitle = section === 'bt' ? 'BIBLE TALK' : 'DIVINE SERVICE';
-  const hasSection = items.some(
-    (i) =>
-      i.type === 'section' &&
-      (section === 'bt'
-        ? isBibleTalkSection(i.title)
-        : isDivineServiceSection(i.title))
-  );
-  if (!hasSection) {
-    items.push({ type: 'section', title: sectionTitle });
-  }
-  // Append after last item of that section if present
-  let lastInSection = -1;
-  current = null;
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    if (item.type === 'section') {
-      if (isBibleTalkSection(item.title)) current = 'bt';
-      else if (isDivineServiceSection(item.title)) current = 'ds';
-      else current = null;
-      if (current === section) lastInSection = i;
-      continue;
-    }
-    if (current === section) lastInSection = i;
-  }
-  if (lastInSection >= 0) {
-    items.splice(lastInSection + 1, 0, hymnItem);
-  } else {
-    items.push(hymnItem);
-  }
-}
-
-function applySongOverlay(
+/**
+ * Validate each Song Set entry's number against the hymn corpus (DEC-004 /
+ * FR-32). The weekly inputs themselves are persisted by the Hub write path
+ * into song_set_inputs, keyed by variable_name â€” parsed_data no longer carries
+ * positional hymn overlays. A number whose lyrics cannot be resolved is
+ * reported through failedHymnNumbers; a number that resolves is cleared from
+ * that list so a corrected entry stops warning.
+ */
+function validateSongSetNumbers(
   parsed: ParsedRundown,
-  slot: 0 | 1 | 2 | 3,
-  number: number
+  sets: SongSetPayloadMap | null | undefined
 ): void {
-  const found = lookupHymn(number);
-  const hymnItem: Extract<ParsedItem, { type: 'hymn' }> = {
-    type: 'hymn',
-    number,
-    title: found.title,
-    lyrics: found.lyrics,
-    incomplete: found.incomplete,
-  };
-
-  const buckets = bucketHymnsBySection(parsed.items);
-  const targetBucket =
-    slot < 2 ? buckets.bibleTalkHymns : buckets.divineServiceHymns;
-  const idxInBucket = slot % 2;
-  const existing = targetBucket[idxInBucket];
-
-  if (existing) {
-    const itemIdx = parsed.items.indexOf(existing);
-    if (itemIdx >= 0) {
-      const oldNumber = existing.number;
-      parsed.items[itemIdx] = { ...hymnItem, timing: existing.timing };
-      // Prune failed number for replaced incomplete hymn
-      if (oldNumber !== number) {
-        parsed.failedHymnNumbers = parsed.failedHymnNumbers.filter(
-          (n) => n !== oldNumber
-        );
+  if (!sets) return;
+  for (const entry of Object.values(sets)) {
+    const n = coerceEntrySongNumber(entry?.songNumber);
+    if (n == null) continue;
+    const found = lookupHymn(n);
+    if (found.incomplete) {
+      if (!parsed.failedHymnNumbers.includes(n)) {
+        parsed.failedHymnNumbers.push(n);
       }
-      if (found.incomplete && !parsed.failedHymnNumbers.includes(number)) {
-        parsed.failedHymnNumbers.push(number);
-      } else if (!found.incomplete) {
-        parsed.failedHymnNumbers = parsed.failedHymnNumbers.filter(
-          (n) => n !== number
-        );
-      }
-      return;
+    } else {
+      parsed.failedHymnNumbers = parsed.failedHymnNumbers.filter(
+        (x) => x !== n
+      );
     }
   }
-
-  if (found.incomplete && !parsed.failedHymnNumbers.includes(number)) {
-    parsed.failedHymnNumbers.push(number);
-  } else if (!found.incomplete) {
-    parsed.failedHymnNumbers = parsed.failedHymnNumbers.filter(
-      (n) => n !== number
-    );
-  }
-
-  const section = slot < 2 ? 'bt' : 'ds';
-  insertHymnInSection(parsed.items, section, idxInBucket, hymnItem);
 }
 
 /** Overlay structured fields onto a ParsedRundown (in place). */
@@ -346,7 +269,7 @@ export function applyStructuredFields(
     if (fields.youthPrayerRequest !== undefined) {
       parsed.youthPrayerRequest = fields.youthPrayerRequest;
     }
-    // Split fields are source of truth — clear legacy combined text
+    // Split fields are source of truth â€” clear legacy combined text
     parsed.familyYouth = null;
   }
   if (fields.specialSong !== undefined) parsed.specialSong = fields.specialSong;
@@ -388,7 +311,7 @@ export function applyStructuredFields(
     );
     if (fields.sermon) {
       const name = fields.sermon.title
-        ? `${fields.sermon.speaker} — ${fields.sermon.title}`
+        ? `${fields.sermon.speaker} â€” ${fields.sermon.title}`
         : fields.sermon.speaker;
       if (idx >= 0) {
         parsed.items[idx] = { type: 'role', role: 'Sermon', name };
@@ -416,32 +339,17 @@ export function applyStructuredFields(
     }
   }
 
-  const songSlots: Array<{
-    key: keyof StructuredServiceFields;
-    slot: 0 | 1 | 2 | 3;
-  }> = [
-    { key: 'song1Number', slot: 0 },
-    { key: 'song2Number', slot: 1 },
-    { key: 'song3Number', slot: 2 },
-    { key: 'song4Number', slot: 3 },
-  ];
-  for (const { key, slot } of songSlots) {
-    if (fields[key] === undefined) continue;
-    const n = parseSongNumber(fields[key] as string | null);
-    if (n != null) applySongOverlay(parsed, slot, n);
-  }
+  validateSongSetNumbers(parsed, fields.songSets);
 
   return parsed;
 }
-
-export { songNumbersFromParsed } from './worship-form-fields';
 
 /** Normalize legacy parsed_data JSON missing newer keys. */
 export function normalizeParsedRundown(parsed: ParsedRundown): ParsedRundown {
   const familyYouth = parsed.familyYouth ?? null;
   let familyPrayerRequest = parsed.familyPrayerRequest ?? null;
   let youthPrayerRequest = parsed.youthPrayerRequest ?? null;
-  // Legacy combined field → family prayer when split fields empty.
+  // Legacy combined field â†’ family prayer when split fields empty.
   // applyStructuredFields clears familyYouth when split fields are saved.
   if (!familyPrayerRequest && !youthPrayerRequest && familyYouth) {
     familyPrayerRequest = familyYouth;

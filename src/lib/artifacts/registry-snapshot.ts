@@ -82,7 +82,7 @@ function placeholdersFromLayouts(
 }
 
 export function composeSongSetEntryTemplate(
-  row: { id: string; label: string; updated_at: string },
+  row: { id: string; label: string; updated_at: string; variable_name?: string },
   trio: SongSetLayoutTrio
 ): StoredArtifactTemplate {
   return {
@@ -90,6 +90,7 @@ export function composeSongSetEntryTemplate(
     id: row.id,
     label: row.label,
     baseType: 'song-set-entry',
+    variableName: row.variable_name,
     placeholders: placeholdersFromLayouts(trio.title, trio.verse, trio.reff),
     layouts: {
       title: trio.title,
@@ -169,11 +170,11 @@ export function loadRegistrySnapshot(db?: Database.Database): RegistrySnapshot {
   const trio = loadSongSetLayoutTrio(database);
   const rows = database
     .prepare(
-      `SELECT id, label, base_type, payload, updated_at
+      `SELECT id, label, base_type, payload, updated_at, variable_name
          FROM artifact_templates
          ORDER BY position`
     )
-    .all() as StoredTemplateRow[];
+    .all() as (StoredTemplateRow & { variable_name?: string })[];
 
   const snapshot = new Map<string, StoredArtifactTemplate>();
   for (const row of rows) {
@@ -181,7 +182,12 @@ export function loadRegistrySnapshot(db?: Database.Database): RegistrySnapshot {
       snapshot.set(
         row.id,
         composeSongSetEntryTemplate(
-          { id: row.id, label: row.label ?? row.id, updated_at: row.updated_at },
+          {
+            id: row.id,
+            label: row.label ?? row.id,
+            updated_at: row.updated_at,
+            variable_name: row.variable_name,
+          },
           trio
         )
       );

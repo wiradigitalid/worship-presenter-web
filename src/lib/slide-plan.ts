@@ -364,11 +364,6 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
         ]
       : [],
 
-  'bt-opening-song': (ctx) =>
-    ctx.bibleTalkHymns[0]
-      ? songGroupNodes(ctx.bibleTalkHymns[0], 'bt-opening', 'bt-opening-song')
-      : [],
-
   'verse-reading': (ctx) =>
     ctx.verseReading
       ? [
@@ -418,11 +413,6 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
             },
           }),
         ]
-      : [],
-
-  'bt-closing-song': (ctx) =>
-    ctx.bibleTalkHymns[1]
-      ? songGroupNodes(ctx.bibleTalkHymns[1], 'bt-closing', 'bt-closing-song')
       : [],
 
   'closing-prayer': () => [
@@ -485,11 +475,6 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
         ]
       : [],
 
-  'ds-opening-song': (ctx) =>
-    ctx.dsOpening
-      ? songGroupNodes(ctx.dsOpening, 'ds-opening', 'ds-opening-song')
-      : [],
-
   'intercessory-prayer': () => [
     leaf({
       id: 'intercessory-prayer',
@@ -517,14 +502,6 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
   ],
 
   'intercessory-684-lyric-1': () => [fixedLyricLeaf('intercessory-684-lyric-1')],
-
-  // The unbounded ds-middle expansion (Dev Notes → Five transitional SongSet
-  // entries): every Divine Service hymn that is neither the opening nor the
-  // closing song, and is not the #671/#684 standing pair.
-  'song-set': (ctx) =>
-    ctx.dsMiddle.flatMap((hymn, idx) =>
-      songGroupNodes(hymn, `ds-middle-${idx}`, 'song-set')
-    ),
 
   'special-song': (ctx) =>
     ctx.specialSong
@@ -571,26 +548,6 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
             legacy: { kind: 'image', imageUrl: ctx.sermonGraphic, fade: false },
           }),
         ]
-      : [],
-
-  'ds-closing-song-cue': (ctx) =>
-    ctx.dsClosing
-      ? [
-          leaf({
-            id: 'ds-closing-song-cue',
-            templateId: 'ds-closing-song-cue',
-            legacy: {
-              kind: 'divider',
-              title: 'Closing Song',
-              subtitle: 'Congregation, please stand',
-            },
-          }),
-        ]
-      : [],
-
-  'ds-closing-song': (ctx) =>
-    ctx.dsClosing
-      ? songGroupNodes(ctx.dsClosing, 'ds-closing', 'ds-closing-song')
       : [],
 
   'closing-prayer-ds': (ctx) =>
@@ -788,7 +745,36 @@ function buildRequestPlan(
       continue;
     }
     const template = snapshot.get(id);
-    if (template?.baseType !== 'general') continue;
+    if (!template) continue;
+    if (template.baseType === 'song-set-entry') {
+      let hymn: HymnItem | undefined;
+      // Map variable name to hymn
+      const vn = template.variableName || template.id;
+      switch (vn) {
+        case 'opening_song_bt':
+          hymn = ctx.bibleTalkHymns[0];
+          break;
+        case 'closing_song_bt':
+          hymn = ctx.bibleTalkHymns[1];
+          break;
+        case 'opening_song_dw':
+          hymn = ctx.dsOpening;
+          break;
+        case 'closing_song_dw':
+          hymn = ctx.dsClosing;
+          break;
+      }
+      if (hymn) {
+        let prefix = `song-${vn.replace(/_/g, '-')}`;
+        if (template.id === 'bt-opening-song') prefix = 'bt-opening';
+        else if (template.id === 'bt-closing-song') prefix = 'bt-closing';
+        else if (template.id === 'ds-opening-song') prefix = 'ds-opening';
+        else if (template.id === 'ds-closing-song') prefix = 'ds-closing';
+        nodes.push(...songGroupNodes(hymn, prefix, template.id));
+      }
+      continue;
+    }
+    if (template.baseType !== 'general') continue;
     const label = template.label;
     nodes.push(
       leaf({

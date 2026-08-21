@@ -93,6 +93,10 @@ function writePattern(table) {
 /** DEC-005 / AD-36: the explicit save-to-book route is the one sanctioned operator write into hymns. */
 const ALLOWED_CORPUS_WRITES = new Set([
   'internal/httpapi/song_sets.go writes hymns',
+  // Hub weekly inputs — not corpus hymn/book data (DEC-004 song_set_inputs).
+  'internal/httpapi/services.go writes song_set_inputs',
+  // Admin registry trio — not song-book corpus (DEC-004 song_set_layouts).
+  'internal/httpapi/song_set_entries.go writes song_set_layouts',
 ]);
 
 test('no operator or administrator write path into a corpus table', () => {

@@ -137,6 +137,13 @@ func (s *Server) createService(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, _ := res.LastInsertId()
+	if sets := songSetInputsFromBody(body); sets != nil {
+		if err := upsertSongSetInputs(tx, id, sets); err != nil {
+			log.Printf("Error creating service: %v", err)
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		log.Printf("Error creating service: %v", err)
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -165,6 +172,76 @@ func (s *Server) createService(w http.ResponseWriter, r *http.Request) {
 func boolFrom(v any) bool {
 	b, _ := v.(bool)
 	return b
+}
+
+// songSetInputsFromBody extracts the Song Set weekly inputs from a create or
+// update body (DEC-004 / FR-32). The Hub form sends them under
+// `fields.songSets`, keyed by the Registry entry's variable_name; a top-level
+// `songSets` is accepted for parity with the other structured fields. A nil
+// result means the body carries no song-set section and stored rows are left
+// untouched.
+func songSetInputsFromBody(body map[string]any) map[string]any {
+	if m, ok := body["songSets"].(map[string]any); ok {
+		return m
+	}
+	if f, ok := body["fields"].(map[string]any); ok {
+		if m, ok := f["songSets"].(map[string]any); ok {
+			return m
+		}
+	}
+	return nil
+}
+
+func nullableTrimmedString(v any) any {
+	s, ok := v.(string)
+	if !ok {
+		return nil
+	}
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+// upsertSongSetInputs writes one song_set_inputs row per entry (LC-12: upsert,
+// never insert-only). Entry shape per `.how/hub/05-model/form-fields.md`:
+// `{ songNumber, songBookCode?, background?, lyricText? }`; an absent or empty
+// value stores NULL so resolution falls through to the defaults (Supplement
+// S3/S4, BR-7). Keys that cannot be a Registry variable_name are skipped —
+// they can never match a live entry and would only litter the table.
+func upsertSongSetInputs(tx *sql.Tx, serviceID int64, sets map[string]any) error {
+	const q = `INSERT INTO song_set_inputs
+	  (service_id, variable_name, song_number, song_book_code, background_id, lyric_override, updated_at)
+	  VALUES (?, ?, ?, ?, ?, ?, ?)
+	  ON CONFLICT(service_id, variable_name) DO UPDATE SET
+	    song_number = excluded.song_number,
+	    song_book_code = excluded.song_book_code,
+	    background_id = excluded.background_id,
+	    lyric_override = excluded.lyric_override,
+	    updated_at = excluded.updated_at`
+	now := timeNowRFC3339Nano()
+	for name, raw := range sets {
+		if !songSetVariableNameRE.MatchString(strings.TrimSpace(name)) {
+			continue
+		}
+		var number any
+		if em, ok := raw.(map[string]any); ok {
+			if n := parse.CoerceSongNumber(em["songNumber"]); n != nil {
+				number = *n
+			}
+		}
+		var book, background, lyric any
+		if em, ok := raw.(map[string]any); ok {
+			book = nullableTrimmedString(em["songBookCode"])
+			background = nullableTrimmedString(em["background"])
+			lyric = nullableTrimmedString(em["lyricText"])
+		}
+		if _, err := tx.Exec(q, serviceID, strings.TrimSpace(name), number, book, background, lyric, now); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func narrowCreatePayload(body map[string]any) (images map[string]any, participants any, announcements []worshipAnnouncement, errMsg string) {
@@ -251,6 +328,7 @@ func (s *Server) getService(w http.ResponseWriter, r *http.Request) {
 		ParsedData    json.RawMessage `json:"parsed_data"`
 		ImagesPayload json.RawMessage `json:"images_payload"`
 		Participants  any             `json:"participants_payload"`
+		SongSets      map[string]any  `json:"songSets"`
 		CreatedAt     string          `json:"created_at"`
 		UpdatedAt     string          `json:"updated_at"`
 		Plan          any             `json:"plan"`
@@ -269,6 +347,7 @@ func (s *Server) getService(w http.ResponseWriter, r *http.Request) {
 	}
 	out.ParsedData = nullJSON(parsed)
 	out.ImagesPayload = nullJSON(images)
+	out.SongSets = s.storedSongSets(id)
 	if parts.Valid {
 		out.Participants = parts.String
 	}
@@ -505,6 +584,13 @@ func (s *Server) updateService(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	if sets := songSetInputsFromBody(body); sets != nil {
+		if err := upsertSongSetInputs(tx, int64(id), sets); err != nil {
+			log.Printf("Error updating service: %v", err)
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		log.Printf("Error updating service: %v", err)
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -717,7 +803,50 @@ func (s *Server) previewService(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func fieldsFromParsed(p parse.Rundown) map[string]string {
+// storedSongSets reads a Service's weekly Song Set inputs for form hydrate,
+// keyed by variable_name. A read failure yields an empty object rather than an
+// error — the edit form must still open when the table has no rows for this
+// Service (AD-17 posture: a gap in existing data is never a crash).
+func (s *Server) storedSongSets(serviceID int) map[string]any {
+	out := map[string]any{}
+	rows, err := s.DB.Query(
+		`SELECT variable_name, song_number, song_book_code, background_id, lyric_override
+		   FROM song_set_inputs WHERE service_id = ? ORDER BY variable_name`,
+		serviceID,
+	)
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var name string
+		var number sql.NullInt64
+		var book, background, lyric sql.NullString
+		if err := rows.Scan(&name, &number, &book, &background, &lyric); err != nil {
+			return out
+		}
+		entry := map[string]any{
+			"songNumber":   nil,
+			"songBookCode": nullStringOrEmpty(book),
+			"background":   nullStringOrEmpty(background),
+			"lyricText":    nullStringOrEmpty(lyric),
+		}
+		if number.Valid && number.Int64 > 0 {
+			entry["songNumber"] = number.Int64
+		}
+		out[name] = entry
+	}
+	return out
+}
+
+func nullStringOrEmpty(s sql.NullString) string {
+	if !s.Valid {
+		return ""
+	}
+	return s.String
+}
+
+func fieldsFromParsed(p parse.Rundown) map[string]any {
 	ref, text := "", ""
 	if p.VerseReading != nil {
 		if p.VerseReading.Reference != nil {
@@ -741,11 +870,12 @@ func fieldsFromParsed(p parse.Rundown) map[string]string {
 	if p.YouthPrayerRequest != nil {
 		youth = *p.YouthPrayerRequest
 	}
-	return map[string]string{
-		"song1Number":         "",
-		"song2Number":         "",
-		"song3Number":         "",
-		"song4Number":         "",
+	// Song sets are weekly inputs owned by song_set_inputs (DEC-004), not
+	// parsed_data overlays — the hydrate payload carries an empty map so the
+	// create form starts clean and the edit form hydrates from the Service's
+	// own stored rows instead.
+	return map[string]any{
+		"songSets":            map[string]any{},
 		"verseReference":      ref,
 		"verseText":           text,
 		"sermonSpeaker":       speaker,

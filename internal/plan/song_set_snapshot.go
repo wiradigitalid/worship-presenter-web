@@ -16,7 +16,14 @@ type songSetLayoutTrio struct {
 type SongSetLayoutTrio = songSetLayoutTrio
 
 func loadSongSetLayoutTrio(db *sql.DB) (*songSetLayoutTrio, error) {
-	rows, err := db.Query(`SELECT role, payload FROM song_set_layouts`)
+	return loadSongSetLayoutTrioQuery(db, `SELECT role, payload FROM song_set_layouts`)
+}
+
+// loadSongSetLayoutTrioQuery runs the given role/payload query and folds the
+// rows into a trio. Callers must finish this query before opening any other
+// result set (MaxOpenConns(1) deadlock).
+func loadSongSetLayoutTrioQuery(db *sql.DB, query string, args ...any) (*songSetLayoutTrio, error) {
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +36,7 @@ func loadSongSetLayoutTrio(db *sql.DB) (*songSetLayoutTrio, error) {
 		}
 		var layout Layout
 		if err := json.Unmarshal([]byte(payload), &layout); err != nil {
-			return nil, fmt.Errorf("song_set_layouts %s: %w", role, err)
+			return nil, fmt.Errorf("song set layout %s: %w", role, err)
 		}
 		byRole[role] = layout
 	}
@@ -83,11 +90,13 @@ func composeSongSetEntryTemplate(id, label string, trio *songSetLayoutTrio) Temp
 		ID:            id,
 		Label:         label,
 		BaseType:      "song-set-entry",
-		Placeholders: placeholdersFromLayouts(trio.title, trio.verse, trio.reff),
+		Placeholders:  placeholdersFromLayouts(trio.title, trio.verse, trio.reff),
 		Layouts: map[string]Layout{
 			"title": trio.title,
-			"lyric": trio.verse,
+			"verse": trio.verse,
 			"reff":  trio.reff,
+			// Compat alias for any caller expecting "lyric"
+			"lyric": trio.verse,
 		},
 	}
 }

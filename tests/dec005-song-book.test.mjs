@@ -36,12 +36,12 @@ function hymnCount() {
   return db.prepare(`SELECT COUNT(*) AS n FROM hymns`).get().n;
 }
 
-test('fresh boot reaches data_version 6 with the SDAH book bootstrapped', () => {
+test('fresh boot reaches data_version 7 with the SDAH book bootstrapped', () => {
   const row = db
     .prepare(`SELECT value FROM settings WHERE key = ?`)
     .get(DATA_VERSION_KEY);
   assert.equal(row?.value, String(CURRENT_DATA_VERSION));
-  assert.equal(CURRENT_DATA_VERSION, 6);
+  assert.equal(CURRENT_DATA_VERSION, 7);
   const marker = db
     .prepare(`SELECT 1 AS ok FROM settings WHERE key = ?`)
     .get(songBookBootstrapKey('SDAH'));

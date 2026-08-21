@@ -19,7 +19,8 @@ import (
 const (
 	artifactRegistryBootstrapKey = "artifact_registry_bootstrapped"
 	dataVersionKey               = "data_version"
-	currentDataVersion           = "6"
+	bootstrapDataVersion         = "3"
+	currentDataVersion           = "7"
 	// AD-26: the corpus code is the cross-boundary key. The shipped corpus is
 	// SDAH; a per-book settings marker (song_book_bootstrapped_<code>) gates
 	// its one-time bootstrap (DEC-005 / AD-36).
@@ -72,7 +73,19 @@ func seedHub(handle *sql.DB, root string) error {
 	if err := reconcileBible(handle, root); err != nil {
 		return err
 	}
-	return migrateSnapshots(handle)
+	// DEC-004 S2: backfill song_set_inputs from parsed_data buckets must run
+	// before migrateSnapshots — migrateSnapshots stamps currentDataVersion,
+	// which would skip this pass on every existing database.
+	if err := migrateSongSetInputs(handle); err != nil {
+		return err
+	}
+	if err := migrateSnapshots(handle); err != nil {
+		return err
+	}
+	if err := ensureDataVersionCurrent(handle); err != nil {
+		return err
+	}
+	return EnsureSongSetLayoutSeeds(handle, root)
 }
 
 func repairPreCounter(db *sql.DB) error {
@@ -467,6 +480,24 @@ func bootstrapRegistry(db *sql.DB, root string) error {
 		if exists > 0 {
 			continue
 		}
+		if baseType == "song-set-entry" {
+			// DEC-004: entries carry no payload of their own — the shared
+			// trio in song_set_layouts is their body. variable_name is the
+			// spine key (AD-31).
+			variableName, _ := t["variableName"].(string)
+			if variableName == "" {
+				continue
+			}
+			if _, err := tx.Exec(
+				`INSERT INTO artifact_templates (id, label, base_type, payload, updated_at, seed_hash, position, variable_name)
+				 VALUES (?, ?, ?, NULL, ?, NULL, ?, ?)`,
+				id, label, baseType, now, i, variableName,
+			); err != nil {
+				return err
+			}
+			inserted++
+			continue
+		}
 		payload, err := json.Marshal(t)
 		if err != nil {
 			return err
@@ -490,15 +521,34 @@ func bootstrapRegistry(db *sql.DB, root string) error {
 	}
 	if _, err := tx.Exec(
 		`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
-		dataVersionKey, currentDataVersion,
+		dataVersionKey, bootstrapDataVersion,
 	); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	log.Printf("[registry] bootstrap: inserted %d template(s), stamped data version %s", inserted, currentDataVersion)
+	log.Printf("[registry] bootstrap: inserted %d template(s), stamped data version %s", inserted, bootstrapDataVersion)
 	return nil
+}
+
+func ensureDataVersionCurrent(db *sql.DB) error {
+	var ver string
+	err := db.QueryRow(`SELECT value FROM settings WHERE key = ?`, dataVersionKey).Scan(&ver)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if ver >= currentDataVersion {
+		return nil
+	}
+	_, err = db.Exec(
+		`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+		dataVersionKey, currentDataVersion,
+	)
+	return err
 }
 
 func migrateSnapshots(db *sql.DB) error {
@@ -596,6 +646,21 @@ func cloneLiveToService(tx *sql.Tx, serviceID int, trio *plan.SongSetLayoutTrio)
 		pos++
 	}
 	if err := rows.Err(); err != nil {
+		return err
+	}
+	// AD-33: freeze the live trio alongside the snapshot rows so this
+	// Service's song-set-entry payloads keep rendering against the canvases
+	// they were cloned with, even after an admin edits the live trio.
+	if _, err := tx.Exec(
+		`DELETE FROM service_song_set_layouts WHERE service_id = ?`, serviceID,
+	); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(
+		`INSERT INTO service_song_set_layouts (service_id, role, payload, updated_at)
+		 SELECT ?, role, payload, updated_at FROM song_set_layouts`,
+		serviceID,
+	); err != nil {
 		return err
 	}
 	_, err = tx.Exec(`UPDATE services SET registry_snapshot_at = `+StampNowSQL+` WHERE id = ?`, serviceID)
