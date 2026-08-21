@@ -1,5 +1,4 @@
 import { toast } from 'sonner';
-import { useRouter } from '@/lib/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,7 +33,6 @@ export default function SystemSettings({
   initialDays: number;
   initialLocale: UiLocale;
 }) {
-  const router = useRouter();
   const { t } = useT();
 
   const [days, setDays] = useState(initialDays);
@@ -97,10 +95,6 @@ export default function SystemSettings({
       setLocaleMessage(saved);
       toast(saved);
       announceUiLocale(data.ui_locale);
-      // Only to re-render the root layout so `<html lang>` follows the new
-      // setting. This component's own state is already correct above, which is
-      // why there is no prop-sync effect: nothing else writes `ui_locale`.
-      router.refresh();
     } catch {
       setLocaleMessage(localeT('admin.uiLocale.saveFailed'));
     } finally {

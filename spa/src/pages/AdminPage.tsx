@@ -9,18 +9,42 @@ export default function AdminPage() {
   const { session } = useSession();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     if (!session || session.role !== 'admin') return;
+    let cancelled = false;
+    setLoading(true);
     (async () => {
-      const acc = await fetch('/api/admin/accounts', { credentials: 'same-origin' });
-      setAccounts(((await acc.json()) as { accounts: any[] }).accounts || []);
-      const st = await fetch('/api/admin/settings', { credentials: 'same-origin' });
-      setSettings(await st.json());
+      try {
+        const acc = await fetch('/api/admin/accounts', { credentials: 'same-origin' });
+        const accData = ((await acc.json()) as { accounts: any[] }).accounts || [];
+        const st = await fetch('/api/admin/settings', { credentials: 'same-origin' });
+        const stData = await st.json();
+        if (cancelled) return;
+        setAccounts(accData);
+        setSettings(stData);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [session]);
+
   if (!session) return null;
   if (session.role !== 'admin') return <Navigate to="/" replace />;
-  if (!settings) return null;
+  if (loading || !settings) {
+    return (
+      <div className="space-y-8 animate-pulse" aria-busy="true" aria-label="Loading admin settings">
+        <div className="h-64 rounded-xl bg-muted/60" />
+        <div className="h-48 rounded-xl bg-muted/60" />
+        <div className="h-48 rounded-xl bg-muted/60" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <AccountsManager initialAccounts={accounts} />

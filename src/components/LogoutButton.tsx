@@ -1,5 +1,4 @@
 import { useT } from '@/lib/i18n/operator';
-import { useRouter } from '@/lib/navigation';
 import { LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,6 @@ export default function LogoutButton({
   variant?: 'button' | 'menu';
 }) {
   const { t } = useT();
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   const logout = async () => {
@@ -21,8 +19,9 @@ export default function LogoutButton({
         method: 'POST',
         headers: { Accept: 'application/json' },
       });
-      router.replace('/login');
-      router.refresh();
+      // Explicit full page navigation to clear cached in-memory SPA state
+      // and reset all auth/session state across the application.
+      window.location.assign('/login');
     } finally {
       setBusy(false);
     }

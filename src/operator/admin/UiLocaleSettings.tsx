@@ -1,5 +1,4 @@
 import { toast } from 'sonner';
-import { useRouter } from '@/lib/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,7 +28,6 @@ export default function UiLocaleSettings({
 }: {
   initialLocale: UiLocale;
 }) {
-  const router = useRouter();
   /** Persisted locale — drives card copy and matches SQLite until Save succeeds. */
   const [displayLocale, setDisplayLocale] = useState<UiLocale>(initialLocale);
   /** Pending select value — may differ from displayLocale until Save. */
@@ -60,10 +58,6 @@ export default function UiLocaleSettings({
       setMessage(saved);
       toast(saved);
       announceUiLocale(data.ui_locale);
-      // Only to re-render the root layout so `<html lang>` follows the new
-      // setting. This component's own state is already correct above, which is
-      // why there is no prop-sync effect: nothing else writes `ui_locale`.
-      router.refresh();
     } catch {
       setMessage(t('admin.uiLocale.saveFailed'));
     } finally {

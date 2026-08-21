@@ -1,4 +1,3 @@
-import { useRouter } from '@/lib/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,7 +31,6 @@ export default function AccountsManager({
 }: {
   initialAccounts: AccountRow[];
 }) {
-  const router = useRouter();
   const { t } = useT();
   const [accounts, setAccounts] = useState(initialAccounts);
   const [username, setUsername] = useState('');
@@ -45,11 +43,6 @@ export default function AccountsManager({
   useEffect(() => {
     setAccounts(initialAccounts);
   }, [initialAccounts]);
-
-  const refresh = (next: AccountRow[]) => {
-    setAccounts(next);
-    router.refresh();
-  };
 
   const handleCreate = async () => {
     setBusy(true);
@@ -65,7 +58,7 @@ export default function AccountsManager({
       setUsername('');
       setPassword('');
       setRole('operator');
-      refresh([...accounts, data.account]);
+      setAccounts((prev) => [...prev, data.account]);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('admin.accounts.createFailed'));
     } finally {
@@ -84,8 +77,8 @@ export default function AccountsManager({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t('admin.accounts.roleFailed'));
-      refresh(
-        accounts.map((a) => (a.id === id ? (data.account as AccountRow) : a))
+      setAccounts((prev) =>
+        prev.map((a) => (a.id === id ? (data.account as AccountRow) : a))
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : t('admin.accounts.roleFailed'));
@@ -128,7 +121,7 @@ export default function AccountsManager({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || t('admin.accounts.deleteFailed'));
-      refresh(accounts.filter((a) => a.id !== id));
+      setAccounts((prev) => prev.filter((a) => a.id !== id));
     } catch (e) {
       setError(e instanceof Error ? e.message : t('admin.accounts.deleteFailed'));
     } finally {
