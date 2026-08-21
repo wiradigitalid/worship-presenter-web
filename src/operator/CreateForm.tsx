@@ -539,7 +539,6 @@ export default function CreateForm({
       }
 
       router.push(`/services/${data.id}`);
-      router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('form.error.generic'));
     } finally {

@@ -14,24 +14,43 @@ export default function RunSheetPage() {
   const { t } = useT();
   const [svc, setSvc] = useState<any>(null);
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
     (async () => {
       const res = await fetch(`/api/services/${id}`, { credentials: 'same-origin' });
+      if (cancelled) return;
       if (res.status === 404) {
         setSvc('missing');
+        setLoading(false);
         return;
       }
       const data = await res.json();
-      setSvc(data);
       const anns = await fetch('/api/announcements', { credentials: 'same-origin' });
-      const annData = await anns.json();
+      const annData = anns.ok ? await anns.json() : { items: [] };
+      if (cancelled) return;
+      setSvc(data);
       setAnnouncements(annData.items || []);
+      setLoading(false);
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   if (svc === 'missing') return <Navigate to="/" replace />;
-  if (!svc || !session) return null;
+  if (!session) return null;
+  if (loading || !svc) {
+    return (
+      <div className="space-y-6 animate-pulse" aria-busy="true" aria-label="Loading service">
+        <div className="h-4 w-32 rounded bg-muted" />
+        <div className="h-10 w-64 rounded bg-muted" />
+        <div className="h-96 rounded-xl bg-muted/60" />
+      </div>
+    );
+  }
 
   const isAdmin = session.role === 'admin';
   const images = svc.images_payload && typeof svc.images_payload === 'object' ? svc.images_payload : {};

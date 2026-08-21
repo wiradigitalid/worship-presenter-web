@@ -1,4 +1,3 @@
-import { useRouter } from '@/lib/navigation';
 import Link from '@/components/Link';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -104,7 +103,6 @@ export default function EditForm({
   initialUpdatedAt: string;
   hymnIndex: HymnIndexEntry[];
 }) {
-  const router = useRouter();
   const { t } = useT();
   const [payload, setPayload] = useState(initialPayload);
   const [sermonGraphicUrl, setSermonGraphicUrl] = useState(
@@ -536,9 +534,147 @@ export default function EditForm({
     setFamilyPhotoUrl(initialFamilyPhotoUrl);
     setYouthPhotoUrl(initialYouthPhotoUrl);
     setAnnouncements(mapAnnouncements(initialAnnouncements));
-    setFields(fieldsFromParsed(initialParsed));
+    setFields({
+      ...fieldsFromParsed(initialParsed),
+      songSets: coerceSongSetInputs(initialSongSets),
+    });
     setUpdatedAt(initialUpdatedAt);
     setError(null);
+  };
+
+  const applyServerSnapshot = (
+    svc: {
+      raw_payload?: string;
+      parsed_data?: ParsedRundown | null;
+      songSets?: unknown;
+      images_payload?: Record<string, unknown>;
+      updated_at?: string;
+    },
+    serviceAnnouncements: AnnouncementSeed[]
+  ) => {
+    const images =
+      svc.images_payload && typeof svc.images_payload === 'object'
+        ? svc.images_payload
+        : {};
+    const sermonUrl =
+      typeof images.sermonGraphicUrl === 'string' ? images.sermonGraphicUrl : '';
+    const familyUrl =
+      typeof images.familyPhotoUrl === 'string' ? images.familyPhotoUrl : '';
+    const youthUrl =
+      typeof images.youthPhotoUrl === 'string' ? images.youthPhotoUrl : '';
+    const mappedAnns = mapAnnouncements(serviceAnnouncements);
+    const nextFields = {
+      ...fieldsFromParsed(svc.parsed_data),
+      songSets: coerceSongSetInputs(svc.songSets),
+    };
+    fieldsRef.current = nextFields;
+    setPayload(svc.raw_payload || '');
+    setSermonGraphicUrl(sermonUrl);
+    setFamilyPhotoUrl(familyUrl);
+    setYouthPhotoUrl(youthUrl);
+    setAnnouncements(mappedAnns);
+    setFields(nextFields);
+    if (svc.updated_at) setUpdatedAt(svc.updated_at);
+    setError(null);
+    return {
+      raw_payload: svc.raw_payload || '',
+      sermonGraphicUrl: sermonUrl,
+      familyPhotoUrl: familyUrl,
+      youthPhotoUrl: youthUrl,
+      announcements: mappedAnns,
+      fields: nextFields,
+    };
+  };
+
+  const refreshSlidePreview = async (snapshot?: {
+    raw_payload: string;
+    sermonGraphicUrl: string;
+    familyPhotoUrl: string;
+    youthPhotoUrl: string;
+    announcements: AnnouncementItemInput[];
+    fields: WorshipFormFields;
+  }) => {
+    const rawPayload = snapshot?.raw_payload ?? payload;
+    if (!rawPayload.trim()) {
+      setSlidePlan([]);
+      setPreviewEntries([]);
+      setDetectedDate(null);
+      setFailedHymnNumbers([]);
+      return;
+    }
+
+    const previewAnnouncements =
+      snapshot?.announcements ??
+      announcements.map((a) => ({
+        image_url: a.image_url,
+        is_recurring: a.is_recurring,
+      }));
+    const previewFields = snapshot?.fields ?? fieldsRef.current;
+
+    const seq = ++previewSeqRef.current;
+    try {
+      const res = await fetch('/api/services/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          raw_payload: rawPayload,
+          sermonGraphicUrl: (snapshot?.sermonGraphicUrl ?? sermonGraphicUrl) || null,
+          familyPhotoUrl: (snapshot?.familyPhotoUrl ?? familyPhotoUrl) || null,
+          youthPhotoUrl: (snapshot?.youthPhotoUrl ?? youthPhotoUrl) || null,
+          announcements: previewAnnouncements,
+          fields: buildFieldsPayload(previewFields),
+        }),
+      });
+
+      if (seq !== previewSeqRef.current) return;
+      if (!res.ok) return;
+
+      const data = (await res.json()) as {
+        plan?: SlidePreviewItem[];
+        previewEntries?: PreviewEntry[];
+        date?: string | null;
+        failedHymnNumbers?: number[];
+      };
+      if (seq !== previewSeqRef.current) return;
+
+      setSlidePlan(data.plan || []);
+      setPreviewEntries(
+        Array.isArray(data.previewEntries) ? data.previewEntries : []
+      );
+      setDetectedDate(data.date || null);
+      setFailedHymnNumbers(
+        Array.isArray(data.failedHymnNumbers) ? data.failedHymnNumbers : []
+      );
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      console.error('Preview refresh after save:', err);
+    }
+  };
+
+  const reloadFromServer = async () => {
+    const svcRes = await fetch(`/api/services/${id}`, {
+      credentials: 'same-origin',
+    });
+    if (!svcRes.ok) return;
+    const svc = (await svcRes.json()) as {
+      id: number;
+      raw_payload?: string;
+      parsed_data?: ParsedRundown | null;
+      songSets?: unknown;
+      images_payload?: Record<string, unknown>;
+      updated_at?: string;
+    };
+    const annRes = await fetch('/api/announcements', {
+      credentials: 'same-origin',
+    });
+    const annData = annRes.ok
+      ? ((await annRes.json()) as { items?: AnnouncementSeed[] })
+      : { items: [] };
+    const serviceAnns = (annData.items || []).filter(
+      (a) => a.service_id == null || a.service_id === svc.id
+    );
+    const snapshot = applyServerSnapshot(svc, serviceAnns);
+    await refreshSlidePreview(snapshot);
   };
 
   // Live carousel from form state (avoids stale flyerImages after edit/save).
@@ -590,7 +726,7 @@ export default function EditForm({
         alert(
           'This service was changed elsewhere. Refreshing form from the server.'
         );
-        router.refresh();
+        await reloadFromServer();
         return;
       }
 
@@ -601,9 +737,15 @@ export default function EditForm({
         throw new Error(data.error || t('form.error.update'));
       }
 
-      const data = (await res.json()) as { updated_at?: string };
+      const data = (await res.json()) as {
+        updated_at?: string;
+        failedHymnNumbers?: number[];
+      };
       if (data.updated_at) setUpdatedAt(data.updated_at);
-      router.refresh();
+      if (Array.isArray(data.failedHymnNumbers)) {
+        setFailedHymnNumbers(data.failedHymnNumbers);
+      }
+      await refreshSlidePreview();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : t('form.error.update'));
       console.error(e);

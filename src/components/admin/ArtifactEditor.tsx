@@ -28,6 +28,7 @@ import type { I18nKey } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -1530,67 +1531,69 @@ export default function ArtifactEditor() {
                       : 'border-transparent hover:bg-muted'
                   }`}
                 >
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-start gap-1">
                     <span className="min-w-0 flex-1 truncate font-medium">
                       {item.label}
                     </span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      aria-label={`${t('admin.artifacts.moveUp')} ${item.label}`}
-                      title={t('admin.artifacts.moveUp')}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleMoveTemplate(item, -1);
-                      }}
-                      disabled={busy || templates[0]?.id === item.id}
-                    >
-                      <ArrowUp />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      aria-label={`${t('admin.artifacts.moveDown')} ${item.label}`}
-                      title={t('admin.artifacts.moveDown')}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleMoveTemplate(item, 1);
-                      }}
-                      disabled={busy || templates.at(-1)?.id === item.id}
-                    >
-                      <ArrowDown />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      aria-label={`${t('admin.artifacts.copySlide')} ${item.label}`}
-                      title={t('admin.artifacts.copySlide')}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleCopySlide(item);
-                      }}
-                      disabled={busy}
-                    >
-                      <Copy />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      aria-label={`${t('admin.artifacts.delete')} ${item.label}`}
-                      title={t('admin.artifacts.delete')}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleDeleteTemplate(item);
-                      }}
-                      disabled={busy}
-                      className="border-destructive text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 />
-                    </Button>
+                    <div className="grid shrink-0 grid-cols-2 gap-0.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        aria-label={`${t('admin.artifacts.moveUp')} ${item.label}`}
+                        title={t('admin.artifacts.moveUp')}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleMoveTemplate(item, -1);
+                        }}
+                        disabled={busy || templates[0]?.id === item.id}
+                      >
+                        <ArrowUp />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        aria-label={`${t('admin.artifacts.moveDown')} ${item.label}`}
+                        title={t('admin.artifacts.moveDown')}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleMoveTemplate(item, 1);
+                        }}
+                        disabled={busy || templates.at(-1)?.id === item.id}
+                      >
+                        <ArrowDown />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        aria-label={`${t('admin.artifacts.copySlide')} ${item.label}`}
+                        title={t('admin.artifacts.copySlide')}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleCopySlide(item);
+                        }}
+                        disabled={busy}
+                      >
+                        <Copy />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        aria-label={`${t('admin.artifacts.delete')} ${item.label}`}
+                        title={t('admin.artifacts.delete')}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleDeleteTemplate(item);
+                        }}
+                        disabled={busy}
+                        className="border-destructive text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
                   </div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs opacity-80">
                     <span>[{kindChipLabel(item.baseType)}]</span>
@@ -1790,12 +1793,15 @@ export default function ArtifactEditor() {
                   </span>
                 </div>
                 <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card/40 p-4">
-                  <Label className="flex items-center gap-2 text-sm">
-                    {t('admin.artifacts.text')}
-                    <Input
-                      type="text"
+                  <div className="flex min-w-[16rem] max-w-md flex-col gap-1.5 text-sm">
+                    <Label htmlFor="artifact-text-content">
+                      {t('admin.artifacts.text')}
+                    </Label>
+                    <Textarea
+                      id="artifact-text-content"
                       value={textContent}
                       disabled={selectedTextCount !== 1}
+                      rows={3}
                       onChange={(e) => handleTextContentChange(e.target.value)}
                       placeholder={
                         selectedTextCount === 1
@@ -1807,9 +1813,9 @@ export default function ArtifactEditor() {
                           ? t('admin.artifacts.textTitle')
                           : t('admin.artifacts.textTitleIdle')
                       }
-                      className="w-64"
+                      className="min-h-[4.5rem] resize-y"
                     />
-                  </Label>
+                  </div>
                   <Label className="flex items-center gap-2 text-sm">
                     {t('admin.artifacts.fontColor')}
                     <input
