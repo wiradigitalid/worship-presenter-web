@@ -93,6 +93,32 @@ export function previewLabel(instance: ArtifactInstance): string {
 }
 
 /**
+ * Derives the title displayed for a preview row following the priority chain:
+ * explicit slide title -> entry label -> entry baseType chip -> slide kind -> fallback.
+ */
+export function resolvePreviewTitle(
+  slide?: { title?: string; kind?: string },
+  entry?: { label?: string; baseType?: ArtifactBaseType },
+  fallback = 'Untitled slide'
+): string {
+  const slideTitle = slide?.title?.trim();
+  if (slideTitle) return slideTitle;
+
+  const entryLabel = entry?.label?.trim();
+  if (entryLabel) return entryLabel;
+
+  if (entry?.baseType) {
+    const chip = kindChipLabel(entry.baseType);
+    if (chip !== 'unknown') return chip;
+  }
+
+  const slideKind = slide?.kind?.trim();
+  if (slideKind) return slideKind;
+
+  return fallback;
+}
+
+/**
  * Stable tone key both forms map to their own class table, so the two preview
  * panes cannot drift into different colours for the same kind of slide.
  */

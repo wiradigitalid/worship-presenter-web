@@ -8,9 +8,11 @@
  */
 import {
   previewBadgeTone,
+  resolvePreviewTitle,
   type PreviewBadgeTone,
   type PreviewEntry,
 } from '@/lib/artifacts/preview-model';
+import { useT } from '@/lib/i18n/operator';
 
 /** Legacy slide payload the API still returns; used for the visible content. */
 export type SlidePreviewItem = {
@@ -130,10 +132,17 @@ function SlideRow({
   slide?: SlidePreviewItem;
   index: number;
 }) {
+  const { t } = useT();
   const toneClass = entry
     ? TONE_CLASS[previewBadgeTone(entry)]
     : legacyToneClass(slide?.kind);
   const label = entry ? entry.label : slide?.kind;
+
+  const title = resolvePreviewTitle(
+    slide,
+    entry,
+    t('form.preview.untitledSlide')
+  );
 
   return (
     <div className="p-3 flex items-start gap-3 hover:bg-muted/30 transition-all">
@@ -144,7 +153,7 @@ function SlideRow({
         <div className="flex items-center gap-1.5">
           <span className={`${BADGE_CLASS} ${toneClass}`}>{label}</span>
           <span className="font-bold text-xs truncate text-foreground">
-            {slide?.title || 'Untitled Slide'}
+            {title}
           </span>
         </div>
         {slide?.subtitle && (

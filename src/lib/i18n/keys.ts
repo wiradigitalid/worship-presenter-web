@@ -188,6 +188,7 @@ export const I18N_KEYS = [
   'form.youthPrayerPlaceholder',
   'form.preview.title',
   'form.preview.description',
+  'form.preview.untitledSlide',
   'edit.actions.back',
   'edit.actions.preview',
   'edit.actions.present',

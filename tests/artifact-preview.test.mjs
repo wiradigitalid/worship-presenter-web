@@ -19,7 +19,7 @@ delete process.env.IMAGE_URL_ALLOWLIST;
 const srcUrl = (...parts) =>
   pathToFileURL(path.join(root, 'src', ...parts)).href;
 
-const { buildPreviewEntries, previewBadgeTone, previewLabel } = await import(
+const { buildPreviewEntries, previewBadgeTone, previewLabel, resolvePreviewTitle } = await import(
   srcUrl('lib', 'artifacts', 'preview-model.ts')
 );
 const { parseRundown } = await import(srcUrl('lib', 'parser.ts'));
@@ -275,4 +275,79 @@ test('badge tone is derived once for both preview surfaces', () => {
       `unknown tone ${tone}`
     );
   }
+});
+
+test('preview row title resolution prefers title -> entry.label -> entry.baseType/kind -> fallback', async () => {
+  const { resolveString } = await import(srcUrl('lib', 'i18n', 'index.ts'));
+
+  // 1. Explicit slide title wins
+  assert.equal(
+    resolvePreviewTitle(
+      { title: 'Opening Hymn' },
+      { label: 'Welcome', baseType: 'general' }
+    ),
+    'Opening Hymn'
+  );
+
+  // 2. Empty slide title falls back to entry.label
+  assert.equal(
+    resolvePreviewTitle(
+      { title: '' },
+      { label: 'Theme Verse', baseType: 'general' }
+    ),
+    'Theme Verse'
+  );
+
+  // 3. Missing slide title and missing entry.label falls back to entry.baseType chip label
+  assert.equal(
+    resolvePreviewTitle(
+      { title: '' },
+      { label: '', baseType: 'general' }
+    ),
+    'general'
+  );
+
+  // 4. Legacy slide without entry falls back to slide.kind
+  assert.equal(
+    resolvePreviewTitle(
+      { title: '', kind: 'scripture' },
+      undefined
+    ),
+    'scripture'
+  );
+
+  // 5. Empty slide without title, entry, or kind falls back to i18n
+  assert.equal(
+    resolvePreviewTitle(
+      { title: '', kind: '' },
+      undefined,
+      resolveString('form.preview.untitledSlide', 'en')
+    ),
+    'Untitled slide'
+  );
+
+  assert.equal(
+    resolvePreviewTitle(
+      { title: '', kind: '' },
+      undefined,
+      resolveString('form.preview.untitledSlide', 'id')
+    ),
+    'Slide tanpa judul'
+  );
+
+  // 6. Whitespace-only values fall back
+  assert.equal(
+    resolvePreviewTitle(
+      { title: '   ', kind: '   ' },
+      { label: '   ', baseType: 'unknown-kind' },
+      'Fallback'
+    ),
+    'Fallback'
+  );
+
+  // 7. Fully undefined inputs fall back
+  assert.equal(
+    resolvePreviewTitle(undefined, undefined, 'Fallback'),
+    'Fallback'
+  );
 });
