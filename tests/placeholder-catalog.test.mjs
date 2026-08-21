@@ -17,7 +17,51 @@ const {
   PLACEHOLDER_CATALOG,
   isCatalogPlaceholderKey,
   catalogValuesFromWeekly,
+  extractInlineTokens,
+  findUnknownPredefinedFieldTokens,
 } = await import(catalogUrl);
+
+test('extractInlineTokens extracts tokens correctly from text', () => {
+  assert.deepEqual(extractInlineTokens('Hello {service_date}!'), ['service_date']);
+  assert.deepEqual(
+    extractInlineTokens('Family: {family_name}, req: {family_request}'),
+    ['family_name', 'family_request']
+  );
+  assert.deepEqual(extractInlineTokens('{duplicate} and {duplicate}'), ['duplicate']);
+  assert.deepEqual(extractInlineTokens('No tokens here'), []);
+  assert.deepEqual(extractInlineTokens(''), []);
+  assert.deepEqual(extractInlineTokens(null), []);
+});
+
+test('findUnknownPredefinedFieldTokens detects unknown tokens and valid tokens', () => {
+  const validTemplate = {
+    layouts: {
+      default: {
+        elements: [
+          { type: 'text', content: 'Date: {service_date} - {sermon_title}' },
+          { type: 'image-placeholder', placeholderKey: 'sermon_poster' },
+        ],
+      },
+    },
+  };
+  assert.deepEqual(findUnknownPredefinedFieldTokens(validTemplate), []);
+
+  const invalidTemplate = {
+    layouts: {
+      default: {
+        elements: [
+          { type: 'text', content: 'Unknown: {invented_token} and {bad_key}' },
+          { type: 'image-placeholder', placeholderKey: 'bad_image_key' },
+        ],
+      },
+    },
+  };
+  const warnings = findUnknownPredefinedFieldTokens(invalidTemplate);
+  assert.equal(warnings.length, 3);
+  assert.ok(warnings.some((w) => w.includes('{invented_token}')));
+  assert.ok(warnings.some((w) => w.includes('{bad_key}')));
+  assert.ok(warnings.some((w) => w.includes('bad_image_key')));
+});
 
 test('catalog admits the 15 shipped General keys and excludes SongSet expansion keys', () => {
   const keys = PLACEHOLDER_CATALOG.map((entry) => entry.key);

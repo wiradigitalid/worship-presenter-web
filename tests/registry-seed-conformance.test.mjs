@@ -29,6 +29,11 @@ const root = path.resolve(__dirname, '..');
 const { loadSeedTemplates } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'seed.ts')).href
 );
+const { extractInlineTokens } = await import(
+  pathToFileURL(
+    path.join(root, 'src', 'lib', 'registry', 'placeholder-catalog.ts')
+  ).href
+);
 
 const templates = loadSeedTemplates();
 const LAYOUT_KEYS = ['default', 'title', 'lyric'];
@@ -57,6 +62,11 @@ test('every declared placeholder is bound by at least one element', () => {
     for (const [, layout] of layoutsOf(template)) {
       for (const el of layout.elements) {
         if (el.placeholderKey) bound.add(el.placeholderKey);
+        if (el.type === 'text' && typeof el.content === 'string') {
+          for (const token of extractInlineTokens(el.content)) {
+            bound.add(token);
+          }
+        }
       }
     }
     for (const p of template.placeholders) {
@@ -79,8 +89,14 @@ test('no layout binds the same placeholder from two elements', () => {
     for (const [layoutKey, layout] of layoutsOf(template)) {
       const counts = new Map();
       for (const el of layout.elements) {
-        if (!el.placeholderKey) continue;
-        counts.set(el.placeholderKey, (counts.get(el.placeholderKey) ?? 0) + 1);
+        if (el.placeholderKey) {
+          counts.set(el.placeholderKey, (counts.get(el.placeholderKey) ?? 0) + 1);
+        }
+        if (el.type === 'text' && typeof el.content === 'string') {
+          for (const token of extractInlineTokens(el.content)) {
+            counts.set(token, (counts.get(token) ?? 0) + 1);
+          }
+        }
       }
       for (const [key, n] of counts) {
         if (n > 1) doubled.push(`${template.id}.${layoutKey}.${key} (${n}x)`);
@@ -100,6 +116,13 @@ test('every element that binds a placeholder binds a declared one', () => {
       for (const el of layout.elements) {
         if (el.placeholderKey && !declared.has(el.placeholderKey)) {
           unknown.push(`${template.id}.${layoutKey}.${el.id} -> ${el.placeholderKey}`);
+        }
+        if (el.type === 'text' && typeof el.content === 'string') {
+          for (const token of extractInlineTokens(el.content)) {
+            if (!declared.has(token)) {
+              unknown.push(`${template.id}.${layoutKey}.${el.id} -> {${token}}`);
+            }
+          }
         }
       }
     }

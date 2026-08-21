@@ -43,6 +43,54 @@ export function isCatalogPlaceholderKey(key: string): boolean {
   return CATALOG_BY_KEY.has(key);
 }
 
+/** Token matching regex for inline `{token_name}` in text element content. */
+export const INLINE_TOKEN_REGEX = /\{([a-zA-Z0-9_]+)\}/g;
+
+/** Extracts all unique token keys found inside text content (e.g. `{service_date}` -> `['service_date']`). */
+export function extractInlineTokens(content: string | null | undefined): string[] {
+  if (!content) return [];
+  const tokens = new Set<string>();
+  const regex = new RegExp(INLINE_TOKEN_REGEX.source, 'g');
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(content)) !== null) {
+    tokens.add(match[1]);
+  }
+  return Array.from(tokens);
+}
+
+/**
+ * Returns a list of warning messages for any inline tokens in a template's text elements
+ * or image placeholderKeys that are not recognized in the Predefined Field Catalog.
+ */
+export function findUnknownPredefinedFieldTokens(template: {
+  layouts?: Record<string, { elements?: Array<{ type?: string; content?: string; placeholderKey?: string }> }>;
+}): string[] {
+  const warnings: string[] = [];
+  if (!template.layouts) return warnings;
+  for (const [layoutKey, layout] of Object.entries(template.layouts)) {
+    if (!layout?.elements) continue;
+    for (const el of layout.elements) {
+      if (el.type === 'text' && typeof el.content === 'string') {
+        const tokens = extractInlineTokens(el.content);
+        for (const token of tokens) {
+          if (!isCatalogPlaceholderKey(token)) {
+            warnings.push(
+              `Unknown predefined field token {${token}} in layout "${layoutKey}"`
+            );
+          }
+        }
+      } else if ((el.type === 'image' || el.type === 'image-placeholder') && el.placeholderKey) {
+        if (!isCatalogPlaceholderKey(el.placeholderKey)) {
+          warnings.push(
+            `Unknown predefined field image key "${el.placeholderKey}" in layout "${layoutKey}"`
+          );
+        }
+      }
+    }
+  }
+  return warnings;
+}
+
 /**
  * Weekly values a General can bind. The two-purpose `verseReference` /
  * `themeReference` pair replaces the old merged `reference` key — a caller

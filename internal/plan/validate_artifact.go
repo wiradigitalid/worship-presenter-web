@@ -11,10 +11,11 @@ import (
 )
 
 var (
-	kebabID      = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
-	hexColor     = regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
-	bundledAsset = regexp.MustCompile(`(?i)^[a-zA-Z0-9._-]+\.(jpg|jpeg|png|gif|webp)$`)
-	catalogKeys  = map[string]string{
+	kebabID          = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+	hexColor         = regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
+	bundledAsset     = regexp.MustCompile(`(?i)^[a-zA-Z0-9._-]+\.(jpg|jpeg|png|gif|webp)$`)
+	inlineTokenRegex = regexp.MustCompile(`\{([a-zA-Z0-9_]+)\}`)
+	catalogKeys      = map[string]string{
 		"service_date": "text",
 		"scripture_reference": "text",
 		"scripture_text":      "text",
@@ -499,6 +500,47 @@ func checkLayoutPlaceholders(layout Layout, keys map[string]struct{}, label stri
 		}
 	}
 	return nil
+}
+
+// ExtractInlineTokens returns all unique token names inside content (e.g. "{service_date}" -> ["service_date"]).
+func ExtractInlineTokens(content string) []string {
+	matches := inlineTokenRegex.FindAllStringSubmatch(content, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	var out []string
+	for _, m := range matches {
+		if len(m) > 1 {
+			token := m[1]
+			if _, ok := seen[token]; !ok {
+				seen[token] = struct{}{}
+				out = append(out, token)
+			}
+		}
+	}
+	return out
+}
+
+// FindUnknownPredefinedFieldTokens returns a list of warning messages for unrecognized tokens.
+func FindUnknownPredefinedFieldTokens(t Template) []string {
+	var warnings []string
+	for layoutKey, layout := range t.Layouts {
+		for _, el := range layout.Elements {
+			if el.Type == "text" && el.Content != nil {
+				for _, token := range ExtractInlineTokens(*el.Content) {
+					if _, ok := catalogKeys[token]; !ok {
+						warnings = append(warnings, fmt.Sprintf("Unknown predefined field token {%s} in layout %q", token, layoutKey))
+					}
+				}
+			} else if (el.Type == "image" || el.Type == "image-placeholder") && el.PlaceholderKey != nil {
+				if _, ok := catalogKeys[*el.PlaceholderKey]; !ok {
+					warnings = append(warnings, fmt.Sprintf("Unknown predefined field image key %q in layout %q", *el.PlaceholderKey, layoutKey))
+				}
+			}
+		}
+	}
+	return warnings
 }
 
 func isSchemaVersion1(v any) bool {

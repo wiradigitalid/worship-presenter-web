@@ -8,7 +8,12 @@ import {
   type PlaceholderType,
 } from './types';
 import { isRegistryImageRef } from './asset-safety';
-import { catalogEntry, isCatalogPlaceholderKey } from './placeholder-catalog';
+import {
+  catalogEntry,
+  isCatalogPlaceholderKey,
+  extractInlineTokens,
+  findUnknownPredefinedFieldTokens,
+} from './placeholder-catalog';
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 export const KEBAB_ID = /^[a-z][a-z0-9-]*$/;
@@ -501,3 +506,5 @@ export function validateArtifactTemplateList(raw: unknown): ArtifactTemplate[] {
   }
   return templates;
 }
+
+export { extractInlineTokens, findUnknownPredefinedFieldTokens };

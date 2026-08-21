@@ -57,7 +57,7 @@
             "w": 50,
             "h": 5.5,
             "zIndex": 1,
-            "placeholderKey": "service_date",
+            "content": "{service_date}",
             "style": {
               "fontSize": 14.67,
               "fontColor": "#FFFFFF",
@@ -370,7 +370,7 @@
             "w": 89.58,
             "h": 53.63,
             "zIndex": 1,
-            "placeholderKey": "scripture_text",
+            "content": "{scripture_text}",
             "style": {
               "fontSize": 46.67,
               "fontColor": "#FFFFFF",
@@ -386,7 +386,7 @@
             "w": 81.63,
             "h": 2.52,
             "zIndex": 1,
-            "placeholderKey": "scripture_reference",
+            "content": "{scripture_reference}",
             "style": {
               "fontSize": 46.67,
               "fontColor": "#FFFFFF",
@@ -832,7 +832,7 @@
             "w": 27.87,
             "h": 41.29,
             "zIndex": 1,
-            "placeholderKey": "theme_text",
+            "content": "{theme_text}",
             "style": {
               "fontSize": 24.79,
               "fontColor": "#FFFFFF",
@@ -848,7 +848,7 @@
             "w": 27.87,
             "h": 6.38,
             "zIndex": 1,
-            "placeholderKey": "theme_reference",
+            "content": "{theme_reference}",
             "style": {
               "fontSize": 24.79,
               "fontColor": "#FFFFFF",
@@ -1335,7 +1335,7 @@
             "w": 47.5,
             "h": 5.5,
             "zIndex": 1,
-            "placeholderKey": "special_song",
+            "content": "{special_song}",
             "style": {
               "fontSize": 31.23,
               "fontColor": "#FFFFFF",
@@ -1378,7 +1378,7 @@
             "w": 31.26,
             "h": 17.35,
             "zIndex": 1,
-            "placeholderKey": "sermon_title",
+            "content": "{sermon_title}",
             "style": {
               "fontSize": 69.41,
               "fontColor": "#FFFFFF",
@@ -1394,7 +1394,7 @@
             "w": 31.77,
             "h": 5.86,
             "zIndex": 1,
-            "placeholderKey": "sermon_speaker_name",
+            "content": "{sermon_speaker_name}",
             "style": {
               "fontSize": 25.73,
               "fontColor": "#2F3B2D",
@@ -1659,7 +1659,7 @@
             "w": 34.7,
             "h": 4.28,
             "zIndex": 1,
-            "placeholderKey": "closing_prayer_person",
+            "content": "{closing_prayer_person}",
             "style": {
               "fontSize": 25.78,
               "textAlign": "left"
@@ -2106,7 +2106,7 @@
             "w": 59.27,
             "h": 10.1,
             "zIndex": 1,
-            "placeholderKey": "family_request",
+            "content": "{family_request}",
             "style": {
               "fontSize": 15.12,
               "fontColor": "#FFFFFF",
@@ -2138,7 +2138,7 @@
             "w": 59.27,
             "h": 16.83,
             "zIndex": 1,
-            "placeholderKey": "youth_request",
+            "content": "{youth_request}",
             "style": {
               "fontSize": 15.12,
               "fontColor": "#FFFFFF",

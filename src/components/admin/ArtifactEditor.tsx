@@ -12,6 +12,7 @@ import { isCanvasAuthorable, kindChipLabel } from '@/lib/registry/types';
 import {
   PLACEHOLDER_CATALOG,
   catalogEntry,
+  findUnknownPredefinedFieldTokens,
 } from '@/lib/registry/placeholder-catalog';
 import {
   beforeUnloadGuard,
@@ -754,10 +755,10 @@ export default function ArtifactEditor() {
         w: pxToPct(size.w, CANVAS_WIDTH),
         h: pxToPct(size.h, CANVAS_HEIGHT),
         zIndex: maxZ + 1,
-        placeholderKey: entry.key,
         ...(entry.type === 'image'
-          ? {}
+          ? { placeholderKey: entry.key }
           : {
+              content: `{${entry.key}}`,
               style: {
                 fontFamily: 'Arial',
                 fontSize,
@@ -1025,8 +1026,15 @@ export default function ArtifactEditor() {
       if (typeof data.label === 'string') setDraftLabel(data.label);
       setIsDirty((current) => nextDirtyState(current, 'saved'));
       setStatus('success');
-      setMessage(t('admin.artifacts.saved'));
-      toast(t('admin.artifacts.saved'));
+      const unknownWarnings = findUnknownPredefinedFieldTokens(payload);
+      if (unknownWarnings.length > 0) {
+        const warningMsg = `${t('admin.artifacts.saved')} (${unknownWarnings.join(', ')})`;
+        setMessage(warningMsg);
+        toast(warningMsg);
+      } else {
+        setMessage(t('admin.artifacts.saved'));
+        toast(t('admin.artifacts.saved'));
+      }
       await loadList();
     } catch (err) {
       setStatus('error');

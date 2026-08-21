@@ -22,6 +22,7 @@ import {
   type ResolvedStyle,
 } from './runtime-contract';
 import { requireTemplate, type RegistrySnapshot } from './registry-snapshot';
+import { extractInlineTokens, INLINE_TOKEN_REGEX } from '@/lib/registry/placeholder-catalog';
 
 export type PlaceholderValue = string | string[] | null | undefined;
 
@@ -103,6 +104,15 @@ function baseResolvedElement(element: CanvasElement): ResolvedElement {
   };
 }
 
+function substituteTokens(content: string, values: PlaceholderValues): string {
+  return content.replace(INLINE_TOKEN_REGEX, (_match, token) => {
+    const v = values[token];
+    if (v === undefined || v === null) return '';
+    if (Array.isArray(v)) return v.join('\n');
+    return String(v);
+  });
+}
+
 function resolveLayout(
   template: ArtifactTemplate,
   layout: ArtifactLayout,
@@ -111,6 +121,13 @@ function resolveLayout(
   values: PlaceholderValues
 ): ResolvedLayout {
   const definitions = new Map(template.placeholders.map((p) => [p.key, p]));
+  const effectiveValues: Record<string, PlaceholderValue> = { ...values };
+  for (const p of template.placeholders) {
+    if (effectiveValues[p.key] === undefined && p.defaultValue !== undefined) {
+      effectiveValues[p.key] = p.defaultValue;
+    }
+  }
+
   const elements: ResolvedElement[] = [];
 
   for (const element of sortElements(layout.elements)) {
@@ -118,7 +135,33 @@ function resolveLayout(
 
     if (!element.placeholderKey) {
       if (element.type === 'text') {
-        if (typeof element.content === 'string') resolved.text = element.content;
+        if (typeof element.content === 'string') {
+          const tokens = extractInlineTokens(element.content);
+          const substituted = substituteTokens(element.content, effectiveValues);
+          if (tokens.length > 0) {
+            // Check if the whole content was just token(s) and rendered completely empty
+            const isSolelyToken = tokens.length === 1 && element.content.trim() === `{${tokens[0]}}`;
+            if (isSolelyToken && substituted.trim() === '') {
+              if (element.required) {
+                throw new ArtifactHydrationError('Missing required placeholder value', {
+                  instanceId,
+                  templateId: template.id,
+                  layoutKey,
+                  elementId: element.id,
+                  placeholderKey: tokens[0],
+                });
+              }
+              // Optional token rendered empty -> omit element
+              continue;
+            }
+            resolved.text = substituted;
+            if (isSolelyToken) {
+              resolved.placeholderKey = tokens[0];
+            }
+          } else {
+            resolved.text = element.content;
+          }
+        }
       } else if (element.type === 'image' || element.type === 'image-placeholder') {
         if (typeof element.imageRef === 'string') resolved.imageUrl = element.imageRef;
       }
@@ -137,7 +180,7 @@ function resolveLayout(
       });
     }
 
-    const value = resolvePlaceholderValue(definition, values[definition.key]);
+    const value = resolvePlaceholderValue(definition, effectiveValues[definition.key]);
     if (!value.present) {
       // The layout — not the placeholder declaration — decides whether a slot may
       // stay empty: a required element must have content, everything else is

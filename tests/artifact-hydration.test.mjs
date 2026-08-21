@@ -267,6 +267,51 @@ test('elements come out sorted by zIndex then source order', () => {
   );
 });
 
+test('inline token substitution substitutes recognized tokens and renders unknown tokens as empty', () => {
+  const template = {
+    schemaVersion: 1,
+    id: 'inline-token-demo',
+    label: 'Inline Token Demo',
+    baseType: 'general',
+    placeholders: [
+      { key: 'service_date', type: 'text', required: false },
+      { key: 'sermon_title', type: 'text', required: false },
+    ],
+    layouts: {
+      default: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [
+          {
+            id: 't1',
+            type: 'text',
+            required: false,
+            x: 10,
+            y: 10,
+            w: 80,
+            h: 20,
+            zIndex: 1,
+            content: 'Date: {service_date}, Title: {sermon_title}, Unknown: [{unknown_key}]',
+          },
+        ],
+      },
+    },
+  };
+
+  const instance = hydrateArtifact(template, {
+    instanceId: 'demo-1',
+    values: {
+      service_date: '2026-08-21',
+      sermon_title: 'The Great Hope',
+    },
+  });
+
+  assert.equal(
+    instance.layout.elements[0].text,
+    'Date: 2026-08-21, Title: The Great Hope, Unknown: []'
+  );
+});
+
 test('off-canvas geometry survives hydration unclamped', () => {
   const instance = hydrateArtifact(seed('family-youth'), {
     instanceId: 'family-youth',

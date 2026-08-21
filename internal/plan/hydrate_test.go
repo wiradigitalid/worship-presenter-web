@@ -48,6 +48,53 @@ func TestHydrateWelcomeFromSeed(t *testing.T) {
 	t.Logf("roundtrip elements %d json %s", len(round.Artifact.Layout.Elements), string(b)[:200])
 }
 
+func TestHydrateInlineTokensAndUnknown(t *testing.T) {
+	content := "Date: {service_date}, Title: {sermon_title}, Unknown: [{unknown_key}]"
+	tmpl := Template{
+		SchemaVersion: 1,
+		ID:            "custom-test",
+		Label:         "Custom Test",
+		BaseType:      "general",
+		Layouts: map[string]Layout{
+			"default": {
+				AspectRatio:     "16:9",
+				BackgroundColor: "#000000",
+				Elements: []CanvasElement{
+					{
+						ID:       "el-1",
+						Type:     "text",
+						Required: false,
+						X:        10,
+						Y:        10,
+						W:        80,
+						H:        20,
+						ZIndex:   1,
+						Content:  &content,
+					},
+				},
+			},
+		},
+	}
+	inst, err := hydrateArtifact(tmpl, "inst-1", "default", map[string]interface{}{
+		"service_date": "2026-08-21",
+		"sermon_title": "Living Water",
+	}, nil)
+	if err != nil {
+		t.Fatalf("hydrateArtifact failed: %v", err)
+	}
+	if len(inst.Layout.Elements) != 1 {
+		t.Fatalf("expected 1 element, got %d", len(inst.Layout.Elements))
+	}
+	el := inst.Layout.Elements[0]
+	if el.Text == nil {
+		t.Fatalf("expected text on element")
+	}
+	expected := "Date: 2026-08-21, Title: Living Water, Unknown: []"
+	if *el.Text != expected {
+		t.Fatalf("expected %q, got %q", expected, *el.Text)
+	}
+}
+
 func keys(m map[string]Layout) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {

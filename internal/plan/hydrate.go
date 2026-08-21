@@ -83,6 +83,27 @@ func sortElements(elements []CanvasElement) []CanvasElement {
 
 func strPtr(s string) *string { return &s }
 
+func substituteTokens(content string, values map[string]interface{}) string {
+	return inlineTokenRegex.ReplaceAllStringFunc(content, func(m string) string {
+		sub := inlineTokenRegex.FindStringSubmatch(m)
+		if len(sub) < 2 {
+			return ""
+		}
+		token := sub[1]
+		val, ok := values[token]
+		if !ok || val == nil {
+			return ""
+		}
+		if arr, ok := asStringSlice(val); ok {
+			return strings.Join(arr, "\n")
+		}
+		if s, ok := val.(string); ok {
+			return s
+		}
+		return fmt.Sprintf("%v", val)
+	})
+}
+
 func hydrateArtifact(template Template, instanceID, layoutKey string, values map[string]interface{}, group *GroupRef) (ArtifactInstance, error) {
 	if layoutKey == "" {
 		layoutKey = "default"
@@ -97,6 +118,15 @@ func hydrateArtifact(template Template, instanceID, layoutKey string, values map
 	}
 	if values == nil {
 		values = map[string]interface{}{}
+	}
+	effectiveValues := map[string]interface{}{}
+	for k, v := range values {
+		effectiveValues[k] = v
+	}
+	for _, p := range template.Placeholders {
+		if _, ok := effectiveValues[p.Key]; !ok && p.DefaultValue != nil {
+			effectiveValues[p.Key] = p.DefaultValue
+		}
 	}
 	elements := make([]ResolvedElement, 0, len(layout.Elements))
 	for _, element := range sortElements(layout.Elements) {
@@ -116,7 +146,23 @@ func hydrateArtifact(template Template, instanceID, layoutKey string, values map
 		}
 		if element.PlaceholderKey == nil || *element.PlaceholderKey == "" {
 			if element.Type == "text" && element.Content != nil {
-				resolved.Text = element.Content
+				tokens := ExtractInlineTokens(*element.Content)
+				substituted := substituteTokens(*element.Content, effectiveValues)
+				if len(tokens) > 0 {
+					isSolelyToken := len(tokens) == 1 && strings.TrimSpace(*element.Content) == "{"+tokens[0]+"}"
+					if isSolelyToken && strings.TrimSpace(substituted) == "" {
+						if element.Required {
+							return ArtifactInstance{}, fmt.Errorf("missing required placeholder %s", tokens[0])
+						}
+						continue
+					}
+					resolved.Text = &substituted
+					if isSolelyToken {
+						resolved.PlaceholderKey = strPtr(tokens[0])
+					}
+				} else {
+					resolved.Text = element.Content
+				}
 			} else if (element.Type == "image" || element.Type == "image-placeholder") && element.ImageRef != nil {
 				resolved.ImageURL = element.ImageRef
 			}
@@ -127,7 +173,7 @@ func hydrateArtifact(template Template, instanceID, layoutKey string, values map
 		if !ok {
 			return ArtifactInstance{}, fmt.Errorf("undeclared placeholder %s", *element.PlaceholderKey)
 		}
-		value := resolvePlaceholderValue(def, values[def.Key])
+		value := resolvePlaceholderValue(def, effectiveValues[def.Key])
 		if !value.present {
 			if element.Required {
 				return ArtifactInstance{}, fmt.Errorf("missing required placeholder %s", def.Key)
