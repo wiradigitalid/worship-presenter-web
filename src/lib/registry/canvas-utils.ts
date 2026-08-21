@@ -86,9 +86,7 @@ export function getElementId(obj: { get?: (key: string) => unknown; data?: { ele
   return obj.data?.elementId;
 }
 
-export function isFabricTextObject(
-  obj: { type?: string }
-): obj is {
+export type FabricTextLike = {
   type: string;
   text?: string;
   fill?: unknown;
@@ -97,8 +95,17 @@ export function isFabricTextObject(
   fontWeight?: unknown;
   fontStyle?: string;
   textAlign?: string;
-} {
-  return obj.type === 'text';
+};
+
+export function isFabricTextObject(
+  obj: unknown
+): obj is import('fabric').FabricObject & FabricTextLike {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'type' in obj &&
+    (obj as { type: unknown }).type === 'text'
+  );
 }
 
 export function serializeTextStyle(

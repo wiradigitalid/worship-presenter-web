@@ -49,23 +49,6 @@ func (s *Server) postWebhook(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Missing or invalid text payload in request body")
 		return
 	}
-	var announcementURLs []string
-	if _, has := body["announcements"]; has {
-		raw := body["announcements"]
-		arr, ok := raw.([]any)
-		if !ok {
-			writeError(w, http.StatusBadRequest, "announcements must be an array of image URLs")
-			return
-		}
-		for _, u := range arr {
-			url, err := plan.AssertAnnouncementImageURL(asString(u))
-			if err != nil {
-				writeError(w, http.StatusBadRequest, err.Error())
-				return
-			}
-			announcementURLs = append(announcementURLs, url)
-		}
-	}
 	parsed := parse.ParseRundown(s.DB, rawPayload)
 	serviceDate := parse.LocalISODate(time.Now())
 	if parsed.Date != nil && *parsed.Date != "" {

@@ -53,6 +53,7 @@ import {
   DEFAULT_FONT_FAMILY,
   DEFAULT_FONT_SIZE,
   DEFAULT_TEXT_ALIGN,
+  FabricTextLike,
   INSERT_CASCADE_PX,
   INSERT_CASCADE_STEPS,
   MAX_FONT_SIZE,
@@ -92,6 +93,11 @@ type EditorStatus =
   | 'success'
   | 'error'
   | 'conflict';
+
+function getEditableLayout(template: StoredArtifactTemplate): ArtifactLayout | null {
+  if (!isCanvasAuthorable(template.baseType)) return null;
+  return template.layouts.default ?? null;
+}
 
 function elementToFabricObject(
   fabric: FabricModule,
@@ -271,11 +277,11 @@ export default function ArtifactEditor({
         .map(getElementId)
         .filter((id): id is string => typeof id === 'string' && id.length > 0)
     );
-    const texts = active.filter(isFabricTextObject);
+    const texts: FabricTextLike[] = active.filter(isFabricTextObject);
     setSelectedTextCount(texts.length);
-    // The content field edits one box at a time; anything else clears it.
-    setTextContent(texts.length === 1 ? (texts[0].text ?? '') : '');
     const selectedText = texts[0];
+    // The content field edits one box at a time; anything else clears it.
+    setTextContent(texts.length === 1 && selectedText ? (selectedText.text ?? '') : '');
     if (!selectedText) return;
     setFontColor(
       toStrictHexColor(selectedText.fill, DEFAULT_FONT_COLOR) ?? DEFAULT_FONT_COLOR

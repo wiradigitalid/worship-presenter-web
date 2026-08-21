@@ -1,3 +1,4 @@
+import type Database from 'better-sqlite3';
 import type { ParsedRundown, ParsedScripture, ParsedSermon } from './parser';
 import { INTERCESSORY_STANDING_NUMBERS, splitLyricsLabeled } from './lyrics';
 import { isAnnouncementImageUrl } from './announcements';

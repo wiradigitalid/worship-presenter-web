@@ -189,8 +189,10 @@ export default function WorshipSettings({
           <Select
             value={code}
             onValueChange={(v) => {
-              setCode(v);
-              setInstalled(translations.some((row) => row.code === v));
+              if (v) {
+                setCode(v);
+                setInstalled(translations.some((row) => row.code === v));
+              }
             }}
             disabled={bibleSaving || options.length === 0}
           >

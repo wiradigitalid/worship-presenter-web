@@ -510,7 +510,7 @@ export default function EditForm({
     const youthUrl =
       typeof images.youthPhotoUrl === 'string' ? images.youthPhotoUrl : '';
     const nextFields = {
-      ...fieldsFromParsed(svc.parsed_data),
+      ...fieldsFromParsed(svc.parsed_data ?? null),
       songSets: coerceSongSetInputs(svc.songSets),
     };
     fieldsRef.current = nextFields;
@@ -778,7 +778,7 @@ export default function EditForm({
                           <Select
                             value={current.songBookCode || (defaultBook ? defaultBook.bookCode : '')}
                             onValueChange={(val) =>
-                              setSongSetField(entry.variableName, 'songBookCode', val)
+                              setSongSetField(entry.variableName, 'songBookCode', val ?? '')
                             }
                             disabled={isSaving}
                           >
@@ -814,7 +814,7 @@ export default function EditForm({
                               setSongSetField(
                                 entry.variableName,
                                 'background',
-                                val === 'default' ? '' : val
+                                !val || val === 'default' ? '' : val
                               )
                             }
                             disabled={isSaving}

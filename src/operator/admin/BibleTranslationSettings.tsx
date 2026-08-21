@@ -114,8 +114,10 @@ export default function BibleTranslationSettings({
             <Select
               value={code}
               onValueChange={(v) => {
-                setCode(v);
-                setInstalled(translations.some((row) => row.code === v));
+                if (v) {
+                  setCode(v);
+                  setInstalled(translations.some((row) => row.code === v));
+                }
               }}
               disabled={saving || options.length === 0}
             >

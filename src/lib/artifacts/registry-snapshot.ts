@@ -97,7 +97,6 @@ export function composeSongSetEntryTemplate(
       title: trio.title,
       // Plan handlers still request layoutKey `lyric`; AD-33's verse role.
       lyric: trio.verse,
-      reff: trio.reff,
     },
     updatedAt: row.updated_at,
   };

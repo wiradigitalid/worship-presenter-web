@@ -625,7 +625,7 @@ export default function CreateForm({
                           <Select
                             value={current.songBookCode || (defaultBook ? defaultBook.bookCode : '')}
                             onValueChange={(val) =>
-                              setSongSetField(entry.variableName, 'songBookCode', val)
+                              setSongSetField(entry.variableName, 'songBookCode', val ?? '')
                             }
                             disabled={isSaving}
                           >
@@ -661,7 +661,7 @@ export default function CreateForm({
                               setSongSetField(
                                 entry.variableName,
                                 'background',
-                                val === 'default' ? '' : val
+                                !val || val === 'default' ? '' : val
                               )
                             }
                             disabled={isSaving}

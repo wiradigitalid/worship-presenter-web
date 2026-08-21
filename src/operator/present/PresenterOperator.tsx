@@ -974,7 +974,7 @@ export default function PresenterOperator({
                 <Select
                   value={scriptureTranslation}
                   onValueChange={(value) => {
-                    setScriptureTranslation(value);
+                    if (value) setScriptureTranslation(value);
                     blurFocusedControl();
                   }}
                 >

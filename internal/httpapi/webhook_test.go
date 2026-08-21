@@ -19,10 +19,7 @@ func TestWebhook_AnnouncementsIgnoredNoAnnouncementItemsWritten(t *testing.T) {
 
 	payload := `{
 		"text": "SABBATH, JULY 25, 2026\nDIVINE SERVICE\nSermon: Pastor Test",
-		"announcements": [
-			"https://example.com/flyer1.png",
-			"https://example.com/flyer2.png"
-		]
+		"announcements": "not-an-array-malformed-shape"
 	}`
 
 	req, err := http.NewRequest("POST", ts.URL+"/api/webhook", strings.NewReader(payload))
