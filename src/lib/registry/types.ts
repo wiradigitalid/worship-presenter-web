@@ -28,9 +28,10 @@ export type ArtifactBaseType = ArtifactEntryKey;
  * widens the entry set with `song-set-entry` rows that still read as
  * `[song-set]` on every human surface.
  */
-export function kindOf(entryKey: string): ArtifactKind {
+export function kindOf(entryKey: string): ArtifactKind | 'marker' {
   if (entryKey === 'general') return 'general';
   if (entryKey === 'announcement') return 'announcement';
+  if (entryKey === 'ann-set-marker') return 'marker';
   if (
     entryKey === 'song-set' ||
     entryKey.startsWith('songset-') ||
@@ -42,7 +43,7 @@ export function kindOf(entryKey: string): ArtifactKind {
 }
 
 /** Safe at render boundaries; {@link kindOf} still throws for invalid keys. */
-export function kindChipLabel(entryKey: string): ArtifactKind | 'unknown' {
+export function kindChipLabel(entryKey: string): ArtifactKind | 'marker' | 'unknown' {
   try {
     return kindOf(entryKey);
   } catch {

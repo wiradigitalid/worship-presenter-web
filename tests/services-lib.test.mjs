@@ -128,7 +128,7 @@ test('create: undated rundown fails before the deferred payload checks', () => {
   assert.equal(both.message, 'Could not parse service date from raw_payload');
 });
 
-test('create: unsafe image URL and bad participants/announcements are validation errors', () => {
+test('create: unsafe image URL and bad participants are validation errors; stray announcements ignored', () => {
   const badImage = create({
     raw_payload: RAW('SABBATH, AUGUST 1, 2026'),
     sermonGraphicUrl: 'http://127.0.0.1/evil.png',
@@ -147,15 +147,12 @@ test('create: unsafe image URL and bad participants/announcements are validation
     message: 'participantsRaw must be a string or null',
   });
 
-  const badAnnouncements = create({
+  // Stray announcements field is ignored, not a validation error
+  const strayAnnouncements = create({
     raw_payload: RAW('SABBATH, AUGUST 1, 2026'),
     announcements: 'not-an-array',
   });
-  assert.deepEqual(badAnnouncements, {
-    ok: false,
-    kind: 'validation',
-    message: 'announcements must be an array',
-  });
+  assert.equal(strayAnnouncements.ok, true);
 });
 
 test('create: date collision returns collision, allowSecond inserts a second row', () => {
@@ -473,6 +470,25 @@ test('update: structured-only edit re-normalizes the stored rundown', () => {
   assert.equal(parsed.sermon.title, 'Hope');
 });
 
+test('update: a stray announcements field in the body is ignored and does not write announcement_items', () => {
+  const created = create({ raw_payload: RAW('SABBATH, DECEMBER 26, 2026') });
+  assert.equal(created.ok, true);
+
+  const db = getDb();
+  db.prepare('DELETE FROM announcement_items').run();
+
+  const result = update(created.id, {
+    updated_at: readUpdatedAt(storedRow(created.id)),
+    raw_payload: `${RAW('SABBATH, DECEMBER 26, 2026')}
+updated-raw`,
+    announcements: [
+      { image_url: 'https://example.com/stray.png', is_recurring: false },
+    ],
+  });
+  assert.equal(result.ok, true);
+  assert.equal(listAnnouncementItems().length, 0);
+});
+
 test('delete: removes an existing row once and reports unknown ids', () => {
   const created = create({ raw_payload: RAW('SABBATH, DECEMBER 19, 2026') });
   assert.equal(created.ok, true);
@@ -522,6 +538,16 @@ test('delete: unlinks this Service local uploads and keeps recurring ones', () =
   // and localUploadStillReferenced keeps flyer image referenced by announcement_items.
   assert.equal(fs.existsSync(oneOffPath), true);
   assert.equal(fs.existsSync(keepPath), true);
+
+  // Assert announcement_items rows remain intact with service_id preserved after Service delete
+  const rows = getDb()
+    .prepare('SELECT id, service_id FROM announcement_items ORDER BY id')
+    .all();
+  assert.equal(rows.length, 2);
+  const oneOffRow = rows.find((r) => r.service_id === created.id);
+  assert.ok(oneOffRow, 'expected announcement_item with service_id to survive service delete');
+  const masterRow = rows.find((r) => r.service_id === null);
+  assert.ok(masterRow, 'expected master announcement_item to survive service delete');
 });
 
 test('readJsonBody maps unparseable bodies to the shared Invalid JSON failure', async () => {

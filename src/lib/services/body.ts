@@ -7,8 +7,6 @@
  * those gates are narrowed here but returned as a `Narrowed<…>` payload the
  * domain function surfaces at the original point in the sequence.
  */
-import { coerceWorshipAnnouncements } from '@/lib/announcements';
-import type { WorshipAnnouncementInput } from '@/lib/announcements';
 import { coerceImageUrls, coerceOptionalSafeImageUrl } from '@/lib/images';
 import { coerceStructuredFields } from '@/lib/parsed-fields';
 import { ABSENT, validationFailure } from './types';
@@ -45,17 +43,6 @@ export async function readJsonBody(request: Request): Promise<Narrowed<unknown>>
   }
 }
 
-function narrowAnnouncements(
-  body: Record<string, unknown>
-): Narrowed<WorshipAnnouncementInput[] | null> {
-  if (!hasKey(body, 'announcements')) return { ok: true, value: null };
-  try {
-    return { ok: true, value: coerceWorshipAnnouncements(body.announcements) };
-  } catch (e) {
-    return validationFailure(messageOf(e, 'Invalid announcements'));
-  }
-}
-
 function narrowParticipants(
   body: Record<string, unknown>
 ): Narrowed<FieldPatch<string | null>> {
@@ -70,7 +57,7 @@ function narrowParticipants(
   };
 }
 
-/** Create: images → participants → announcements (legacy order). */
+/** Create: images → participants (legacy order). */
 function narrowCreatePayload(
   body: Record<string, unknown>
 ): Narrowed<CreateServicePayload> {
@@ -94,9 +81,6 @@ function narrowCreatePayload(
   const participants = narrowParticipants(body);
   if (!participants.ok) return participants;
 
-  const announcements = narrowAnnouncements(body);
-  if (!announcements.ok) return announcements;
-
   return {
     ok: true,
     value: {
@@ -109,12 +93,11 @@ function narrowCreatePayload(
       participantsRaw: participants.value.present
         ? participants.value.value
         : null,
-      announcements: announcements.value,
     },
   };
 }
 
-/** Update: images → announcements → participants (legacy order). */
+/** Update: images → participants (legacy order). */
 function narrowUpdatePayload(
   body: Record<string, unknown>
 ): Narrowed<UpdateServicePayload> {
@@ -175,9 +158,6 @@ function narrowUpdatePayload(
     }
   }
 
-  const announcements = narrowAnnouncements(body);
-  if (!announcements.ok) return announcements;
-
   const participants = narrowParticipants(body);
   if (!participants.ok) return participants;
 
@@ -185,7 +165,6 @@ function narrowUpdatePayload(
     ok: true,
     value: {
       images,
-      announcements: announcements.value,
       participants: participants.value,
     },
   };

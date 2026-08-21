@@ -42,11 +42,17 @@ const SEARCH_LIMIT = 40;
 const queryCache = new Map<string, HymnIndexEntry[]>();
 /** In-flight `/api/hymns` requests, so concurrent callers share one round trip. */
 const queryInflight = new Map<string, Promise<HymnIndexEntry[] | null>>();
-/** Every row ever fetched, by number — the `numbers=` fast path. */
-const knownByNumber = new Map<number, HymnIndexEntry>();
+/** Every row ever fetched, by bookCode:number — the `numbers=` fast path. */
+const knownByNumber = new Map<string, HymnIndexEntry>();
 
-function searchKey(query: string): string {
-  return `q=${encodeURIComponent(query)}&limit=${SEARCH_LIMIT}`;
+function searchKey(query: string, bookCode?: string): string {
+  const params = new URLSearchParams();
+  params.set('q', query);
+  params.set('limit', String(SEARCH_LIMIT));
+  if (bookCode && bookCode.trim()) {
+    params.set('book_code', bookCode.trim());
+  }
+  return params.toString();
 }
 
 /** Rows for an already-settled query, or `null` when nothing has settled yet. */
@@ -63,7 +69,10 @@ async function fetchHymns(search: string): Promise<HymnIndexEntry[] | null> {
     if (!res.ok) return null;
     const rows = coerceHymnIndexEntries(await res.json());
     queryCache.set(search, rows);
-    for (const row of rows) knownByNumber.set(row.number, row);
+    for (const row of rows) {
+      const bCode = (row as { bookCode?: string }).bookCode || '';
+      knownByNumber.set(`${bCode}:${row.number}`, row);
+    }
     return rows;
   } catch {
     // Non-blocking: the input stays usable and already-known hymns remain
@@ -85,19 +94,35 @@ function requestHymns(search: string): Promise<HymnIndexEntry[] | null> {
   return run;
 }
 
-/** Numbers waiting for the next coalesced `numbers=` request. */
-let numberQueue: number[] = [];
-let numberBatch: Promise<HymnIndexEntry[] | null> | null = null;
-let settleNumberBatch: ((rows: HymnIndexEntry[] | null) => void) | null = null;
+/** Numbers waiting for the next coalesced `numbers=` request per bookCode. */
+type QueuedBatch = {
+  numbers: number[];
+  batch: Promise<HymnIndexEntry[] | null> | null;
+  settle: ((rows: HymnIndexEntry[] | null) => void) | null;
+};
+const bookQueues = new Map<string, QueuedBatch>();
 
-async function flushNumberQueue(): Promise<void> {
-  const numbers = numberQueue;
-  const settle = settleNumberBatch;
-  numberQueue = [];
-  numberBatch = null;
-  settleNumberBatch = null;
+function getBookQueue(bookCode: string): QueuedBatch {
+  let q = bookQueues.get(bookCode);
+  if (!q) {
+    q = { numbers: [], batch: null, settle: null };
+    bookQueues.set(bookCode, q);
+  }
+  return q;
+}
+
+async function flushBookQueue(bookCode: string): Promise<void> {
+  const q = getBookQueue(bookCode);
+  const numbers = q.numbers;
+  const settle = q.settle;
+  q.numbers = [];
+  q.batch = null;
+  q.settle = null;
+  const params = new URLSearchParams();
+  if (numbers.length) params.set('numbers', numbers.join(','));
+  if (bookCode.trim()) params.set('book_code', bookCode.trim());
   const rows = numbers.length
-    ? await requestHymns(`numbers=${numbers.join(',')}`)
+    ? await requestHymns(params.toString())
     : [];
   settle?.(rows);
 }
@@ -105,19 +130,21 @@ async function flushNumberQueue(): Promise<void> {
 /**
  * Resolve labels for stored hymn numbers. Requests raised in the same tick —
  * the four hymn fields re-rendering after a Parse hydrate — are coalesced into
- * a single `numbers=1,2,3,4` call, which is what that endpoint is for.
+ * a single `numbers=1,2,3,4` call, scoped to bookCode.
  */
-function requestHymnNumber(number: number): Promise<HymnIndexEntry[] | null> {
-  const known = knownByNumber.get(number);
+function requestHymnNumber(number: number, bookCode: string = ''): Promise<HymnIndexEntry[] | null> {
+  const key = `${bookCode}:${number}`;
+  const known = knownByNumber.get(key);
   if (known) return Promise.resolve([known]);
-  if (!numberBatch) {
-    numberBatch = new Promise((resolve) => {
-      settleNumberBatch = resolve;
+  const q = getBookQueue(bookCode);
+  if (!q.batch) {
+    q.batch = new Promise((resolve) => {
+      q.settle = resolve;
     });
-    setTimeout(() => void flushNumberQueue(), 0);
+    setTimeout(() => void flushBookQueue(bookCode), 0);
   }
-  if (!numberQueue.includes(number)) numberQueue.push(number);
-  return numberBatch;
+  if (!q.numbers.includes(number)) q.numbers.push(number);
+  return q.batch;
 }
 
 /** Blur-time hymn commits that have not settled yet. */
@@ -156,12 +183,14 @@ export async function flushPendingHymnCommits(): Promise<void> {
 export function HymnNumberAutocomplete({
   value,
   onChange,
+  bookCode = '',
   hymnIndex,
   placeholder,
   disabled,
 }: {
   value: string;
   onChange: (next: string) => void;
+  bookCode?: string;
   hymnIndex: HymnIndexEntry[];
   placeholder?: string;
   disabled?: boolean;
@@ -231,7 +260,7 @@ export function HymnNumberAutocomplete({
     if (!open || !query || inputValue === labelForValue) return;
     let active = true;
     const timer = setTimeout(() => {
-      void requestHymns(searchKey(query)).then((rows) => {
+      void requestHymns(searchKey(query, bookCode)).then((rows) => {
         if (!active) return;
         setSearchState({ query, status: rows === null ? 'failed' : 'done' });
         if (rows) learn(rows);
@@ -241,7 +270,7 @@ export function HymnNumberAutocomplete({
       active = false;
       clearTimeout(timer);
     };
-  }, [inputValue, open, learn, labelForValue]);
+  }, [inputValue, open, learn, labelForValue, bookCode]);
 
   // Resolve the label for a stored number the seed does not cover (e.g. after
   // a Parse hydrate on the create page). Seeded numbers never reach here, so
@@ -253,13 +282,13 @@ export function HymnNumberAutocomplete({
     const number = Number.parseInt(trimmed, 10);
     if (!Number.isSafeInteger(number)) return;
     let active = true;
-    void requestHymnNumber(number).then((rows) => {
+    void requestHymnNumber(number, bookCode).then((rows) => {
       if (active && rows) learn(rows);
     });
     return () => {
       active = false;
     };
-  }, [value, entries, learn]);
+  }, [value, entries, learn, bookCode]);
 
   useLayoutEffect(() => {
     if (!showList || !inputRef.current) {
@@ -348,7 +377,7 @@ export function HymnNumberAutocomplete({
     }
     // `keep` needs a lookup result, which this call did not pass — unreachable.
     if (shape.kind !== 'lookup') return;
-    const key = searchKey(shape.query);
+    const key = searchKey(shape.query, bookCode);
     const settled = readSettledHymns(key);
     if (settled) {
       settleCommit(token, raw, settled);

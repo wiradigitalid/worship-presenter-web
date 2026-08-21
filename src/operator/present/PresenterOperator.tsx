@@ -1053,7 +1053,7 @@ export default function PresenterOperator({
                     </div>
                   ) : item.type === 'hymn' ? (
                     <div>
-                      SDAH {item.number} · {item.title}
+                      #{item.number} · {item.title}
                       {item.timing ? (
                         <span className="text-muted-foreground">
                           {' '}

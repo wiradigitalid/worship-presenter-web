@@ -8,6 +8,7 @@ import {
   discoverBibleTranslationFiles,
   loadBibleCorpus,
   loadSongBookCorpus,
+  songBookCorpusPath,
   type HymnSeed,
 } from '../corpus';
 import {

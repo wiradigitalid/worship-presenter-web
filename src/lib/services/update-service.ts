@@ -3,7 +3,6 @@
  * image payload, re-parse or re-normalize, and one guarded UPDATE.
  */
 import type Database from 'better-sqlite3';
-import { syncWorshipAnnouncements } from '@/lib/announcements';
 import { parseImagesPayloadJson } from '@/lib/images';
 import { parseRundown } from '@/lib/parser';
 import type { ParsedRundown } from '@/lib/parser';
@@ -138,18 +137,12 @@ export function updateService(
   const sql = `UPDATE services
              SET ${assignments.join(', ')}
              WHERE id = ? AND COALESCE(updated_at, created_at) = ?`;
-  const { announcements } = payload;
-  const { clearMaster } = input;
 
   const commit = db.transaction((): void => {
     const result = db
       .prepare<Array<string | number | null>>(sql)
       .run(...params);
     if (result.changes === 0) throw new StaleWriteError();
-
-    if (announcements) {
-      syncWorshipAnnouncements(serviceId, announcements, { clearMaster }, db);
-    }
   });
 
   let stale = false;

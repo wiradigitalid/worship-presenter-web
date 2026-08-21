@@ -121,28 +121,59 @@ test('the 8→9 migration adds metadata columns, backfills locale and bumps vers
   const { migrateSongBookMetadata } = await import(
     pathToFileURL(path.join(root, 'src', 'lib', 'db', 'index.ts')).href
   );
-  // Simulate v8 database: version at 8, NULL locale on a test book
-  db.prepare(
-    `INSERT OR REPLACE INTO settings (key, value) VALUES ('data_version', '8')`
-  ).run();
-  db.prepare(
-    `INSERT OR REPLACE INTO song_books (book_code, name, locale, is_default, updated_at) VALUES ('TEST_V8', 'Test V8', NULL, 0, '2026-08-20T00:00:00Z')`
-  ).run();
 
-  migrateSongBookMetadata(db);
+  const fixturePath = path.join(root, 'data', 'song-book', 'test_locale_fixture.json');
+  fs.writeFileSync(
+    fixturePath,
+    JSON.stringify({
+      book: {
+        code: 'TEST_LOCALE_FIXTURE',
+        name: 'Test Locale Fixture',
+        locale: 'id-ID',
+      },
+    })
+  );
 
-  const ver = db
-    .prepare(`SELECT value FROM settings WHERE key = ?`)
-    .get(DATA_VERSION_KEY);
-  assert.equal(ver.value, '9');
+  try {
+    // Simulate v8 database: version at 8, NULL locale on a test book and fixture book
+    db.prepare(
+      `INSERT OR REPLACE INTO settings (key, value) VALUES ('data_version', '8')`
+    ).run();
+    db.prepare(
+      `INSERT OR REPLACE INTO song_books (book_code, name, locale, is_default, updated_at) VALUES ('TEST_V8', 'Test V8', NULL, 0, '2026-08-20T00:00:00Z')`
+    ).run();
+    db.prepare(
+      `INSERT OR REPLACE INTO song_books (book_code, name, locale, is_default, updated_at) VALUES ('TEST_LOCALE_FIXTURE', 'Test Locale Fixture', NULL, 0, '2026-08-20T00:00:00Z')`
+    ).run();
 
-  const row = db
-    .prepare(`SELECT locale FROM song_books WHERE book_code = 'TEST_V8'`)
-    .get();
-  assert.ok(row?.locale, 'locale must be backfilled with non-NULL');
+    migrateSongBookMetadata(db);
 
-  // Idempotency: second call does not fail
-  migrateSongBookMetadata(db);
+    const ver = db
+      .prepare(`SELECT value FROM settings WHERE key = ?`)
+      .get(DATA_VERSION_KEY);
+    assert.equal(ver.value, '9');
+
+    const rowV8 = db
+      .prepare(`SELECT locale FROM song_books WHERE book_code = 'TEST_V8'`)
+      .get();
+    assert.equal(rowV8?.locale, 'en', 'fallback without corpus must default to en');
+
+    const rowFixture = db
+      .prepare(`SELECT locale FROM song_books WHERE book_code = 'TEST_LOCALE_FIXTURE'`)
+      .get();
+    assert.equal(
+      rowFixture?.locale,
+      'id-ID',
+      'locale must be backfilled from corpus file rather than fallback en'
+    );
+
+    // Idempotency: second call does not fail
+    migrateSongBookMetadata(db);
+  } finally {
+    if (fs.existsSync(fixturePath)) {
+      fs.unlinkSync(fixturePath);
+    }
+  }
 });
 
 test('the 5→6 migration is a no-op once data_version has reached 6', () => {

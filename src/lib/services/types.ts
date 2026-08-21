@@ -4,7 +4,6 @@
  *
  * Route handlers must never re-declare a row shape or re-narrow a body.
  */
-import type { WorshipAnnouncementInput } from '@/lib/announcements';
 import type { StructuredServiceFields } from '@/lib/parsed-fields';
 
 /** Row shape returned by the list/search SELECT (`updated_at` already coalesced). */
@@ -80,7 +79,6 @@ export function validationFailure(message: string): ValidationFailure {
 export type CreateServicePayload = {
   imagesPayload: ServiceImagesPayload;
   participantsRaw: string | null;
-  announcements: WorshipAnnouncementInput[] | null;
 };
 
 export type CreateServiceInput = {
@@ -106,7 +104,6 @@ export type UpdateImagesPatch = {
  */
 export type UpdateServicePayload = {
   images: UpdateImagesPatch;
-  announcements: WorshipAnnouncementInput[] | null;
   participants: FieldPatch<string | null>;
 };
 

@@ -1,5 +1,5 @@
 /**
- * Remaining Hub verbs on the Go API: announcements, hymns, scripture,
+ * Remaining Hub verbs on the Go API: hymns, scripture,
  * admin settings/accounts/registry, webhook intake.
  */
 import { test, before, after } from 'node:test';
@@ -160,36 +160,17 @@ async function json(url, method = 'GET', body, extraHeaders = {}) {
   return { status: res.status, body: parsed };
 }
 
-test('GET /api/announcements starts empty; POST then DELETE with token', async () => {
-  const empty = await json(`${base}/api/announcements`);
-  assert.equal(empty.status, 200);
-  assert.deepEqual(empty.body, { items: [] });
-
-  const created = await json(`${base}/api/announcements`, 'POST', {
-    image_url: 'https://example.com/flyer.png',
-  });
-  assert.equal(created.status, 201);
-  assert.equal(created.body.item.image_url, 'https://example.com/flyer.png');
-  assert.equal(typeof created.body.item.updated_at, 'string');
-  const id = created.body.item.id;
-  const token = created.body.item.updated_at;
-
-  const listed = await json(`${base}/api/announcements`);
-  assert.equal(listed.status, 200);
-  assert.equal(listed.body.items.length, 1);
-
-  const missing = await json(`${base}/api/announcements/${id}`, 'DELETE');
-  assert.equal(missing.status, 400);
-
-  const stale = await json(`${base}/api/announcements/${id}`, 'DELETE', {
-    updated_at: '1999-01-01 00:00:00',
-  });
-  assert.equal(stale.status, 409);
-
-  const removed = await json(`${base}/api/announcements/${id}`, 'DELETE', {
-    updated_at: token,
-  });
-  assert.equal(removed.status, 200);
+test('retired /api/announcements routes return 404 for all verbs', async () => {
+  const verbs = ['GET', 'POST', 'PUT'];
+  for (const method of verbs) {
+    const res = await json(`${base}/api/announcements`, method, method === 'GET' ? undefined : {});
+    assert.equal(res.status, 404, `${method} /api/announcements expected 404, got ${res.status}`);
+  }
+  const itemVerbs = ['GET', 'PATCH', 'DELETE'];
+  for (const method of itemVerbs) {
+    const res = await json(`${base}/api/announcements/123`, method, method === 'GET' ? undefined : {});
+    assert.equal(res.status, 404, `${method} /api/announcements/123 expected 404, got ${res.status}`);
+  }
 });
 
 test('GET /api/hymns returns seeded SDAH entries', async () => {

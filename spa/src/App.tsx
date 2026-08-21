@@ -10,7 +10,6 @@ import RunSheetPage from './pages/RunSheetPage';
 import PresentPage from './pages/PresentPage';
 import SlideshowPage from './pages/SlideshowPage';
 import ProjectorPage from './pages/ProjectorPage';
-import AnnouncementsPage from './pages/AnnouncementsPage';
 import AdminPage from './pages/AdminPage';
 import AdminArtifactsPage from './pages/AdminArtifactsPage';
 import OperatorShell from './pages/OperatorShell';
@@ -35,7 +34,6 @@ export default function App() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/services/new" element={<CreateServicePage />} />
         <Route path="/services/:id" element={<RunSheetPage />} />
-        <Route path="/announcements" element={<AnnouncementsPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/admin/artifacts" element={<AdminArtifactsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

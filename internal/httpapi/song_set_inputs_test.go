@@ -229,3 +229,55 @@ func TestSongSetInputsUpsertLifecycle(t *testing.T) {
 		t.Errorf("row count changed after junk-key update: %d", len(rows))
 	}
 }
+
+func TestServices_StrayAnnouncementsIgnoredOnCreateAndUpdate(t *testing.T) {
+	ts, handle, _ := newSongSetTestServer(t)
+	admin := songSetLogin(t, ts)
+
+	// Clean out any existing announcement_items
+	if _, err := handle.Exec(`DELETE FROM announcement_items`); err != nil {
+		t.Fatalf("delete announcement_items: %v", err)
+	}
+
+	// 1. Create with announcements field - must succeed and not write to announcement_items
+	res := songSetRequest(t, ts, "POST", "/api/services", `{
+		"raw_payload": "SABBATH, JULY 25, 2026\nDIVINE SERVICE\nSermon: Pastor Adam",
+		"announcements": [
+			{"image_url": "https://example.com/flyer1.png", "is_recurring": false}
+		]
+	}`, admin)
+	createBody := songSetJSON(t, res)
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create with announcements failed: %d %v", res.StatusCode, createBody)
+	}
+	id := int64(createBody["id"].(float64))
+
+	var count int
+	if err := handle.QueryRow(`SELECT COUNT(*) FROM announcement_items`).Scan(&count); err != nil {
+		t.Fatalf("query announcement_items: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected 0 announcement_items after create, got %d", count)
+	}
+
+	// 2. Update with announcements field - must succeed (200, not 400/500) and not write to announcement_items
+	token := freshUpdatedAt(t, ts, admin, id)
+	res = songSetRequest(t, ts, "PUT", fmt.Sprintf("/api/services/%d", id), fmt.Sprintf(`{
+		"updated_at": %q,
+		"raw_payload": "SABBATH, JULY 25, 2026\nDIVINE SERVICE\nSermon: Pastor Noah",
+		"announcements": [
+			{"image_url": "https://example.com/flyer2.png", "is_recurring": false}
+		]
+	}`, token), admin)
+	updateBody := songSetJSON(t, res)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("update with announcements failed: %d %v", res.StatusCode, updateBody)
+	}
+
+	if err := handle.QueryRow(`SELECT COUNT(*) FROM announcement_items`).Scan(&count); err != nil {
+		t.Fatalf("query announcement_items: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected 0 announcement_items after update, got %d", count)
+	}
+}

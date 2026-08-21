@@ -3010,7 +3010,7 @@ test('AC-6: the hand-rolled red pair is the destructive token, so it says so', (
   // from it the moment the identity is retuned.
   for (const file of [
     'src/components/LogoutButton.tsx',
-    'src/operator/AnnouncementsManager.tsx',
+    'src/operator/DeleteButton.tsx',
   ]) {
     const source = read(file);
     assert.doesNotMatch(

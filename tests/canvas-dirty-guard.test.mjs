@@ -702,8 +702,8 @@ test('AC-4: every Header link routes through the guard', () => {
   );
   assert.equal(
     jsxTags(header, 'CustomLink').length,
-    5,
-    'logo, Dashboard, Announcements, Artifacts, Settings'
+    4,
+    'logo, Dashboard, Artifacts, Settings'
   );
   assert.ok(
     !importSpecifiers(header).includes('@/components/Link'),

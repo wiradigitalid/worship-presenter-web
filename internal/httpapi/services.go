@@ -705,20 +705,7 @@ func (s *Server) previewService(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var flyers []string
-	if arr, ok := body["announcements"].([]any); ok {
-		for _, item := range arr {
-			m, ok := item.(map[string]any)
-			if !ok {
-				continue
-			}
-			u, _ := m["image_url"].(string)
-			if u, e := plan.AssertAnnouncementImageURL(u); e == nil {
-				flyers = append(flyers, u)
-			} else if plan.IsAnnouncementImageURL(u) {
-				flyers = append(flyers, strings.TrimSpace(u))
-			}
-		}
-	} else if arr, ok := body["images"].([]any); ok {
+	if arr, ok := body["images"].([]any); ok {
 		for _, x := range arr {
 			if u, ok := x.(string); ok && plan.IsAnnouncementImageURL(u) {
 				flyers = append(flyers, u)

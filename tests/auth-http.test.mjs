@@ -145,7 +145,7 @@ after(() => {
 });
 
 test('unauthenticated API returns 401', async () => {
-  const res = await fetchRaw(`${base}/api/announcements`);
+  const res = await fetchRaw(`${base}/api/services`);
   assert.equal(res.status, 401);
 });
 

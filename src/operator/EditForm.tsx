@@ -1,4 +1,3 @@
-import Link from '@/components/Link';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,28 +46,6 @@ import {
   type WorshipFormFields,
 } from '@/lib/worship-form-fields';
 
-type AnnouncementItemInput = {
-  id: string;
-  image_url: string;
-  is_recurring: boolean;
-};
-
-type AnnouncementSeed = {
-  id?: number | string;
-  image_url: string;
-  service_id?: number | null;
-};
-
-function mapAnnouncements(
-  list: AnnouncementSeed[]
-): AnnouncementItemInput[] {
-  return list.map((ann, idx) => ({
-    id: `init-${idx}-${ann.id ?? idx}`,
-    image_url: ann.image_url,
-    is_recurring: ann.service_id == null,
-  }));
-}
-
 /** Module-level so the default keeps a stable identity across renders. */
 const EMPTY_HYMN_INDEX: HymnIndexEntry[] = [];
 
@@ -80,9 +57,6 @@ export default function EditForm({
   initialSermonGraphicUrl = '',
   initialFamilyPhotoUrl = '',
   initialYouthPhotoUrl = '',
-  initialAnnouncements = [],
-  flyerImages = [],
-  usingLegacyFallback = false,
   initialUpdatedAt,
   hymnIndex = EMPTY_HYMN_INDEX,
 }: {
@@ -94,10 +68,6 @@ export default function EditForm({
   initialSermonGraphicUrl?: string;
   initialFamilyPhotoUrl?: string;
   initialYouthPhotoUrl?: string;
-  initialAnnouncements?: AnnouncementSeed[];
-  /** Server-resolved URLs for legacy fallback when the editable list is empty. */
-  flyerImages?: string[];
-  usingLegacyFallback?: boolean;
   /** Accepted for page compat; edit no longer mutates participants_payload. */
   initialParticipantsRaw?: string;
   initialUpdatedAt: string;
@@ -110,9 +80,6 @@ export default function EditForm({
   );
   const [familyPhotoUrl, setFamilyPhotoUrl] = useState(initialFamilyPhotoUrl);
   const [youthPhotoUrl, setYouthPhotoUrl] = useState(initialYouthPhotoUrl);
-  const [announcements, setAnnouncements] = useState<AnnouncementItemInput[]>(
-    () => mapAnnouncements(initialAnnouncements)
-  );
 
   const [fields, setFields] = useState<WorshipFormFields>(() => ({
     ...fieldsFromParsed(initialParsed),
@@ -126,6 +93,9 @@ export default function EditForm({
   const [backgroundLibrary, setBackgroundLibrary] = useState<
     Array<{ id: number; url: string; isDefault: boolean }>
   >([]);
+  const [songBooks, setSongBooks] = useState<
+    Array<{ bookCode: string; name: string; isDefault: boolean }>
+  >([]);
   const [openLyricEditors, setOpenLyricEditors] = useState<Record<string, boolean>>({});
   const [savingBookStatus, setSavingBookStatus] = useState<Record<string, boolean>>({});
 
@@ -138,8 +108,9 @@ export default function EditForm({
       // If lyrics are not already filled, fetch from hymn number if valid
       if (!current?.lyricText && current?.songNumber && /^\d+$/.test(current.songNumber.trim())) {
         const num = Number(current.songNumber.trim());
+        const bookParam = current.songBookCode ? `&book_code=${encodeURIComponent(current.songBookCode)}` : '';
         try {
-          const res = await fetch(`/api/hymns?numbers=${num}`);
+          const res = await fetch(`/api/hymns?numbers=${num}${bookParam}`);
           if (res.ok) {
             const data = (await res.json()) as { hymns?: Array<{ number: number; lyrics?: string }> };
             const hymn = data.hymns?.find((h) => h.number === num);
@@ -191,9 +162,10 @@ export default function EditForm({
     let active = true;
     void (async () => {
       try {
-        const [entriesRes, bgRes] = await Promise.all([
+        const [entriesRes, bgRes, booksRes] = await Promise.all([
           fetch('/api/song-set-entries'),
           fetch('/api/background-library'),
+          fetch('/api/song-books'),
         ]);
         if (entriesRes.ok) {
           const data = (await entriesRes.json()) as {
@@ -209,6 +181,14 @@ export default function EditForm({
           };
           if (active && Array.isArray(data.images)) {
             setBackgroundLibrary(data.images);
+          }
+        }
+        if (booksRes.ok) {
+          const data = (await booksRes.json()) as {
+            books?: Array<{ bookCode: string; name: string; isDefault: boolean }>;
+          };
+          if (active && Array.isArray(data.books)) {
+            setSongBooks(data.books);
           }
         }
       } catch {
@@ -255,10 +235,6 @@ export default function EditForm({
   }, [initialYouthPhotoUrl]);
 
   useEffect(() => {
-    setAnnouncements(mapAnnouncements(initialAnnouncements));
-  }, [initialAnnouncements]);
-
-  useEffect(() => {
     setFields({
       ...fieldsFromParsed(initialParsed),
       songSets: coerceSongSetInputs(initialSongSets),
@@ -292,10 +268,6 @@ export default function EditForm({
             sermonGraphicUrl: sermonGraphicUrl || null,
             familyPhotoUrl: familyPhotoUrl || null,
             youthPhotoUrl: youthPhotoUrl || null,
-            announcements: announcements.map((a) => ({
-              image_url: a.image_url,
-              is_recurring: a.is_recurring,
-            })),
             fields: buildFieldsPayload(fields),
           }),
         });
@@ -342,7 +314,6 @@ export default function EditForm({
     sermonGraphicUrl,
     familyPhotoUrl,
     youthPhotoUrl,
-    announcements,
     fields,
   ]);
 
@@ -397,15 +368,11 @@ export default function EditForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           raw_payload: payload,
-          // Images/announcements so setSlidePlan does not flicker photos away;
+          // Images so setSlidePlan does not flicker photos away;
           // omit fields so hydrate overlays come from raw parse only.
           sermonGraphicUrl: sermonGraphicUrl || null,
           familyPhotoUrl: familyPhotoUrl || null,
           youthPhotoUrl: youthPhotoUrl || null,
-          announcements: announcements.map((a) => ({
-            image_url: a.image_url,
-            is_recurring: a.is_recurring,
-          })),
         }),
       });
       const data = (await res.json()) as {
@@ -477,63 +444,11 @@ export default function EditForm({
     }
   };
 
-  const moveAnnouncement = (index: number, direction: -1 | 1) => {
-    const target = index + direction;
-    if (target < 0 || target >= announcements.length) return;
-    const next = [...announcements];
-    const [row] = next.splice(index, 1);
-    next.splice(target, 0, row);
-    setAnnouncements(next);
-  };
-
-  const removeAnnouncement = (annId: string) => {
-    setAnnouncements(announcements.filter((ann) => ann.id !== annId));
-  };
-
-  const addAnnouncementUrl = (url: string) => {
-    if (!url.trim()) return;
-    setAnnouncements([
-      ...announcements,
-      {
-        id: `custom-${Date.now()}-${Math.random()}`,
-        image_url: url.trim(),
-        is_recurring: false,
-      },
-    ]);
-  };
-
-  const uploadAnnouncementFile = async (file: File) => {
-    setError(null);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = (await res.json()) as { error?: string; url?: string };
-      if (!res.ok) throw new Error(data.error || t('form.error.upload'));
-      setAnnouncements([
-        ...announcements,
-        {
-          id: `upload-${Date.now()}-${Math.random()}`,
-          image_url: data.url || '',
-          is_recurring: false,
-        },
-      ]);
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : 'Announcement upload failed'
-      );
-    }
-  };
-
   const resetFromProps = () => {
     setPayload(initialPayload);
     setSermonGraphicUrl(initialSermonGraphicUrl);
     setFamilyPhotoUrl(initialFamilyPhotoUrl);
     setYouthPhotoUrl(initialYouthPhotoUrl);
-    setAnnouncements(mapAnnouncements(initialAnnouncements));
     setFields({
       ...fieldsFromParsed(initialParsed),
       songSets: coerceSongSetInputs(initialSongSets),
@@ -549,8 +464,7 @@ export default function EditForm({
       songSets?: unknown;
       images_payload?: Record<string, unknown>;
       updated_at?: string;
-    },
-    serviceAnnouncements: AnnouncementSeed[]
+    }
   ) => {
     const images =
       svc.images_payload && typeof svc.images_payload === 'object'
@@ -562,7 +476,6 @@ export default function EditForm({
       typeof images.familyPhotoUrl === 'string' ? images.familyPhotoUrl : '';
     const youthUrl =
       typeof images.youthPhotoUrl === 'string' ? images.youthPhotoUrl : '';
-    const mappedAnns = mapAnnouncements(serviceAnnouncements);
     const nextFields = {
       ...fieldsFromParsed(svc.parsed_data),
       songSets: coerceSongSetInputs(svc.songSets),
@@ -572,7 +485,6 @@ export default function EditForm({
     setSermonGraphicUrl(sermonUrl);
     setFamilyPhotoUrl(familyUrl);
     setYouthPhotoUrl(youthUrl);
-    setAnnouncements(mappedAnns);
     setFields(nextFields);
     if (svc.updated_at) setUpdatedAt(svc.updated_at);
     setError(null);
@@ -581,7 +493,6 @@ export default function EditForm({
       sermonGraphicUrl: sermonUrl,
       familyPhotoUrl: familyUrl,
       youthPhotoUrl: youthUrl,
-      announcements: mappedAnns,
       fields: nextFields,
     };
   };
@@ -591,7 +502,6 @@ export default function EditForm({
     sermonGraphicUrl: string;
     familyPhotoUrl: string;
     youthPhotoUrl: string;
-    announcements: AnnouncementItemInput[];
     fields: WorshipFormFields;
   }) => {
     const rawPayload = snapshot?.raw_payload ?? payload;
@@ -603,12 +513,6 @@ export default function EditForm({
       return;
     }
 
-    const previewAnnouncements =
-      snapshot?.announcements ??
-      announcements.map((a) => ({
-        image_url: a.image_url,
-        is_recurring: a.is_recurring,
-      }));
     const previewFields = snapshot?.fields ?? fieldsRef.current;
 
     const seq = ++previewSeqRef.current;
@@ -621,7 +525,6 @@ export default function EditForm({
           sermonGraphicUrl: (snapshot?.sermonGraphicUrl ?? sermonGraphicUrl) || null,
           familyPhotoUrl: (snapshot?.familyPhotoUrl ?? familyPhotoUrl) || null,
           youthPhotoUrl: (snapshot?.youthPhotoUrl ?? youthPhotoUrl) || null,
-          announcements: previewAnnouncements,
           fields: buildFieldsPayload(previewFields),
         }),
       });
@@ -664,42 +567,14 @@ export default function EditForm({
       images_payload?: Record<string, unknown>;
       updated_at?: string;
     };
-    const annRes = await fetch('/api/announcements', {
-      credentials: 'same-origin',
-    });
-    const annData = annRes.ok
-      ? ((await annRes.json()) as { items?: AnnouncementSeed[] })
-      : { items: [] };
-    const serviceAnns = (annData.items || []).filter(
-      (a) => a.service_id == null || a.service_id === svc.id
-    );
-    const snapshot = applyServerSnapshot(svc, serviceAnns);
+    const snapshot = applyServerSnapshot(svc);
     await refreshSlidePreview(snapshot);
   };
-
-  // Live carousel from form state (avoids stale flyerImages after edit/save).
-  // Legacy-only services: empty editable list + server-resolved flyerImages.
-  const carouselImages =
-    announcements.length > 0 || !usingLegacyFallback
-      ? announcements
-          .map((a) => a.image_url)
-          .filter((url) => Boolean(url.trim()))
-      : flyerImages;
 
   const handleSave = async () => {
     // A hymn input blurred by this very click may still be resolving its title
     // against /api/hymns; let it land before the payload is built.
     await flushPendingHymnCommits();
-
-    const recurringCount = announcements.filter((a) => a.is_recurring).length;
-    const initialMasterCount = initialAnnouncements.filter(
-      (a) => a.service_id == null
-    ).length;
-    let clearMaster = false;
-    if (recurringCount === 0 && initialMasterCount > 0) {
-      const ok = window.confirm(t('form.clearMasterConfirm'));
-      if (ok) clearMaster = true;
-    }
 
     setIsSaving(true);
     setError(null);
@@ -713,11 +588,6 @@ export default function EditForm({
           sermonGraphicUrl: sermonGraphicUrl.trim() || null,
           familyPhotoUrl: familyPhotoUrl.trim() || null,
           youthPhotoUrl: youthPhotoUrl.trim() || null,
-          clearMaster: clearMaster || undefined,
-          announcements: announcements.map((a) => ({
-            image_url: a.image_url,
-            is_recurring: a.is_recurring,
-          })),
           fields: buildFieldsPayload(fieldsRef.current),
         }),
       });
@@ -768,7 +638,7 @@ export default function EditForm({
           <p className={FORM_WARN_BANNER_BODY}>
             {t('form.missingHymns.body').replace(
               '{list}',
-              failedHymnNumbers.map((n) => `SDAH ${n}`).join(', ')
+              failedHymnNumbers.map((n) => `#${n}`).join(', ')
             )}
           </p>
         </div>
@@ -776,51 +646,6 @@ export default function EditForm({
 
       <div className="grid gap-6 lg:grid-cols-12 items-start">
         <div className="lg:col-span-7 space-y-6">
-          <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
-            <CardHeader>
-              <CardTitle>{t('form.flyers.title')}</CardTitle>
-              <CardDescription>
-                {carouselImages.length === 0
-                  ? t('form.flyers.editEmpty')
-                  : usingLegacyFallback && announcements.length === 0
-                    ? t('form.flyers.editLegacy')
-                    : carouselImages.length === 1
-                      ? t('form.flyers.editCountOne')
-                      : t('form.flyers.editCount').replace(
-                          '{n}',
-                          String(carouselImages.length)
-                        )}{' '}
-                <Link
-                  href="/announcements"
-                  className="text-primary hover:underline"
-                >
-                  {t('form.flyers.manage')}
-                </Link>
-              </CardDescription>
-            </CardHeader>
-            {carouselImages.length > 0 && (
-              <CardContent>
-                <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth">
-                  {carouselImages.map((img, i) => (
-                    <a
-                      key={`${img}-${i}`}
-                      href={img}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="shrink-0 snap-start group relative block h-32 w-auto max-w-[200px] border rounded overflow-hidden"
-                    >
-                      <img
-                        src={img}
-                        alt={t('announcements.alt').replace('{n}', String(i + 1))}
-                        className="h-full w-auto object-cover group-hover:scale-105 transition-transform"
-                      />
-                    </a>
-                  ))}
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
           <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
             <CardHeader>
               <CardTitle className="text-xl font-bold">
@@ -880,12 +705,14 @@ export default function EditForm({
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
                   {songSetEntries.map((entry) => {
+                    const defaultBook = songBooks.find((b) => b.isDefault);
                     const current = fields.songSets[entry.variableName] || {
                       songNumber: '',
                       songBookCode: '',
                       background: '',
                       lyricText: '',
                     };
+                    const selectedBookCode = current.songBookCode || defaultBook?.bookCode || '';
                     const isLyricOpen = !!openLyricEditors[entry.variableName];
                     const numVal = current.songNumber.trim();
                     const hasValidNum = /^\d+$/.test(numVal);
@@ -908,15 +735,36 @@ export default function EditForm({
                             </Button>
                           ) : null}
                         </div>
-                        <HymnNumberAutocomplete
-                          value={current.songNumber}
-                          onChange={(v) =>
-                            setSongSetField(entry.variableName, 'songNumber', v)
-                          }
-                          hymnIndex={hymnIndex}
-                          placeholder={t('form.hymnPlaceholder')}
-                          disabled={isSaving}
-                        />
+                        <div className="grid gap-2 sm:grid-cols-[140px_minmax(0,1fr)] items-center">
+                          <Select
+                            value={current.songBookCode || (defaultBook ? defaultBook.bookCode : '')}
+                            onValueChange={(val) =>
+                              setSongSetField(entry.variableName, 'songBookCode', val)
+                            }
+                            disabled={isSaving}
+                          >
+                            <SelectTrigger className="h-9 text-xs">
+                              <SelectValue placeholder={t('form.songSets.book')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {songBooks.map((b) => (
+                                <SelectItem key={b.bookCode} value={b.bookCode}>
+                                  {b.bookCode} {b.isDefault ? `(${t('form.songSets.defaultBookBadge')})` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <HymnNumberAutocomplete
+                            value={current.songNumber}
+                            bookCode={selectedBookCode}
+                            onChange={(v) =>
+                              setSongSetField(entry.variableName, 'songNumber', v)
+                            }
+                            hymnIndex={hymnIndex}
+                            placeholder={t('form.hymnPlaceholder')}
+                            disabled={isSaving}
+                          />
+                        </div>
                         <div className="flex items-center gap-2">
                           <label className="text-[10px] text-muted-foreground uppercase font-medium">
                             {t('form.songSets.background')}
@@ -1170,199 +1018,6 @@ export default function EditForm({
                   disabled={isSaving}
                 />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">
-                {t('form.flyers.title')}
-              </CardTitle>
-              <CardDescription>
-                {t('form.flyers.description')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-                {announcements.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic text-center py-4">
-                    {t('form.flyers.empty')}
-                  </p>
-                ) : (
-                  announcements.map((ann, idx) => (
-                    <div
-                      key={ann.id}
-                      className="flex items-center justify-between border border-border/50 bg-background/30 rounded-xl p-3 gap-3"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <a
-                          href={ann.image_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="shrink-0 block h-12 w-16 border border-border/80 rounded-lg overflow-hidden bg-background"
-                        >
-                          <img
-                            src={ann.image_url}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                        </a>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-mono text-[10px] break-all truncate text-muted-foreground">
-                            {ann.image_url}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <Label className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground cursor-pointer">
-                              <Checkbox
-                                checked={ann.is_recurring}
-                                onCheckedChange={(checked) => {
-                                  const next = [...announcements];
-                                  next[idx] = {
-                                    ...next[idx],
-                                    is_recurring: checked === true,
-                                  };
-                                  setAnnouncements(next);
-                                }}
-                              />
-                              {t('form.flyers.master')}
-                            </Label>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-1 shrink-0">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-xs"
-                          disabled={idx === 0}
-                          onClick={() => moveAnnouncement(idx, -1)}
-                          title={t('form.moveUp')}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={2.5}
-                            stroke="currentColor"
-                            className="size-3"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18"
-                            />
-                          </svg>
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-xs"
-                          disabled={idx === announcements.length - 1}
-                          onClick={() => moveAnnouncement(idx, 1)}
-                          title={t('form.moveDown')}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={2.5}
-                            stroke="currentColor"
-                            className="size-3"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3"
-                            />
-                          </svg>
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon-xs"
-                          onClick={() => removeAnnouncement(ann.id)}
-                          title={t('form.remove')}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={2.5}
-                            stroke="currentColor"
-                            className="size-3"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                            />
-                          </svg>
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-12 items-end pt-2 border-t border-border/40">
-                <div className="sm:col-span-8">
-                  <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">
-                    {t('form.flyers.addUrl')}
-                  </label>
-                  <Input
-                    type="text"
-                    id="edit-flyer-url-input"
-                    className="text-xs"
-                    placeholder="https://example.com/flyer.png"
-                  />
-                </div>
-                <div className="sm:col-span-4 flex gap-1.5">
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => {
-                      const input = document.getElementById(
-                        'edit-flyer-url-input'
-                      ) as HTMLInputElement | null;
-                      if (input && input.value.trim()) {
-                        addAnnouncementUrl(input.value);
-                        input.value = '';
-                      }
-                    }}
-                  >
-                    {t('form.flyers.addUrlButton')}
-                  </Button>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    id="flyer-upload-edit-btn"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) uploadAnnouncementFile(file);
-                      e.target.value = '';
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() =>
-                      document.getElementById('flyer-upload-edit-btn')?.click()
-                    }
-                  >
-                    {t('form.flyers.upload')}
-                  </Button>
-                </div>
-              </div>
-              <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/50 pt-3">
-                <span className="font-medium text-foreground/80">
-                  {t('form.flyers.title')}:{' '}
-                </span>
-                {t('form.flyers.how')}
-              </p>
             </CardContent>
           </Card>
         </div>

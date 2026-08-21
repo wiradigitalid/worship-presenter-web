@@ -97,6 +97,8 @@ const ALLOWED_CORPUS_WRITES = new Set([
   'internal/httpapi/services.go writes song_set_inputs',
   // Admin registry trio — not song-book corpus (DEC-004 song_set_layouts).
   'internal/httpapi/song_set_entries.go writes song_set_layouts',
+  // Admin song-books CRUD contract (.how/registry/02-contracts/05-song-books.md, DEC-005 / AD-36).
+  'internal/httpapi/song_books.go writes song_books',
 ]);
 
 test('no operator or administrator write path into a corpus table', () => {
@@ -104,6 +106,8 @@ test('no operator or administrator write path into a corpus table', () => {
   const scan = (abs, skipRel) => {
     const rel = path.relative(repoRoot, abs).replace(/\\/g, '/');
     if (rel === skipRel) return;
+    // Go test fixtures are not runtime write paths; Go only compiles _test.go under `go test`.
+    if (rel.endsWith('_test.go')) return;
     const code = stripComments(fs.readFileSync(abs, 'utf8'));
     for (const table of corpusTables) {
       if (writePattern(table).test(code)) {
@@ -117,24 +121,30 @@ test('no operator or administrator write path into a corpus table', () => {
   assert.deepEqual(offenders, []);
 });
 
-const localePredicate = /WHERE[\s\S]*?\blocale\b\s*(=|LIKE|IN\b|<>|!=)/i;
-
 function hasLocaleListingFilter(code) {
-  let idx = 0;
-  while (true) {
-    const hit = localePredicate.exec(code.slice(idx));
-    if (!hit) return false;
-    const between = hit[0];
-    // UPSERT … ON CONFLICT DO UPDATE SET locale = excluded.locale is not a listing filter.
-    if (!/DO\s+UPDATE\s+SET/i.test(between)) return true;
-    idx += hit.index + hit[0].length;
+  // Strip one-time null-backfill migrations: `locale IS NULL OR locale = ''` is not a listing filter.
+  const cleaned = code.replace(/locale\s+IS\s+NULL\s+OR\s+locale\s*=\s*(?:''|""|``)/gi, '');
+  // Split on SQL-ish string / template boundaries or semicolons/backticks to evaluate per statement
+  // rather than spanning across unrelated statements in a file.
+  const statements = cleaned.split(/[`'"]|;|\bprepare\s*\(|\bexec\s*\(|\bquery(?:row)?\s*\(/i);
+  for (const stmt of statements) {
+    const whereIdx = stmt.search(/\bWHERE\b/i);
+    if (whereIdx !== -1) {
+      const whereClause = stmt.slice(whereIdx);
+      if (/\blocale\b\s*(=|LIKE|IN\b|<>|!=)/i.test(whereClause)) {
+        return true;
+      }
+    }
   }
+  return false;
 }
 
 test('listing endpoints never filter corpus rows by locale', () => {
   const offenders = [];
   const scan = (abs) => {
     const rel = path.relative(repoRoot, abs).replace(/\\/g, '/');
+    // Go test files are test fixtures, not listing endpoints.
+    if (rel.endsWith('_test.go')) return;
     const code = stripComments(fs.readFileSync(abs, 'utf8'));
     if (hasLocaleListingFilter(code)) offenders.push(rel);
   };

@@ -101,12 +101,6 @@ export default function Header({ isAdmin = false, username = 'Operator' }: Heade
           >
             {t('chrome.nav.dashboard')}
           </CustomLink>
-          <CustomLink
-            href="/announcements"
-            className={getLinkClass(pathname.startsWith('/announcements'))}
-          >
-            {t('chrome.nav.announcements')}
-          </CustomLink>
           {isAdmin && (
             <>
               <CustomLink

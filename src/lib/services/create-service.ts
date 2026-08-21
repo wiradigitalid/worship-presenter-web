@@ -3,7 +3,6 @@
  * INSERT + announcement sync transaction.
  */
 import type Database from 'better-sqlite3';
-import { syncWorshipAnnouncements } from '@/lib/announcements';
 import { parseRundown } from '@/lib/parser';
 import {
   applyStructuredFields,
@@ -43,8 +42,6 @@ export function createService(
 
   const parsedJson = JSON.stringify(parsedData);
   const imagesJson = JSON.stringify(payload.imagesPayload);
-  const { announcements } = payload;
-  const { clearMaster } = input;
 
   class DateCollision extends Error {
     existingId: number;

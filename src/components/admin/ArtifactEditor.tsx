@@ -381,13 +381,37 @@ function serializeCanvas(
     .map((entry) => entry.next);
 }
 
-export default function ArtifactEditor() {
+import {
+  ArtifactEditorAdapter,
+  CopiedSlide,
+  mainSpineAdapter,
+} from '@/lib/registry/canvas-adapters';
+
+export interface ArtifactEditorProps {
+  adapter?: ArtifactEditorAdapter;
+  initialSelectedId?: string | null;
+  copiedSlidePayload?: CopiedSlide | null;
+  onCopySlidePayloadChange?: (slide: CopiedSlide | null) => void;
+  hideList?: boolean;
+  allowImages?: boolean;
+  bannerNote?: React.ReactNode;
+}
+
+export default function ArtifactEditor({
+  adapter = mainSpineAdapter,
+  initialSelectedId = null,
+  copiedSlidePayload: externalCopiedSlidePayload,
+  onCopySlidePayloadChange,
+  hideList = false,
+  allowImages = true,
+  bannerNote = null,
+}: ArtifactEditorProps = {}) {
   const { t } = useT();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasShellRef = useRef<HTMLDivElement | null>(null);
   const fabricCanvasRef = useRef<import('fabric').Canvas | null>(null);
   const [templates, setTemplates] = useState<ArtifactTemplateSummary[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [template, setTemplate] = useState<StoredArtifactTemplate | null>(null);
   const [draftLabel, setDraftLabel] = useState('');
   const [newLabel, setNewLabel] = useState('');
@@ -470,20 +494,15 @@ export default function ArtifactEditor() {
   }, []);
 
   const loadList = useCallback(async () => {
-    const res = await fetch('/api/admin/artifacts');
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || t('admin.artifacts.loadFailed'));
-    const summaries = data.templates ?? [];
+    const summaries = await adapter.list();
     setTemplates(summaries);
-    return summaries as ArtifactTemplateSummary[];
-  }, []);
+    return summaries;
+  }, [adapter]);
 
   const loadTemplate = useCallback(async (id: string) => {
     setStatus('loading');
     setMessage(null);
-    const res = await fetch(`/api/admin/artifacts/${id}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || t('admin.artifacts.loadOneFailed'));
+    const data = await adapter.getOne(id);
     setTemplate(data);
     setDraftLabel(typeof data.label === 'string' ? data.label : '');
     // A new server copy remounts the canvas, and a freshly mounted canvas is
@@ -494,7 +513,7 @@ export default function ArtifactEditor() {
     // still on it, and that flag must survive.
     setIsDirty((current) => nextDirtyState(current, 'template-changed'));
     setStatus('idle');
-  }, []);
+  }, [adapter]);
 
   useEffect(() => {
     loadList().catch((err) => {
@@ -502,6 +521,12 @@ export default function ArtifactEditor() {
       setMessage(err instanceof Error ? err.message : t('admin.artifacts.loadFailed'));
     });
   }, [loadList]);
+
+  useEffect(() => {
+    if (initialSelectedId && selectedId !== initialSelectedId) {
+      setSelectedId(initialSelectedId);
+    }
+  }, [initialSelectedId]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -973,18 +998,25 @@ export default function ArtifactEditor() {
     setFontSize(clampFontSize(parsed));
   };
 
-  const [copiedSlidePayload, setCopiedSlidePayload] = useState<{
-    label: string;
-    payload: Record<string, unknown>;
-  } | null>(null);
+  const [internalCopiedSlidePayload, setInternalCopiedSlidePayload] = useState<CopiedSlide | null>(null);
+
+  const activeCopiedSlidePayload =
+    externalCopiedSlidePayload !== undefined
+      ? externalCopiedSlidePayload
+      : internalCopiedSlidePayload;
+
+  const setCopiedSlide = (val: CopiedSlide | null) => {
+    if (onCopySlidePayloadChange) {
+      onCopySlidePayloadChange(val);
+    }
+    setInternalCopiedSlidePayload(val);
+  };
 
   const handleCopySlide = async (item: ArtifactTemplateSummary) => {
     try {
-      const res = await fetch(`/api/admin/artifacts/${item.id}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t('admin.artifacts.loadOneFailed'));
+      const data = await adapter.getOne(item.id);
       const { updatedAt, id, ...body } = data;
-      setCopiedSlidePayload({
+      setCopiedSlide({
         label: `${item.label} (Copy)`,
         payload: body,
       });
@@ -995,7 +1027,7 @@ export default function ArtifactEditor() {
   };
 
   const handlePasteSlide = async () => {
-    if (!copiedSlidePayload) return;
+    if (!activeCopiedSlidePayload) return;
     const proceed = mayDiscard(
       isDirty && isEditable,
       DISCARD_ON_SWITCH_CONFIRMATION,
@@ -1007,33 +1039,22 @@ export default function ArtifactEditor() {
     setMessage(null);
     try {
       // 1. Create new authored slide
-      const res = await fetch('/api/admin/artifacts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label: copiedSlidePayload.label }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t('admin.artifacts.addFailed'));
+      const data = await adapter.create(activeCopiedSlidePayload.label);
 
       // 2. Put copied layout/payload into the new slide (shares image references as-is)
-      const putRes = await fetch(`/api/admin/artifacts/${data.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...copiedSlidePayload.payload,
-          id: data.id,
-          label: copiedSlidePayload.label,
-          baseType: 'general',
-          updatedAt: data.updatedAt,
-        }),
+      const saveRes = await adapter.save(data.id, {
+        ...activeCopiedSlidePayload.payload,
+        id: data.id,
+        label: activeCopiedSlidePayload.label,
+        baseType: 'general',
+        updatedAt: data.updatedAt,
       });
-      const putData = await putRes.json();
-      if (!putRes.ok) throw new Error(putData.error || t('admin.artifacts.saveFailed'));
+      if (!saveRes.ok) throw new Error(saveRes.error || t('admin.artifacts.saveFailed'));
 
       await loadList();
       setSelectedId(data.id);
       setStatus('success');
-      toast(t('admin.artifacts.created').replace('{label}', copiedSlidePayload.label));
+      toast(t('admin.artifacts.created').replace('{label}', activeCopiedSlidePayload.label));
     } catch (err) {
       setStatus('error');
       setMessage(err instanceof Error ? err.message : t('admin.artifacts.addFailed'));
@@ -1053,13 +1074,7 @@ export default function ArtifactEditor() {
     setStatus('creating');
     setMessage(null);
     try {
-      const res = await fetch('/api/admin/artifacts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t('admin.artifacts.addFailed'));
+      const data = await adapter.create(label);
       setNewLabel('');
       await loadList();
       setSelectedId(data.id);
@@ -1082,19 +1097,15 @@ export default function ArtifactEditor() {
     setStatus('renaming');
     setMessage(null);
     try {
-      const res = await fetch(`/api/admin/artifacts/${template.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label, updatedAt: template.updatedAt }),
-      });
-      const data = await res.json();
+      const res = await adapter.rename(template.id, label, template.updatedAt);
       if (res.status === 409) {
         await loadTemplate(template.id);
         setStatus('conflict');
-        setMessage(data.error || t('admin.artifacts.modifiedElsewhere'));
+        setMessage(res.error || t('admin.artifacts.modifiedElsewhere'));
         return;
       }
-      if (!res.ok) throw new Error(data.error || t('admin.artifacts.renameFailed'));
+      if (!res.ok || !res.data) throw new Error(res.error || t('admin.artifacts.renameFailed'));
+      const data = res.data;
       setTemplate(data);
       if (typeof data.label === 'string') setDraftLabel(data.label);
       setStatus('success');
@@ -1151,12 +1162,7 @@ export default function ArtifactEditor() {
         updatedAt,
       };
 
-      const res = await fetch(`/api/admin/artifacts/${template.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
+      const res = await adapter.save(template.id, payload);
       if (res.status === 409) {
         // Reload first: `loadTemplate` clears the banner, so the explanation
         // has to be written after it or the admin sees nothing at all.
@@ -1168,12 +1174,13 @@ export default function ArtifactEditor() {
         setMessage(
           t('admin.artifacts.conflictSaved').replace(
             '{error}',
-            data.error || t('admin.artifacts.modifiedElsewhere')
+            res.error || t('admin.artifacts.modifiedElsewhere')
           )
         );
         return;
       }
-      if (!res.ok) throw new Error(data.error || t('admin.artifacts.saveFailed'));
+      if (!res.ok || !res.data) throw new Error(res.error || t('admin.artifacts.saveFailed'));
+      const data = res.data;
       setTemplate(data);
       if (typeof data.label === 'string') setDraftLabel(data.label);
       setIsDirty((current) => nextDirtyState(current, 'saved'));
@@ -1206,24 +1213,20 @@ export default function ArtifactEditor() {
     setStatus('resetting');
     setMessage(null);
     try {
-      const res = await fetch(`/api/admin/artifacts/${template.id}/reset`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updatedAt: template.updatedAt }),
-      });
-      const data = await res.json();
+      const res = await adapter.reset(template.id, template.updatedAt);
       if (res.status === 409) {
         await loadTemplate(template.id);
         setStatus('conflict');
         setMessage(
           t('admin.artifacts.resetConflict').replace(
             '{error}',
-            data.error || t('admin.artifacts.modifiedElsewhere')
+            res.error || t('admin.artifacts.modifiedElsewhere')
           )
         );
         return;
       }
-      if (!res.ok) throw new Error(data.error || t('admin.artifacts.resetFailed'));
+      if (!res.ok || !res.data) throw new Error(res.error || t('admin.artifacts.resetFailed'));
+      const data = res.data;
       setTemplate(data);
       if (typeof data.label === 'string') setDraftLabel(data.label);
       setIsDirty((current) => nextDirtyState(current, 'reset'));
@@ -1271,12 +1274,7 @@ export default function ArtifactEditor() {
     setStatus('deleting');
     setMessage(null);
     try {
-      const res = await fetch(`/api/admin/artifacts/${item.id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updatedAt: item.updatedAt }),
-      });
-      const data = await res.json();
+      const res = await adapter.delete(item.id, item.updatedAt);
       if (res.status === 409) {
         const summaries = await loadList();
         await reconcileSelectedTemplate(summaries);
@@ -1284,7 +1282,7 @@ export default function ArtifactEditor() {
         setMessage(
           t('admin.artifacts.deleteConflict').replace(
             '{error}',
-            data.error || t('admin.artifacts.modifiedElsewhere')
+            res.error || t('admin.artifacts.modifiedElsewhere')
           )
         );
         return;
@@ -1296,13 +1294,13 @@ export default function ArtifactEditor() {
         setMessage(
           t('admin.artifacts.deleteMissing').replace(
             '{error}',
-            data.error || t('admin.artifacts.loadOneFailed')
+            res.error || t('admin.artifacts.loadOneFailed')
           )
         );
         return;
       }
-      if (!res.ok) throw new Error(data.error || t('admin.artifacts.deleteFailed'));
-      const summaries = data.templates ?? [];
+      if (!res.ok) throw new Error(res.error || t('admin.artifacts.deleteFailed'));
+      const summaries = res.templates ?? (await loadList());
       setTemplates(summaries);
       if (deletingSelected) {
         setSelectedId(null);
@@ -1330,28 +1328,23 @@ export default function ArtifactEditor() {
     setStatus('reordering');
     setMessage(null);
     try {
-      const res = await fetch('/api/admin/artifacts/order', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: desired.map(({ id, updatedAt }) => ({ id, updatedAt })),
-        }),
-      });
-      const data = await res.json();
-      if (res.status === 409) {
+      const res = await adapter.reorder(
+        desired.map(({ id, updatedAt }) => ({ id, updatedAt }))
+      );
+      if (res.status === 409 || res.status === 400) {
         const summaries = await loadList();
         await reconcileSelectedTemplate(summaries);
         setStatus('conflict');
         setMessage(
           t('admin.artifacts.reorderConflict').replace(
             '{error}',
-            data.error || t('admin.artifacts.modifiedElsewhere')
+            res.error || t('admin.artifacts.modifiedElsewhere')
           )
         );
         return;
       }
-      if (!res.ok) throw new Error(data.error || t('admin.artifacts.reorderFailed'));
-      const summaries = data.templates ?? [];
+      if (!res.ok) throw new Error(res.error || t('admin.artifacts.reorderFailed'));
+      const summaries = res.templates ?? (await loadList());
       setTemplates(summaries);
       await reconcileSelectedTemplate(summaries);
       setStatus('success');
@@ -1452,8 +1445,9 @@ export default function ArtifactEditor() {
     );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-      <aside className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card/60 p-4 shadow-sm">
+    <div className={hideList ? 'block' : 'grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]'}>
+      {!hideList ? (
+        <aside className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card/60 p-4 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold text-foreground">Templates</h2>
         <form
           className="mb-3 flex gap-1"
@@ -1479,7 +1473,7 @@ export default function ArtifactEditor() {
           >
             {status === 'creating' ? t('admin.artifacts.adding') : t('admin.artifacts.add')}
           </Button>
-          {copiedSlidePayload ? (
+          {activeCopiedSlidePayload ? (
             <Button
               type="button"
               variant="outline"
@@ -1609,8 +1603,10 @@ export default function ArtifactEditor() {
           })}
         </ul>
       </aside>
+      ) : null}
 
       <section className="min-w-0 space-y-4">
+        {bannerNote ? <div>{bannerNote}</div> : null}
         {!template ? (
           <>
             {message ? (
@@ -1701,10 +1697,12 @@ export default function ArtifactEditor() {
 
             {!isEditable ? (
               <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-                {t('admin.artifacts.readOnlyBody').replace(
-                  '{kind}',
-                  `[${kindChipLabel(template.baseType)}]`
-                )}
+                {template.baseType === 'ann-set-marker'
+                  ? t('admin.artifacts.markerSpineNote')
+                  : t('admin.artifacts.readOnlyBody').replace(
+                      '{kind}',
+                      `[${kindChipLabel(template.baseType)}]`
+                    )}
               </div>
             ) : (
               <>
@@ -1745,7 +1743,9 @@ export default function ArtifactEditor() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {PLACEHOLDER_CATALOG.map((entry) => (
+                      {PLACEHOLDER_CATALOG.filter(
+                        (entry) => allowImages || entry.type !== 'image'
+                      ).map((entry) => (
                         <SelectItem key={entry.key} value={entry.key}>
                           {t(placeholderLabelKey(entry.key))}
                         </SelectItem>
