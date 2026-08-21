@@ -19,7 +19,7 @@ draft)** to also clone the shared Title/Verse/Reff trio into `service_song_set_l
 create/Sync moment, so the trio freezes exactly like the rest of the structure instead of being
 read live at plan-build time.
 
-**Extended (DEC-004, G4-registry, not yet built):** the same store also owns `song_set_layouts`
+**Extended (DEC-004, G4-registry — built and shipped 2026-08-21, waves W3/W4):** the same store also owns `song_set_layouts`
 (3-row singleton, Reset per role), `announcement_sets` / `announcement_set_slides` (set CRUD,
 per-set ordered slide CRUD, referential check before a set delete), `background_library_images`
 (single-default enforcement), and `song_books` (single-default enforcement, in-use check against
@@ -37,6 +37,25 @@ SQLite in `api`. LC-11 calls this; this does not call LC-11.
 `src/lib/registry/store.ts`. The plan (LC-16) reads the result, not the Admin API. New table
 access is expected to live beside it in the same module family (implementation detail, not
 specified further here).
+
+## Persistence invariants
+
+`position` is persisted and asserted contiguous after every delete and reorder, on the spine and
+within each Announcement Set.
+
+`zIndex` is different and the difference is load-bearing: it is persisted **only when the operator
+actually reorders existing elements**. Inserting an element gives the new one a `zIndex` above the
+current maximum and leaves every existing element's stored value untouched; deleting one leaves every
+survivor's untouched. Insert, reorder and delete are three separate triggers on layout membership, and
+a guard covering one covers neither of the others.
+
+Why it matters here rather than only in a test: both the PPTX exporter and the web slideshow paint in
+`zIndex` order, so this rule decides what reaches the congregation — and `data/default-registry.json`
+holds 40 layouts whose stored `zIndex` is not dense (`[1,1,1]`, `[0,0,1,1]`). An unconditional rewrite
+renumbered all of them on any save. That shipped twice before it was closed, once through the
+untouched-save path and once through insert, which is why the invariant is stated where the next agent
+reads it. Verified: `src/lib/registry/canvas-utils.ts`; guards AC-06 and AC-07 in
+`tests/artifact-editor-controls.test.mjs`.
 
 ## Notes
 

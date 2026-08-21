@@ -30,7 +30,7 @@ Later CAP-11: UC-1, UC-17. As-built JSON agnostic of Telegram (AD-3). Not this p
 | Lane | Answer |
 | --- | --- |
 | Authentication | `WEBHOOK_SECRET` only; 503 unset, 401 wrong (AD-5). Not a cookie. |
-| Validation | If `action === 'correct'` → correction. Else require rundown `text` or 400. Specified: no readable date → no insert (OQ-21). `announcements` URL array or absent. ISO date if present. |
+| Validation | If `action === 'correct'` → correction. Else require rundown `text` or 400. Specified: no readable date → no insert (OQ-21). ISO date if present. `announcements` is **accepted and ignored** — see below. |
 | Error handling | Shared envelope. 400 JSON/text. Specified: no date → no row (OQ-21). Partial parse **with** a date → 200 with failed hymn numbers (NFR-5), not a silent 500. Images: attach or fail visibly (OQ-22) — as-built still filters silently ([MISSING] in SDD Evidence). |
 | Rate limiting | `none` on Hub — picoclaw is the caller. Not a public internet API without the secret. |
 | Idempotency | POST same date updates (OQ-8). Correction to a missing Service does not create a new row and does not fall back to nearest Sabbath (SCN-3, OQ-21). |
@@ -54,3 +54,21 @@ Binding layout/slot fields to webhook JSON is breaking AD-3.
 ## Constraints
 
 Timeout is on the caller side. No retry on Hub. See `.how/hub/03-integrations/picoclaw.md`.
+
+## `announcements` is accepted and ignored (2026-08-21)
+
+FR-3 retired: the five `/api/announcements` routes are deleted and announcement composition is
+Registry-owned. This route no longer writes `announcement_items`, and `announcementsAdded` in the
+response reports `0`.
+
+The field is still **accepted**, and deliberately so: an external Telegram sender is outside this
+team's release cycle, so rejecting a field it has always sent would break a caller nobody here can
+redeploy. A stray or malformed `announcements` value is ignored rather than refused — the same posture
+`/api/services` takes for a stray `announcements[]` in its own body. Verified:
+`internal/httpapi/webhook.go`, with a Go test asserting a payload carrying the field succeeds and
+writes zero `announcement_items` rows.
+
+`announcement_items` itself is deliberately **not** dropped (`05-model/data-model.md` §
+*Retirement of `announcement_items`*), and since migration 9→10 a Service delete no longer cascades
+into it. Whether the webhook should stop accepting the field at all is the owner's call, not this
+contract's: **OQ-42**.
