@@ -1853,6 +1853,7 @@ export default function ArtifactEditor() {
                   <span className="text-xs text-muted-foreground sm:ml-auto">
                     {t('admin.artifacts.styleHint')}
                   </span>
+                  </div>
                 </div>
                 <div
                   ref={canvasShellRef}
