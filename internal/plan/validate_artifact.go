@@ -15,9 +15,21 @@ var (
 	hexColor     = regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
 	bundledAsset = regexp.MustCompile(`(?i)^[a-zA-Z0-9._-]+\.(jpg|jpeg|png|gif|webp)$`)
 	catalogKeys  = map[string]string{
-		"date": "text", "reference": "text", "text": "text", "performer": "text",
-		"title": "text", "speaker": "text", "imageUrl": "image", "person": "text",
-		"familyText": "text", "youthText": "text", "familyPhoto": "image", "youthPhoto": "image",
+		"service_date": "text",
+		"scripture_reference": "text",
+		"scripture_text":      "text",
+		"theme_reference":     "text",
+		"theme_text":          "text",
+		"special_song":        "text",
+		"sermon_title":        "text",
+		"sermon_speaker_name": "text",
+		"sermon_poster":       "image",
+		"closing_prayer_person": "text",
+		"family_request": "text",
+		"youth_request":  "text",
+		"family_name":    "text",
+		"family_photo":   "image",
+		"youth_photo":    "image",
 	}
 	allowedTemplateKeys = map[string]struct{}{
 		"schemaVersion": {}, "id": {}, "label": {}, "baseType": {}, "placeholders": {}, "layouts": {},
@@ -34,7 +46,7 @@ var (
 		"fontFamily": {}, "fontSize": {}, "fontColor": {}, "fontWeight": {}, "fontStyle": {},
 		"textAlign": {}, "verticalAlign": {}, "objectFit": {}, "fillColor": {}, "opacity": {},
 	}
-	entryKeys = map[string]struct{}{"general": {}, "song-set": {}, "announcement": {}}
+	entryKeys = map[string]struct{}{"general": {}, "song-set": {}, "song-set-entry": {}, "ann-set-marker": {}, "announcement": {}}
 )
 
 type templateValidationError struct{ msg string }

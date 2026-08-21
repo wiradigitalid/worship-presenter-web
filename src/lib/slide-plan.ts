@@ -157,7 +157,7 @@ function songGroupNodes(
       id: `${idPrefix}-title`,
       templateId,
       layoutKey: 'title',
-      values: { hymnNumber: subtitle, songTitle: hymn.title },
+      values: { song_number: subtitle, song_title: hymn.title },
       legacy: { kind: 'song-title', title: hymn.title, subtitle },
     },
   });
@@ -173,7 +173,10 @@ function songGroupNodes(
           id: `${idPrefix}-lyric-${i}`,
           templateId,
           layoutKey: 'lyric',
-          values: { label: lyric.label || undefined, lyrics: lyric.text },
+          values: {
+            verse_number: lyric.label || undefined,
+            'verse_content[]': lyric.text,
+          },
           legacy: {
             kind: 'song-lyric',
             title: lyric.label || undefined,
@@ -316,7 +319,7 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
     leaf({
       id: 'welcome',
       templateId: 'welcome',
-      values: { date: ctx.serviceDate },
+      values: { service_date: ctx.serviceDate },
       legacy: {
         kind: 'text',
         title: 'Welcome',
@@ -373,8 +376,8 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
             id: 'verse-reading',
             templateId: 'verse-reading',
             values: {
-              reference: ctx.verseReading.reference ?? '',
-              text: ctx.verseReading.text ?? '',
+              scripture_reference: ctx.verseReading.reference ?? '',
+              scripture_text: ctx.verseReading.text ?? '',
             },
             legacy: {
               kind: 'scripture',
@@ -457,12 +460,12 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
       // Absent weekly verse → the registry template defaults supply the
       // standing theme verse (no second copy lives in this module).
       values: ctx.themeVerse
-        ? { reference: ctx.themeVerse.reference ?? '', text: ctx.themeVerse.text ?? '' }
+        ? { theme_reference: ctx.themeVerse.reference ?? '', theme_text: ctx.themeVerse.text ?? '' }
         : {},
       legacy: (instance) => ({
         kind: 'scripture',
-        subtitle: findResolvedText(instance, 'reference') || undefined,
-        body: findResolvedText(instance, 'text') || undefined,
+        subtitle: findResolvedText(instance, 'theme_reference') || undefined,
+        body: findResolvedText(instance, 'theme_text') || undefined,
       }),
     }),
   ],
@@ -529,7 +532,7 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
           leaf({
             id: 'special-song',
             templateId: 'special-song',
-            values: { performer: ctx.specialSong },
+            values: { special_song: ctx.specialSong },
             legacy: {
               kind: 'divider',
               title: 'Special Song',
@@ -545,7 +548,10 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
           leaf({
             id: 'sermon',
             templateId: 'sermon',
-            values: { title: ctx.sermon.title ?? '', speaker: ctx.sermon.speaker ?? '' },
+            values: {
+              sermon_title: ctx.sermon.title ?? '',
+              sermon_speaker_name: ctx.sermon.speaker ?? '',
+            },
             legacy: {
               kind: 'sermon',
               title: ctx.sermon.title || undefined,
@@ -561,7 +567,7 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
           leaf({
             id: 'sermon-graphic',
             templateId: 'sermon-flyer',
-            values: { imageUrl: ctx.sermonGraphic },
+            values: { sermon_poster: ctx.sermonGraphic },
             legacy: { kind: 'image', imageUrl: ctx.sermonGraphic, fade: false },
           }),
         ]
@@ -593,7 +599,7 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
           leaf({
             id: 'ds-closing-prayer',
             templateId: 'closing-prayer-ds',
-            values: { person: ctx.closingPrayer },
+            values: { closing_prayer_person: ctx.closingPrayer },
             legacy: {
               kind: 'closing-prayer',
               title: 'Closing Prayer',
@@ -685,10 +691,10 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
             id: 'family-youth',
             templateId: 'family-youth',
             values: {
-              familyText: optional(ctx.familyPrayer ?? ctx.legacyCombined),
-              youthText: optional(ctx.youthPrayer),
-              familyPhoto: optional(ctx.familyPhoto),
-              youthPhoto: optional(ctx.youthPhoto),
+              family_request: optional(ctx.familyPrayer ?? ctx.legacyCombined),
+              youth_request: optional(ctx.youthPrayer),
+              family_photo: optional(ctx.familyPhoto),
+              youth_photo: optional(ctx.youthPhoto),
             },
             legacy: {
               kind: 'family',
@@ -707,7 +713,10 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
       leaf({
         id: `flyer-${idx}`,
         templateId: 'announcement-flyer',
-        values: { imageUrl: [imageUrl] },
+        // The shipped announcement-flyer template binds the same
+        // `sermon_poster` key (DEC-004 S1 image rename). Decoupling the two
+        // would mean a new catalog entry for "flyer image", out of scope here.
+        values: { sermon_poster: [imageUrl] },
         legacy: { kind: 'image', imageUrl, fade: false },
       })
     ),

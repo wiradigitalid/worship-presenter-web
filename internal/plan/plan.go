@@ -89,16 +89,16 @@ func songGroup(hymn HymnItem, idPrefix, templateID string) []node {
 			templateID: templateID,
 			layoutKey:  "title",
 			values: map[string]interface{}{
-				"hymnNumber": subtitle,
-				"songTitle":  hymn.Title,
+				"song_number": subtitle,
+				"song_title":  hymn.Title,
 			},
 		},
 	})
 	if !hymn.Incomplete && strings.TrimSpace(hymn.Lyrics) != "" {
 		for i, lyric := range SplitLyricsLabeled(hymn.Lyrics, 4) {
-			vals := map[string]interface{}{"lyrics": lyric.Text}
+			vals := map[string]interface{}{"verse_content[]": lyric.Text}
 			if lyric.Label != "" {
-				vals["label"] = lyric.Label
+				vals["verse_number"] = lyric.Label
 			}
 			children = append(children, groupChild{
 				role: "lyric",
@@ -208,57 +208,57 @@ func firstNonEmpty(values ...string) string {
 func catalogValues(c ctx) map[string]interface{} {
 	out := map[string]interface{}{}
 	if date := firstNonEmpty(c.serviceDate); date != "" {
-		out["date"] = date
+		out["service_date"] = date
 	}
-	verseRef, themeRef := "", ""
-	verseText, themeText := "", ""
 	if c.verseReading != nil {
-		verseRef = ptrStr(c.verseReading.Reference)
-		verseText = c.verseReading.Text
+		if ref := firstNonEmpty(ptrStr(c.verseReading.Reference)); ref != "" {
+			out["scripture_reference"] = ref
+		}
+		if text := firstNonEmpty(c.verseReading.Text); text != "" {
+			out["scripture_text"] = text
+		}
 	}
 	if c.themeVerse != nil {
-		themeRef = ptrStr(c.themeVerse.Reference)
-		themeText = c.themeVerse.Text
-	}
-	if reference := firstNonEmpty(verseRef, themeRef); reference != "" {
-		out["reference"] = reference
-	}
-	if text := firstNonEmpty(verseText, themeText); text != "" {
-		out["text"] = text
+		if ref := firstNonEmpty(ptrStr(c.themeVerse.Reference)); ref != "" {
+			out["theme_reference"] = ref
+		}
+		if text := firstNonEmpty(c.themeVerse.Text); text != "" {
+			out["theme_text"] = text
+		}
 	}
 	if performer := firstNonEmpty(c.specialSong); performer != "" {
-		out["performer"] = performer
+		out["special_song"] = performer
 	}
 	if c.sermon != nil {
 		if title := firstNonEmpty(c.sermon.Title); title != "" {
-			out["title"] = title
+			out["sermon_title"] = title
 		}
 		if speaker := firstNonEmpty(c.sermon.Speaker); speaker != "" {
-			out["speaker"] = speaker
+			out["sermon_speaker_name"] = speaker
 		}
 	}
 	if c.sermonGraphic != nil {
 		if imageURL := firstNonEmpty(*c.sermonGraphic); imageURL != "" {
-			out["imageUrl"] = imageURL
+			out["sermon_poster"] = imageURL
 		}
 	}
 	if person := firstNonEmpty(c.closingPrayer); person != "" {
-		out["person"] = person
+		out["closing_prayer_person"] = person
 	}
 	if familyText := firstNonEmpty(c.familyPrayer, c.legacyCombined); familyText != "" {
-		out["familyText"] = familyText
+		out["family_request"] = familyText
 	}
 	if youthText := firstNonEmpty(c.youthPrayer); youthText != "" {
-		out["youthText"] = youthText
+		out["youth_request"] = youthText
 	}
 	if c.familyPhoto != nil {
 		if photo := firstNonEmpty(*c.familyPhoto); photo != "" {
-			out["familyPhoto"] = photo
+			out["family_photo"] = photo
 		}
 	}
 	if c.youthPhoto != nil {
 		if photo := firstNonEmpty(*c.youthPhoto); photo != "" {
-			out["youthPhoto"] = photo
+			out["youth_photo"] = photo
 		}
 	}
 	return out
@@ -277,7 +277,7 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 	case "welcome":
 		return leaf(request{
 			id: "welcome", templateID: "welcome",
-			values: map[string]interface{}{"date": c.serviceDate},
+			values: map[string]interface{}{"service_date": c.serviceDate},
 		})
 	case "bible-talk-sequence":
 		return leaf(request{id: "bible-talk-sequence", templateID: "bible-talk-sequence"})
@@ -300,8 +300,8 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 		return leaf(request{
 			id: "verse-reading", templateID: "verse-reading",
 			values: map[string]interface{}{
-				"reference": ptrStr(c.verseReading.Reference),
-				"text":      c.verseReading.Text,
+				"scripture_reference": ptrStr(c.verseReading.Reference),
+				"scripture_text":      c.verseReading.Text,
 			},
 		})
 	case "opening-prayer":
@@ -327,8 +327,8 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 	case "bible-verse-contemplation":
 		vals := map[string]interface{}{}
 		if c.themeVerse != nil {
-			vals["reference"] = ptrStr(c.themeVerse.Reference)
-			vals["text"] = c.themeVerse.Text
+			vals["theme_reference"] = ptrStr(c.themeVerse.Reference)
+			vals["theme_text"] = c.themeVerse.Text
 		}
 		return leaf(request{
 			id: "theme-verse", templateID: "bible-verse-contemplation", values: vals,
@@ -363,7 +363,7 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 		}
 		return leaf(request{
 			id: "special-song", templateID: "special-song",
-			values: map[string]interface{}{"performer": c.specialSong},
+			values: map[string]interface{}{"special_song": c.specialSong},
 		})
 	case "sermon":
 		if c.sermon == nil {
@@ -371,7 +371,7 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 		}
 		return leaf(request{
 			id: "sermon", templateID: "sermon",
-			values: map[string]interface{}{"title": c.sermon.Title, "speaker": c.sermon.Speaker},
+			values: map[string]interface{}{"sermon_title": c.sermon.Title, "sermon_speaker_name": c.sermon.Speaker},
 		})
 	case "sermon-flyer":
 		if c.sermonGraphic == nil {
@@ -380,7 +380,7 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 		fade := false
 		return leaf(request{
 			id: "sermon-graphic", templateID: "sermon-flyer",
-			values: map[string]interface{}{"imageUrl": *c.sermonGraphic},
+			values: map[string]interface{}{"sermon_poster": *c.sermonGraphic},
 			fade:   &fade,
 		})
 	case "ds-closing-song-cue":
@@ -399,7 +399,7 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 		}
 		return leaf(request{
 			id: "ds-closing-prayer", templateID: "closing-prayer-ds",
-			values: map[string]interface{}{"person": c.closingPrayer},
+			values: map[string]interface{}{"closing_prayer_person": c.closingPrayer},
 		})
 	case "hope-lyric-1":
 		return fixedLyric("hope-lyric-1")
@@ -430,16 +430,16 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 			famText = c.legacyCombined
 		}
 		if famText != "" {
-			vals["familyText"] = famText
+			vals["family_request"] = famText
 		}
 		if c.youthPrayer != "" {
-			vals["youthText"] = c.youthPrayer
+			vals["youth_request"] = c.youthPrayer
 		}
 		if c.familyPhoto != nil {
-			vals["familyPhoto"] = *c.familyPhoto
+			vals["family_photo"] = *c.familyPhoto
 		}
 		if c.youthPhoto != nil {
-			vals["youthPhoto"] = *c.youthPhoto
+			vals["youth_photo"] = *c.youthPhoto
 		}
 		fade := false
 		return leaf(request{

@@ -15,8 +15,16 @@ export const ARTIFACT_REGISTRY_BOOTSTRAP_KEY = 'artifact_registry_bootstrapped';
 /** AD-21: the one monotonic data-version counter, stamped with the bootstrap. */
 export const DATA_VERSION_KEY = 'data_version';
 
-/** W1 ships the AD-16 snapshot table as data version 2; Story 25.2 is 3. */
-export const CURRENT_DATA_VERSION = 3;
+/** W1 ships the AD-16 snapshot table as data version 2; Story 25.2 is 3.
+ * DEC-004 lands the song-set physical-shape migration (3→4) and the
+ * predefined-field vocabulary migration (4→5) — the bootstrap stamps the
+ * shipped seed at `BOOTSTRAP_DATA_VERSION`, then the two migrations bump
+ * the counter to `CURRENT_DATA_VERSION` (5) in the same boot.
+ */
+export const BOOTSTRAP_DATA_VERSION = 3;
+
+/** The full target version after every DEC-004 migration has landed. */
+export const CURRENT_DATA_VERSION = 5;
 
 const SEED_PATH = path.join(process.cwd(), 'data', 'default-registry.json');
 
@@ -120,7 +128,7 @@ export function bootstrapArtifactRegistry(
       .run(ARTIFACT_REGISTRY_BOOTSTRAP_KEY, '1');
     database
       .prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`)
-      .run(DATA_VERSION_KEY, String(CURRENT_DATA_VERSION));
+      .run(DATA_VERSION_KEY, String(BOOTSTRAP_DATA_VERSION));
     return inserted;
   });
   // BEGIN IMMEDIATE, not the default deferred BEGIN: this pass reads every row

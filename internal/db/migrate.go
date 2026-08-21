@@ -3,9 +3,19 @@ package db
 import "database/sql"
 
 // migrateColumns applies additive schema that CREATE TABLE IF NOT EXISTS cannot
-// reach on an existing file (AD-9).
+// reach on an existing file (AD-9). DEC-004 widens this with the new
+// song_set_layouts trio table and the variable_name/ann_set_id columns.
 func migrateColumns(handle *sql.DB) error {
-	return ensureAnnouncementUpdatedAt(handle)
+	if err := ensureAnnouncementUpdatedAt(handle); err != nil {
+		return err
+	}
+	if err := ensureArtifactTemplatesNewColumns(handle); err != nil {
+		return err
+	}
+	if err := ensureArtifactTemplatesPayloadNullable(handle); err != nil {
+		return err
+	}
+	return nil
 }
 
 func ensureAnnouncementUpdatedAt(handle *sql.DB) error {
@@ -36,5 +46,92 @@ func ensureAnnouncementUpdatedAt(handle *sql.DB) error {
 		    SET updated_at = COALESCE(created_at, ` + StampNowSQL + `)
 		  WHERE updated_at IS NULL OR updated_at = ''`,
 	)
+	return err
+}
+
+// ensureArtifactTemplatesNewColumns adds the DEC-004 columns to
+// artifact_templates. ALTER TABLE ADD COLUMN is idempotent at the SQL level
+// when guarded by PRAGMA table_info; SQLite has no IF NOT EXISTS for ADD
+// COLUMN, so the guard runs first and only ADDs when missing.
+func ensureArtifactTemplatesNewColumns(handle *sql.DB) error {
+	rows, err := handle.Query(`PRAGMA table_info(artifact_templates)`)
+	if err != nil {
+		return err
+	}
+	have := map[string]struct{}{}
+	for rows.Next() {
+		var cid, notnull, pk int
+		var name, ctype string
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			rows.Close()
+			return err
+		}
+		have[name] = struct{}{}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+	if _, ok := have["variable_name"]; !ok {
+		if _, err := handle.Exec(`ALTER TABLE artifact_templates ADD COLUMN variable_name TEXT`); err != nil {
+			return err
+		}
+	}
+	if _, ok := have["ann_set_id"]; !ok {
+		if _, err := handle.Exec(`ALTER TABLE artifact_templates ADD COLUMN ann_set_id INTEGER`); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ensureArtifactTemplatesPayloadNullable drops the NOT NULL constraint on
+// artifact_templates.payload. SQLite cannot ALTER COLUMN in place, so the
+// table is rebuilt once. Song-set-entry rows (DEC-004) carry payload = NULL.
+func ensureArtifactTemplatesPayloadNullable(handle *sql.DB) error {
+	rows, err := handle.Query(`PRAGMA table_info(artifact_templates)`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	alreadyNullable := false
+	for rows.Next() {
+		var cid, notnull, pk int
+		var name, ctype string
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return err
+		}
+		if name == "payload" && notnull == 0 {
+			alreadyNullable = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if alreadyNullable {
+		return nil
+	}
+	_, err = handle.Exec(`
+		CREATE TABLE artifact_templates_new (
+		  id TEXT PRIMARY KEY,
+		  label TEXT NOT NULL,
+		  base_type TEXT NOT NULL,
+		  payload TEXT,
+		  updated_at TEXT NOT NULL,
+		  seed_hash TEXT,
+		  position INTEGER NOT NULL DEFAULT 0,
+		  variable_name TEXT,
+		  ann_set_id INTEGER
+		);
+		INSERT INTO artifact_templates_new
+		  (id, label, base_type, payload, updated_at, seed_hash, position, variable_name, ann_set_id)
+		  SELECT id, label, base_type, payload, updated_at, seed_hash, position, variable_name, ann_set_id
+		    FROM artifact_templates;
+		DROP TABLE artifact_templates;
+		ALTER TABLE artifact_templates_new RENAME TO artifact_templates;
+	`)
 	return err
 }

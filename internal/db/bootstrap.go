@@ -19,7 +19,7 @@ import (
 const (
 	artifactRegistryBootstrapKey = "artifact_registry_bootstrapped"
 	dataVersionKey               = "data_version"
-	currentDataVersion           = "3"
+	currentDataVersion           = "5"
 	defaultSongBook              = "SDAH"
 )
 
@@ -48,6 +48,12 @@ func seedHub(handle *sql.DB, root string) error {
 		return err
 	}
 	if err := bootstrapRegistry(handle, root); err != nil {
+		return err
+	}
+	if err := migrateSongSetShape(handle); err != nil {
+		return err
+	}
+	if err := migratePredefinedFields(handle); err != nil {
 		return err
 	}
 	return migrateSnapshots(handle)
@@ -87,11 +93,11 @@ func repairPreThreeKind(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
 	retired := false
 	for rows.Next() {
 		var bt string
 		if err := rows.Scan(&bt); err != nil {
+			rows.Close()
 			return err
 		}
 		if _, ok := allowedBaseTypes[bt]; !ok {
@@ -100,8 +106,13 @@ func repairPreThreeKind(db *sql.DB) error {
 		}
 	}
 	if err := rows.Err(); err != nil {
+		rows.Close()
 		return err
 	}
+	// The pool is capped at one connection: an early break leaves this cursor
+	// holding it, so it must be closed before any further query or the next
+	// one deadlocks waiting for a conn that will never be released.
+	rows.Close()
 	if !retired {
 		return nil
 	}
@@ -477,13 +488,14 @@ func migrateSnapshots(db *sql.DB) error {
 		}
 		ids = append(ids, id)
 	}
+	trio, _ := plan.LoadSongSetLayoutTrio(db)
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 	for _, id := range ids {
-		if err := cloneLiveToService(tx, id); err != nil {
+		if err := cloneLiveToService(tx, id, trio); err != nil {
 			return err
 		}
 	}
@@ -500,7 +512,7 @@ func migrateSnapshots(db *sql.DB) error {
 	return nil
 }
 
-func cloneLiveToService(tx *sql.Tx, serviceID int) error {
+func cloneLiveToService(tx *sql.Tx, serviceID int, trio *plan.SongSetLayoutTrio) error {
 	if _, err := tx.Exec(`DELETE FROM service_registry_snapshots WHERE service_id = ?`, serviceID); err != nil {
 		return err
 	}
@@ -513,11 +525,26 @@ func cloneLiveToService(tx *sql.Tx, serviceID int) error {
 	defer rows.Close()
 	pos := 0
 	for rows.Next() {
-		var id, label, baseType, payload, updatedAt string
-		if err := rows.Scan(&id, &label, &baseType, &payload, &updatedAt); err != nil {
+		var id, label, baseType, updatedAt string
+		var payloadNull sql.NullString
+		if err := rows.Scan(&id, &label, &baseType, &payloadNull, &updatedAt); err != nil {
 			return err
 		}
-		if !plan.AcceptLivePayload(id, payload) {
+		var payload string
+		switch {
+		case baseType == "song-set-entry" && trio != nil:
+			serialized, err := plan.SongSetEntryPayloadJSON(id, label, trio)
+			if err != nil {
+				log.Printf("[registry] template %q: song-set-entry clone skipped: %v", id, err)
+				continue
+			}
+			payload = serialized
+		case payloadNull.Valid && payloadNull.String != "":
+			payload = payloadNull.String
+			if !plan.AcceptLivePayload(id, payload) {
+				continue
+			}
+		default:
 			continue
 		}
 		if _, err := tx.Exec(
@@ -538,12 +565,13 @@ func cloneLiveToService(tx *sql.Tx, serviceID int) error {
 }
 
 func CloneRegistryToNewService(db *sql.DB, serviceID int) error {
+	trio, _ := plan.LoadSongSetLayoutTrio(db)
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	if err := cloneLiveToService(tx, serviceID); err != nil {
+	if err := cloneLiveToService(tx, serviceID, trio); err != nil {
 		return err
 	}
 	return tx.Commit()

@@ -21,6 +21,7 @@ const {
   ARTIFACT_REGISTRY_BOOTSTRAP_KEY,
   bootstrapArtifactRegistry,
   CURRENT_DATA_VERSION,
+  BOOTSTRAP_DATA_VERSION,
   DATA_VERSION_KEY,
   loadSeedTemplates,
 } = await import(srcUrl('lib', 'registry', 'seed.ts'));
@@ -142,12 +143,14 @@ test('repairPreThreeKindArtifactRegistry clears rows and the bootstrap marker', 
 
   bootstrapArtifactRegistry(db);
   const templates = loadSeedTemplates();
+  // The bootstrap alone (no DEC-004 migration pass) leaves the full shipped
+  // count — migration 3->4 is what retires the generic song-set row.
   assert.equal(
     db.prepare(`SELECT COUNT(*) AS n FROM artifact_templates`).get().n,
     templates.length
   );
   assertContiguousPositions(db);
-  assert.equal(settingsValue(db, DATA_VERSION_KEY), String(CURRENT_DATA_VERSION));
+  assert.equal(settingsValue(db, DATA_VERSION_KEY), String(BOOTSTRAP_DATA_VERSION));
   assert.equal(getArtifactTemplate(db, 'welcome')?.baseType, 'general');
 
   db.close();
@@ -174,10 +177,11 @@ test('the real getDb() resets a pre-collapse database to the re-authored 38-row 
 
   const db = openFile(file);
   const templates = loadSeedTemplates();
+  // DEC-004 3->4 retires the generic `song-set` row.
   assert.equal(
     db.prepare(`SELECT COUNT(*) AS n FROM artifact_templates`).get().n,
-    templates.length,
-    'getDb must reset retired base types and re-bootstrap the shipped seed'
+    templates.length - 1,
+    'getDb must reset retired base types, re-bootstrap the shipped seed, then 3->4 retires the generic song-set row'
   );
   assertContiguousPositions(db);
   assert.equal(settingsValue(db, ARTIFACT_REGISTRY_BOOTSTRAP_KEY), '1');

@@ -7,6 +7,8 @@
  */
 import type Database from 'better-sqlite3';
 import {
+  composeSongSetEntryTemplate,
+  loadSongSetLayoutTrio,
   parseStoredTemplateRow,
   type RegistrySnapshot,
 } from '@/lib/artifacts/registry-snapshot';
@@ -19,7 +21,7 @@ type LiveRow = {
   id: string;
   label: string;
   base_type: string;
-  payload: string;
+  payload: string | null;
   updated_at: string;
 };
 
@@ -59,7 +61,26 @@ function cloneValidLiveRows(db: Database.Database, serviceId: number): number {
      VALUES (?, ?, ?, ?, ?, ?, ?)`
   );
   let position = 0;
+  const trio = loadSongSetLayoutTrio(db);
   for (const row of liveRows(db)) {
+    if (row.base_type === 'song-set-entry' && trio) {
+      const stored = composeSongSetEntryTemplate(
+        { id: row.id, label: row.label, updated_at: row.updated_at },
+        trio
+      );
+      const { updatedAt: _token, ...template } = stored;
+      insert.run(
+        serviceId,
+        stored.id,
+        position,
+        stored.label,
+        stored.baseType,
+        serializeTemplate(template),
+        row.updated_at
+      );
+      position += 1;
+      continue;
+    }
     const stored = parseStoredTemplateRow(row);
     if (!stored) continue;
     const { updatedAt: _token, ...template } = stored;

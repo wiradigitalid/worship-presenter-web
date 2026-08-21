@@ -47,6 +47,7 @@ const {
   ARTIFACT_REGISTRY_BOOTSTRAP_KEY,
   DATA_VERSION_KEY,
   CURRENT_DATA_VERSION,
+  BOOTSTRAP_DATA_VERSION,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'seed.ts')).href
 );
@@ -85,14 +86,16 @@ test('first boot inserts every shipped template once, positioned 0..N-1, and sta
   assert.equal(row0.position, 0);
 
   assertContiguousPositions(db);
+  // DEC-004 3->4 deletes the generic `song-set` row (the retired dsMiddle
+  // loop row), so the post-migration count is one less than the shipped seed.
   assert.equal(
     db.prepare(`SELECT COUNT(*) AS n FROM artifact_templates`).get().n,
-    templates.length
+    templates.length - 1
   );
 
   assert.equal(settingsValue(db, ARTIFACT_REGISTRY_BOOTSTRAP_KEY), '1');
   assert.equal(settingsValue(db, DATA_VERSION_KEY), String(CURRENT_DATA_VERSION));
-  assert.equal(CURRENT_DATA_VERSION, 3);
+  assert.equal(CURRENT_DATA_VERSION, 5);
 });
 
 /**
@@ -373,12 +376,14 @@ test('repairing before bootstrapping compacts a pre-counter database into the co
 
   bootstrapArtifactRegistry(db);
   const templates = loadSeedTemplates();
+  // DEC-004 3->4 deletes the generic `song-set` row, but this test only runs
+  // the bootstrap (no migration pass) — the count here is the full seed.
   assert.equal(
     db.prepare(`SELECT COUNT(*) AS n FROM artifact_templates`).get().n,
     templates.length
   );
   assertContiguousPositions(db);
-  assert.equal(settingsValue(db, DATA_VERSION_KEY), String(CURRENT_DATA_VERSION));
+  assert.equal(settingsValue(db, DATA_VERSION_KEY), String(BOOTSTRAP_DATA_VERSION));
 
   db.close();
 });
@@ -390,10 +395,11 @@ test('the real getDb() wires the correct order against a pre-counter database', 
 
   const db = openFile(file);
   const templates = loadSeedTemplates();
+  // DEC-004 3->4 deletes the generic `song-set` row.
   assert.equal(
     db.prepare(`SELECT COUNT(*) AS n FROM artifact_templates`).get().n,
-    templates.length,
-    'getDb must compact the pre-counter rows into the fresh 38-row bootstrap'
+    templates.length - 1,
+    'getDb must compact the pre-counter rows into the fresh 38-row bootstrap, then 3->4 deletes the generic song-set row'
   );
   assertContiguousPositions(db);
   assert.equal(settingsValue(db, ARTIFACT_REGISTRY_BOOTSTRAP_KEY), '1');

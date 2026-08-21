@@ -532,37 +532,46 @@ test('AC-3: switching template while dirty asks before it discards', () => {
   const setters = callsNamed(editor, 'setSelectedId');
   assert.equal(
     setters.length,
-    4,
-    'one guarded list switch, one create select, plus successful and remote-delete selection clears'
+    5,
+    'one guarded list switch on click plus its keyboard mirror, one create select, ' +
+      'plus successful and remote-delete selection clears'
   );
 
-  const switchSetter = setters.find((setter) => setter.arguments[0]?.getText() === 'item.id');
+  const switchSetters = setters.filter((setter) => setter.arguments[0]?.getText() === 'item.id');
   const createSetter = setters.find((setter) => setter.arguments[0]?.getText() === 'data.id');
   const deleteClearers = setters.filter((setter) => setter.arguments[0]?.getText() === 'null');
-  assert.ok(switchSetter, 'the sidebar row selects the clicked template');
+  assert.equal(
+    switchSetters.length,
+    2,
+    'the sidebar row selects the clicked template, on pointer and on keyboard'
+  );
   assert.ok(createSetter, 'create selects the new template');
   assert.equal(deleteClearers.length, 2, 'both deletion outcomes clear a gone selection');
 
-  // The nearest arrow function around the setter is the list row's onClick; the
-  // confirmation has to live in the same handler or it can be bypassed.
-  let handler = switchSetter.parent;
-  while (handler && !ts.isArrowFunction(handler)) handler = handler.parent;
-  assert.ok(handler, 'the setter is expected inside the row onClick handler');
+  // The nearest arrow function around each setter is its row handler; the
+  // confirmation has to live in the same handler or it can be bypassed. The
+  // keyboard mirror must carry the same guard as the click or a11y input
+  // would be the hole in the guard.
+  for (const [label, switchSetter] of switchSetters.entries()) {
+    let handler = switchSetter.parent;
+    while (handler && !ts.isArrowFunction(handler)) handler = handler.parent;
+    assert.ok(handler, `the ${label} setter is expected inside a row handler`);
 
-  assert.ok(
-    identifiers(handler, 'mayDiscard').length > 0,
-    'clicking another row re-enters mountCanvas, which resets the added-element ' +
-      'map and disposes the canvas — every unsaved edit goes with it'
-  );
-  assert.ok(
-    identifiers(handler, 'DISCARD_ON_SWITCH_CONFIRMATION').length > 0,
-    'it must use the switch wording, not the leave-the-page wording'
-  );
-  assert.match(
-    handler.getText(),
-    /item\.id === selectedId/,
-    'AC-3 guards the actual switch: re-clicking the active row must not prompt'
-  );
+    assert.ok(
+      identifiers(handler, 'mayDiscard').length > 0,
+      're-entering mountCanvas resets the added-element map and disposes the canvas — ' +
+        'every unsaved edit goes with it'
+    );
+    assert.ok(
+      identifiers(handler, 'DISCARD_ON_SWITCH_CONFIRMATION').length > 0,
+      'it must use the switch wording, not the leave-the-page wording'
+    );
+    assert.match(
+      handler.getText(),
+      /item\.id === selectedId/,
+      'AC-3 guards the actual switch: re-activating the active row must not prompt'
+    );
+  }
 
   let createHandler = createSetter.parent;
   while (createHandler && !ts.isArrowFunction(createHandler)) {

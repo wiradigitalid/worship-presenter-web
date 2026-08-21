@@ -8,16 +8,98 @@
 import type Database from 'better-sqlite3';
 import { getDb } from '@/lib/db';
 import { validateArtifactTemplate } from '@/lib/registry/validate';
-import type { StoredArtifactTemplate } from '@/lib/registry/types';
+import type {
+  ArtifactLayout,
+  PlaceholderDefinition,
+  StoredArtifactTemplate,
+} from '@/lib/registry/types';
 import { ArtifactHydrationError } from './runtime-contract';
 
 export type RegistrySnapshot = ReadonlyMap<string, StoredArtifactTemplate>;
 
 export type StoredTemplateRow = {
   id: string;
-  payload: string;
+  label?: string;
+  base_type?: string;
+  payload: string | null;
   updated_at: string;
 };
+
+type SongSetLayoutTrio = {
+  title: ArtifactLayout;
+  verse: ArtifactLayout;
+  reff: ArtifactLayout;
+};
+
+const SONG_SET_PLACEHOLDER_TYPES: Record<string, PlaceholderDefinition['type']> = {
+  song_number: 'text',
+  song_title: 'text',
+  verse_number: 'text',
+  'verse_content[]': 'text',
+  'reff[]': 'text',
+};
+
+export function loadSongSetLayoutTrio(
+  database: Database.Database
+): SongSetLayoutTrio | null {
+  const rows = database
+    .prepare(`SELECT role, payload FROM song_set_layouts`)
+    .all() as { role: string; payload: string }[];
+  if (rows.length === 0) return null;
+  const byRole = new Map<string, ArtifactLayout>();
+  for (const row of rows) {
+    try {
+      byRole.set(row.role, JSON.parse(row.payload) as ArtifactLayout);
+    } catch {
+      return null;
+    }
+  }
+  const title = byRole.get('title');
+  const verse = byRole.get('verse');
+  const reff = byRole.get('reff');
+  if (!title || !verse || !reff) return null;
+  return { title, verse, reff };
+}
+
+function placeholdersFromLayouts(
+  ...layouts: ArtifactLayout[]
+): PlaceholderDefinition[] {
+  const keys = new Set<string>();
+  for (const layout of layouts) {
+    for (const element of layout.elements) {
+      if (element.placeholderKey) keys.add(element.placeholderKey);
+    }
+  }
+  return [...keys].map((key) => ({
+    key,
+    type: SONG_SET_PLACEHOLDER_TYPES[key] ?? 'text',
+    required:
+      key === 'song_number' ||
+      key === 'song_title' ||
+      key === 'verse_content[]' ||
+      key === 'reff[]',
+  }));
+}
+
+export function composeSongSetEntryTemplate(
+  row: { id: string; label: string; updated_at: string },
+  trio: SongSetLayoutTrio
+): StoredArtifactTemplate {
+  return {
+    schemaVersion: 1,
+    id: row.id,
+    label: row.label,
+    baseType: 'song-set-entry',
+    placeholders: placeholdersFromLayouts(trio.title, trio.verse, trio.reff),
+    layouts: {
+      title: trio.title,
+      // Plan handlers still request layoutKey `lyric`; AD-33's verse role.
+      lyric: trio.verse,
+      reff: trio.reff,
+    },
+    updatedAt: row.updated_at,
+  };
+}
 
 function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -37,6 +119,13 @@ function reason(error: unknown): string {
 export function parseStoredTemplateRow(
   row: StoredTemplateRow
 ): StoredArtifactTemplate | null {
+  // DEC-004: song-set-entry and ann-set-marker rows carry NULL payload
+  // (their canvas lives in song_set_layouts / announcement_set_slides). The
+  // snapshot reader skips these silently — there is no payload to parse, so
+  // "no layout is available" would be a misleading log line.
+  if (row.payload === null || row.payload === undefined || row.payload === '') {
+    return null;
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(row.payload);
@@ -77,12 +166,27 @@ export function parseStoredTemplateRow(
  */
 export function loadRegistrySnapshot(db?: Database.Database): RegistrySnapshot {
   const database = db ?? getDb();
+  const trio = loadSongSetLayoutTrio(database);
   const rows = database
-    .prepare(`SELECT id, payload, updated_at FROM artifact_templates ORDER BY position`)
+    .prepare(
+      `SELECT id, label, base_type, payload, updated_at
+         FROM artifact_templates
+         ORDER BY position`
+    )
     .all() as StoredTemplateRow[];
 
   const snapshot = new Map<string, StoredArtifactTemplate>();
   for (const row of rows) {
+    if (row.base_type === 'song-set-entry' && trio) {
+      snapshot.set(
+        row.id,
+        composeSongSetEntryTemplate(
+          { id: row.id, label: row.label ?? row.id, updated_at: row.updated_at },
+          trio
+        )
+      );
+      continue;
+    }
     const stored = parseStoredTemplateRow(row);
     if (stored) {
       snapshot.set(stored.id, stored);

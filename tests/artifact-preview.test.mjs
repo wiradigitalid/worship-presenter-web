@@ -134,14 +134,12 @@ test('SongSet children share one group and carry title/lyric roles', () => {
 
   assert.equal(opening[0].role, 'title');
   assert.equal(opening[0].label, 'Song Title');
-  // Story 20.1 (AC-6) gives this transitional weekly position its own clone
-  // of the `song-set` template (`bt-opening-song`), not the shared row —
-  // both templates carry `baseType: 'song-set'`, which is what the "Song
-  // Title" / "Song Lyric" preview labels are keyed on (preview-model.ts).
+  // DEC-004: per-position SongSet rows are song-set-entry templates composed
+  // from the shared layout trio.
   for (const child of opening.slice(1)) {
     assert.equal(child.role, 'lyric');
     assert.equal(child.label, 'Song Lyric');
-    assert.equal(child.baseType, 'song-set');
+    assert.equal(child.baseType, 'song-set-entry');
   }
 
   // Story 20.1 (AC-3 delta a/c, AC-5): the standing Intercessory pair is no

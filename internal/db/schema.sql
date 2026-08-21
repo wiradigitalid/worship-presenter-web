@@ -100,10 +100,63 @@ CREATE TABLE IF NOT EXISTS artifact_templates (
   id TEXT PRIMARY KEY,
   label TEXT NOT NULL,
   base_type TEXT NOT NULL,
-  payload TEXT NOT NULL,
+  payload TEXT,
   updated_at TEXT NOT NULL,
   seed_hash TEXT,
+  position INTEGER NOT NULL DEFAULT 0,
+  variable_name TEXT,
+  ann_set_id INTEGER
+);
+
+-- DEC-004 / AD-31: Admin-configurable list of song-set entries.
+-- The four default seeds use base_type 'song-set-entry' on artifact_templates
+-- with a stable variable_name; their shared canvas trio lives below.
+CREATE TABLE IF NOT EXISTS song_set_layouts (
+  role TEXT PRIMARY KEY,
+  payload TEXT,
+  updated_at TEXT,
+  seed_hash TEXT
+);
+
+-- DEC-004 / AD-33: per-Service frozen copy of the live song_set_layouts trio.
+CREATE TABLE IF NOT EXISTS service_song_set_layouts (
+  service_id INTEGER NOT NULL,
+  role TEXT NOT NULL,
+  payload TEXT,
+  updated_at TEXT,
+  PRIMARY KEY (service_id, role),
+  FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS announcement_sets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  label TEXT,
+  updated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS announcement_set_slides (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ann_set_id INTEGER NOT NULL,
+  label TEXT,
+  payload TEXT,
+  updated_at TEXT,
+  seed_hash TEXT,
   position INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS background_library_images (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  url TEXT,
+  is_default INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT,
+  updated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS song_books (
+  book_code TEXT PRIMARY KEY,
+  name TEXT,
+  is_default INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS service_registry_snapshots (
@@ -112,7 +165,7 @@ CREATE TABLE IF NOT EXISTS service_registry_snapshots (
   position INTEGER NOT NULL,
   label TEXT NOT NULL,
   base_type TEXT NOT NULL,
-  payload TEXT NOT NULL,
+  payload TEXT,
   updated_at TEXT NOT NULL,
   PRIMARY KEY (service_id, template_id),
   FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE

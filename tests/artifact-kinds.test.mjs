@@ -147,11 +147,15 @@ test('the shipped seed uses only the three kinds in the expected counts', () => 
   }
   assert.equal(templates.length, 38);
   assert.equal(counts.general, 32);
+  // After DEC-004 3->4 the shipped seed's five `song-set` rows become
+  // `song-set-entry`. The seed JSON itself is the pre-migration shape; the
+  // migration rewrites them on first boot. Counts above describe the shipped
+  // (pre-migration) seed.
   assert.equal(counts['song-set'], 5);
   assert.equal(counts.announcement, 1);
 });
 
-test('artifact_templates DDL gained no column beyond the Story 20.1 shape', () => {
+test('artifact_templates DDL carries the DEC-004 columns on top of Story 20.1', () => {
   const ddl = fs.readFileSync(path.join(root, 'src', 'lib', 'db', 'index.ts'), 'utf8');
   const match = ddl.match(
     /CREATE TABLE IF NOT EXISTS artifact_templates \(([\s\S]*?)\);/
@@ -167,5 +171,7 @@ test('artifact_templates DDL gained no column beyond the Story 20.1 shape', () =
     'updated_at',
     'seed_hash',
     'position',
+    'variable_name',
+    'ann_set_id',
   ]);
 });

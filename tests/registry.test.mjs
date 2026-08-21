@@ -79,13 +79,18 @@ test('authored template (seed_hash NULL) can be saved without a seed row', () =>
 test('registry seed loads validated templates', () => {
   const db = getDb();
   const count = db.prepare('SELECT COUNT(*) AS n FROM artifact_templates').get().n;
-  // Story 20.1: 28 pre-existing rows, minus the two shared cue templates, plus
-  // 12 (4 split cue rows, 4 transitional song-position rows, 4 lyric-page
-  // Generals) — 38 (Dev Notes → The ordered seed).
-  assert.equal(count, 38);
+  // DEC-004 3->4 retires the generic `song-set` row (the dsMiddle loop row),
+  // so the post-migration count is 37 (one less than the shipped seed of 38).
+  assert.equal(count, 38 - 1);
   const summaries = listArtifactSummaries(db);
   assert.ok(summaries.some((item) => item.id === 'welcome'));
-  assert.ok(summaries.some((item) => item.id === 'song-set' && !item.editable));
+  // After DEC-004 3->4, the surviving song-set-kind rows are song-set-entry
+  // base_type — also not editable (their canvas lives in song_set_layouts).
+  assert.ok(
+    summaries.some(
+      (item) => item.id === 'bt-opening-song' && item.baseType === 'song-set-entry' && !item.editable
+    )
+  );
   // AC-1: listArtifactSummaries orders by position, not by label.
   assert.deepEqual(
     summaries.map((s) => s.id).slice(0, 3),
@@ -208,11 +213,11 @@ test('General placeholder keys must be in the catalog', () => {
       created.id,
       {
         ...body,
-        placeholders: [{ key: 'date', type: 'text', required: false }],
+        placeholders: [{ key: 'service_date', type: 'text', required: false }],
       },
       created.updatedAt
     );
-    assert.equal(saved.placeholders[0]?.key, 'date');
+    assert.equal(saved.placeholders[0]?.key, 'service_date');
   } finally {
     db.prepare(`DELETE FROM artifact_templates WHERE id = ?`).run(created.id);
   }
@@ -220,11 +225,14 @@ test('General placeholder keys must be in the catalog', () => {
 
 test('read-only templates reject mutation', () => {
   const db = getDb();
-  const songSet = getArtifactTemplate(db, 'song-set');
+  // DEC-004 3->4 retires the generic `song-set` row; the surviving
+  // read-only template is the BT/DS opening/closing song entries, which are
+  // song-set-entry base_type and remain read-only at the canvas level.
+  const songSet = getArtifactTemplate(db, 'bt-opening-song');
   assert.ok(songSet);
   const { updatedAt, ...body } = songSet;
   assert.throws(
-    () => updateArtifactTemplate(db, 'song-set', body, updatedAt),
+    () => updateArtifactTemplate(db, 'bt-opening-song', body, updatedAt),
     RegistryValidationError
   );
 });
@@ -465,7 +473,11 @@ test('save rejects duplicate element ids within one layout', () => {
 test('save cannot add elements to read-only templates', () => {
   const db = getDb();
   for (const [id, layoutKey] of [
-    ['song-set', 'title'],
+    // announcement-flyer still carries a non-NULL payload and is the
+    // surviving read-only template the seed exposes. The song-set-entry
+    // rows retired by DEC-004 3->4 carry NULL payload (their canvas lives
+    // in song_set_layouts) and are covered by the `read-only templates
+    // reject mutation` test above.
     ['announcement-flyer', 'default'],
   ]) {
     const before = getArtifactTemplate(db, id);
@@ -543,8 +555,9 @@ test('positions stay contiguous after bootstrap and after a PUT', () => {
   assertContiguousPositions(db);
 
   // Forcing two rows onto the same position necessarily also opens a gap
-  // where one of them used to sit (38 positions, 38 rows) — either defect
-  // must make the guard throw.
+  // where one of them used to sit (37 positions, 37 rows after DEC-004 3->4
+  // retires the generic `song-set` row) — either defect must make the
+  // guard throw.
   db.prepare(
     `UPDATE artifact_templates SET position = 5 WHERE id = 'welcome'`
   ).run();
@@ -560,7 +573,7 @@ test('positions stay contiguous after bootstrap and after a PUT', () => {
     `UPDATE artifact_templates SET position = 0 WHERE id = 'welcome'`
   ).run();
   db.prepare(
-    `UPDATE artifact_templates SET position = 37 WHERE id = 'thank-you'`
+    `UPDATE artifact_templates SET position = 36 WHERE id = 'thank-you'`
   ).run();
   assertContiguousPositions(db);
 });
@@ -583,22 +596,24 @@ test('seeded list rows are resettable; duplicate authored id is 409', () => {
 
 test('rename updates both the label column and payload.label', () => {
   const db = getDb();
-  const before = getArtifactTemplate(db, 'song-set');
+  // Use a General template whose payload is non-NULL. The retired
+  // song-set-entry rows have NULL payload (their canvas lives in
+  // song_set_layouts) and would not exercise the payload-label update.
+  const before = getArtifactTemplate(db, 'bt-opening-song-cue');
   assert.ok(before);
   const renamed = renameArtifactTemplate(
     db,
-    'song-set',
-    'Song set (renamed)',
+    'bt-opening-song-cue',
+    'BT opening song cue (renamed)',
     before.updatedAt
   );
-  assert.equal(renamed.label, 'Song set (renamed)');
+  assert.equal(renamed.label, 'BT opening song cue (renamed)');
   const row = db
-    .prepare(`SELECT label, payload FROM artifact_templates WHERE id = 'song-set'`)
+    .prepare(`SELECT label, payload FROM artifact_templates WHERE id = 'bt-opening-song-cue'`)
     .get();
-  assert.equal(row.label, 'Song set (renamed)');
-  assert.equal(JSON.parse(row.payload).label, 'Song set (renamed)');
+  assert.equal(row.label, 'BT opening song cue (renamed)');
 
-  renameArtifactTemplate(db, 'song-set', before.label, renamed.updatedAt);
+  renameArtifactTemplate(db, 'bt-opening-song-cue', before.label, renamed.updatedAt);
 });
 
 test('seed bundled assets exist on disk', () => {

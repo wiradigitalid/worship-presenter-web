@@ -119,6 +119,63 @@ function migrateBibleVersesTranslationCode(database: Database.Database) {
 }
 
 /**
+ * DEC-004 adds `variable_name` and `ann_set_id` columns to artifact_templates.
+ * SQLite ADD COLUMN has no IF NOT EXISTS, so the guard pattern is to wrap each
+ * ALTER in a try/catch and ignore the "duplicate column" error path.
+ */
+function migrateArtifactTemplatesNewColumns(database: Database.Database) {
+  for (const stmt of [
+    'ALTER TABLE artifact_templates ADD COLUMN variable_name TEXT',
+    'ALTER TABLE artifact_templates ADD COLUMN ann_set_id INTEGER',
+  ]) {
+    try {
+      database.prepare(stmt).run();
+    } catch (e) {
+      if (!/duplicate column/i.test(String(e))) throw e;
+    }
+  }
+}
+
+/**
+ * DEC-004 allows `artifact_templates.payload` to be NULL — song-set-entry and
+ * ann-set-marker rows carry no canvas of their own. SQLite cannot ALTER COLUMN
+ * in place, so the table is rebuilt once (same discipline as
+ * `migrateHymnsForSongBooks`).
+ */
+function migrateArtifactTemplatesPayloadNullable(database: Database.Database) {
+  const columns = database.prepare(`PRAGMA table_info(artifact_templates)`).all() as {
+    name: string;
+    notnull: number;
+  }[];
+  if (columns.length === 0) return;
+  const payload = columns.find((c) => c.name === 'payload');
+  if (!payload || payload.notnull === 0) return;
+
+  database.exec(`
+    CREATE TABLE artifact_templates_payload_nullable (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      base_type TEXT NOT NULL,
+      payload TEXT,
+      updated_at TEXT NOT NULL,
+      seed_hash TEXT,
+      position INTEGER NOT NULL DEFAULT 0,
+      variable_name TEXT,
+      ann_set_id INTEGER
+    );
+    INSERT INTO artifact_templates_payload_nullable
+      (id, label, base_type, payload, updated_at, seed_hash, position, variable_name, ann_set_id)
+      SELECT id, label, base_type, payload, updated_at, seed_hash, position, variable_name, ann_set_id
+        FROM artifact_templates;
+    DROP TABLE artifact_templates;
+    ALTER TABLE artifact_templates_payload_nullable RENAME TO artifact_templates;
+  `);
+  console.info(
+    `[registry] migration: artifact_templates.payload made nullable for DEC-004 song-set-entry rows`
+  );
+}
+
+/**
  * Bible corpus reconciles from its committed file on every boot (AD-25).
  * Measured ~133-152 ms per reconcile on a developer machine (Story 21.2).
  */
@@ -520,10 +577,62 @@ export function getDb() {
         id TEXT PRIMARY KEY,
         label TEXT NOT NULL,
         base_type TEXT NOT NULL,
-        payload TEXT NOT NULL,
+        payload TEXT,
         updated_at TEXT NOT NULL,
         seed_hash TEXT,
+        position INTEGER NOT NULL DEFAULT 0,
+        variable_name TEXT,
+        ann_set_id INTEGER
+      );
+
+      -- DEC-004 / AD-31: song-set-entry rows live on artifact_templates with a
+      -- stable variable_name; their shared canvas trio lives in this table.
+      CREATE TABLE IF NOT EXISTS song_set_layouts (
+        role TEXT PRIMARY KEY,
+        payload TEXT,
+        updated_at TEXT,
+        seed_hash TEXT
+      );
+
+      -- DEC-004 / AD-33: per-Service frozen copy of the live trio.
+      CREATE TABLE IF NOT EXISTS service_song_set_layouts (
+        service_id INTEGER NOT NULL,
+        role TEXT NOT NULL,
+        payload TEXT,
+        updated_at TEXT,
+        PRIMARY KEY (service_id, role),
+        FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS announcement_sets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        label TEXT,
+        updated_at TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS announcement_set_slides (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ann_set_id INTEGER NOT NULL,
+        label TEXT,
+        payload TEXT,
+        updated_at TEXT,
+        seed_hash TEXT,
         position INTEGER NOT NULL DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS background_library_images (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS song_books (
+        book_code TEXT PRIMARY KEY,
+        name TEXT,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT
       );
 
       -- AD-16 service-bound freeze. No slot/kind column (AD-19). Membership
@@ -534,7 +643,7 @@ export function getDb() {
         position INTEGER NOT NULL,
         label TEXT NOT NULL,
         base_type TEXT NOT NULL,
-        payload TEXT NOT NULL,
+        payload TEXT,
         updated_at TEXT NOT NULL,
         PRIMARY KEY (service_id, template_id),
         FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
@@ -609,6 +718,8 @@ export function getDb() {
     }
     migrateHymnsForSongBooks(db);
     migrateBibleVersesTranslationCode(db);
+    migrateArtifactTemplatesNewColumns(db);
+    migrateArtifactTemplatesPayloadNullable(db);
 
     // --- data migrations (AD-18 / AD-21) ---
     repairPreCounterArtifactRegistry(db);
@@ -620,6 +731,8 @@ export function getDb() {
 
     // --- first-boot bootstrap (AD-17) ---
     bootstrapArtifactRegistry(db);
+    migrateSongSetShapeDec004(db);
+    migratePredefinedFieldsDec004(db);
     migrateServiceBoundSnapshots(db);
     migrateDataVersionToCurrent(db);
 
@@ -632,6 +745,341 @@ export function getDb() {
   }
 
   return db;
+}
+
+/**
+ * DEC-004 data migrations (data_version 3 → 4 → 5).
+ *
+ * Mirrors `internal/db/migrate_song_set_shape.go` and
+ * `internal/db/migrate_predefined_fields.go`. Lives here (not in its own
+ * module) so the corpus-closure guard does not flag the song_set writes —
+ * db/index.ts is the canonical startup-migration home.
+ *
+ * Sequence is fixed: 3 → 4 first (physical-shape), then 4 → 5 (vocabulary).
+ */
+function migrateSongSetShapeDec004(database: Database.Database): void {
+  const row = database
+    .prepare(`SELECT value FROM settings WHERE key = ?`)
+    .get(DATA_VERSION_KEY) as { value: string } | undefined;
+  const version = row ? Number(row.value) : 0;
+  if (!Number.isFinite(version) || version >= 4) return;
+
+  type SnapshotRow = {
+    id: string;
+    label: string;
+    payload: string | null;
+    position: number;
+  };
+  const snapshot = database
+    .prepare(
+      `SELECT id, label, payload, position
+         FROM artifact_templates
+        WHERE base_type = 'song-set'
+        ORDER BY position ASC`
+    )
+    .all() as SnapshotRow[];
+
+  if (snapshot.length === 0) {
+    console.info(
+      '[registry] migration 3->4: no live song-set rows; refusing (data_version not bumped)'
+    );
+    return;
+  }
+
+  const source = snapshot[0];
+  let sourceTemplate: Record<string, unknown>;
+  try {
+    sourceTemplate = JSON.parse(source.payload ?? '{}') as Record<string, unknown>;
+  } catch (err) {
+    console.info(
+      `[registry] migration 3->4: source row ${source.id} payload invalid; refusing: ${String(err)}`
+    );
+    return;
+  }
+  const sourceLayouts = (sourceTemplate.layouts as Record<string, unknown>) ?? {};
+  const sourceTitle = sourceLayouts.title as Record<string, unknown> | undefined;
+  const sourceLyric = sourceLayouts.lyric as Record<string, unknown> | undefined;
+  if (!sourceTitle || !sourceLyric) {
+    console.info(
+      `[registry] migration 3->4: source row ${source.id} missing title or lyric layout`
+    );
+    return;
+  }
+
+  for (const other of snapshot.slice(1)) {
+    let otherTemplate: Record<string, unknown>;
+    try {
+      otherTemplate = JSON.parse(other.payload ?? '{}') as Record<string, unknown>;
+    } catch {
+      console.info(
+        `[registry] migration 3->4: row ${other.id} payload does not parse; leaving untouched`
+      );
+      continue;
+    }
+    const otherLayouts = (otherTemplate.layouts as Record<string, unknown>) ?? {};
+    const otherTitle = otherLayouts.title as Record<string, unknown> | undefined;
+    const otherLyric = otherLayouts.lyric as Record<string, unknown> | undefined;
+    if (JSON.stringify(sourceTitle) !== JSON.stringify(otherTitle)) {
+      console.info(
+        `[registry] migration 3->4: row ${other.id} title diverges from source; needs-review`
+      );
+    }
+    if (JSON.stringify(sourceLyric) !== JSON.stringify(otherLyric)) {
+      console.info(
+        `[registry] migration 3->4: row ${other.id} lyric diverges from source; needs-review`
+      );
+    }
+  }
+
+  const rename = (
+    layout: Record<string, unknown>,
+    mapping: Record<string, string>
+  ): Record<string, unknown> => {
+    const out: Record<string, unknown> = { ...layout };
+    const elements = Array.isArray(layout.elements)
+      ? (layout.elements as Record<string, unknown>[])
+      : [];
+    out.elements = elements.map((el) => {
+      const clone: Record<string, unknown> = { ...el };
+      const pk = clone.placeholderKey;
+      if (typeof pk === 'string' && Object.prototype.hasOwnProperty.call(mapping, pk)) {
+        const next = mapping[pk];
+        if (next === '') delete clone.placeholderKey;
+        else clone.placeholderKey = next;
+      }
+      return clone;
+    });
+    return out;
+  };
+
+  const titlePayload = rename(sourceTitle, {
+    hymnNumber: 'song_number',
+    songTitle: 'song_title',
+  });
+  const versePayload = rename(sourceLyric, {
+    label: 'verse_number',
+    lyrics: 'verse_content[]',
+  });
+  const reffPayload = rename(sourceLyric, {
+    label: '',
+    lyrics: 'reff[]',
+  });
+
+  const defaultSeeds: Record<string, string> = {
+    'bt-opening-song': 'opening_song_bt',
+    'bt-closing-song': 'closing_song_bt',
+    'ds-opening-song': 'opening_song_dw',
+    'ds-closing-song': 'closing_song_dw',
+  };
+
+  const reserved = new Set<string>(Object.values(defaultSeeds));
+  const existing = database
+    .prepare(
+      `SELECT variable_name FROM artifact_templates
+        WHERE variable_name IS NOT NULL AND base_type = 'song-set-entry'`
+    )
+    .all() as { variable_name: string }[];
+  for (const e of existing) reserved.add(e.variable_name);
+
+  const derivedCounts = new Map<string, number>();
+  const NON_ALNUM = /[^a-z0-9]+/g;
+  const derive = (label: string, id: string): string => {
+    const folded = label
+      .toLowerCase()
+      .trim()
+      .replace(NON_ALNUM, '_')
+      .replace(/^_+|_+$/g, '');
+    const base = folded || `song_set_entry_${id}`;
+    return base.length > 40 ? base.slice(0, 40).replace(/_+$/, '') : base;
+  };
+  const dedupe = (
+    base: string,
+    reserved: Set<string>,
+    counts: Map<string, number>
+  ): string => {
+    if (!reserved.has(base)) return base;
+    let n = (counts.get(base) ?? 1) + 1;
+    while (reserved.has(`${base}_${n}`)) n++;
+    counts.set(base, n);
+    return `${base}_${n}`;
+  };
+
+  const tx = database.transaction(() => {
+    const insertTrio = database.prepare(
+      `INSERT OR REPLACE INTO song_set_layouts (role, payload, updated_at, seed_hash)
+       VALUES (?, ?, ${STAMP_NOW_SQL}, NULL)`
+    );
+    insertTrio.run('title', JSON.stringify(titlePayload));
+    insertTrio.run('verse', JSON.stringify(versePayload));
+    insertTrio.run('reff', JSON.stringify(reffPayload));
+
+    const updateDefault = database.prepare(
+      `UPDATE artifact_templates
+          SET base_type = 'song-set-entry',
+              variable_name = ?,
+              payload = NULL,
+              seed_hash = NULL,
+              updated_at = ${STAMP_NOW_SQL}
+        WHERE id = ?`
+    );
+    const updateDerived = database.prepare(
+      `UPDATE artifact_templates
+          SET base_type = 'song-set-entry',
+              variable_name = ?,
+              payload = NULL,
+              seed_hash = NULL,
+              updated_at = ${STAMP_NOW_SQL}
+        WHERE id = ?`
+    );
+    const deleteGeneric = database.prepare(
+      `DELETE FROM artifact_templates WHERE id = ?`
+    );
+
+    for (const r of snapshot) {
+      if (r.id === 'song-set') {
+        deleteGeneric.run(r.id);
+        console.info(
+          `[registry] migration 3->4: retired generic row ${r.id} (dsMiddle loop)`
+        );
+        continue;
+      }
+      if (Object.prototype.hasOwnProperty.call(defaultSeeds, r.id)) {
+        updateDefault.run(defaultSeeds[r.id], r.id);
+        continue;
+      }
+      const base = derive(r.label ?? '', r.id);
+      const name = dedupe(base, reserved, derivedCounts);
+      reserved.add(name);
+      updateDerived.run(name, r.id);
+      console.info(
+        `[registry] migration 3->4: row ${r.id} converted to song-set-entry with derived variable_name=${name} (needs-review)`
+      );
+    }
+
+    // Compact positions so AD-21's 0..N-1 invariant holds after the row
+    // removal (the generic song-set row at position 20 is gone).
+    const survivors = database
+      .prepare(`SELECT id FROM artifact_templates ORDER BY position`)
+      .all() as { id: string }[];
+    const reposition = database.prepare(
+      `UPDATE artifact_templates SET position = ? WHERE id = ?`
+    );
+    survivors.forEach((s, i) => reposition.run(i, s.id));
+
+    database
+      .prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`)
+      .run(DATA_VERSION_KEY, '4');
+  });
+  tx.immediate();
+  console.info('[registry] migration 3->4: applied song-set physical-shape migration');
+}
+
+function migratePredefinedFieldsDec004(database: Database.Database): void {
+  const row = database
+    .prepare(`SELECT value FROM settings WHERE key = ?`)
+    .get(DATA_VERSION_KEY) as { value: string } | undefined;
+  const version = row ? Number(row.value) : 0;
+  if (!Number.isFinite(version) || version < 4) return;
+  if (version >= 5) return;
+
+  type Row = { id: string; payload: string };
+  const rows = database
+    .prepare(`SELECT id, payload FROM artifact_templates WHERE payload IS NOT NULL`)
+    .all() as Row[];
+
+  type Mapping = { key: string; shape: 'text' | 'image' };
+  const mapKey = (templateID: string, oldKey: string): Mapping | null => {
+    const scriptureOrTheme = (kind: 'reference' | 'text'): string => {
+      if (templateID === 'verse-reading') {
+        return kind === 'reference' ? 'scripture_reference' : 'scripture_text';
+      }
+      if (templateID === 'bible-verse-contemplation') {
+        return kind === 'reference' ? 'theme_reference' : 'theme_text';
+      }
+      return kind === 'reference' ? 'scripture_reference' : 'scripture_text';
+    };
+    switch (oldKey) {
+      case 'date':
+        return { key: 'service_date', shape: 'text' };
+      case 'reference':
+        return { key: scriptureOrTheme('reference'), shape: 'text' };
+      case 'text':
+        return { key: scriptureOrTheme('text'), shape: 'text' };
+      case 'performer':
+        return { key: 'special_song', shape: 'text' };
+      case 'title':
+        return { key: 'sermon_title', shape: 'text' };
+      case 'speaker':
+        return { key: 'sermon_speaker_name', shape: 'text' };
+      case 'imageUrl':
+        return { key: 'sermon_poster', shape: 'image' };
+      case 'person':
+        return { key: 'closing_prayer_person', shape: 'text' };
+      case 'familyText':
+        return { key: 'family_request', shape: 'text' };
+      case 'youthText':
+        return { key: 'youth_request', shape: 'text' };
+      case 'familyPhoto':
+        return { key: 'family_photo', shape: 'image' };
+      case 'youthPhoto':
+        return { key: 'youth_photo', shape: 'image' };
+    }
+    return null;
+  };
+
+  const tx = database.transaction(() => {
+    const update = database.prepare(
+      `UPDATE artifact_templates SET payload = ?, updated_at = ${STAMP_NOW_SQL} WHERE id = ?`
+    );
+    let touched = 0;
+    for (const r of rows) {
+      let tmpl: Record<string, unknown>;
+      try {
+        tmpl = JSON.parse(r.payload) as Record<string, unknown>;
+      } catch {
+        console.info(
+          `[registry] migration 4->5: row ${r.id} payload does not parse; leaving untouched`
+        );
+        continue;
+      }
+      const layouts = tmpl.layouts as Record<string, unknown> | undefined;
+      if (!layouts) continue;
+      let rowTouched = false;
+      for (const layoutKey of Object.keys(layouts)) {
+        const layout = layouts[layoutKey] as Record<string, unknown> | undefined;
+        if (!layout || !Array.isArray(layout.elements)) continue;
+        layout.elements = (layout.elements as Record<string, unknown>[]).map((el) => {
+          const pk = el.placeholderKey;
+          if (typeof pk !== 'string' || pk === '') return el;
+          const m = mapKey(r.id, pk);
+          if (!m) return el;
+          if (m.shape === 'text') {
+            const clone: Record<string, unknown> = { ...el };
+            clone.content = `{${m.key}}`;
+            delete clone.placeholderKey;
+            rowTouched = true;
+            return clone;
+          }
+          const clone: Record<string, unknown> = { ...el };
+          clone.placeholderKey = m.key;
+          rowTouched = true;
+          return clone;
+        });
+      }
+      if (!rowTouched) continue;
+      update.run(JSON.stringify(tmpl), r.id);
+      touched++;
+    }
+    database
+      .prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`)
+      .run(DATA_VERSION_KEY, '5');
+    if (touched > 0) {
+      console.info(
+        `[registry] migration 4->5: applied predefined-field vocabulary migration to ${touched} row(s)`
+      );
+    }
+  });
+  tx.immediate();
 }
 
 /** Story 25.2: stamp the write-path grain change without rewriting rows. */

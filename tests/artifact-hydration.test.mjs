@@ -76,17 +76,19 @@ test('fixed content and background hydrate; absent optional date is omitted', ()
 test('welcome renders the service date when one is supplied', () => {
   const instance = hydrateArtifact(seed('welcome'), {
     instanceId: 'welcome',
-    values: { date: '2026-07-11' },
+    values: { service_date: '2026-07-11' },
   });
-  const date = instance.layout.elements.find((e) => e.placeholderKey === 'date');
-  assert.ok(date, 'welcome must bind an element to the date placeholder');
+  const date = instance.layout.elements.find(
+    (e) => e.placeholderKey === 'service_date'
+  );
+  assert.ok(date, 'welcome must bind an element to the service_date placeholder');
   assert.equal(date.text, '2026-07-11');
 });
 
 test('placeholder elements resolve; fixed elements keep their content', () => {
   const instance = hydrateArtifact(seed('sermon'), {
     instanceId: 'sermon',
-    values: { title: 'Living Water', speaker: 'Ps. Doe' },
+    values: { sermon_title: 'Living Water', sermon_speaker_name: 'Ps. Doe' },
   });
 
   const byKey = Object.fromEntries(
@@ -94,16 +96,19 @@ test('placeholder elements resolve; fixed elements keep their content', () => {
       .filter((e) => e.placeholderKey)
       .map((e) => [e.placeholderKey, e.text])
   );
-  assert.deepEqual(byKey, { title: 'Living Water', speaker: 'Ps. Doe' });
+  assert.deepEqual(byKey, {
+    sermon_title: 'Living Water',
+    sermon_speaker_name: 'Ps. Doe',
+  });
 
   // The citation slot must carry the *rundown's* reference — never a baked-in
   // sample citation (that silently printed the wrong verse every week).
   const verse = hydrateArtifact(seed('verse-reading'), {
     instanceId: 'verse-reading',
-    values: { reference: 'Rom 1:1', text: 'Paul, a servant.' },
+    values: { scripture_reference: 'Rom 1:1', scripture_text: 'Paul, a servant.' },
   });
   const citation = verse.layout.elements.find((e) => e.id === 'e3');
-  assert.equal(citation.placeholderKey, 'reference');
+  assert.equal(citation.placeholderKey, 'scripture_reference');
   assert.equal(citation.text, 'Rom 1:1');
   assert.ok(
     verse.layout.elements.every(
@@ -119,29 +124,33 @@ test('required-with-default placeholders fall back to the seed default', () => {
   });
 
   const reference = instance.layout.elements.find(
-    (e) => e.placeholderKey === 'reference'
+    (e) => e.placeholderKey === 'theme_reference'
   );
-  const text = instance.layout.elements.find((e) => e.placeholderKey === 'text');
+  const text = instance.layout.elements.find(
+    (e) => e.placeholderKey === 'theme_text'
+  );
   assert.equal(reference.text, 'John 4:23');
   assert.match(text.text, /true worshipers/);
   assert.equal(instance.baseType, 'general');
 });
 
 test('optional placeholder absent omits the element', () => {
-  const withLabel = hydrateArtifact(seed('song-set'), {
+  const songEntry = loadRegistrySnapshot().get('bt-opening-song');
+  assert.ok(songEntry, 'expected composed bt-opening-song template');
+  const withLabel = hydrateArtifact(songEntry, {
     instanceId: 'bt-opening-lyric-1',
     layoutKey: 'lyric',
-    values: { label: 'Verse 1', lyrics: 'line one\nline two' },
+    values: { verse_number: '1/1', 'verse_content[]': 'line one\nline two' },
   });
   assert.equal(withLabel.layout.elements.length, 2);
 
-  const withoutLabel = hydrateArtifact(seed('song-set'), {
+  const withoutLabel = hydrateArtifact(songEntry, {
     instanceId: 'bt-opening-lyric-2',
     layoutKey: 'lyric',
-    values: { lyrics: 'line one' },
+    values: { 'verse_content[]': 'line one' },
   });
   assert.equal(withoutLabel.layout.elements.length, 1);
-  assert.equal(withoutLabel.layout.elements[0].placeholderKey, 'lyrics');
+  assert.equal(withoutLabel.layout.elements[0].placeholderKey, 'verse_content[]');
   assert.equal(withoutLabel.layout.elements[0].text, 'line one');
 });
 
@@ -152,7 +161,7 @@ test('required element without a value throws ArtifactHydrationError', () => {
       assert.ok(err instanceof ArtifactHydrationError);
       assert.equal(err.instanceId, 'sermon-graphic');
       assert.equal(err.templateId, 'sermon-flyer');
-      assert.equal(err.placeholderKey, 'imageUrl');
+      assert.equal(err.placeholderKey, 'sermon_poster');
       assert.match(err.message, /instance=sermon-graphic/);
       return true;
     }
@@ -162,7 +171,7 @@ test('required element without a value throws ArtifactHydrationError', () => {
 test('array placeholder resolves to the first URL; empty array + required throws', () => {
   const instance = hydrateArtifact(seed('announcement-flyer'), {
     instanceId: 'flyer-0',
-    values: { imageUrl: ['https://cdn.example.com/a.jpg', 'https://cdn.example.com/b.jpg'] },
+    values: { sermon_poster: ['https://cdn.example.com/a.jpg', 'https://cdn.example.com/b.jpg'] },
   });
   assert.equal(
     instance.layout.elements[0].imageUrl,
@@ -173,7 +182,7 @@ test('array placeholder resolves to the first URL; empty array + required throws
     () =>
       hydrateArtifact(seed('announcement-flyer'), {
         instanceId: 'flyer-1',
-        values: { imageUrl: [] },
+        values: { sermon_poster: [] },
       }),
     ArtifactHydrationError
   );
@@ -261,7 +270,7 @@ test('elements come out sorted by zIndex then source order', () => {
 test('off-canvas geometry survives hydration unclamped', () => {
   const instance = hydrateArtifact(seed('family-youth'), {
     instanceId: 'family-youth',
-    values: { familyText: 'F', youthText: 'Y' },
+    values: { family_request: 'F', youth_request: 'Y' },
   });
   const offCanvas = instance.layout.elements.find((e) => e.id === 'e4');
   assert.equal(offCanvas.x, -14.44);
@@ -295,10 +304,12 @@ test('unknown layout key and unknown template id throw', () => {
 
 test('registry snapshot covers every seeded template exactly once', () => {
   const snapshot = loadRegistrySnapshot();
+  const retiredByDec004 = new Set(['song-set']);
   for (const id of seeds.keys()) {
+    if (retiredByDec004.has(id)) continue;
     assert.ok(snapshot.has(id), `snapshot missing ${id}`);
   }
-  assert.ok(snapshot.size >= seeds.size);
+  assert.ok(snapshot.size >= seeds.size - retiredByDec004.size);
 });
 
 test('buildArtifactPlan flattens to the same order as buildSlidePlan', () => {
@@ -345,13 +356,11 @@ test('SongSets become one group node with ordered title/lyric children', () => {
       .every((c) => c.instance.layoutKey === 'lyric' && c.instance.group.role === 'lyric')
   );
 
-  // Story 20.1 (AC-6) split the shared `song-set` template into five rows —
-  // a group's children share the SongSet *baseType*, not literally the
-  // `song-set` id: `bt-opening`/`bt-closing`/`ds-opening`/`ds-closing` groups
-  // now hydrate from their own transitional per-position template.
+  // DEC-004 converts per-position SongSet rows to song-set-entry templates
+  // composed from the shared layout trio.
   for (const group of groups) {
     assert.ok(
-      group.children.every((c) => c.instance.baseType === 'song-set'),
+      group.children.every((c) => c.instance.baseType === 'song-set-entry'),
       `group ${group.id} holds a non SongSet child`
     );
   }
@@ -460,10 +469,10 @@ test('optional weekly media is omitted instead of failing hydration', () => {
   );
   assert.ok(
     family.artifact.layout.elements.some(
-      (e) => e.placeholderKey === 'familyText' && e.text === 'Pray for the Lees'
+      (e) => e.placeholderKey === 'family_request' && e.text === 'Pray for the Lees'
     )
   );
   assert.ok(
-    !family.artifact.layout.elements.some((e) => e.placeholderKey === 'youthText')
+    !family.artifact.layout.elements.some((e) => e.placeholderKey === 'youth_request')
   );
 });

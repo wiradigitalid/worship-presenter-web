@@ -26,14 +26,34 @@ func AcceptLivePayload(id, payload string) bool {
 	return true
 }
 
-func loadTemplates(rows *sql.Rows) Snapshot {
+// loadTemplates builds a snapshot from open Rows. trio must be loaded before
+// opening rows — never query the DB from here (MaxOpenConns(1) deadlock).
+func loadTemplates(rows *sql.Rows, useTemplateID bool, trio *songSetLayoutTrio) Snapshot {
 	snap := Snapshot{ByID: map[string]Template{}}
 	for rows.Next() {
-		var id, payload, updatedAt string
-		if err := rows.Scan(&id, &payload, &updatedAt); err != nil {
-			log.Printf("[registry] scan failed: %v", err)
+		var id, label, baseType, updatedAt string
+		var payloadNull sql.NullString
+		if useTemplateID {
+			if err := rows.Scan(&id, &label, &baseType, &payloadNull, &updatedAt); err != nil {
+				log.Printf("[registry] scan failed: %v", err)
+				continue
+			}
+		} else {
+			if err := rows.Scan(&id, &label, &baseType, &payloadNull, &updatedAt); err != nil {
+				log.Printf("[registry] scan failed: %v", err)
+				continue
+			}
+		}
+		if baseType == "song-set-entry" && trio != nil {
+			tmpl := composeSongSetEntryTemplate(id, label, trio)
+			snap.Order = append(snap.Order, id)
+			snap.ByID[id] = tmpl
 			continue
 		}
+		if !payloadNull.Valid || payloadNull.String == "" {
+			continue
+		}
+		payload := payloadNull.String
 		if !AcceptLivePayload(id, payload) {
 			continue
 		}
@@ -46,6 +66,7 @@ func loadTemplates(rows *sql.Rows) Snapshot {
 }
 
 func LoadSnapshot(db *sql.DB, serviceID int) (Snapshot, error) {
+	trio, _ := loadSongSetLayoutTrio(db)
 	var n int
 	if err := db.QueryRow(
 		`SELECT COUNT(*) FROM service_registry_snapshots WHERE service_id = ?`,
@@ -55,7 +76,7 @@ func LoadSnapshot(db *sql.DB, serviceID int) (Snapshot, error) {
 	}
 	if n > 0 {
 		rows, err := db.Query(
-			`SELECT template_id, payload, updated_at
+			`SELECT template_id, label, base_type, payload, updated_at
 			   FROM service_registry_snapshots
 			  WHERE service_id = ?
 			  ORDER BY position`,
@@ -65,16 +86,16 @@ func LoadSnapshot(db *sql.DB, serviceID int) (Snapshot, error) {
 			return Snapshot{}, err
 		}
 		defer rows.Close()
-		return loadTemplates(rows), rows.Err()
+		return loadTemplates(rows, true, trio), rows.Err()
 	}
 	rows, err := db.Query(
-		`SELECT id, payload, updated_at FROM artifact_templates ORDER BY position`,
+		`SELECT id, label, base_type, payload, updated_at FROM artifact_templates ORDER BY position`,
 	)
 	if err != nil {
 		return Snapshot{}, err
 	}
 	defer rows.Close()
-	return loadTemplates(rows), rows.Err()
+	return loadTemplates(rows, false, trio), rows.Err()
 }
 
 func LoadMedia(db *sql.DB, serviceID int, imagesPayload sql.NullString) Media {

@@ -5,10 +5,17 @@ export type ArtifactKind = (typeof ARTIFACT_BASE_TYPES)[number];
 
 /**
  * Legal persisted entry keys in `base_type` / `payload.baseType`.
- * Story 20.7 extends this with `songset-*` slot identities; extend this list,
- * not {@link ARTIFACT_BASE_TYPES}, when widening the entry set.
+ * DEC-004 widens this with `song-set-entry` (the post-migration shape of an
+ * Admin-configurable list of song-set rows). Extend this list, not
+ * {@link ARTIFACT_BASE_TYPES}, when widening the entry set.
  */
-export const ARTIFACT_ENTRY_KEYS = ['general', 'song-set', 'announcement'] as const;
+export const ARTIFACT_ENTRY_KEYS = [
+  'general',
+  'song-set',
+  'song-set-entry',
+  'ann-set-marker',
+  'announcement',
+] as const;
 
 export type ArtifactEntryKey = (typeof ARTIFACT_ENTRY_KEYS)[number];
 
@@ -17,14 +24,20 @@ export type ArtifactBaseType = ArtifactEntryKey;
 
 /**
  * Maps a persisted entry key (`base_type` / `payload.baseType`) to its kind.
- * Today the three kind values are also the only legal entry keys; Story 20.7
- * widens the entry set with `songset-*` slot identities that still read as
+ * Today the three kind values are also the only legal entry keys; DEC-004
+ * widens the entry set with `song-set-entry` rows that still read as
  * `[song-set]` on every human surface.
  */
 export function kindOf(entryKey: string): ArtifactKind {
   if (entryKey === 'general') return 'general';
   if (entryKey === 'announcement') return 'announcement';
-  if (entryKey === 'song-set' || entryKey.startsWith('songset-')) return 'song-set';
+  if (
+    entryKey === 'song-set' ||
+    entryKey.startsWith('songset-') ||
+    entryKey === 'song-set-entry'
+  ) {
+    return 'song-set';
+  }
   throw new Error(`Unknown artifact entry key: ${entryKey}`);
 }
 
