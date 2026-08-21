@@ -67,3 +67,67 @@ waves:
             tests:
               - tests/pptx-go-http.test.mjs
             touches: [api, pptx, slide-plan]
+
+  - id: W3
+    status: open
+    release: dec004-completion
+    prd: [offline-deck]
+    fr: [FR-20, FR-21]
+    size: M
+    depends_on: []
+    spec_folder: _bmad-output/specs/spec-w3-registry/
+    # Split per Product Component. wdi-build SKILL.md says one spec_folder per wave;
+    # this project's bmad-spec override (_bmad/custom) says the slug MUST be
+    # w<N>-<pc>, one run per (wave x Product Component). Both hold only when a wave
+    # is single-PC -- which is how W1 (registry) and W2 (hub) already are. So the
+    # registry work is W3 and the hub work is W4 rather than one compound wave.
+    # Reported as a method contradiction; neither method file patched here.
+    # Owner rulings 2026-08-21: coding goes through wdi-build; no reviewer panel --
+    # the coordinator tests and reviews OpenCode's output (cross-family, so Step 3
+    # is satisfied as a coordinator review, not a dropped step).
+    # Isolation: Orca worktree auto1, separate from the canonical checkout.
+    # Pre-wave: f393bfd (S1 catalog + name-field storage) is committed but unpushed
+    # and lands in this wave's PR -- built before the ruling, reconciled not redone.
+    epics:
+      - id: dec004-completion-registry
+        stories:
+          - id: "1"
+            spec_folder: _bmad-output/specs/spec-w3-registry/
+            satisfies: [UC-14]
+            tests:
+              - tests/artifact-editor-controls.test.mjs
+              - tests/artifacts-api.test.mjs
+              - tests/registry.test.mjs
+              - tests/copy-paste-share-by-reference.test.mjs
+              - tests/canvas-dirty-guard.test.mjs
+            touches: [spa]
+          - id: "2"
+            spec_folder: _bmad-output/specs/spec-w3-registry/
+            satisfies: [UC-20]
+            depends_on: ["1"]
+            tests:
+              - tests/artifact-preview.test.mjs
+              - tests/i18n.test.mjs
+            touches: [spa]
+          - id: "3"
+            spec_folder: _bmad-output/specs/spec-w3-registry/
+            satisfies: [UC-16]
+            depends_on: ["2"]
+            tests:
+              - tests/registry-sync-artifact.test.mjs
+              - tests/no-router-refresh-guard.test.mjs
+              - tests/i18n.test.mjs
+            touches: [spa]
+
+  - id: W4
+    status: open
+    release: dec004-completion
+    prd: [operator-turn]
+    fr: [FR-6]
+    size: S
+    depends_on: []
+    spec_folder: _bmad-output/specs/spec-w4-hub/
+    # The Hub half of dec004-completion: the Family/Youth name inputs whose storage
+    # landed in f393bfd with no input bound to them, and the S6 closing-prayer
+    # checkbox that replaces today's silent shouldAutoFill overwrite.
+    epics: []

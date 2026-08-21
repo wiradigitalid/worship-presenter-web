@@ -1,0 +1,82 @@
+- id: "1"
+  title: Insert image, explicit layer order, and bold/italic on the Registry canvas
+  description: >-
+    Adds the three controls DEC-004 names under Registry UI, against SPEC CAP-9.
+    Persistence already exists; only the toolbar and style panel are missing.
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: >-
+    Read SPEC.md's Constraints before writing: every key you persist must already
+    appear in allowedElementKeys or allowedStyleKeys in
+    internal/plan/validate_artifact.go. Underline is out — textDecoration is not
+    in that list, so document it as out of scope rather than adding a control that
+    cannot survive a save.
+
+    Three traps, all already recorded in the code you are editing. (a)
+    ArtifactEditor.tsx ~197: Fabric dies in Cache.getFontCache when fontStyle is
+    undefined and every shipped element omits it, so write fontStyle and
+    fontWeight only when the operator sets them — follow serializeTextStyle's
+    existing setIfMeaningful discipline. A seed layout opened and saved without
+    touching a style control must produce no new style keys, and you must prove
+    that test fails if you write fontStyle unconditionally. (b) ArtifactEditor.tsx
+    ~598: the PPTX exporter and the web slideshow both paint in zIndex order, so
+    your reorder control decides what the congregation sees — keep it a dense,
+    deterministic ordering with no gaps or duplicates, and reconcile Fabric's own
+    canvas order with the stored array order the way serializeCanvas (~293)
+    already does. (c) Deleting an element must never delete the uploaded file:
+    images are shared by reference, and tests/copy-paste-share-by-reference.test.mjs
+    pins it — read that test before touching any delete path.
+
+    Reuse the existing upload path (src/components/ImageUploadField.tsx and
+    POST /api/upload); do not invent an endpoint. Targeted edits only —
+    ArtifactEditor.tsx is ~1900 lines and is the surface the owner uses every
+    week, and it now serves the main spine, an Announcement Set's slides, and the
+    layout trio through one adapter. Its dirty guard, unsaved-changes prompt, and
+    adapter behaviour must be unchanged apart from the three new controls.
+
+- id: "2"
+  title: Preview rows show the registry label or kind, never "Untitled Slide"
+  description: >-
+    SlidePreviewList.tsx:147 hardcodes an English literal where DEC-004 asks for
+    the registry label or kind chip. Against SPEC CAP-9.
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: >-
+    Read src/lib/artifacts/preview-model.ts first: previewLabel and
+    kindChipLabel already compute what you need. Prefer, in order, the registry
+    label, then the kind chip, then a translated last-resort string behind an
+    i18n key — never a bare literal, on a surface that is otherwise fully
+    translated.
+
+    Announcement Set group chrome is explicitly OUT of scope: SPEC.md's non-goals
+    record why (grouping is SongSet-only today, group.role is typed
+    'title' | 'lyric', and DEC-004 says groups MAY appear as chrome rather than
+    MUST). Do not widen that union here. What does still hold: a group marker is
+    never a projected slide — only children carry # slide numbers — so do not
+    number a group row if you touch that code.
+
+- id: "3"
+  title: Sync Artifact tells the truth, reports success, and refreshes the preview
+  description: >-
+    Its confirm copy still promises announcement flyers survive, which FR-3's
+    retirement made false; success is silent and the preview goes stale. Against
+    SPEC CAP-9 / UC-16.
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: >-
+    Three defects in src/operator/SyncArtifactButton.tsx. First, the confirm text
+    ends with "Announcement flyers stay this Service's list" — false as of today:
+    FR-3 retired, the five /api/announcements routes are deleted, and composition
+    lives in the Registry. Rewrite it to say what sync now does: it replaces this
+    Service's frozen deck structure with the live Artifact Registry, and the
+    weekly values the operator entered — hymn numbers, book choices, names,
+    verses, lyric overrides — stay. Second, a 200 sets nothing: add a success
+    toast via sonner and refresh the Live Slide Preview so the new structure is
+    visible. Third, every string in the file is an untranslated literal — the
+    confirm, the button label, "Syncing…", and the error text.
+
+    The refresh MUST NOT use router.refresh() or navigate(0):
+    tests/no-router-refresh-guard.test.mjs enforces it, and it exists because
+    navigate(0) remounts the route and blanks the page. Read how the parent mounts
+    this button before choosing between a success callback and parent-owned state,
+    and report which you chose.
