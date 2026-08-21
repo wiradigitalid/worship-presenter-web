@@ -288,6 +288,10 @@ export default function PresenterOperator({
   // again, which is the whole contract of the control.
   const [liveTransition, setLiveTransition] =
     useState<SlideTransition>(deckTransition);
+  const [liveBackground, setLiveBackground] = useState<string | null>(null);
+  const [backgroundLibrary, setBackgroundLibrary] = useState<
+    Array<{ id: number; url: string; isDefault: boolean }>
+  >([]);
   const [scriptureRef, setScriptureRef] = useState('');
   const [scriptureBusy, setScriptureBusy] = useState(false);
   const [scriptureError, setScriptureError] = useState<string | null>(null);
@@ -306,6 +310,7 @@ export default function PresenterOperator({
   const indexRef = useRef(0);
   const blankRef = useRef(false);
   const transitionRef = useRef<SlideTransition>(deckTransition);
+  const backgroundRef = useRef<string | null>(null);
   const planIdentityRef = useRef(planIdentity);
   planIdentityRef.current = planIdentity;
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
@@ -320,6 +325,19 @@ export default function PresenterOperator({
 
   useEffect(() => {
     let active = true;
+    void fetch('/api/background-library', { credentials: 'same-origin' })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        return (await res.json()) as {
+          images?: Array<{ id: number; url: string; isDefault: boolean }>;
+        };
+      })
+      .then((body) => {
+        if (!active || !body) return;
+        const images = Array.isArray(body.images) ? body.images : [];
+        setBackgroundLibrary(images);
+      })
+      .catch(() => {});
     void fetch('/api/bible-translations', { credentials: 'same-origin' })
       .then(async (res) => {
         if (!res.ok) return null;
@@ -428,6 +446,7 @@ export default function PresenterOperator({
         index: clamped,
         blank: blankRef.current,
         transition: transitionRef.current,
+        background: backgroundRef.current,
         planIdentity: planIdentityRef.current,
       });
     },
@@ -476,6 +495,22 @@ export default function PresenterOperator({
     [broadcast]
   );
 
+  /**
+   * Overrides the projected Verse/Reff background for the rest of this session (AD-34).
+   */
+  const setBackgroundAndSync = useCallback(
+    (next: string | null) => {
+      backgroundRef.current = next;
+      setLiveBackground(next);
+      broadcast({
+        type: 'background',
+        background: next,
+        planIdentity: planIdentityRef.current,
+      });
+    },
+    [broadcast]
+  );
+
   useEffect(() => {
     const ch = openPresentChannel(serviceId);
     channelRef.current = ch;
@@ -489,6 +524,7 @@ export default function PresenterOperator({
       index: indexRef.current,
       blank: blankRef.current,
       transition: transitionRef.current,
+      background: backgroundRef.current,
       planIdentity: planIdentityRef.current,
     });
 
@@ -784,6 +820,40 @@ export default function PresenterOperator({
                   {SLIDE_TRANSITIONS.map((id) => (
                     <SelectItem key={id} value={id}>
                       {SLIDE_TRANSITION_SPECS[id].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Label>
+
+            {/* Live background override (AD-34, UC-27) */}
+            <Label
+              htmlFor="live-background"
+              className="flex items-center gap-2 text-xs text-muted-foreground"
+            >
+              <span className="flex items-center gap-1.5">
+                Background
+                <span
+                  className={`${BADGE_CLASS} border-border bg-muted text-muted-foreground`}
+                >
+                  Live only · not saved
+                </span>
+              </span>
+              <Select
+                value={liveBackground || 'default'}
+                onValueChange={(value) => {
+                  setBackgroundAndSync(value === 'default' ? null : value);
+                  blurFocusedControl();
+                }}
+              >
+                <SelectTrigger id="live-background" size="sm" className="w-[9.5rem]">
+                  <SelectValue placeholder="Deck default" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Deck default</SelectItem>
+                  {backgroundLibrary.map((bg) => (
+                    <SelectItem key={bg.id} value={bg.url}>
+                      {bg.url.split('/').pop() || `Image ${bg.id}`} {bg.isDefault ? '(Default)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

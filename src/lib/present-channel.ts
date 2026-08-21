@@ -22,6 +22,7 @@ export type PresentMessage =
       index: number;
       blank: boolean;
       transition: SlideTransition;
+      background?: string | null;
       planIdentity: string;
     }
   | { type: 'request-sync' }
@@ -47,6 +48,15 @@ export type PresentMessage =
    * it: it exists for the length of a Presenter session and no longer.
    */
   | { type: 'transition'; transition: SlideTransition; planIdentity: string }
+  /**
+   * A live-only override of the Verse/Reff background (AD-34). Nothing stores
+   * it: it exists for the length of a Presenter session and no longer.
+   */
+  | {
+      type: 'background';
+      background: string | null;
+      planIdentity: string;
+    }
   | {
       type: 'scripture';
       reference: string;
@@ -92,6 +102,20 @@ export function liveTransitionOf(msg: PresentMessage): SlideTransition | null {
   // sending window is the one thing that cannot be trusted to agree.
   const value: unknown = msg.transition;
   return value === undefined ? null : parseSlideTransition(value);
+}
+
+/**
+ * The live background override a message asserts, or `undefined` when it says
+ * nothing about it (null means an explicit override to remove/clear the live background).
+ */
+export function liveBackgroundOf(msg: PresentMessage): string | null | undefined {
+  if (msg.type === 'sync') {
+    return msg.background !== undefined ? msg.background : undefined;
+  }
+  if (msg.type === 'background') {
+    return msg.background !== undefined ? msg.background : null;
+  }
+  return undefined;
 }
 
 /**

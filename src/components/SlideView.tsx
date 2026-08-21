@@ -13,6 +13,17 @@ import type { SlidePlanItem } from '@/lib/slide-plan';
  * 17.1 without touching any file that story's test reads. Styling a projected
  * slide from the outside is not a thing to make convenient.
  */
-export default function SlideView({ slide }: { slide: SlidePlanItem }) {
-  return <ArtifactSlide instance={slide.artifact} />;
+export default function SlideView({
+  slide,
+  backgroundOverride,
+}: {
+  slide: SlidePlanItem;
+  backgroundOverride?: string | null;
+}) {
+  return (
+    <ArtifactSlide
+      instance={slide.artifact}
+      backgroundOverride={backgroundOverride}
+    />
+  );
 }

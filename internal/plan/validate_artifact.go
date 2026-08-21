@@ -105,6 +105,10 @@ func asNonNegInt(v any, label string) (int, error) {
 	return int(n), nil
 }
 
+func IsRegistryImageRef(ref, repoRoot string) bool {
+	return isRegistryImageRef(ref, repoRoot)
+}
+
 func isRegistryImageRef(ref, repoRoot string) bool {
 	if IsSafeImageURL(ref) {
 		return true

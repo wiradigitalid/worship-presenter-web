@@ -225,12 +225,22 @@ function ArtifactElement({ element }: { element: ResolvedElement }) {
  */
 export default function ArtifactSlide({
   instance,
+  backgroundOverride,
 }: {
   instance: ArtifactInstance;
+  backgroundOverride?: string | null;
 }) {
   assertRuntimeVersion(instance);
 
   const { layout } = instance;
+  const isVerseOrReff =
+    instance.layoutKey === 'verse' ||
+    instance.layoutKey === 'reff' ||
+    instance.group?.role === 'lyric';
+  const effectiveBgImage =
+    isVerseOrReff && backgroundOverride !== undefined
+      ? backgroundOverride || undefined
+      : layout.backgroundImage;
 
   return (
     <div className="flex h-full w-full items-center justify-center overflow-hidden">
@@ -251,9 +261,9 @@ export default function ArtifactSlide({
             // the rendered stage rather than the viewport.
             containerType: 'size',
             backgroundColor: toCssColor(layout.backgroundColor) ?? '#000000',
-            ...(layout.backgroundImage
+            ...(effectiveBgImage
               ? {
-                  backgroundImage: `url(${JSON.stringify(layout.backgroundImage)})`,
+                  backgroundImage: `url(${JSON.stringify(effectiveBgImage)})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   backgroundRepeat: 'no-repeat',

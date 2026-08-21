@@ -4,6 +4,7 @@ import SlideView from '@/components/SlideView';
 import {
   adoptsSharedState,
   blankStateOf,
+  liveBackgroundOf,
   liveTransitionOf,
   openPresentChannel,
   type PresentMessage,
@@ -37,6 +38,9 @@ export default function ProjectorClient({
   const [transition, setTransition] = useState<SlideTransition>(
     configuredTransition
   );
+  const [backgroundOverride, setBackgroundOverride] = useState<
+    string | null | undefined
+  >(undefined);
   const { index, outgoing, phase, goTo } = useSlideTransition(
     transition,
     slides.length
@@ -70,7 +74,14 @@ export default function ProjectorClient({
       const msg = ev.data;
       if (!msg || typeof msg !== 'object') return;
       if (!adoptsSharedState(msg, planIdentityRef.current)) {
-        if (msg.type === 'sync' || msg.type === 'blank' || msg.type === 'transition' || msg.type === 'scripture' || msg.type === 'clear-scripture') {
+        if (
+          msg.type === 'sync' ||
+          msg.type === 'blank' ||
+          msg.type === 'transition' ||
+          msg.type === 'background' ||
+          msg.type === 'scripture' ||
+          msg.type === 'clear-scripture'
+        ) {
           setStalePlan(true);
         }
         return;
@@ -85,6 +96,8 @@ export default function ProjectorClient({
       if (nextBlank !== null) setBlank(nextBlank);
       const nextTransition = liveTransitionOf(msg);
       if (nextTransition !== null) setTransition(nextTransition);
+      const nextBg = liveBackgroundOf(msg);
+      if (nextBg !== undefined) setBackgroundOverride(nextBg);
       if (msg.type === 'sync') {
         goToRef.current(msg.index);
         setOverlay(null);
@@ -170,7 +183,10 @@ export default function ProjectorClient({
           className="absolute inset-0"
           style={transitionLayerStyle(transition, 'outgoing', phase)}
         >
-          <SlideView slide={outgoingSlide} />
+          <SlideView
+            slide={outgoingSlide}
+            backgroundOverride={backgroundOverride}
+          />
         </div>
       ) : null}
       <div
@@ -186,7 +202,7 @@ export default function ProjectorClient({
             </p>
           </div>
         ) : slide ? (
-          <SlideView slide={slide} />
+          <SlideView slide={slide} backgroundOverride={backgroundOverride} />
         ) : null}
       </div>
       {/* Outside the transition wrapper on purpose. Blanking has to preserve

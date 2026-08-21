@@ -118,18 +118,33 @@ export default function EditForm({
   const [songSetEntries, setSongSetEntries] = useState<
     Array<{ variableName: string; title: string }>
   >([]);
+  const [backgroundLibrary, setBackgroundLibrary] = useState<
+    Array<{ id: number; url: string; isDefault: boolean }>
+  >([]);
 
   useEffect(() => {
     let active = true;
     void (async () => {
       try {
-        const res = await fetch('/api/song-set-entries');
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          entries?: Array<{ variableName: string; title: string }>;
-        };
-        if (active && Array.isArray(data.entries)) {
-          setSongSetEntries(data.entries);
+        const [entriesRes, bgRes] = await Promise.all([
+          fetch('/api/song-set-entries'),
+          fetch('/api/background-library'),
+        ]);
+        if (entriesRes.ok) {
+          const data = (await entriesRes.json()) as {
+            entries?: Array<{ variableName: string; title: string }>;
+          };
+          if (active && Array.isArray(data.entries)) {
+            setSongSetEntries(data.entries);
+          }
+        }
+        if (bgRes.ok) {
+          const data = (await bgRes.json()) as {
+            images?: Array<{ id: number; url: string; isDefault: boolean }>;
+          };
+          if (active && Array.isArray(data.images)) {
+            setBackgroundLibrary(data.images);
+          }
         }
       } catch {
         // Non-blocking fallback
@@ -663,8 +678,8 @@ export default function EditForm({
                       lyricText: '',
                     };
                     return (
-                      <div key={entry.variableName}>
-                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                      <div key={entry.variableName} className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
                           {entry.title}
                         </label>
                         <HymnNumberAutocomplete
@@ -676,6 +691,34 @@ export default function EditForm({
                           placeholder={t('form.hymnPlaceholder')}
                           disabled={isSaving}
                         />
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] text-muted-foreground uppercase font-medium">
+                            Background:
+                          </label>
+                          <Select
+                            value={current.background || 'default'}
+                            onValueChange={(val) =>
+                              setSongSetField(
+                                entry.variableName,
+                                'background',
+                                val === 'default' ? '' : val
+                              )
+                            }
+                            disabled={isSaving}
+                          >
+                            <SelectTrigger className="h-7 text-xs">
+                              <SelectValue placeholder="Global Default" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="default">Global Default</SelectItem>
+                              {backgroundLibrary.map((img) => (
+                                <SelectItem key={img.id} value={img.url}>
+                                  {img.url.split('/').pop() || `Image ${img.id}`} {img.isDefault ? '(Default)' : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     );
                   })}

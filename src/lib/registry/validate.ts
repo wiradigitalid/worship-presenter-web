@@ -485,6 +485,38 @@ export function validateArtifactTemplate(raw: unknown): ArtifactTemplate {
   return template;
 }
 
+export function validateSongSetLayout(
+  raw: unknown,
+  role: 'title' | 'verse' | 'reff'
+): ArtifactLayout {
+  const label = `layouts.${role}`;
+  const obj = assertPlainObject(raw, label);
+  if (role === 'verse' || role === 'reff') {
+    if (obj.backgroundImage !== undefined) {
+      throw new RegistryValidationError(
+        `${label} must not set a background image`
+      );
+    }
+    if (Array.isArray(obj.elements)) {
+      obj.elements.forEach((el, i) => {
+        if (el && typeof el === 'object') {
+          const elObj = el as Record<string, unknown>;
+          if (
+            elObj.imageRef !== undefined ||
+            elObj.type === 'image' ||
+            elObj.type === 'image-placeholder'
+          ) {
+            throw new RegistryValidationError(
+              `${label}.elements[${i}] must not set a background image`
+            );
+          }
+        }
+      });
+    }
+  }
+  return parseLayout(raw, label);
+}
+
 export function validateArtifactTemplateList(raw: unknown): ArtifactTemplate[] {
   if (!Array.isArray(raw)) {
     throw new RegistryValidationError('Seed must be an array of templates');
