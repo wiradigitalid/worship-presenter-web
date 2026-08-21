@@ -92,7 +92,59 @@ export function stopProcess(proc) {
     }
     return;
   }
-  proc.kill('SIGTERM');
+
+  const sleepSync = (ms) => {
+    try {
+      const sab = new SharedArrayBuffer(4);
+      const int32 = new Int32Array(sab);
+      Atomics.wait(int32, 0, 0, ms);
+    } catch {
+      const end = Date.now() + ms;
+      while (Date.now() < end) {}
+    }
+  };
+
+  const pid = proc.pid;
+  const isAlive = (targetPid) => {
+    try {
+      process.kill(targetPid, 0);
+      return true;
+    } catch (err) {
+      return err.code === 'EPERM';
+    }
+  };
+
+  if (!isAlive(pid)) {
+    return;
+  }
+
+  try {
+    process.kill(-pid, 'SIGTERM');
+  } catch (err) {
+    if (err.code !== 'ESRCH') throw err;
+  }
+
+  const start = Date.now();
+  while (Date.now() - start < 1000) {
+    if (!isAlive(pid)) return;
+    sleepSync(50);
+  }
+
+  try {
+    process.kill(-pid, 'SIGKILL');
+  } catch (err) {
+    if (err.code !== 'ESRCH') throw err;
+  }
+
+  const killStart = Date.now();
+  while (Date.now() - killStart < 1000) {
+    if (!isAlive(pid)) return;
+    sleepSync(50);
+  }
+
+  if (isAlive(pid)) {
+    throw new Error(`Failed to stop process group for pid ${pid}`);
+  }
 }
 
 export async function spawnGoApi({
@@ -105,6 +157,7 @@ export async function spawnGoApi({
   const output = [];
   const child = spawn('go', ['run', './cmd/api'], {
     cwd: root,
+    detached: process.platform !== 'win32',
     env: {
       ...process.env,
       PORT: String(port),
