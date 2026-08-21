@@ -116,6 +116,41 @@ reported.
 Also restore the removed comment (wherever the serialize logic now lives) so the next agent learns the
 invariant from the code rather than from this log.
 
+### 2026-08-21 — coordinator review, return trip 2 (found by the edge-case lens during wdi-review)
+
+**Finding (must-fix): inserting an element renumbers every `zIndex` in the layout, including the 40
+non-dense seed layouts.**
+
+Return trip 1 made `zIndex` conditional, and AC-06 pins the case it was written for: a seed layout
+saved without moving or reordering anything keeps its stored values. But the condition is
+
+```
+const isOrderModified = hasReorderedExisting || hasAddedElements;
+```
+
+so **adding** an element — the insert-image control this very story shipped, or Add text, or Add
+rectangle — sets `isOrderModified` and every element in the layout is rewritten to `zIndex: canvasIndex`.
+Insert one image into any of the 40 layouts whose stored `zIndex` is `[1,1,1]` or `[0,0,1,1]` and all of
+them are renumbered. Same silent seed mutation as return trip 1, reached through a different trigger,
+and AC-06 does not cover it because AC-06 only exercises the untouched-save path.
+
+This is also a regression against HEAD, which assigned a new element `maxZ + 1` and left every existing
+element's `zIndex` alone.
+
+**Required fix.** An insert MUST NOT renumber siblings. A newly added element takes a `zIndex` above the
+current maximum; existing elements keep their stored values. Renumbering stays reserved for an actual
+reorder of existing elements — `hasReorderedExisting` — which is the only case where the stored values
+genuinely no longer describe the order.
+
+**New acceptance criterion, AC-07.** Given a seed template whose stored `zIndex` values are not dense
+(one of the 40, e.g. `[1, 1, 1]`), when the Admin inserts an image, a text box, or a shape and saves
+without reordering anything, then every pre-existing element keeps its stored `zIndex` byte-identical and
+the new element carries a `zIndex` above the previous maximum. Exercise **all three** insert controls —
+a guard that probes only the image path does not cover the set this story shipped.
+
+Confirm AC-07 fails against the current implementation before fixing it, and report that failure output.
+AC-02 (reordering persists) and AC-06 (untouched save preserves) MUST both stay green.
+
 ## Review Triage Log
 
 ### 2026-08-21 — Review pass

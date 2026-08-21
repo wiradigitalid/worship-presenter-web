@@ -432,3 +432,219 @@ test('AC-06: Seed template with non-dense zIndex preserves stored zIndex when no
   assert.equal(serializedPartial[0].zIndex, 1);
   assert.equal(serializedPartial[1].zIndex, 1);
 });
+
+test('AC-07: Seed template with non-dense zIndex preserves stored zIndex on insert (image, text, shape)', () => {
+  // Seed layout with non-dense stored zIndex [1, 1, 1] (e.g. welcome template)
+  const layout = {
+    aspectRatio: '16:9',
+    backgroundColor: '#000000',
+    elements: [
+      {
+        id: 'e1',
+        type: 'text',
+        required: false,
+        x: 5.63,
+        y: 55.62,
+        w: 56.42,
+        h: 25.47,
+        zIndex: 1,
+        content: 'Welcome to',
+        style: { fontSize: 101.75, fontColor: '#FFFFFF', textAlign: 'left' },
+      },
+      {
+        id: 'e2',
+        type: 'text',
+        required: false,
+        x: 5.63,
+        y: 80.48,
+        w: 77.04,
+        h: 7.97,
+        zIndex: 1,
+        content: 'BANDUNG INTERNATIONAL COMMUNITY',
+        style: { fontSize: 20.7, fontColor: '#FFFFFF', textAlign: 'left' },
+      },
+      {
+        id: 'e3',
+        type: 'text',
+        required: false,
+        x: 5.63,
+        y: 89.5,
+        w: 50,
+        h: 5.5,
+        zIndex: 1,
+        content: '{service_date}',
+        style: { fontSize: 14.67, fontColor: '#FFFFFF', textAlign: 'left' },
+      },
+    ],
+  };
+
+  const obj1 = new MockFabricText('Welcome to', { data: { elementId: 'e1' }, left: 54.048, top: 300.348 });
+  const obj2 = new MockFabricText('BANDUNG INTERNATIONAL COMMUNITY', { data: { elementId: 'e2' }, left: 54.048, top: 434.592 });
+  const obj3 = new MockFabricText('{service_date}', { data: { elementId: 'e3' }, left: 54.048, top: 483.3 });
+
+  // 1. Exercise Insert Image control
+  {
+    const addedImage = new Map([
+      [
+        'usr-img-1',
+        {
+          id: 'usr-img-1',
+          type: 'image',
+          required: false,
+          x: 10,
+          y: 10,
+          w: 30,
+          h: 30,
+          zIndex: 2, // maxZ + 1
+          imageRef: '/api/uploads/test-image.png',
+        },
+      ],
+    ]);
+    const objImage = new MockFabricObject({ data: { elementId: 'usr-img-1' }, left: 96, top: 54, width: 288, height: 162 });
+    const canvasWithImage = new MockCanvas([obj1, obj2, obj3, objImage]);
+
+    const serializedImage = serializeCanvas(canvasWithImage, layout, addedImage);
+    assert.equal(serializedImage.length, 4);
+    const byId = new Map(serializedImage.map((e) => [e.id, e]));
+    assert.equal(byId.get('e1').zIndex, 1, 'pre-existing e1 zIndex must stay 1 on image insert');
+    assert.equal(byId.get('e2').zIndex, 1, 'pre-existing e2 zIndex must stay 1 on image insert');
+    assert.equal(byId.get('e3').zIndex, 1, 'pre-existing e3 zIndex must stay 1 on image insert');
+    assert.equal(byId.get('usr-img-1').zIndex, 2, 'inserted image zIndex must be above maxZ (2)');
+    assert.deepEqual(
+      serializedImage.map((e) => e.zIndex),
+      [1, 1, 1, 2]
+    );
+  }
+
+  // 2. Exercise Insert Text control
+  {
+    const addedText = new Map([
+      [
+        'usr-txt-1',
+        {
+          id: 'usr-txt-1',
+          type: 'text',
+          required: false,
+          x: 10,
+          y: 10,
+          w: 40,
+          h: 15,
+          zIndex: 2, // maxZ + 1
+          content: 'New text',
+          style: { fontFamily: 'Arial', fontSize: 32, fontColor: '#FFFFFF', fontWeight: 'normal', textAlign: 'left' },
+        },
+      ],
+    ]);
+    const objText = new MockFabricText('New text', { data: { elementId: 'usr-txt-1' }, left: 96, top: 54, width: 384, height: 81 });
+    const canvasWithText = new MockCanvas([obj1, obj2, obj3, objText]);
+
+    const serializedText = serializeCanvas(canvasWithText, layout, addedText);
+    assert.equal(serializedText.length, 4);
+    const byId = new Map(serializedText.map((e) => [e.id, e]));
+    assert.equal(byId.get('e1').zIndex, 1, 'pre-existing e1 zIndex must stay 1 on text insert');
+    assert.equal(byId.get('e2').zIndex, 1, 'pre-existing e2 zIndex must stay 1 on text insert');
+    assert.equal(byId.get('e3').zIndex, 1, 'pre-existing e3 zIndex must stay 1 on text insert');
+    assert.equal(byId.get('usr-txt-1').zIndex, 2, 'inserted text zIndex must be above maxZ (2)');
+    assert.deepEqual(
+      serializedText.map((e) => e.zIndex),
+      [1, 1, 1, 2]
+    );
+  }
+
+  // 3. Exercise Insert Shape control
+  {
+    const addedShape = new Map([
+      [
+        'usr-shp-1',
+        {
+          id: 'usr-shp-1',
+          type: 'shape',
+          required: false,
+          x: 10,
+          y: 10,
+          w: 30,
+          h: 30,
+          zIndex: 2, // maxZ + 1
+          style: { fillColor: '#5C2E16', opacity: 1 },
+        },
+      ],
+    ]);
+    const objShape = new MockFabricObject({ data: { elementId: 'usr-shp-1' }, left: 96, top: 54, width: 288, height: 162 });
+    const canvasWithShape = new MockCanvas([obj1, obj2, obj3, objShape]);
+
+    const serializedShape = serializeCanvas(canvasWithShape, layout, addedShape);
+    assert.equal(serializedShape.length, 4);
+    const byId = new Map(serializedShape.map((e) => [e.id, e]));
+    assert.equal(byId.get('e1').zIndex, 1, 'pre-existing e1 zIndex must stay 1 on shape insert');
+    assert.equal(byId.get('e2').zIndex, 1, 'pre-existing e2 zIndex must stay 1 on shape insert');
+    assert.equal(byId.get('e3').zIndex, 1, 'pre-existing e3 zIndex must stay 1 on shape insert');
+    assert.equal(byId.get('usr-shp-1').zIndex, 2, 'inserted shape zIndex must be above maxZ (2)');
+    assert.deepEqual(
+      serializedShape.map((e) => e.zIndex),
+      [1, 1, 1, 2]
+    );
+  }
+});
+
+test('AC-07: Seed template with non-dense zIndex preserves stored zIndex on element deletion', () => {
+  // Seed layout with non-dense stored zIndex [1, 1, 1]
+  const layout = {
+    aspectRatio: '16:9',
+    backgroundColor: '#000000',
+    elements: [
+      {
+        id: 'e1',
+        type: 'text',
+        required: false,
+        x: 5.63,
+        y: 55.62,
+        w: 56.42,
+        h: 25.47,
+        zIndex: 1,
+        content: 'Welcome to',
+        style: { fontSize: 101.75, fontColor: '#FFFFFF', textAlign: 'left' },
+      },
+      {
+        id: 'e2',
+        type: 'text',
+        required: false,
+        x: 5.63,
+        y: 80.48,
+        w: 77.04,
+        h: 7.97,
+        zIndex: 1,
+        content: 'BANDUNG INTERNATIONAL COMMUNITY',
+        style: { fontSize: 20.7, fontColor: '#FFFFFF', textAlign: 'left' },
+      },
+      {
+        id: 'e3',
+        type: 'text',
+        required: false,
+        x: 5.63,
+        y: 89.5,
+        w: 50,
+        h: 5.5,
+        zIndex: 1,
+        content: '{service_date}',
+        style: { fontSize: 14.67, fontColor: '#FFFFFF', textAlign: 'left' },
+      },
+    ],
+  };
+
+  const obj1 = new MockFabricText('Welcome to', { data: { elementId: 'e1' }, left: 54.048, top: 300.348 });
+  const obj3 = new MockFabricText('{service_date}', { data: { elementId: 'e3' }, left: 54.048, top: 483.3 });
+
+  // Delete element e2: canvas holds obj1 and obj3 in original relative order, added map empty
+  const canvasAfterDelete = new MockCanvas([obj1, obj3]);
+  const serialized = serializeCanvas(canvasAfterDelete, layout, new Map());
+
+  assert.equal(serialized.length, 2);
+  const byId = new Map(serialized.map((e) => [e.id, e]));
+  assert.equal(byId.get('e1').zIndex, 1, 'surviving e1 stored zIndex must remain byte-identical (1)');
+  assert.equal(byId.get('e3').zIndex, 1, 'surviving e3 stored zIndex must remain byte-identical (1)');
+  assert.deepEqual(
+    serialized.map((e) => e.zIndex),
+    [1, 1]
+  );
+});
+

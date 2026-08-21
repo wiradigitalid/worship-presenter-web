@@ -190,12 +190,25 @@ export function serializeCanvas(
     }))
     .sort((a, b) => a.zIndex - b.zIndex || a.sourceIndex - b.sourceIndex);
 
+  // Check if surviving elements are in their initial relative order on canvas,
+  // and check if any added elements have moved relative to the existing elements
+  // (e.g. newly added element was moved behind/below existing elements).
   const hasReorderedExisting = existingObjects.some(
     (entry, idx) => entry.elementId !== initialOrder[idx]?.id
   );
 
-  const hasAddedElements = added.size > 0;
-  const isOrderModified = hasReorderedExisting || hasAddedElements;
+  // Check if any added element is positioned before (underneath) any existing element on canvas
+  const minExistingIndex = existingObjects.length > 0 ? existingObjects[0].canvasIndex : -1;
+  const maxExistingIndex = existingObjects.length > 0 ? existingObjects[existingObjects.length - 1].canvasIndex : -1;
+  const hasReorderedAdded = canvasObjects.some((obj, canvasIndex) => {
+    const elementId = getElementId(obj);
+    if (!elementId || !added.has(elementId)) return false;
+    // Added element was created at the top (zIndex = maxZ + 1).
+    // If it is located below any existing element in canvas index order, it was explicitly reordered.
+    return maxExistingIndex !== -1 && canvasIndex < maxExistingIndex;
+  });
+
+  const isOrderModified = hasReorderedExisting || hasReorderedAdded;
 
   const serialized = canvasObjects.flatMap((obj, canvasIndex) => {
     const elementId = getElementId(obj);

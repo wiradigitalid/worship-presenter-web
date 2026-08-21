@@ -19,15 +19,23 @@ sources:
 >
 > **Projection, not authorship.** This file projects `.what/registry/`, `.how/registry/` and DEC-004 onto wave W3. It introduces no `FR`, `UC`, `BR` or `AD`. A gap found while building is landed in the corpus by the skill that owns that layer — never patched in here.
 
-# W3 × Registry — FR-20 / FR-21: the authoring surface DEC-004 promised but did not finish
+# W3 × Registry — FR-20 / FR-21: canvas authoring controls, preview titles, Sync Artifact
 
 ## Why
 
-**A pain to solve.** DEC-004's admin surfaces shipped, so the Registry is now a real nested registry — spine, song-set entries, a shared layout trio, announcement sets, backgrounds, song books. Three promises in that same decision did not land with them, and each leaves an Admin stuck on a specific gap rather than merely unpolished.
+**A pain to solve.** DEC-004's admin surfaces shipped; three promises in the same decision did not land
+with them, and each blocks a specific authoring act.
 
-The canvas can add text and a rectangle and nothing else, so a layout needing an image, a deliberate stacking order, or emphasis cannot be authored at all — even though the payload already carries `imageRef`, `zIndex`, `fontWeight` and `fontStyle`. The Live Preview labels a row `Untitled Slide` when the registry knows its label, which is both a meaningless title and the one untranslated string on an otherwise fully translated surface. And Sync Artifact still promises the Operator that "Announcement flyers stay this Service's list" — a sentence that became false earlier today when FR-3 retired and the five `/api/announcements` routes were deleted — then succeeds in silence without refreshing the preview it just changed.
+The canvas offers Add text and Add rectangle only, so a layout needing an image, a deliberate stacking
+order, or emphasis cannot be authored — even though the payload already carries `imageRef`, `zIndex`,
+`fontWeight` and `fontStyle`. The Live Preview labels a row `Untitled Slide` when the registry holds its
+label, and that literal is the one untranslated string on an otherwise translated surface. Sync Artifact
+still tells the Operator "Announcement flyers stay this Service's list", false since FR-3 retired and the
+five `/api/announcements` routes were deleted, then succeeds silently without refreshing the preview it
+replaced.
 
-The backdrop that makes it matter now: the deck structure is frozen per Service at creation, so an Admin who cannot author a layout this week cannot fix last week's either. The gap compounds.
+The deck structure is frozen per Service at creation, so an Admin blocked from authoring a layout this
+week cannot repair last week's either.
 
 ## Capabilities
 
@@ -41,8 +49,16 @@ The backdrop that makes it matter now: the deck structure is frozen per Service 
 - **Underline is not persistable.** `textDecoration` is absent from `allowedStyleKeys`. It MUST be documented as out of scope rather than faked with a control that cannot survive a save.
 - **`fontStyle` is written only when the operator sets it.** `ArtifactEditor.tsx` records at ~line 197 that Fabric dies in `Cache.getFontCache` when `fontStyle` is undefined and that every shipped text element omits it. Writing it unconditionally would rewrite every seed layout's payload on first save. `serializeTextStyle`'s existing `setIfMeaningful` discipline governs.
 - **`zIndex` stays a dense, deterministic ordering.** Both the PPTX exporter and the web slideshow paint in `zIndex` order (`ArtifactEditor.tsx` ~line 598), so this control decides what reaches the congregation. Gaps or duplicates that make the next sort non-deterministic are a defect, not a cosmetic detail.
+- **Inserting an element never renumbers its siblings.** A new element takes a `zIndex` above the
+  current maximum; every existing element keeps its stored value. Renumbering is reserved for an actual
+  reorder of existing elements, which is the only case where the stored values stop describing the
+  order. Insert, reorder and delete are three separate triggers on layout membership, and a guard
+  covering one covers neither of the others: deleting an element leaves every survivor's stored `zIndex`
+  untouched for the same reason an insert does.
 - **Deleting an element never deletes the file.** Images are shared by reference (DEC-004 § *Copy / paste*); `tests/copy-paste-share-by-reference.test.mjs` pins it.
-- **A group marker is never a projected slide.** Only children carry `#` slide numbers and reach the room (DEC-004 § *Live Preview / Presenter chrome*).
+- **A whitespace-only registry label is not a label.** The title resolver trims, so a label that is
+  blank after trimming falls through to the next source rather than rendering an empty row.
+- **A group marker is never a projected slide.** Only children carry `#` slide numbers and reach the congregation (DEC-004 § *Live Preview / Presenter chrome*).
 - **No route remount for a refresh.** `router.refresh()` and `navigate(0)` are forbidden on operator surfaces; `tests/no-router-refresh-guard.test.mjs` enforces it, and it exists because `navigate(0)` blanks and repaints the page.
 - **Every new user-facing string is translated in both catalogues.** `keys.ts`, `catalogue-en.ts` and `catalogue-id.ts` change together or `tests/i18n.test.mjs` fails. Indonesian is written as Indonesian, with industry-English technical terms left alone.
 - **shadcn primitives only**, from `src/components/ui/` — `tests/operator-shadcn-guard.test.mjs`.
@@ -58,7 +74,6 @@ The backdrop that makes it matter now: the deck structure is frozen per Service 
 - **Any new predefined-field key.** S1's catalog was completed in `f393bfd`; this wave consumes it and adds nothing.
 - **The webhook's `announcements[]` ingestion.** `03-announcements.md` retires the five routes and is silent on the webhook; that silence needs an owner decision, not code.
 - **Announcement Set group chrome in the Live Preview.** Checked before writing this: `preview-model.ts` documents grouping as present "only on members of a group (currently SongSets)", and `slide-plan.ts` types `group.role` as `'title' | 'lyric'`, so an Announcement Set expands flat (`slide-plan.ts` ~791) with no group wrapper. Adding it means widening a role union the Presenter also consumes, and DEC-004 says groups **MAY** appear as operator chrome — permissive, not normative. Story C therefore keeps only the normative half: prefer the registry label or kind over `Untitled Slide`.
-- **A second independent reviewer.** The owner ruled the coordinator reviews; recorded so its absence is deliberate rather than an oversight.
 
 ## Success signal
 

@@ -16,7 +16,7 @@ sources:
 >
 > **Projection, not authorship.** This file projects `.what/hub/`, `.how/hub/` and DEC-004 onto wave W4. It introduces no `FR`, `UC`, `BR` or `AD`. A gap found while building is landed in the corpus by the skill that owns that layer — never patched in here.
 
-# W4 × Hub — FR-6: the two weekly fields with nowhere to type them, and a checkbox that should never have been automatic
+# W4 × Hub — FR-6: Family/Youth name inputs and the S6 closing-prayer checkbox
 
 ## Why
 
@@ -60,22 +60,21 @@ is not told. That is the opposite of what S6 asks for, and it destroys entered d
 - **The checkbox is the only copy path.** Unchecked means nothing writes to `closingPrayerPerson`
   except the Operator. The `shouldAutoFill` machinery goes; leaving it behind alongside a checkbox
   would mean two writers for one field.
+- **The copy fires once, at check time.** Checking the box writes the sermon speaker into the
+  closing-prayer person then; it does not track the speaker afterwards, so editing the speaker later
+  leaves the closing-prayer person as it stands. Unchecking the box leaves the copied value in place
+  rather than reverting it — the Operator remains the field's only other writer.
 - **The edit form infers the checkbox from stored values** — checked only when the stored closing-prayer
-  person already equals the stored sermon speaker. The both-empty case is a judgement call and MUST be
-  stated in the build report rather than decided silently.
+  person already equals the stored sermon speaker, and **unchecked when both are empty**, so a fresh
+  Service does not present a link the Operator never asked for. The rule lives in
+  `shouldClosingPrayerCheckboxStartChecked` as a pure function so it is testable on its own.
 - **Card order stays as `form-fields.md` states it**: Bible Talk → Divine Worship → Sermon → Family of
   the Week → Youth of the Week. Each name sits with its own request, above it, because that is the
   reading order of the slide it fills.
-- **Every new user-facing string is translated in both catalogues.** `keys.ts`, `catalogue-en.ts` and
-  `catalogue-id.ts` change together or `tests/i18n.test.mjs` fails. Indonesian is written as Indonesian.
-- **shadcn primitives only**, from `src/components/ui/` — `tests/operator-shadcn-guard.test.mjs`. The
-  checkbox is `src/components/ui/checkbox.tsx`.
-- **Never `return null` while loading.** That is the page-flash defect already reported by the owner.
-- **Every acceptance criterion needs a test that can fail.** An absence criterion needs a guard that
-  scans what it claims, proved by injecting the defect and watching it fail. W3 was returned twice for
-  exactly this gap — once for an AC with no test at all.
-- **`npm test` names every file explicitly.** A new test file does not run until it is added to that
-  script. Every existing file under `tests/` is registered as of `62a0485`; keep it that way.
+- **The repo-wide build rules apply, from `.constitution/project/codebase-conventions-guide.md` and the
+  guards under `tests/`, and are not restated here.** One is worth naming because it bit W3 twice: an
+  absence criterion needs a guard that scans what it claims, proved by injecting the defect.
+- **The checkbox primitive is `src/components/ui/checkbox.tsx`** — this wave's only new UI primitive.
 - **The corpus is not the builder's to change.** No worker edits `.what/`, `.how/`, or an `applied`
   `DEC-`. A deviation is reported and becomes a `DEC-` through `wdi-decision`.
 
@@ -85,8 +84,6 @@ is not told. That is the opposite of what S6 asks for, and it destroys entered d
   consumes them.
 - **Splitting the legacy `familyYouth` text.** Named as manual cleanup by S1 itself.
 - **The Registry side of `dec004-completion`.** That is W3.
-- **A second independent reviewer.** The owner ruled the coordinator reviews; recorded so its absence
-  is deliberate.
 
 ## Success signal
 
@@ -97,5 +94,5 @@ typed.
 
 ## Open Questions
 
-- Nothing blocking. The both-empty checkbox case is a builder judgement call to be reported, not a
-  question for the owner.
+- Nothing blocking. One bound is deferred rather than invented: neither name field carries a length
+  limit while sibling fields are bounded 1–120 — filed as OQ-46.

@@ -119,23 +119,6 @@ func (s *Server) postWebhook(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	announcementsAdded := 0
-	if announcementURLs != nil {
-		if _, err := s.DB.Exec(`DELETE FROM announcement_items WHERE service_id = ?`, serviceID); err == nil {
-			var order int
-			_ = s.DB.QueryRow(`SELECT COALESCE(MAX(sort_order), -1) + 1 FROM announcement_items`).Scan(&order)
-			for _, u := range announcementURLs {
-				if _, err := s.DB.Exec(
-					`INSERT INTO announcement_items (image_url, service_id, sort_order, updated_at)
-					 VALUES (?, ?, ?, `+db.StampNowSQL+`)`,
-					u, serviceID, order,
-				); err == nil {
-					announcementsAdded++
-					order++
-				}
-			}
-		}
-	}
 	resolved := []map[string]any{}
 	for _, it := range parsed.Items {
 		if it.Type == "hymn" {
@@ -151,7 +134,7 @@ func (s *Server) postWebhook(w http.ResponseWriter, r *http.Request) {
 		"resolvedHymns":      resolved,
 		"failedHymnNumbers":  parsed.FailedHymnNumbers,
 		"imagesCount":        len(urls),
-		"announcementsAdded": announcementsAdded,
+		"announcementsAdded": 0,
 		"updated":            false,
 	})
 }
