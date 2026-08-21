@@ -250,3 +250,46 @@ test('the 9→10 migration removes ON DELETE CASCADE from announcement_items and
   assert.ok(afterDelete, 'announcement_items row must survive service deletion');
   assert.equal(afterDelete.service_id, svcId);
 });
+
+test('the 9→10 migration repairs an already-stamped-10 database with FK intact', async () => {
+  const { migrateAnnouncementItemsCascade } = await import(
+    pathToFileURL(path.join(root, 'src', 'lib', 'db', 'index.ts')).href
+  );
+
+  // Re-create table with cascade but stamped 10 (the production defect state)
+  db.exec(`
+    DROP TABLE IF EXISTS announcement_items;
+    CREATE TABLE announcement_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      image_url TEXT NOT NULL,
+      service_id INTEGER,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT,
+      FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+    );
+    INSERT OR REPLACE INTO settings (key, value) VALUES ('data_version', '10');
+  `);
+
+  const svcRes = db.prepare(`INSERT INTO services (date, raw_payload) VALUES ('2026-08-22', 'raw')`).run();
+  const svcId = svcRes.lastInsertRowid;
+
+  db.prepare(`
+    INSERT INTO announcement_items (id, image_url, service_id, sort_order, created_at, updated_at)
+    VALUES (501, '/api/uploads/repaired_flyer.png', ?, 1, '2026-08-20 12:00:00', '2026-08-20 12:05:00')
+  `).run(svcId);
+
+  // Run migration
+  migrateAnnouncementItemsCascade(db);
+
+  // Assert FK is gone
+  const fks = db.prepare(`PRAGMA foreign_key_list(announcement_items)`).all();
+  const hasFK = fks.some((fk) => fk.from?.toLowerCase() === 'service_id');
+  assert.equal(hasFK, false, 'FK on service_id must be removed even if version was already 10');
+
+  // Deleting service must NOT delete announcement_items
+  db.prepare(`DELETE FROM services WHERE id = ?`).run(svcId);
+  const afterDelete = db.prepare(`SELECT * FROM announcement_items WHERE id = 501`).get();
+  assert.ok(afterDelete, 'announcement_items row must survive service deletion after repair');
+  assert.equal(afterDelete.service_id, svcId);
+});

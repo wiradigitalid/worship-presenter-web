@@ -1357,19 +1357,17 @@ export function migrateSongBookMetadata(database: Database.Database): void {
  *
  * Note on foreign key: In SQLite with PRAGMA foreign_keys = ON, keeping
  * FOREIGN KEY (service_id) REFERENCES services(id) without ON DELETE CASCADE
- * defaults to RESTRICT / NO ACTION, which forbids deleting a services row if
- * any announcement_items row references it. Since announcement_items must survive
+ * defaults to RESTRICT / NO ACTION, technical trap forbidding deleting a services row
+ * if any announcement_items row references it. Since announcement_items must survive
  * Service deletion while retaining service_id, the FK constraint itself is dropped.
+ *
+ * Gated structurally on PRAGMA foreign_key_list(announcement_items) rather than
+ * settings.data_version, ensuring databases already stamped 10 whose FK constraint
+ * remained intact are safely repaired on the next boot.
  *
  * Mirrors `internal/db/migrate_announcement_items_cascade.go`.
  */
 export function migrateAnnouncementItemsCascade(database: Database.Database): void {
-  const row = database
-    .prepare(`SELECT value FROM settings WHERE key = ?`)
-    .get(DATA_VERSION_KEY) as { value: string } | undefined;
-  const version = row ? Number(row.value) : 0;
-  if (!Number.isFinite(version) || version >= 10) return;
-
   type FKRow = {
     id: number;
     seq: number;
@@ -1382,24 +1380,23 @@ export function migrateAnnouncementItemsCascade(database: Database.Database): vo
   };
   const fks = database.prepare(`PRAGMA foreign_key_list(announcement_items)`).all() as FKRow[];
   const hasFK = fks.some((fk) => fk.from?.toLowerCase() === 'service_id');
+  if (!hasFK) return;
 
   const tx = database.transaction(() => {
-    if (hasFK) {
-      database.exec(`
-        CREATE TABLE announcement_items_new (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          image_url TEXT NOT NULL,
-          service_id INTEGER,
-          sort_order INTEGER NOT NULL DEFAULT 0,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT
-        );
-        INSERT INTO announcement_items_new (id, image_url, service_id, sort_order, created_at, updated_at)
-          SELECT id, image_url, service_id, sort_order, created_at, updated_at FROM announcement_items;
-        DROP TABLE announcement_items;
-        ALTER TABLE announcement_items_new RENAME TO announcement_items;
-      `);
-    }
+    database.exec(`
+      CREATE TABLE announcement_items_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        image_url TEXT NOT NULL,
+        service_id INTEGER,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT
+      );
+      INSERT INTO announcement_items_new (id, image_url, service_id, sort_order, created_at, updated_at)
+        SELECT id, image_url, service_id, sort_order, created_at, updated_at FROM announcement_items;
+      DROP TABLE announcement_items;
+      ALTER TABLE announcement_items_new RENAME TO announcement_items;
+    `);
 
     database
       .prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`)

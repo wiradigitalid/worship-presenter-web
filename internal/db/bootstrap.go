@@ -106,10 +106,13 @@ func seedHub(handle *sql.DB, root string) error {
 	if err := migrateSongSetInputs(handle); err != nil {
 		return err
 	}
-	if err := migrateSnapshots(handle); err != nil {
+	// Announcement-items cascade retirement must run before migrateSnapshots —
+	// migrateSnapshots stamps currentDataVersion, which would skip this pass on
+	// every existing database.
+	if err := migrateAnnouncementItemsCascade(handle); err != nil {
 		return err
 	}
-	if err := migrateAnnouncementItemsCascade(handle); err != nil {
+	if err := migrateSnapshots(handle); err != nil {
 		return err
 	}
 	if err := ensureDataVersionCurrent(handle); err != nil {
