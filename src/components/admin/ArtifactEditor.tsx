@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Copy, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   ArtifactLayout,
@@ -840,7 +840,91 @@ export default function ArtifactEditor() {
     setMessage(
       `Removed ${removable.length} element${removable.length === 1 ? '' : 's'}. Save to persist.`
     );
-  }, [template, syncSelection, markDirty]);
+  }, [template, syncSelection, markDirty, t]);
+
+  const handleDuplicateSelected = useCallback(async () => {
+    const canvas = fabricCanvasRef.current;
+    const layout = template ? getEditableLayout(template) : null;
+    if (!canvas || !layout) return;
+
+    const byId = new Map<string, CanvasElement>([
+      ...addedElementsRef.current,
+      ...layout.elements.map((e) => [e.id, e] as const),
+    ]);
+    const active = canvas.getActiveObjects();
+    if (active.length === 0) {
+      setStatus('error');
+      setMessage(t('admin.artifacts.selectElementFirst'));
+      return;
+    }
+
+    const fabric = await import('fabric');
+    if (fabricCanvasRef.current !== canvas) return;
+
+    const usedIds = new Set<string>([
+      ...layout.elements.map((e) => e.id),
+      ...addedElementsRef.current.keys(),
+      ...canvas
+        .getObjects()
+        .map(getElementId)
+        .filter((id): id is string => typeof id === 'string'),
+    ]);
+
+    let maxZ = [
+      ...layout.elements,
+      ...addedElementsRef.current.values(),
+    ].reduce((acc, element) => Math.max(acc, element.zIndex), -1);
+
+    const newObjects: import('fabric').FabricObject[] = [];
+
+    for (const obj of active) {
+      const elementId = getElementId(obj);
+      if (!elementId) continue;
+      const source = byId.get(elementId);
+      if (!source) continue;
+
+      const id = nextElementId(usedIds, insertCounterRef.current);
+      usedIds.add(id);
+      insertCounterRef.current += 1;
+      maxZ += 1;
+
+      // Duplicate element: full copy of style/text/shape/geometry/tokens,
+      // image element copies its URL string by reference (shared ref).
+      const clonedElement: CanvasElement = {
+        ...source,
+        id,
+        required: false,
+        x: Math.min(90, source.x + pxToPct(INSERT_CASCADE_PX, CANVAS_WIDTH)),
+        y: Math.min(90, source.y + pxToPct(INSERT_CASCADE_PX, CANVAS_HEIGHT)),
+        zIndex: maxZ,
+        style: source.style ? { ...source.style } : undefined,
+      };
+
+      if (source.type === 'text' && isFabricTextObject(obj)) {
+        clonedElement.content = obj.text ?? source.content;
+      }
+
+      addedElementsRef.current.set(id, clonedElement);
+      const fabricObj = elementToFabricObject(fabric, clonedElement, true);
+      canvas.add(fabricObj);
+      newObjects.push(fabricObj);
+    }
+
+    if (newObjects.length > 0) {
+      canvas.discardActiveObject();
+      if (newObjects.length === 1) {
+        canvas.setActiveObject(newObjects[0]);
+      } else {
+        const sel = new fabric.ActiveSelection(newObjects, { canvas });
+        canvas.setActiveObject(sel);
+      }
+      canvas.requestRenderAll();
+      syncSelection(canvas);
+      markDirty();
+      setStatus('idle');
+      setMessage(null);
+    }
+  }, [template, syncSelection, markDirty, t]);
 
   const applyTextStyle = () => {
     const canvas = fabricCanvasRef.current;
@@ -886,6 +970,73 @@ export default function ArtifactEditor() {
     // rejects the entire save with an opaque `style.fontSize must be positive`.
     if (!raw.trim() || !Number.isFinite(parsed) || parsed <= 0) return;
     setFontSize(clampFontSize(parsed));
+  };
+
+  const [copiedSlidePayload, setCopiedSlidePayload] = useState<{
+    label: string;
+    payload: Record<string, unknown>;
+  } | null>(null);
+
+  const handleCopySlide = async (item: ArtifactTemplateSummary) => {
+    try {
+      const res = await fetch(`/api/admin/artifacts/${item.id}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || t('admin.artifacts.loadOneFailed'));
+      const { updatedAt, id, ...body } = data;
+      setCopiedSlidePayload({
+        label: `${item.label} (Copy)`,
+        payload: body,
+      });
+      toast(t('admin.artifacts.copiedSlide'));
+    } catch (err) {
+      toast(err instanceof Error ? err.message : t('admin.artifacts.loadOneFailed'));
+    }
+  };
+
+  const handlePasteSlide = async () => {
+    if (!copiedSlidePayload) return;
+    const proceed = mayDiscard(
+      isDirty && isEditable,
+      DISCARD_ON_SWITCH_CONFIRMATION,
+      (message) => window.confirm(message)
+    );
+    if (!proceed) return;
+
+    setStatus('creating');
+    setMessage(null);
+    try {
+      // 1. Create new authored slide
+      const res = await fetch('/api/admin/artifacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: copiedSlidePayload.label }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || t('admin.artifacts.addFailed'));
+
+      // 2. Put copied layout/payload into the new slide (shares image references as-is)
+      const putRes = await fetch(`/api/admin/artifacts/${data.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...copiedSlidePayload.payload,
+          id: data.id,
+          label: copiedSlidePayload.label,
+          baseType: 'general',
+          updatedAt: data.updatedAt,
+        }),
+      });
+      const putData = await putRes.json();
+      if (!putRes.ok) throw new Error(putData.error || t('admin.artifacts.saveFailed'));
+
+      await loadList();
+      setSelectedId(data.id);
+      setStatus('success');
+      toast(t('admin.artifacts.created').replace('{label}', copiedSlidePayload.label));
+    } catch (err) {
+      setStatus('error');
+      setMessage(err instanceof Error ? err.message : t('admin.artifacts.addFailed'));
+    }
   };
 
   const handleCreate = async () => {
@@ -1327,6 +1478,17 @@ export default function ArtifactEditor() {
           >
             {status === 'creating' ? t('admin.artifacts.adding') : t('admin.artifacts.add')}
           </Button>
+          {copiedSlidePayload ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handlePasteSlide()}
+              disabled={busy}
+              title={t('admin.artifacts.pasteSlide')}
+            >
+              {t('admin.artifacts.pasteSlide')}
+            </Button>
+          ) : null}
         </form>
         <ul className="max-h-[70vh] space-y-1 overflow-x-hidden overflow-y-auto">
           {templates.map((item) => {
@@ -1399,6 +1561,20 @@ export default function ArtifactEditor() {
                       disabled={busy || templates.at(-1)?.id === item.id}
                     >
                       <ArrowDown />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label={`${t('admin.artifacts.copySlide')} ${item.label}`}
+                      title={t('admin.artifacts.copySlide')}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleCopySlide(item);
+                      }}
+                      disabled={busy}
+                    >
+                      <Copy />
                     </Button>
                     <Button
                       type="button"
@@ -1596,6 +1772,18 @@ export default function ArtifactEditor() {
                     className="border-destructive/60 text-destructive hover:bg-destructive/10"
                   >
                     {t('admin.artifacts.deleteSelected')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      void handleDuplicateSelected();
+                    }}
+                    disabled={busy || selectedElementIds.length === 0}
+                    title={t('admin.artifacts.duplicateSelected')}
+                  >
+                    {t('admin.artifacts.duplicateSelected')}
                   </Button>
                   <span className="text-xs text-muted-foreground">
                     {t('admin.artifacts.deleteOnlyAuthored')}

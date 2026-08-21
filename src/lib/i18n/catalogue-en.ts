@@ -343,6 +343,11 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'admin.artifacts.placeholder.familyPhoto': 'Family photo',
   'admin.artifacts.placeholder.youthPhoto': 'Youth photo',
   'admin.artifacts.deleteSelected': 'Delete selected',
+  'admin.artifacts.duplicateSelected': 'Duplicate / Copy',
+  'admin.artifacts.copySlide': 'Copy slide',
+  'admin.artifacts.copiedSlide': 'Slide copied to clipboard',
+  'admin.artifacts.pasteSlide': 'Paste as new slide',
+  'admin.artifacts.pasting': 'Pasting…',
   'admin.artifacts.deleteHintNone': 'Select an element you added on the canvas',
   'admin.artifacts.deleteHintOk': 'Delete the selected element(s)',
   'admin.artifacts.deleteHintShipped':

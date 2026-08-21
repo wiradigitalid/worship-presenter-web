@@ -345,6 +345,11 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'admin.artifacts.placeholder.familyPhoto': 'Foto keluarga',
   'admin.artifacts.placeholder.youthPhoto': 'Foto pemuda',
   'admin.artifacts.deleteSelected': 'Hapus yang dipilih',
+  'admin.artifacts.duplicateSelected': 'Duplikasi / Salin',
+  'admin.artifacts.copySlide': 'Salin slide',
+  'admin.artifacts.copiedSlide': 'Slide disalin ke papan klip',
+  'admin.artifacts.pasteSlide': 'Tempel sebagai slide baru',
+  'admin.artifacts.pasting': 'Menempel…',
   'admin.artifacts.deleteHintNone': 'Pilih elemen yang Anda tambahkan di kanvas',
   'admin.artifacts.deleteHintOk': 'Hapus elemen yang dipilih',
   'admin.artifacts.deleteHintShipped':

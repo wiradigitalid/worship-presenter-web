@@ -619,3 +619,109 @@ export function insertArtifactTemplateIfMissing(
   );
   return true;
 }
+
+export function copySlideTemplate(
+  db: Database.Database,
+  source:
+    | { kind: 'main'; id: string }
+    | { kind: 'announcement_set'; setId: number; slideId: number },
+  target:
+    | { kind: 'main' }
+    | { kind: 'announcement_set'; setId: number }
+): StoredArtifactTemplate | { id: number; annSetId: number; label: string; position: number; updatedAt: string; payload: ArtifactTemplate } {
+  let sourcePayloadStr: string;
+  let sourceLabel: string;
+
+  if (source.kind === 'main') {
+    const row = db
+      .prepare(`SELECT label, base_type, payload FROM artifact_templates WHERE id = ?`)
+      .get(source.id) as { label: string; base_type: string; payload: string } | undefined;
+    if (!row) throw new RegistryNotFoundError(source.id);
+    if (!row.payload) {
+      throw new RegistryValidationError('Cannot copy slide without payload');
+    }
+    sourcePayloadStr = row.payload;
+    sourceLabel = row.label;
+  } else {
+    const row = db
+      .prepare(`SELECT label, payload FROM announcement_set_slides WHERE id = ? AND ann_set_id = ?`)
+      .get(source.slideId, source.setId) as { label: string; payload: string } | undefined;
+    if (!row) throw new RegistryNotFoundError(`ann-slide-${source.slideId}`);
+    if (!row.payload) {
+      throw new RegistryValidationError('Cannot copy slide without payload');
+    }
+    sourcePayloadStr = row.payload;
+    sourceLabel = row.label;
+  }
+
+  let parsed: ArtifactTemplate;
+  try {
+    parsed = JSON.parse(sourcePayloadStr) as ArtifactTemplate;
+  } catch {
+    throw new RegistryValidationError('Source payload will not parse');
+  }
+
+  if (target.kind === 'main') {
+    const id = newAuthoredTemplateId();
+    const validated = validateArtifactTemplate({
+      ...parsed,
+      id,
+      label: sourceLabel,
+      baseType: 'general',
+    });
+    const payload = serializeTemplate(validated);
+    const now = nextRegistryUpdatedAt(db);
+    const position = (
+      db.prepare(`SELECT COUNT(*) AS n FROM artifact_templates`).get() as {
+        n: number;
+      }
+    ).n;
+
+    db.prepare(
+      `INSERT INTO artifact_templates (id, label, base_type, payload, updated_at, seed_hash, position)
+       VALUES (?, ?, 'general', ?, ?, NULL, ?)`
+    ).run(id, sourceLabel, payload, now, position);
+    assertContiguousPositions(db);
+
+    const created = getArtifactTemplate(db, id);
+    if (!created) throw new RegistryNotFoundError(id);
+    return created;
+  } else {
+    const setExists = db
+      .prepare(`SELECT COUNT(*) AS n FROM announcement_sets WHERE id = ?`)
+      .get(target.setId) as { n: number } | undefined;
+    if (!setExists || setExists.n === 0) {
+      throw new RegistryNotFoundError(`ann-set-${target.setId}`);
+    }
+
+    const validated = validateArtifactTemplate({
+      ...parsed,
+      label: sourceLabel,
+      baseType: 'general',
+    });
+    const payload = serializeTemplate(validated);
+    const now = nextRegistryUpdatedAt(db);
+
+    const maxPosRow = db
+      .prepare(`SELECT MAX(position) AS maxPos FROM announcement_set_slides WHERE ann_set_id = ?`)
+      .get(target.setId) as { maxPos: number | null } | undefined;
+    const position = maxPosRow && maxPosRow.maxPos !== null ? maxPosRow.maxPos + 1 : 0;
+
+    const res = db
+      .prepare(
+        `INSERT INTO announcement_set_slides (ann_set_id, label, payload, updated_at, seed_hash, position)
+         VALUES (?, ?, ?, ?, NULL, ?)`
+      )
+      .run(target.setId, sourceLabel, payload, now, position);
+
+    return {
+      id: Number(res.lastInsertRowid),
+      annSetId: target.setId,
+      label: sourceLabel,
+      position,
+      updatedAt: now,
+      payload: validated,
+    };
+  }
+}
+

@@ -129,6 +129,24 @@ function localUploadStillReferenced(
   for (const item of items) {
     if (localUploadFilename(item.image_url) === filename) return true;
   }
+  const mainArtifacts = db
+    .prepare<[], { payload: string | null }>('SELECT payload FROM artifact_templates WHERE payload IS NOT NULL')
+    .all();
+  for (const art of mainArtifacts) {
+    if (art.payload && art.payload.includes(filename)) return true;
+  }
+  const annSlides = db
+    .prepare<[], { payload: string | null }>('SELECT payload FROM announcement_set_slides WHERE payload IS NOT NULL')
+    .all();
+  for (const slide of annSlides) {
+    if (slide.payload && slide.payload.includes(filename)) return true;
+  }
+  const bgImages = db
+    .prepare<[], { url: string | null }>('SELECT url FROM background_library_images WHERE url IS NOT NULL')
+    .all();
+  for (const bg of bgImages) {
+    if (bg.url && localUploadFilename(bg.url) === filename) return true;
+  }
   return false;
 }
 
