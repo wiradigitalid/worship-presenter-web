@@ -16,12 +16,13 @@ func (s *Server) getHymns(w http.ResponseWriter, r *http.Request) {
 	type row struct {
 		Number int    `json:"number"`
 		Title  string `json:"title"`
+		Lyrics string `json:"lyrics,omitempty"`
 	}
 	var rows []row
 	var err error
 	if all {
-		err = s.queryHymns(`SELECT number, title FROM hymns ORDER BY number ASC`, func(n int, t string) {
-			rows = append(rows, row{n, t})
+		err = s.queryHymns(`SELECT number, title, lyrics FROM hymns ORDER BY number ASC`, func(n int, t, l string) {
+			rows = append(rows, row{Number: n, Title: t, Lyrics: l})
 		})
 	} else if q.Has("numbers") {
 		nums := parseHymnNumbers(q.Get("numbers"))
@@ -34,26 +35,26 @@ func (s *Server) getHymns(w http.ResponseWriter, r *http.Request) {
 				args[i] = n
 			}
 			err = s.queryHymnsArgs(
-				`SELECT number, title FROM hymns WHERE number IN (`+placeholders+`) ORDER BY number ASC`,
+				`SELECT number, title, lyrics FROM hymns WHERE number IN (`+placeholders+`) ORDER BY number ASC`,
 				args,
-				func(n int, t string) { rows = append(rows, row{n, t}) },
+				func(n int, t, l string) { rows = append(rows, row{Number: n, Title: t, Lyrics: l}) },
 			)
 		}
 	} else if search != "" {
 		pattern := "%" + escapeLike(search) + "%"
 		err = s.queryHymnsArgs(
-			`SELECT number, title FROM hymns
+			`SELECT number, title, lyrics FROM hymns
 			  WHERE CAST(number AS TEXT) LIKE ? ESCAPE '\'
 			     OR title LIKE ? ESCAPE '\'
 			  ORDER BY number ASC LIMIT ?`,
 			[]any{pattern, pattern, limit},
-			func(n int, t string) { rows = append(rows, row{n, t}) },
+			func(n int, t, l string) { rows = append(rows, row{Number: n, Title: t, Lyrics: l}) },
 		)
 	} else {
 		err = s.queryHymnsArgs(
-			`SELECT number, title FROM hymns ORDER BY number ASC LIMIT ?`,
+			`SELECT number, title, lyrics FROM hymns ORDER BY number ASC LIMIT ?`,
 			[]any{limit},
-			func(n int, t string) { rows = append(rows, row{n, t}) },
+			func(n int, t, l string) { rows = append(rows, row{Number: n, Title: t, Lyrics: l}) },
 		)
 	}
 	if err != nil {
@@ -67,11 +68,11 @@ func (s *Server) getHymns(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"hymns": rows})
 }
 
-func (s *Server) queryHymns(sql string, fn func(int, string)) error {
+func (s *Server) queryHymns(sql string, fn func(int, string, string)) error {
 	return s.queryHymnsArgs(sql, nil, fn)
 }
 
-func (s *Server) queryHymnsArgs(sql string, args []any, fn func(int, string)) error {
+func (s *Server) queryHymnsArgs(sql string, args []any, fn func(int, string, string)) error {
 	rows, err := s.DB.Query(sql, args...)
 	if err != nil {
 		return err
@@ -79,11 +80,11 @@ func (s *Server) queryHymnsArgs(sql string, args []any, fn func(int, string)) er
 	defer rows.Close()
 	for rows.Next() {
 		var n int
-		var t string
-		if err := rows.Scan(&n, &t); err != nil {
+		var t, l string
+		if err := rows.Scan(&n, &t, &l); err != nil {
 			return err
 		}
-		fn(n, t)
+		fn(n, t, l)
 	}
 	return rows.Err()
 }

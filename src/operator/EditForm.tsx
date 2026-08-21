@@ -3,6 +3,13 @@ import Link from '@/components/Link';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Card,
   CardContent,
   CardDescription,
@@ -121,6 +128,66 @@ export default function EditForm({
   const [backgroundLibrary, setBackgroundLibrary] = useState<
     Array<{ id: number; url: string; isDefault: boolean }>
   >([]);
+  const [openLyricEditors, setOpenLyricEditors] = useState<Record<string, boolean>>({});
+  const [savingBookStatus, setSavingBookStatus] = useState<Record<string, boolean>>({});
+
+  const toggleLyricEditor = async (variableName: string) => {
+    const isOpening = !openLyricEditors[variableName];
+    setOpenLyricEditors((prev) => ({ ...prev, [variableName]: isOpening }));
+
+    if (isOpening) {
+      const current = fieldsRef.current.songSets[variableName];
+      // If lyrics are not already filled, fetch from hymn number if valid
+      if (!current?.lyricText && current?.songNumber && /^\d+$/.test(current.songNumber.trim())) {
+        const num = Number(current.songNumber.trim());
+        try {
+          const res = await fetch(`/api/hymns?numbers=${num}`);
+          if (res.ok) {
+            const data = (await res.json()) as { hymns?: Array<{ number: number; lyrics?: string }> };
+            const hymn = data.hymns?.find((h) => h.number === num);
+            if (hymn?.lyrics) {
+              setSongSetField(variableName, 'lyricText', hymn.lyrics);
+            }
+          }
+        } catch {
+          // ignore lookup failure
+        }
+      }
+    }
+  };
+
+  const handleSaveToBook = async (variableName: string) => {
+    const current = fieldsRef.current.songSets[variableName];
+    if (!current?.songNumber || !/^\d+$/.test(current.songNumber.trim())) return;
+
+    setSavingBookStatus((prev) => ({ ...prev, [variableName]: true }));
+    setError(null);
+    try {
+      const res = await fetch(`/api/services/${id}/song-sets/${variableName}/save-to-book`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: current.lyricText ?? '',
+          songNumber: Number(current.songNumber.trim()),
+          songBookCode: current.songBookCode || undefined,
+        }),
+      });
+
+      if (res.status === 409) {
+        setError(t('form.songSets.songChangedConflict'));
+        return;
+      }
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error || t('form.songSets.saveToBookFailed'));
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : t('form.songSets.saveToBookFailed'));
+    } finally {
+      setSavingBookStatus((prev) => ({ ...prev, [variableName]: false }));
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -657,16 +724,16 @@ export default function EditForm({
           <Card className="border-border/80 shadow-md bg-card/60 backdrop-blur-md">
             <CardHeader>
               <CardTitle className="text-lg font-bold">
-                Song Sets
+                {t('form.songSets.title')}
               </CardTitle>
               <CardDescription>
-                Weekly song assignments across service sections.
+                {t('form.songSets.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {songSetEntries.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic">
-                  No song set entries configured in registry.
+                  {t('form.songSets.empty')}
                 </p>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -677,11 +744,28 @@ export default function EditForm({
                       background: '',
                       lyricText: '',
                     };
+                    const isLyricOpen = !!openLyricEditors[entry.variableName];
+                    const numVal = current.songNumber.trim();
+                    const hasValidNum = /^\d+$/.test(numVal);
+                    const isSavingBook = !!savingBookStatus[entry.variableName];
                     return (
-                      <div key={entry.variableName} className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
-                          {entry.title}
-                        </label>
+                      <div key={entry.variableName} className="space-y-2 rounded-lg border border-border/40 p-3 bg-background/40">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+                            {entry.title}
+                          </label>
+                          {hasValidNum ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="xs"
+                              className="h-6 text-[11px] px-2 text-primary"
+                              onClick={() => toggleLyricEditor(entry.variableName)}
+                            >
+                              {isLyricOpen ? t('form.songSets.hideLyrics') : t('form.songSets.editLyrics')}
+                            </Button>
+                          ) : null}
+                        </div>
                         <HymnNumberAutocomplete
                           value={current.songNumber}
                           onChange={(v) =>
@@ -693,7 +777,7 @@ export default function EditForm({
                         />
                         <div className="flex items-center gap-2">
                           <label className="text-[10px] text-muted-foreground uppercase font-medium">
-                            Background:
+                            {t('form.songSets.background')}
                           </label>
                           <Select
                             value={current.background || 'default'}
@@ -707,18 +791,47 @@ export default function EditForm({
                             disabled={isSaving}
                           >
                             <SelectTrigger className="h-7 text-xs">
-                              <SelectValue placeholder="Global Default" />
+                              <SelectValue placeholder={t('form.songSets.globalDefault')} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="default">Global Default</SelectItem>
+                              <SelectItem value="default">{t('form.songSets.globalDefault')}</SelectItem>
                               {backgroundLibrary.map((img) => (
                                 <SelectItem key={img.id} value={img.url}>
-                                  {img.url.split('/').pop() || `Image ${img.id}`} {img.isDefault ? '(Default)' : ''}
+                                  {img.url.split('/').pop() || `Image ${img.id}`} {img.isDefault ? `(${t('form.songSets.globalDefault')})` : ''}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
+                        {isLyricOpen ? (
+                          <div className="mt-3 pt-2 border-t border-border/50 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-[11px] font-medium text-muted-foreground">
+                                {t('form.songSets.lyricsLabel')}
+                              </Label>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="xs"
+                                className="h-6 text-[11px] px-2"
+                                disabled={isSaving || isSavingBook || !hasValidNum}
+                                onClick={() => void handleSaveToBook(entry.variableName)}
+                              >
+                                {isSavingBook ? t('form.songSets.savingToBook') : t('form.songSets.saveToBook')}
+                              </Button>
+                            </div>
+                            <Textarea
+                              rows={6}
+                              className="text-xs font-mono"
+                              placeholder={t('form.songSets.lyricsPlaceholder')}
+                              value={current.lyricText}
+                              onChange={(e) =>
+                                setSongSetField(entry.variableName, 'lyricText', e.target.value)
+                              }
+                              disabled={isSaving}
+                            />
+                          </div>
+                        ) : null}
                       </div>
                     );
                   })}
