@@ -375,3 +375,26 @@ test('AC-03 guard: SlidePreviewList and preview rendering components contain no 
   }
 });
 
+test('ArtifactSlide permits background override for verse, reff, and lyric layout keys', () => {
+  const artifactSlidePath = path.join(root, 'src', 'components', 'artifacts', 'ArtifactSlide.tsx');
+  const source = fs.readFileSync(artifactSlidePath, 'utf8');
+
+  function getLayoutKeyMatches(src) {
+    const clean = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    const isVerseOrReffDecl = clean.match(/const\s+isVerseOrReff\s*=\s*([^;]+);/);
+    assert.ok(isVerseOrReffDecl, 'ArtifactSlide must define isVerseOrReff');
+    const expr = isVerseOrReffDecl[1];
+    const keys = [];
+    for (const m of expr.matchAll(/instance\.layoutKey\s*===?\s*['"]([^'"]+)['"]/g)) {
+      keys.push(m[1]);
+    }
+    return keys;
+  }
+
+  const keys = getLayoutKeyMatches(source);
+  assert.ok(keys.includes('verse'), 'ArtifactSlide must match layoutKey "verse"');
+  assert.ok(keys.includes('reff'), 'ArtifactSlide must match layoutKey "reff"');
+  assert.ok(keys.includes('lyric'), 'ArtifactSlide must match layoutKey "lyric"');
+});
+
+

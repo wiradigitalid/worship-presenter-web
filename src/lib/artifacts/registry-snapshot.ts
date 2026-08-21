@@ -1,3 +1,6 @@
+// Hand-mirrored port: src/lib/artifacts/registry-snapshot.ts <-> internal/plan/song_set_snapshot.go
+// A change to one is incomplete until the other matches. (DEC-004 S4/AD-33)
+
 /**
  * One-shot registry read used by plan building.
  *
@@ -97,6 +100,8 @@ export function composeSongSetEntryTemplate(
       title: trio.title,
       // Plan handlers still request layoutKey `lyric`; AD-33's verse role.
       lyric: trio.verse,
+      verse: trio.verse,
+      reff: trio.reff,
     },
     updatedAt: row.updated_at,
   };

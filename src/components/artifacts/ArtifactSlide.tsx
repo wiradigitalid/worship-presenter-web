@@ -234,6 +234,8 @@ export default function ArtifactSlide({
 
   const { layout } = instance;
   const isVerseOrReff =
+    instance.layoutKey === 'verse' ||
+    instance.layoutKey === 'reff' ||
     instance.layoutKey === 'lyric' ||
     instance.group?.role === 'lyric';
   const effectiveBgImage =

@@ -416,12 +416,12 @@ func ValidateArtifactTemplate(raw []byte, repoRoot string) ([]byte, error) {
 		return nil, err
 	}
 	for key := range layoutsRaw {
-		if key != "default" && key != "title" && key != "lyric" {
+		if key != "default" && key != "title" && key != "lyric" && key != "verse" && key != "reff" {
 			return nil, failf("Unknown layouts field: %s", key)
 		}
 	}
 	layouts := map[string]Layout{}
-	for _, name := range []string{"default", "title", "lyric"} {
+	for _, name := range []string{"default", "title", "lyric", "verse", "reff"} {
 		if rawLayout, ok := layoutsRaw[name]; ok {
 			layout, err := parseLayout(rawLayout, "layouts."+name, repoRoot)
 			if err != nil {
