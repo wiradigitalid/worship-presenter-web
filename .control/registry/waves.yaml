@@ -42,6 +42,16 @@ waves:
     size: L
     depends_on: [W1]
     spec_folder: _bmad-output/specs/spec-w2-hub/
+    spec_reviewed:
+      date: '2026-08-21'
+      sha: '4d5128fb6b060a10b732550b9d67f79c4b2eafdf'
+      lenses: [structure, prose, edge-case-hunter]
+    # Reviewed 2026-08-21 to clear its V13 finding. Three redundancies and one stale
+    # sentence found and accepted without action, filed as OQ-47: this wave shipped long
+    # ago, so its SPEC is a historical record and re-deriving it would be churn.
+    # W2 is still : its own Phase 4 -- distillation, inventories, RTM -- has never
+    # run, and stamping a review trace does not close a wave. That is a separate
+    # wdi-build invocation and MUST NOT be faked here.
     # Owner held G3/G4 on the DEC-003 delta 2026-08-19 ("oke, kerjakan aja semua otomatis saya setuju").
     # Isolation: this checkout is main (same override as W1).
     epics:
