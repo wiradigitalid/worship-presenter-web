@@ -155,4 +155,14 @@ waves:
     # The Hub half of dec004-completion: the Family/Youth name inputs whose storage
     # landed in f393bfd with no input bound to them, and the S6 closing-prayer
     # checkbox that replaces today's silent shouldAutoFill overwrite.
-    epics: []
+    epics:
+      - id: dec004-completion-hub
+        stories:
+          - id: "1"
+            spec_folder: _bmad-output/specs/spec-w4-hub/
+            satisfies: [UC-20]
+            tests:
+              - tests/worship-form-fields.test.mjs
+              - tests/services-create.test.mjs
+              - tests/i18n.test.mjs
+            touches: [spa]

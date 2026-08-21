@@ -30,6 +30,7 @@ const {
   hymnFieldDisplayValue,
   mergeHymnIndexEntries,
   resolveHymnDraft,
+  shouldClosingPrayerCheckboxStartChecked,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'worship-form-fields.ts')).href
 );
@@ -346,4 +347,26 @@ test('coerceHydrateFields rejects non-objects', () => {
   });
   assert.equal(h?.songSets?.opening_song_bt?.songNumber, '10');
   assert.equal(h?.sermonSpeaker, 'Ada');
+});
+
+test('shouldClosingPrayerCheckboxStartChecked evaluates equality and edge cases', () => {
+  // Both empty / null / undefined -> false
+  assert.equal(shouldClosingPrayerCheckboxStartChecked('', ''), false);
+  assert.equal(shouldClosingPrayerCheckboxStartChecked(null, null), false);
+  assert.equal(shouldClosingPrayerCheckboxStartChecked(undefined, undefined), false);
+  assert.equal(shouldClosingPrayerCheckboxStartChecked('   ', '   '), false);
+
+  // One empty -> false
+  assert.equal(shouldClosingPrayerCheckboxStartChecked('Pastor John', ''), false);
+  assert.equal(shouldClosingPrayerCheckboxStartChecked('', 'Pastor John'), false);
+  assert.equal(shouldClosingPrayerCheckboxStartChecked('Pastor John', null), false);
+  assert.equal(shouldClosingPrayerCheckboxStartChecked(null, 'Pastor John'), false);
+
+  // Matching non-empty -> true
+  assert.equal(shouldClosingPrayerCheckboxStartChecked('Pastor John', 'Pastor John'), true);
+  assert.equal(shouldClosingPrayerCheckboxStartChecked('  Pastor John  ', 'Pastor John'), true);
+  assert.equal(shouldClosingPrayerCheckboxStartChecked('Pastor John', '  Pastor John  '), true);
+
+  // Mismatch -> false
+  assert.equal(shouldClosingPrayerCheckboxStartChecked('Pastor John', 'Elder Bob'), false);
 });

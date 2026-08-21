@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,6 +42,7 @@ import {
   buildFieldsPayload,
   coerceHydrateFields,
   EMPTY_WORSHIP_FORM_FIELDS,
+  shouldClosingPrayerCheckboxStartChecked,
   type HymnIndexEntry,
   type WorshipFormFields,
 } from '@/lib/worship-form-fields';
@@ -326,7 +328,16 @@ export default function CreateForm({
         throw new Error(data.error || t('form.error.parse'));
       }
       const hydrated = coerceHydrateFields(data.fields);
-      if (hydrated) setFields(hydrated);
+      if (hydrated) {
+        fieldsRef.current = hydrated;
+        setFields(hydrated);
+        setClosingPrayerCopiesSpeaker(
+          shouldClosingPrayerCheckboxStartChecked(
+            hydrated.sermonSpeaker,
+            hydrated.closingPrayerPerson
+          )
+        );
+      }
       setSlidePlan(data.plan || []);
       setPreviewEntries(
         Array.isArray(data.previewEntries) ? data.previewEntries : []
@@ -360,18 +371,22 @@ export default function CreateForm({
     }
   };
 
+  const [closingPrayerCopiesSpeaker, setClosingPrayerCopiesSpeaker] =
+    useState(false);
+
   const onSermonSpeakerChange = (nextSpeaker: string) => {
-    setFields((prev) => {
-      const prevSpeaker = prev.sermonSpeaker;
-      const closing = prev.closingPrayerPerson;
-      const shouldAutoFill =
-        !closing.trim() || closing.trim() === prevSpeaker.trim();
-      return {
-        ...prev,
-        sermonSpeaker: nextSpeaker,
-        closingPrayerPerson: shouldAutoFill ? nextSpeaker : closing,
-      };
-    });
+    fieldsRef.current = { ...fieldsRef.current, sermonSpeaker: nextSpeaker };
+    setFields((prev) => ({
+      ...prev,
+      sermonSpeaker: nextSpeaker,
+    }));
+  };
+
+  const onClosingPrayerCopiesSpeakerChange = (checked: boolean) => {
+    setClosingPrayerCopiesSpeaker(checked);
+    if (checked) {
+      setField('closingPrayerPerson', fields.sermonSpeaker);
+    }
   };
 
   const resolveScripture = async () => {
@@ -805,6 +820,22 @@ export default function CreateForm({
                     placeholder={t('form.closingPrayerPlaceholder')}
                     disabled={isSaving}
                   />
+                  <div className="flex items-center space-x-2 mt-2">
+                    <Checkbox
+                      id="create-closing-prayer-copies-speaker"
+                      checked={closingPrayerCopiesSpeaker}
+                      onCheckedChange={(checked) =>
+                        onClosingPrayerCopiesSpeakerChange(Boolean(checked))
+                      }
+                      disabled={isSaving}
+                    />
+                    <Label
+                      htmlFor="create-closing-prayer-copies-speaker"
+                      className="text-xs font-medium cursor-pointer text-muted-foreground"
+                    >
+                      {t('form.closingPrayerSameAsSpeaker')}
+                    </Label>
+                  </div>
                 </div>
               </div>
               <ImageUploadField
@@ -835,15 +866,28 @@ export default function CreateForm({
               />
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                    {t('form.familyPrayer')}
-                  </label>
-                  <Textarea
-                    className="h-20 text-xs"
-                    value={fields.familyPrayerRequest}
-                    onChange={(e) =>
-                      setField('familyPrayerRequest', e.target.value)
-                    }
-                    placeholder={t('form.familyPrayerPlaceholder')}
+                  {t('form.familyName')}
+                </label>
+                <Input
+                  type="text"
+                  className="text-xs"
+                  value={fields.familyName}
+                  onChange={(e) => setField('familyName', e.target.value)}
+                  placeholder={t('form.familyNamePlaceholder')}
+                  disabled={isSaving}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                  {t('form.familyPrayer')}
+                </label>
+                <Textarea
+                  className="h-20 text-xs"
+                  value={fields.familyPrayerRequest}
+                  onChange={(e) =>
+                    setField('familyPrayerRequest', e.target.value)
+                  }
+                  placeholder={t('form.familyPrayerPlaceholder')}
                   disabled={isSaving}
                 />
               </div>
@@ -867,15 +911,28 @@ export default function CreateForm({
               />
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                    {t('form.youthPrayer')}
-                  </label>
-                  <Textarea
-                    className="h-20 text-xs"
-                    value={fields.youthPrayerRequest}
-                    onChange={(e) =>
-                      setField('youthPrayerRequest', e.target.value)
-                    }
-                    placeholder={t('form.youthPrayerPlaceholder')}
+                  {t('form.youthName')}
+                </label>
+                <Input
+                  type="text"
+                  className="text-xs"
+                  value={fields.youthName}
+                  onChange={(e) => setField('youthName', e.target.value)}
+                  placeholder={t('form.youthNamePlaceholder')}
+                  disabled={isSaving}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                  {t('form.youthPrayer')}
+                </label>
+                <Textarea
+                  className="h-20 text-xs"
+                  value={fields.youthPrayerRequest}
+                  onChange={(e) =>
+                    setField('youthPrayerRequest', e.target.value)
+                  }
+                  placeholder={t('form.youthPrayerPlaceholder')}
                   disabled={isSaving}
                 />
               </div>

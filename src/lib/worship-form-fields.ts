@@ -345,3 +345,13 @@ export function coerceHydrateFields(raw: unknown): WorshipFormFields | null {
     youthName: str(o.youthName),
   };
 }
+
+export function shouldClosingPrayerCheckboxStartChecked(
+  speaker: string | null | undefined,
+  closing: string | null | undefined
+): boolean {
+  const s = (speaker ?? '').trim();
+  const c = (closing ?? '').trim();
+  if (!s || !c) return false;
+  return s === c;
+}

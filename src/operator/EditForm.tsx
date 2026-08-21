@@ -42,6 +42,7 @@ import {
   coerceHydrateFields,
   coerceSongSetInputs,
   fieldsFromParsed,
+  shouldClosingPrayerCheckboxStartChecked,
   type HymnIndexEntry,
   type WorshipFormFields,
 } from '@/lib/worship-form-fields';
@@ -87,6 +88,14 @@ export default function EditForm({
     // song_set_inputs, not parsed_data) — fill them from the Service payload.
     songSets: coerceSongSetInputs(initialSongSets),
   }));
+  const [closingPrayerCopiesSpeaker, setClosingPrayerCopiesSpeaker] =
+    useState(() => {
+      const parsedFields = fieldsFromParsed(initialParsed);
+      return shouldClosingPrayerCheckboxStartChecked(
+        parsedFields.sermonSpeaker,
+        parsedFields.closingPrayerPerson
+      );
+    });
   const [songSetEntries, setSongSetEntries] = useState<
     Array<{ variableName: string; title: string }>
   >([]);
@@ -235,10 +244,17 @@ export default function EditForm({
   }, [initialYouthPhotoUrl]);
 
   useEffect(() => {
+    const parsedFields = fieldsFromParsed(initialParsed);
     setFields({
-      ...fieldsFromParsed(initialParsed),
+      ...parsedFields,
       songSets: coerceSongSetInputs(initialSongSets),
     });
+    setClosingPrayerCopiesSpeaker(
+      shouldClosingPrayerCheckboxStartChecked(
+        parsedFields.sermonSpeaker,
+        parsedFields.closingPrayerPerson
+      )
+    );
     // initialSongSets rides with the same server payload as initialParsed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialParsed]);
@@ -387,7 +403,16 @@ export default function EditForm({
         throw new Error(data.error || t('form.error.parse'));
       }
       const hydrated = coerceHydrateFields(data.fields);
-      if (hydrated) setFields(hydrated);
+      if (hydrated) {
+        fieldsRef.current = hydrated;
+        setFields(hydrated);
+        setClosingPrayerCopiesSpeaker(
+          shouldClosingPrayerCheckboxStartChecked(
+            hydrated.sermonSpeaker,
+            hydrated.closingPrayerPerson
+          )
+        );
+      }
       setSlidePlan(data.plan || []);
       setPreviewEntries(
         Array.isArray(data.previewEntries) ? data.previewEntries : []
@@ -404,17 +429,18 @@ export default function EditForm({
   };
 
   const onSermonSpeakerChange = (nextSpeaker: string) => {
-    setFields((prev) => {
-      const prevSpeaker = prev.sermonSpeaker;
-      const closing = prev.closingPrayerPerson;
-      const shouldAutoFill =
-        !closing.trim() || closing.trim() === prevSpeaker.trim();
-      return {
-        ...prev,
-        sermonSpeaker: nextSpeaker,
-        closingPrayerPerson: shouldAutoFill ? nextSpeaker : closing,
-      };
-    });
+    fieldsRef.current = { ...fieldsRef.current, sermonSpeaker: nextSpeaker };
+    setFields((prev) => ({
+      ...prev,
+      sermonSpeaker: nextSpeaker,
+    }));
+  };
+
+  const onClosingPrayerCopiesSpeakerChange = (checked: boolean) => {
+    setClosingPrayerCopiesSpeaker(checked);
+    if (checked) {
+      setField('closingPrayerPerson', fields.sermonSpeaker);
+    }
   };
 
   const resolveScripture = async () => {
@@ -449,10 +475,17 @@ export default function EditForm({
     setSermonGraphicUrl(initialSermonGraphicUrl);
     setFamilyPhotoUrl(initialFamilyPhotoUrl);
     setYouthPhotoUrl(initialYouthPhotoUrl);
+    const parsedFields = fieldsFromParsed(initialParsed);
     setFields({
-      ...fieldsFromParsed(initialParsed),
+      ...parsedFields,
       songSets: coerceSongSetInputs(initialSongSets),
     });
+    setClosingPrayerCopiesSpeaker(
+      shouldClosingPrayerCheckboxStartChecked(
+        parsedFields.sermonSpeaker,
+        parsedFields.closingPrayerPerson
+      )
+    );
     setUpdatedAt(initialUpdatedAt);
     setError(null);
   };
@@ -486,6 +519,12 @@ export default function EditForm({
     setFamilyPhotoUrl(familyUrl);
     setYouthPhotoUrl(youthUrl);
     setFields(nextFields);
+    setClosingPrayerCopiesSpeaker(
+      shouldClosingPrayerCheckboxStartChecked(
+        nextFields.sermonSpeaker,
+        nextFields.closingPrayerPerson
+      )
+    );
     if (svc.updated_at) setUpdatedAt(svc.updated_at);
     setError(null);
     return {
@@ -944,6 +983,22 @@ export default function EditForm({
                     placeholder={t('form.closingPrayerPlaceholder')}
                     disabled={isSaving}
                   />
+                  <div className="flex items-center space-x-2 mt-2">
+                    <Checkbox
+                      id="edit-closing-prayer-copies-speaker"
+                      checked={closingPrayerCopiesSpeaker}
+                      onCheckedChange={(checked) =>
+                        onClosingPrayerCopiesSpeakerChange(Boolean(checked))
+                      }
+                      disabled={isSaving}
+                    />
+                    <Label
+                      htmlFor="edit-closing-prayer-copies-speaker"
+                      className="text-xs font-medium cursor-pointer text-muted-foreground"
+                    >
+                      {t('form.closingPrayerSameAsSpeaker')}
+                    </Label>
+                  </div>
                 </div>
               </div>
               <ImageUploadField
@@ -974,15 +1029,28 @@ export default function EditForm({
               />
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                    {t('form.familyPrayer')}
-                  </label>
-                  <Textarea
-                    className="h-20 text-xs"
-                    value={fields.familyPrayerRequest}
-                    onChange={(e) =>
-                      setField('familyPrayerRequest', e.target.value)
-                    }
-                    placeholder={t('form.familyPrayerPlaceholder')}
+                  {t('form.familyName')}
+                </label>
+                <Input
+                  type="text"
+                  className="text-xs"
+                  value={fields.familyName}
+                  onChange={(e) => setField('familyName', e.target.value)}
+                  placeholder={t('form.familyNamePlaceholder')}
+                  disabled={isSaving}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                  {t('form.familyPrayer')}
+                </label>
+                <Textarea
+                  className="h-20 text-xs"
+                  value={fields.familyPrayerRequest}
+                  onChange={(e) =>
+                    setField('familyPrayerRequest', e.target.value)
+                  }
+                  placeholder={t('form.familyPrayerPlaceholder')}
                   disabled={isSaving}
                 />
               </div>
@@ -1006,15 +1074,28 @@ export default function EditForm({
               />
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                    {t('form.youthPrayer')}
-                  </label>
-                  <Textarea
-                    className="h-20 text-xs"
-                    value={fields.youthPrayerRequest}
-                    onChange={(e) =>
-                      setField('youthPrayerRequest', e.target.value)
-                    }
-                    placeholder={t('form.youthPrayerPlaceholder')}
+                  {t('form.youthName')}
+                </label>
+                <Input
+                  type="text"
+                  className="text-xs"
+                  value={fields.youthName}
+                  onChange={(e) => setField('youthName', e.target.value)}
+                  placeholder={t('form.youthNamePlaceholder')}
+                  disabled={isSaving}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                  {t('form.youthPrayer')}
+                </label>
+                <Textarea
+                  className="h-20 text-xs"
+                  value={fields.youthPrayerRequest}
+                  onChange={(e) =>
+                    setField('youthPrayerRequest', e.target.value)
+                  }
+                  placeholder={t('form.youthPrayerPlaceholder')}
                   disabled={isSaving}
                 />
               </div>
