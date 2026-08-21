@@ -13,7 +13,6 @@ export default function RunSheetPage() {
   const { session } = useSession();
   const { t } = useT();
   const [svc, setSvc] = useState<any>(null);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,11 +27,8 @@ export default function RunSheetPage() {
         return;
       }
       const data = await res.json();
-      const anns = await fetch('/api/announcements', { credentials: 'same-origin' });
-      const annData = anns.ok ? await anns.json() : { items: [] };
       if (cancelled) return;
       setSvc(data);
-      setAnnouncements(annData.items || []);
       setLoading(false);
     })();
     return () => {
@@ -54,9 +50,6 @@ export default function RunSheetPage() {
 
   const isAdmin = session.role === 'admin';
   const images = svc.images_payload && typeof svc.images_payload === 'object' ? svc.images_payload : {};
-  const serviceAnns = announcements.filter(
-    (a: { service_id: number | null }) => a.service_id == null || a.service_id === svc.id
-  );
 
   const reloadService = async () => {
     try {

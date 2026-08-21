@@ -77,9 +77,9 @@ export function scanSource(source, rel) {
         findings.push({ rel, lineNo, line: line.trim() });
       }
     } else {
-      // Check for UI route or navigation/link references to the /announcements screen (excluding API endpoints like /api/announcements)
-      // Matches href="/announcements", path="/announcements", to="/announcements", or exact "/announcements"
-      if (/(['"`])\/announcements(?:\/|\1)/.test(line)) {
+      // Check for UI route or navigation/link references or API endpoint calls to /announcements or /api/announcements.
+      // Matches href="/announcements", path="/announcements", to="/announcements", "/api/announcements", or exact "/announcements".
+      if (/(['"`])(?:\/api)?\/announcements(?:\/|\1)/.test(line)) {
         findings.push({ rel, lineNo, line: line.trim() });
       }
     }
@@ -112,6 +112,13 @@ test('no route, nav item, or component references /announcements', () => {
 test('guard proof: injected /announcements reference is detected', () => {
   const probe = '<CustomLink href="/announcements">Announcements</CustomLink>';
   const findings = scanSource(probe, 'src/components/Header.tsx');
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].lineNo, 1);
+});
+
+test('guard proof: injected /api/announcements fetch reference is detected', () => {
+  const probe = 'const res = await fetch(\'/api/announcements\');';
+  const findings = scanSource(probe, 'spa/src/pages/RunSheetPage.tsx');
   assert.equal(findings.length, 1);
   assert.equal(findings[0].lineNo, 1);
 });
