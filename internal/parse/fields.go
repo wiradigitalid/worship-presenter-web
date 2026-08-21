@@ -10,7 +10,7 @@ import (
 
 var structuredKeys = []string{
 	"themeVerse", "verseReading", "familyYouth", "familyPrayerRequest",
-	"youthPrayerRequest", "sermon", "specialSong", "closingPrayerPerson",
+	"youthPrayerRequest", "familyName", "youthName", "sermon", "specialSong", "closingPrayerPerson",
 	"songSets",
 	"sermonSpeaker", "sermonTitle",
 }
@@ -55,6 +55,12 @@ func ApplyStructuredFields(db *sql.DB, parsed *Rundown, body map[string]any) {
 	if _, ok := src["youthPrayerRequest"]; ok {
 		parsed.YouthPrayerRequest = coerceNullableString(src["youthPrayerRequest"])
 		parsed.FamilyYouth = nil
+	}
+	if _, ok := src["familyName"]; ok {
+		parsed.FamilyName = coerceNullableString(src["familyName"])
+	}
+	if _, ok := src["youthName"]; ok {
+		parsed.YouthName = coerceNullableString(src["youthName"])
 	}
 	if v, ok := src["specialSong"]; ok {
 		parsed.SpecialSong = coerceSpecialSong(v)

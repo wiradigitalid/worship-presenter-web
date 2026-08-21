@@ -22,6 +22,8 @@ export type StructuredServiceFields = {
   familyYouth?: string | null;
   familyPrayerRequest?: string | null;
   youthPrayerRequest?: string | null;
+  familyName?: string | null;
+  youthName?: string | null;
   sermon?: ParsedSermon | null;
   specialSong?: string | null;
   closingPrayerPerson?: string | null;
@@ -162,6 +164,24 @@ export function coerceStructuredFields(
       any = true;
     }
   }
+  if (Object.prototype.hasOwnProperty.call(src, 'familyName')) {
+    const v = coerceNullableString(
+      (src as { familyName?: unknown }).familyName
+    );
+    if (v !== undefined) {
+      fields.familyName = v;
+      any = true;
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(src, 'youthName')) {
+    const v = coerceNullableString(
+      (src as { youthName?: unknown }).youthName
+    );
+    if (v !== undefined) {
+      fields.youthName = v;
+      any = true;
+    }
+  }
   if (Object.prototype.hasOwnProperty.call(src, 'sermon')) {
     const raw = (src as { sermon?: unknown }).sermon;
     if (raw === null) {
@@ -272,6 +292,8 @@ export function applyStructuredFields(
     // Split fields are source of truth â€” clear legacy combined text
     parsed.familyYouth = null;
   }
+  if (fields.familyName !== undefined) parsed.familyName = fields.familyName;
+  if (fields.youthName !== undefined) parsed.youthName = fields.youthName;
   if (fields.specialSong !== undefined) parsed.specialSong = fields.specialSong;
   if (fields.closingPrayerPerson !== undefined) {
     let person = fields.closingPrayerPerson;
@@ -372,5 +394,7 @@ export function normalizeParsedRundown(parsed: ParsedRundown): ParsedRundown {
     familyYouth,
     familyPrayerRequest,
     youthPrayerRequest,
+    familyName: parsed.familyName ?? null,
+    youthName: parsed.youthName ?? null,
   };
 }

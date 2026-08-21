@@ -32,6 +32,8 @@ export type WorshipFormFields = {
   closingPrayerPerson: string;
   familyPrayerRequest: string;
   youthPrayerRequest: string;
+  familyName: string;
+  youthName: string;
 };
 
 export type HymnIndexEntry = { number: number; title: string };
@@ -46,6 +48,8 @@ export const EMPTY_WORSHIP_FORM_FIELDS: WorshipFormFields = {
   closingPrayerPerson: '',
   familyPrayerRequest: '',
   youthPrayerRequest: '',
+  familyName: '',
+  youthName: '',
 };
 
 /** Map ParsedRundown → overlay form fields (Parse hydrate / edit initial). */
@@ -66,6 +70,8 @@ export function fieldsFromParsed(
     familyPrayerRequest:
       parsed?.familyPrayerRequest ?? parsed?.familyYouth ?? '',
     youthPrayerRequest: parsed?.youthPrayerRequest ?? '',
+    familyName: parsed?.familyName ?? '',
+    youthName: parsed?.youthName ?? '',
   };
 }
 
@@ -83,14 +89,16 @@ export function buildFieldsPayload(fields: WorshipFormFields) {
             ...(verseTranslation ? { translation: verseTranslation } : {}),
           }
         : null,
-    familyPrayerRequest: fields.familyPrayerRequest.trim() || null,
-    youthPrayerRequest: fields.youthPrayerRequest.trim() || null,
-    sermon: fields.sermonSpeaker.trim()
+    familyPrayerRequest: (fields.familyPrayerRequest ?? '').trim() || null,
+    youthPrayerRequest: (fields.youthPrayerRequest ?? '').trim() || null,
+    familyName: (fields.familyName ?? '').trim() || null,
+    youthName: (fields.youthName ?? '').trim() || null,
+    sermon: (fields.sermonSpeaker ?? '').trim()
       ? { speaker: fields.sermonSpeaker.trim(), title: '' }
       : null,
-    specialSong: fields.specialSong.trim() || null,
-    closingPrayerPerson: fields.closingPrayerPerson.trim() || null,
-    songSets: songSetsToPayload(fields.songSets),
+    specialSong: (fields.specialSong ?? '').trim() || null,
+    closingPrayerPerson: (fields.closingPrayerPerson ?? '').trim() || null,
+    songSets: songSetsToPayload(fields.songSets ?? {}),
   };
 }
 
@@ -333,5 +341,7 @@ export function coerceHydrateFields(raw: unknown): WorshipFormFields | null {
     closingPrayerPerson: str(o.closingPrayerPerson),
     familyPrayerRequest: str(o.familyPrayerRequest),
     youthPrayerRequest: str(o.youthPrayerRequest),
+    familyName: str(o.familyName),
+    youthName: str(o.youthName),
   };
 }

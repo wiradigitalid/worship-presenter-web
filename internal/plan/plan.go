@@ -47,6 +47,8 @@ type ctx struct {
 	verseReading   *ParsedScripture
 	familyPrayer   string
 	youthPrayer    string
+	familyName     string
+	youthName      string
 	legacyCombined string
 	familyBody     string
 }
@@ -173,6 +175,8 @@ func computeCtx(serviceDate string, parsed ParsedRundown, media Media) ctx {
 		closingPrayer:  trimPtr(parsed.ClosingPrayerPerson),
 		familyPrayer:   trimPtr(parsed.FamilyPrayerRequest),
 		youthPrayer:    trimPtr(parsed.YouthPrayerRequest),
+		familyName:     trimPtr(parsed.FamilyName),
+		youthName:      trimPtr(parsed.YouthName),
 	}
 	if hasScripture(parsed.ThemeVerse) {
 		c.themeVerse = parsed.ThemeVerse
@@ -228,6 +232,9 @@ func catalogValues(c ctx) map[string]interface{} {
 		if text := firstNonEmpty(c.verseReading.Text); text != "" {
 			out["scripture_text"] = text
 		}
+		if version := firstNonEmpty(c.verseReading.Translation); version != "" {
+			out["scripture_bible_version"] = version
+		}
 	}
 	if c.themeVerse != nil {
 		if ref := firstNonEmpty(ptrStr(c.themeVerse.Reference)); ref != "" {
@@ -261,6 +268,12 @@ func catalogValues(c ctx) map[string]interface{} {
 	}
 	if youthText := firstNonEmpty(c.youthPrayer); youthText != "" {
 		out["youth_request"] = youthText
+	}
+	if famName := firstNonEmpty(c.familyName); famName != "" {
+		out["family_name"] = famName
+	}
+	if ytName := firstNonEmpty(c.youthName); ytName != "" {
+		out["youth_name"] = ytName
 	}
 	if c.familyPhoto != nil {
 		if photo := firstNonEmpty(*c.familyPhoto); photo != "" {
@@ -406,7 +419,7 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 	case "contact":
 		return leaf(request{id: "contact", templateID: "contact"})
 	case "family-youth":
-		if c.familyBody == "" && c.familyPhoto == nil && c.youthPhoto == nil {
+		if c.familyBody == "" && c.familyPhoto == nil && c.youthPhoto == nil && c.familyName == "" && c.youthName == "" {
 			return nil
 		}
 		vals := map[string]interface{}{}
@@ -419,6 +432,12 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 		}
 		if c.youthPrayer != "" {
 			vals["youth_request"] = c.youthPrayer
+		}
+		if c.familyName != "" {
+			vals["family_name"] = c.familyName
+		}
+		if c.youthName != "" {
+			vals["youth_name"] = c.youthName
 		}
 		if c.familyPhoto != nil {
 			vals["family_photo"] = *c.familyPhoto

@@ -810,7 +810,7 @@ func fieldsFromParsed(p parse.Rundown) map[string]any {
 		}
 		text = p.VerseReading.Text
 	}
-	speaker, special, closing, family, youth := "", "", "", "", ""
+	speaker, special, closing, family, youth, familyName, youthName := "", "", "", "", "", "", ""
 	if p.Sermon != nil {
 		speaker = p.Sermon.Speaker
 	}
@@ -826,6 +826,12 @@ func fieldsFromParsed(p parse.Rundown) map[string]any {
 	if p.YouthPrayerRequest != nil {
 		youth = *p.YouthPrayerRequest
 	}
+	if p.FamilyName != nil {
+		familyName = *p.FamilyName
+	}
+	if p.YouthName != nil {
+		youthName = *p.YouthName
+	}
 	// Song sets are weekly inputs owned by song_set_inputs (DEC-004), not
 	// parsed_data overlays — the hydrate payload carries an empty map so the
 	// create form starts clean and the edit form hydrates from the Service's
@@ -839,5 +845,7 @@ func fieldsFromParsed(p parse.Rundown) map[string]any {
 		"closingPrayerPerson": closing,
 		"familyPrayerRequest": family,
 		"youthPrayerRequest":  youth,
+		"familyName":          familyName,
+		"youthName":           youthName,
 	}
 }

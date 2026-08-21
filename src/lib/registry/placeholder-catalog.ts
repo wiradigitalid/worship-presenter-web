@@ -1,7 +1,8 @@
+// Hand-mirrored port: src/lib/registry/placeholder-catalog.ts <-> internal/plan/validate_artifact.go
 /**
  * Placeholder Catalog (DEC-004 Supplement S1, AD-19/AD-32).
  *
- * The catalog admits the 15 predefined-field keys named by the reference deck.
+ * The catalog admits the 17 predefined-field keys named by the reference deck.
  * Hydration substitutes `{key}` tokens inline in a text element's content; an
  * image key keeps its own geometry box. Weekly values land in the catalog
  * through `catalogValuesFromWeekly`, which keeps the same `CatalogWeeklyInput`
@@ -19,6 +20,7 @@ export const PLACEHOLDER_CATALOG: readonly CatalogEntry[] = [
   { key: 'service_date', type: 'text' },
   { key: 'scripture_reference', type: 'text' },
   { key: 'scripture_text', type: 'text' },
+  { key: 'scripture_bible_version', type: 'text' },
   { key: 'theme_reference', type: 'text' },
   { key: 'theme_text', type: 'text' },
   { key: 'special_song', type: 'text' },
@@ -29,6 +31,7 @@ export const PLACEHOLDER_CATALOG: readonly CatalogEntry[] = [
   { key: 'family_request', type: 'text' },
   { key: 'youth_request', type: 'text' },
   { key: 'family_name', type: 'text' },
+  { key: 'youth_name', type: 'text' },
   { key: 'family_photo', type: 'image' },
   { key: 'youth_photo', type: 'image' },
 ];
@@ -101,6 +104,7 @@ export type CatalogWeeklyInput = {
   serviceDate?: string;
   scriptureReference?: string;
   scriptureText?: string;
+  scriptureBibleVersion?: string;
   themeReference?: string;
   themeText?: string;
   specialSong?: string | null;
@@ -111,6 +115,7 @@ export type CatalogWeeklyInput = {
   familyRequest?: string | null;
   youthRequest?: string | null;
   familyName?: string | null;
+  youthName?: string | null;
   familyPhoto?: string | null;
   youthPhoto?: string | null;
 };
@@ -140,6 +145,8 @@ export function catalogValuesFromWeekly(input: CatalogWeeklyInput): Readonly<
   if (scriptureReference) values.scripture_reference = scriptureReference;
   const scriptureText = firstText(input.scriptureText);
   if (scriptureText) values.scripture_text = scriptureText;
+  const scriptureBibleVersion = firstText(input.scriptureBibleVersion);
+  if (scriptureBibleVersion) values.scripture_bible_version = scriptureBibleVersion;
   const themeReference = firstText(input.themeReference);
   if (themeReference) values.theme_reference = themeReference;
   const themeText = firstText(input.themeText);
@@ -160,6 +167,8 @@ export function catalogValuesFromWeekly(input: CatalogWeeklyInput): Readonly<
   if (youthRequest) values.youth_request = youthRequest;
   const familyName = firstText(input.familyName);
   if (familyName) values.family_name = familyName;
+  const youthName = firstText(input.youthName);
+  if (youthName) values.youth_name = youthName;
   const familyPhoto = firstText(input.familyPhoto);
   if (familyPhoto) values.family_photo = familyPhoto;
   const youthPhoto = firstText(input.youthPhoto);

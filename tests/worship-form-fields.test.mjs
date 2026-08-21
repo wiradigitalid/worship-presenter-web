@@ -83,6 +83,8 @@ test('buildFieldsPayload serializes songSets; empty sermon is null', () => {
     closingPrayerPerson: '',
     familyPrayerRequest: '',
     youthPrayerRequest: '',
+    familyName: '',
+    youthName: '',
   });
   assert.equal(payload.songSets.opening_song_bt.songNumber, 1);
   assert.equal(payload.songSets.closing_song_bt.songNumber, null);
@@ -101,6 +103,8 @@ test('buildFieldsPayload persists the translation beside a resolved passage', ()
       closingPrayerPerson: '',
       familyPrayerRequest: '',
       youthPrayerRequest: '',
+      familyName: '',
+      youthName: '',
     },
   });
   assert.equal(payload.verseReading.reference, 'John 3:16');

@@ -1,3 +1,4 @@
+// Hand-mirrored port: internal/plan/validate_artifact.go <-> src/lib/registry/placeholder-catalog.ts
 package plan
 
 import (
@@ -16,21 +17,23 @@ var (
 	bundledAsset     = regexp.MustCompile(`(?i)^[a-zA-Z0-9._-]+\.(jpg|jpeg|png|gif|webp)$`)
 	inlineTokenRegex = regexp.MustCompile(`\{([a-zA-Z0-9_]+)\}`)
 	catalogKeys      = map[string]string{
-		"service_date": "text",
-		"scripture_reference": "text",
-		"scripture_text":      "text",
-		"theme_reference":     "text",
-		"theme_text":          "text",
-		"special_song":        "text",
-		"sermon_title":        "text",
-		"sermon_speaker_name": "text",
-		"sermon_poster":       "image",
-		"closing_prayer_person": "text",
-		"family_request": "text",
-		"youth_request":  "text",
-		"family_name":    "text",
-		"family_photo":   "image",
-		"youth_photo":    "image",
+		"service_date":            "text",
+		"scripture_reference":     "text",
+		"scripture_text":          "text",
+		"scripture_bible_version": "text",
+		"theme_reference":         "text",
+		"theme_text":              "text",
+		"special_song":            "text",
+		"sermon_title":            "text",
+		"sermon_speaker_name":     "text",
+		"sermon_poster":           "image",
+		"closing_prayer_person":   "text",
+		"family_request":          "text",
+		"youth_request":           "text",
+		"family_name":             "text",
+		"youth_name":              "text",
+		"family_photo":            "image",
+		"youth_photo":             "image",
 	}
 	allowedTemplateKeys = map[string]struct{}{
 		"schemaVersion": {}, "id": {}, "label": {}, "baseType": {}, "placeholders": {}, "layouts": {},
