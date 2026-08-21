@@ -1,4 +1,3 @@
-import { useRouter } from '@/lib/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
@@ -9,7 +8,6 @@ export default function SyncArtifactButton({
   serviceId: number;
   updatedAt: string;
 }) {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,10 +32,8 @@ export default function SyncArtifactButton({
       } | null;
       if (!res.ok) {
         setError(payload?.error || `Sync failed (${res.status})`);
-        if (res.status === 409) router.refresh();
         return;
       }
-      router.refresh();
     } catch {
       setError('Sync failed');
     } finally {

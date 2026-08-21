@@ -33,7 +33,6 @@ export default function DeleteButton({
         throw new Error(t('service.delete.failed'));
       }
       router.push('/');
-      router.refresh();
     } catch (e) {
       alert(e instanceof Error ? e.message : t('service.delete.failed'));
       console.error(e);

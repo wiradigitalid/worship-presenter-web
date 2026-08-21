@@ -1495,7 +1495,7 @@ export default function ArtifactEditor() {
           {templates.map((item) => {
             const isSelected = selectedId === item.id;
             return (
-              <li key={item.id}>
+              <li key={item.id} className="border-b border-border/60 last:border-b-0">
                 <div
                   role="button"
                   tabIndex={0}
@@ -1525,14 +1525,14 @@ export default function ArtifactEditor() {
                     if (!proceed) return;
                     setSelectedId(item.id);
                   }}
-                  className={`cursor-pointer rounded-xl border px-2 py-1.5 transition-colors ${
+                  className={`cursor-pointer rounded-lg px-2 py-2 transition-colors ${
                     isSelected
-                      ? 'border-primary bg-primary/10'
-                      : 'border-transparent hover:bg-muted'
+                      ? 'bg-primary/10 ring-1 ring-primary/40'
+                      : 'hover:bg-muted/60'
                   }`}
                 >
-                  <div className="flex items-start gap-1">
-                    <span className="min-w-0 flex-1 truncate font-medium">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1">
+                    <span className="truncate font-medium leading-tight">
                       {item.label}
                     </span>
                     <div className="grid shrink-0 grid-cols-2 gap-0.5">
@@ -1564,6 +1564,14 @@ export default function ArtifactEditor() {
                       >
                         <ArrowDown />
                       </Button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs opacity-80">
+                      <span>[{kindChipLabel(item.baseType)}]</span>
+                      {!item.editable ? (
+                        <span>{t('admin.artifacts.readOnly')}</span>
+                      ) : null}
+                    </div>
+                    <div className="grid shrink-0 grid-cols-2 gap-0.5">
                       <Button
                         type="button"
                         variant="outline"
@@ -1594,10 +1602,6 @@ export default function ArtifactEditor() {
                         <Trash2 />
                       </Button>
                     </div>
-                  </div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs opacity-80">
-                    <span>[{kindChipLabel(item.baseType)}]</span>
-                    {!item.editable ? <span>{t('admin.artifacts.readOnly')}</span> : null}
                   </div>
                 </div>
               </li>
@@ -1792,16 +1796,16 @@ export default function ArtifactEditor() {
                     {t('admin.artifacts.deleteOnlyAuthored')}
                   </span>
                 </div>
-                <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card/40 p-4">
-                  <div className="flex min-w-[16rem] max-w-md flex-col gap-1.5 text-sm">
-                    <Label htmlFor="artifact-text-content">
+                <div className="space-y-4 rounded-2xl border border-border bg-card/40 p-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="artifact-text-content" className="text-sm font-medium">
                       {t('admin.artifacts.text')}
                     </Label>
                     <Textarea
                       id="artifact-text-content"
                       value={textContent}
                       disabled={selectedTextCount !== 1}
-                      rows={3}
+                      rows={5}
                       onChange={(e) => handleTextContentChange(e.target.value)}
                       placeholder={
                         selectedTextCount === 1
@@ -1813,9 +1817,10 @@ export default function ArtifactEditor() {
                           ? t('admin.artifacts.textTitle')
                           : t('admin.artifacts.textTitleIdle')
                       }
-                      className="min-h-[4.5rem] resize-y"
+                      className="min-h-[7.5rem] w-full resize-y font-mono text-sm leading-relaxed"
                     />
                   </div>
+                  <div className="flex flex-wrap items-end gap-3 border-t border-border/60 pt-3">
                   <Label className="flex items-center gap-2 text-sm">
                     {t('admin.artifacts.fontColor')}
                     <input
@@ -1845,7 +1850,7 @@ export default function ArtifactEditor() {
                   >
                     {t('admin.artifacts.applyStyle')}
                   </Button>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground sm:ml-auto">
                     {t('admin.artifacts.styleHint')}
                   </span>
                 </div>
