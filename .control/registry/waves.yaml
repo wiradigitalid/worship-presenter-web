@@ -88,6 +88,30 @@ waves:
     # Isolation: Orca worktree auto1, separate from the canonical checkout.
     # Pre-wave: f393bfd (S1 catalog + name-field storage) is committed but unpushed
     # and lands in this wave's PR -- built before the ruling, reconciled not redone.
+    # PHASE 4 (2026-08-21) -- ran, did NOT complete. W3 stays `open`.
+    #  1 registry catch-up: PASS. No new LC named by these stories; `touches: [spa]`
+    #    resolves in components.yaml.
+    #  2 inventories from code: RAN, 45 plan-versus-code gaps reported as findings and
+    #    NOT patched. Nearly all are DEC-004 endpoints built today and absent from
+    #    inventory-api.md (song-set-entries, song-set-layouts, announcement-sets,
+    #    background-library, song-books, save-to-book), plus `spa:/announcements`
+    #    planned-but-deleted. The three inventories are wdi-blueprint's to write, so
+    #    `inventory.py --write` was deliberately not run here.
+    #  3 structure maps: NOT refreshed. No base folder was born, but new key files
+    #    landed (src/lib/registry/canvas-utils.ts, canvas-adapters.ts,
+    #    src/components/admin/*Panel.tsx). Routes to wdi-init intent `structure`.
+    #  4 distillation: PASS. Durable content left the spec folder as OQ-40 (ann-set
+    #    group chrome deferred), OQ-41 (underline not persistable), OQ-42 (webhook
+    #    still writes announcement_items) in .control/questions/assumptions.md.
+    #    Filed directly as coordinator registry work, not through wdi-question.
+    #  5 retrospective: SKIPPED. Advisory at size M per V19; stated rather than silent.
+    #  6 RTM green: FAIL -- this is what holds the wave open. V13 wants a `reviewed`
+    #    trace with date and sha on this wave; it comes from a wdi-review lens run over
+    #    the SPEC, and MUST NOT be stamped from the coordinator's own self-validate.
+    #    The memlog already records a prior pass that stamped a self-check and had to be
+    #    corrected -- not repeating it. Seven sibling V13 findings (SRS/SDD/spine stale
+    #    at 4847cc2) and W2's missing trace predate this session.
+    #  7 status closed: NOT DONE, blocked by item 6.
     epics:
       - id: dec004-completion-registry
         stories:
