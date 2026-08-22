@@ -272,13 +272,13 @@ func TestAnnouncementItemsCascadeMigration(t *testing.T) {
 			t.Fatalf("bootstrap: %v", err)
 		}
 
-		// Verify version is 10
+		// Verify version reached current version (11)
 		var ver string
 		if err := handle.QueryRow(`SELECT value FROM settings WHERE key = ?`, dataVersionKey).Scan(&ver); err != nil {
 			t.Fatalf("read version: %v", err)
 		}
-		if ver != "10" {
-			t.Fatalf("data_version = %q, want '10'", ver)
+		if ver != "11" {
+			t.Fatalf("data_version = %q, want '11'", ver)
 		}
 
 		// Verify FK is gone from announcement_items

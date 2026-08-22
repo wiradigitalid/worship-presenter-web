@@ -51,6 +51,48 @@ func TestDataVersionGateWalkingPastSingleDigit(t *testing.T) {
 		}
 	})
 
+	t.Run("version 11 is not downgraded by 10->11 migration", func(t *testing.T) {
+		dbPath := filepath.Join(t.TempDir(), "v11.db")
+		handle, err := Open(dbPath)
+		if err != nil {
+			t.Fatalf("open: %v", err)
+		}
+		defer handle.Close()
+
+		_, err = handle.Exec(`
+			CREATE TABLE IF NOT EXISTS settings (
+				key TEXT PRIMARY KEY,
+				value TEXT NOT NULL
+			);
+			CREATE TABLE IF NOT EXISTS song_books (
+				book_code TEXT PRIMARY KEY,
+				name TEXT,
+				locale TEXT,
+				licence TEXT,
+				provenance TEXT,
+				is_default INTEGER NOT NULL DEFAULT 0,
+				updated_at TEXT
+			);
+			INSERT INTO settings (key, value) VALUES ('data_version', '11');
+		`)
+		if err != nil {
+			t.Fatalf("setup v11 db: %v", err)
+		}
+
+		root := "../../"
+		if err := migrateSongBookRow(handle, root); err != nil {
+			t.Fatalf("migrateSongBookRow: %v", err)
+		}
+
+		var ver string
+		if err := handle.QueryRow(`SELECT value FROM settings WHERE key = ?`, dataVersionKey).Scan(&ver); err != nil {
+			t.Fatalf("read version: %v", err)
+		}
+		if ver != "11" {
+			t.Fatalf("data_version after migration = %q, want '11' (got downgraded)", ver)
+		}
+	})
+
 	// 2. A database stamped "9" must not re-run it either
 	t.Run("version 9 is not re-run", func(t *testing.T) {
 		dbPath := filepath.Join(t.TempDir(), "v9.db")

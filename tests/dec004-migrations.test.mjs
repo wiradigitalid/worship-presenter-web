@@ -41,13 +41,13 @@ const OLD_KEYS = new Set([
   'youthPhoto',
 ]);
 
-test('fresh boot reaches data_version 10', () => {
+test('fresh boot reaches data_version 11', () => {
   const db = getDb();
   const row = db
     .prepare(`SELECT value FROM settings WHERE key = ?`)
     .get(DATA_VERSION_KEY);
   assert.equal(row?.value, String(CURRENT_DATA_VERSION));
-  assert.equal(CURRENT_DATA_VERSION, 10);
+  assert.equal(CURRENT_DATA_VERSION, 11);
 });
 
 test('fresh boot leaves no song_set_inputs rows (nothing to backfill)', () => {

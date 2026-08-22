@@ -58,18 +58,26 @@ func TestSeedSongBooks_FreshDatabase(t *testing.T) {
 	if isDefault != 1 {
 		t.Errorf("expected is_default=1 on fresh db, got %d", isDefault)
 	}
+
+	var hymnCount int
+	if err := handle.QueryRow(`SELECT COUNT(*) FROM hymns WHERE book_code = 'SDAH'`).Scan(&hymnCount); err != nil {
+		t.Fatalf("query hymns count: %v", err)
+	}
+	if hymnCount == 0 {
+		t.Errorf("expected hymns to be seeded, got %d", hymnCount)
+	}
 }
 
-func TestSeedSongBooks_ExistingDatabaseWithHymnsAndMarkerStamped(t *testing.T) {
+func TestSeedSongBooks_ExistingDatabaseAtVersion10(t *testing.T) {
 	root := repoRoot(t)
-	dbPath := filepath.Join(t.TempDir(), "existing_regression.db")
+	dbPath := filepath.Join(t.TempDir(), "existing_v10.db")
 	handle, err := Open(dbPath)
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
 	defer handle.Close()
 
-	// Simulate broken existing install state: hymns exist, marker is stamped, but song_books is empty
+	// Simulate existing database at data_version 10 with hymn marker stamped and no song_books row
 	if _, err := handle.Exec(`
 		INSERT INTO hymns (book_code, number, title, lyrics) VALUES ('SDAH', 1, 'Title', 'Lyrics');
 		INSERT OR REPLACE INTO settings (key, value) VALUES ('song_book_bootstrapped_SDAH', '1');
@@ -100,10 +108,59 @@ func TestSeedSongBooks_ExistingDatabaseWithHymnsAndMarkerStamped(t *testing.T) {
 		t.Fatalf("query SDAH count: %v", err)
 	}
 	if countAfter != 1 {
-		t.Fatalf("expected SDAH row to appear on boot despite marker stamped, got count=%d", countAfter)
+		t.Fatalf("expected SDAH row to appear via migration 10->11, got count=%d", countAfter)
 	}
 	if isDefault != 1 {
 		t.Errorf("expected is_default=1, got %d", isDefault)
+	}
+
+	var ver string
+	if err := handle.QueryRow(`SELECT value FROM settings WHERE key = ?`, dataVersionKey).Scan(&ver); err != nil {
+		t.Fatalf("read version: %v", err)
+	}
+	if ver != "11" {
+		t.Fatalf("expected data_version 11, got %q", ver)
+	}
+}
+
+func TestSeedSongBooks_AD17DeletedSDAHNotResurrectedAtVersion11(t *testing.T) {
+	root := repoRoot(t)
+	dbPath := filepath.Join(t.TempDir(), "ad17_deletion.db")
+	handle, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer handle.Close()
+
+	if err := Bootstrap(handle, root); err != nil {
+		t.Fatalf("first bootstrap: %v", err)
+	}
+
+	var ver string
+	if err := handle.QueryRow(`SELECT value FROM settings WHERE key = ?`, dataVersionKey).Scan(&ver); err != nil {
+		t.Fatalf("read version: %v", err)
+	}
+	if ver != "11" {
+		t.Fatalf("expected data_version 11, got %q", ver)
+	}
+
+	// Administrator deliberately deletes SDAH song book row
+	if _, err := handle.Exec(`DELETE FROM song_books WHERE book_code = 'SDAH'`); err != nil {
+		t.Fatalf("delete SDAH song_books row: %v", err)
+	}
+
+	// Reboot
+	if err := Bootstrap(handle, root); err != nil {
+		t.Fatalf("second bootstrap: %v", err)
+	}
+
+	// AD-17: Row must NOT be resurrected on boot
+	var countAfter int
+	if err := handle.QueryRow(`SELECT COUNT(*) FROM song_books WHERE book_code = 'SDAH'`).Scan(&countAfter); err != nil {
+		t.Fatalf("query SDAH count: %v", err)
+	}
+	if countAfter != 0 {
+		t.Fatalf("AD-17 violation: deleted SDAH row resurrected on boot (count=%d)", countAfter)
 	}
 }
 
@@ -228,8 +285,11 @@ func TestSeedSongBooks_MissingCorpusFileGraceful(t *testing.T) {
 
 	// Pass an empty temp dir as root where data/song-book/sdah.json does not exist
 	emptyRoot := t.TempDir()
-	if err := seedSongBooks(handle, emptyRoot); err != nil {
+	if err := upsertHymns(handle, emptyRoot); err != nil {
 		t.Fatalf("expected nil error on missing corpus file, got: %v", err)
+	}
+	if err := migrateSongBookRow(handle, emptyRoot); err != nil {
+		t.Fatalf("expected nil error on migrateSongBookRow with missing corpus file, got: %v", err)
 	}
 
 	var count int

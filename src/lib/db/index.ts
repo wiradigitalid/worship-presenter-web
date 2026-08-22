@@ -84,49 +84,6 @@ function migrateHymnsForSongBooks(database: Database.Database) {
  * no-resurrection and no-overwrite guarantees directly.
  */
 export function upsertHymns(database: Database.Database) {
-  const corpus = loadSongBookCorpus(DEFAULT_SONG_BOOK);
-  const marker = songBookBootstrapKey(corpus.code);
-
-  const already = database
-    .prepare(`SELECT 1 FROM settings WHERE key = ?`)
-    .get(marker);
-  if (already) return;
-
-  const insertIfAbsent = database.prepare(`
-    INSERT INTO hymns (book_code, number, title, lyrics)
-    VALUES (@book_code, @number, @title, @lyrics)
-    ON CONFLICT(book_code, number) DO NOTHING
-  `);
-
-  const tx = database.transaction((rows: HymnSeed[]) => {
-    for (const hymn of rows) {
-      insertIfAbsent.run({ ...hymn, book_code: corpus.code });
-    }
-    database
-      .prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`)
-      .run(marker, '1');
-  });
-  tx.immediate(corpus.hymns);
-  console.info(
-    `[corpus] bootstrapped ${corpus.hymns.length} ${corpus.code} hymn(s) from the corpus file (DEC-005/AD-36 bootstrap-once)`
-  );
-}
-
-/**
- * Seed the SDAH song_books registry row from the corpus file.
- *
- * Hand-mirrored port: internal/db/bootstrap.go <-> src/lib/db/index.ts.
- *
- * CRITICAL: This is intentionally NOT inside upsertHymns and is NOT gated by
- * the per-book marker song_book_bootstrapped_SDAH. Migration 5->6 stamped that
- * marker for every book already in hymns, so an existing database has the marker
- * while song_books is completely empty. Seeding song_books separately ensures
- * existing databases heal on the next boot while remaining idempotent via
- * ON CONFLICT(book_code) DO NOTHING.
- *
- * Exported for `tests/song-books-seed.test.mjs`.
- */
-export function seedSongBooks(database: Database.Database): void {
   const corpusPath = songBookCorpusPath(DEFAULT_SONG_BOOK);
   if (!fs.existsSync(corpusPath)) return;
 
@@ -146,17 +103,29 @@ export function seedSongBooks(database: Database.Database): void {
   const licence = String(meta.licence ?? '').trim();
   const provenance = String(meta.attribution ?? '').trim();
 
-  let inserted = false;
-  let isDefault = 0;
+  const marker = songBookBootstrapKey(code);
 
-  const tx = database.transaction(() => {
+  const already = database
+    .prepare(`SELECT 1 FROM settings WHERE key = ?`)
+    .get(marker);
+  if (already) return;
+
+  const corpus = loadSongBookCorpus(code);
+
+  const insertIfAbsent = database.prepare(`
+    INSERT INTO hymns (book_code, number, title, lyrics)
+    VALUES (@book_code, @number, @title, @lyrics)
+    ON CONFLICT(book_code, number) DO NOTHING
+  `);
+
+  const tx = database.transaction((rows: HymnSeed[]) => {
     const defaultRow = database
       .prepare(`SELECT COUNT(*) AS count FROM song_books WHERE is_default = 1`)
       .get() as { count: number } | undefined;
     const defaultCount = defaultRow?.count ?? 0;
-    isDefault = defaultCount === 0 ? 1 : 0;
+    const isDefault = defaultCount === 0 ? 1 : 0;
 
-    const res = database
+    database
       .prepare(`
         INSERT INTO song_books (book_code, name, locale, licence, provenance, is_default, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ${STAMP_NOW_SQL})
@@ -164,16 +133,17 @@ export function seedSongBooks(database: Database.Database): void {
       `)
       .run(code, name, locale, licence, provenance, isDefault);
 
-    if (res.changes > 0) {
-      inserted = true;
+    for (const hymn of rows) {
+      insertIfAbsent.run({ ...hymn, book_code: corpus.code });
     }
+    database
+      .prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`)
+      .run(marker, '1');
   });
-
-  tx.immediate();
-
-  if (inserted) {
-    console.info(`[corpus] seeded song book ${code} (is_default=${isDefault})`);
-  }
+  tx.immediate(corpus.hymns);
+  console.info(
+    `[corpus] bootstrapped ${corpus.hymns.length} ${corpus.code} hymn(s) from the corpus file (DEC-005/AD-36 bootstrap-once)`
+  );
 }
 
 /**
@@ -845,6 +815,7 @@ export function getDb() {
     migrateSongBookMetadata(db);
     migrateSongSetInputsDec004(db);
     migrateAnnouncementItemsCascade(db);
+    migrateSongBookRow(db);
 
     // --- corpus load ---
     // DEC-005/AD-36: upsertHymns is a bootstrap-once seed and MUST run after
@@ -852,7 +823,6 @@ export function getDb() {
     // marked first and never re-seeded. The bible reconcile (AD-25) is
     // untouched by DEC-005.
     upsertHymns(db);
-    seedSongBooks(db);
     reconcileBibleCorpus(db);
 
     migrateDataVersionToCurrent(db);
@@ -1472,6 +1442,78 @@ export function migrateAnnouncementItemsCascade(database: Database.Database): vo
   console.info(
     `[registry] migration 9->10: retired foreign key on announcement_items (data_version=10)`
   );
+}
+
+/**
+ * Song-book row migration (AD-17 / AD-21 / data_version 10 -> 11).
+ * One-time pass that:
+ *   - inserts the SDAH song_books registry row from data/song-book/sdah.json when absent,
+ *   - sets is_default = 1 only if no existing song_books row is already marked default,
+ *   - leaves an existing SDAH row completely untouched (no overwrite, no resurrection),
+ *   - bumps data_version to 11.
+ *
+ * Mirrors `internal/db/migrate_song_book_row.go`.
+ */
+export function migrateSongBookRow(database: Database.Database): void {
+  const row = database
+    .prepare(`SELECT value FROM settings WHERE key = ?`)
+    .get(DATA_VERSION_KEY) as { value: string } | undefined;
+  const version = row ? Number(row.value) : 0;
+  if (!Number.isFinite(version) || version >= 11) return;
+
+  const corpusPath = songBookCorpusPath(DEFAULT_SONG_BOOK);
+  let metaFound = false;
+  let code = DEFAULT_SONG_BOOK;
+  let name = '';
+  let locale = '';
+  let licence = '';
+  let provenance = '';
+
+  if (fs.existsSync(corpusPath)) {
+    try {
+      const raw = JSON.parse(fs.readFileSync(corpusPath, 'utf8')) as Record<string, unknown>;
+      const meta = (raw?.book ?? {}) as Record<string, unknown>;
+      code = String(meta.code ?? DEFAULT_SONG_BOOK).trim().toUpperCase() || DEFAULT_SONG_BOOK;
+      name = String(meta.name ?? '').trim();
+      locale = String(meta.language ?? '').trim();
+      licence = String(meta.licence ?? '').trim();
+      provenance = String(meta.attribution ?? '').trim();
+      metaFound = true;
+    } catch (err) {
+      throw new Error(
+        `song book corpus metadata in migration 10->11: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  const tx = database.transaction(() => {
+    if (metaFound) {
+      const defaultRow = database
+        .prepare(`SELECT COUNT(*) AS count FROM song_books WHERE is_default = 1`)
+        .get() as { count: number } | undefined;
+      const defaultCount = defaultRow?.count ?? 0;
+      const isDefault = defaultCount === 0 ? 1 : 0;
+
+      const res = database
+        .prepare(`
+          INSERT INTO song_books (book_code, name, locale, licence, provenance, is_default, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ${STAMP_NOW_SQL})
+          ON CONFLICT(book_code) DO NOTHING
+        `)
+        .run(code, name, locale, licence, provenance, isDefault);
+
+      if (res.changes > 0) {
+        console.info(`[corpus] migration 10->11: seeded song book ${code} (is_default=${isDefault})`);
+      }
+    }
+
+    database
+      .prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`)
+      .run(DATA_VERSION_KEY, '11');
+  });
+
+  tx.immediate();
+  console.info(`[registry] migration 10->11: song_books row migration complete (data_version=11)`);
 }
 
 /** Story 25.2: stamp the write-path grain change without rewriting rows. */
