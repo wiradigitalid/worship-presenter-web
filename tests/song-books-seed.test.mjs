@@ -17,6 +17,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import Database from 'better-sqlite3';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -26,7 +27,7 @@ process.env.DB_PATH = path.join(tmp, 'test.db');
 delete process.env.IMAGE_URL_ALLOWLIST;
 process.env.WPW_USE_SHIPPED_REGISTRY = '1';
 
-const { getDb, upsertHymns, migrateSongBookRow, songBookBootstrapKey } = await import(
+const { getDb, bootstrap, upsertHymns, migrateSongBookRow, songBookBootstrapKey } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'db', 'index.ts')).href
 );
 const { DATA_VERSION_KEY, CURRENT_DATA_VERSION } = await import(
@@ -94,25 +95,38 @@ test('existing database at data_version 10 with marker stamped heals missing row
 });
 
 test('AD-17: deleted SDAH row stays absent on subsequent boot at data_version 11', () => {
-  // Setup db at version 11 with SDAH marker stamped
-  db.prepare(
-    `INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`
-  ).run(DATA_VERSION_KEY, '11');
-  db.prepare(
-    `INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`
-  ).run(songBookBootstrapKey('SDAH'), '1');
+  const ad17Tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'song-books-ad17-'));
+  const ad17DbPath = path.join(ad17Tmp, 'ad17_deletion.db');
+  const ad17Db = new Database(ad17DbPath);
 
-  // Administrator deliberately deletes SDAH row
-  db.prepare(`DELETE FROM song_books WHERE book_code = 'SDAH'`).run();
+  try {
+    // 1. Boot fresh database through the bootstrap function
+    bootstrap(ad17Db);
 
-  // Boot / run upsertHymns and migrateSongBookRow
-  upsertHymns(db);
-  migrateSongBookRow(db);
+    const initialRow = ad17Db
+      .prepare(`SELECT book_code FROM song_books WHERE book_code = 'SDAH'`)
+      .get();
+    assert.ok(initialRow, 'SDAH row must exist after first boot');
 
-  const after = db
-    .prepare(`SELECT COUNT(*) AS count FROM song_books WHERE book_code = 'SDAH'`)
-    .get();
-  assert.equal(after.count, 0, 'AD-17: deleted SDAH row must NOT be resurrected on boot');
+    const ver = ad17Db
+      .prepare(`SELECT value FROM settings WHERE key = ?`)
+      .get(DATA_VERSION_KEY);
+    assert.equal(ver?.value, '11', 'expected data_version 11 after first boot');
+
+    // 2. Administrator deliberately deletes SDAH row
+    ad17Db.prepare(`DELETE FROM song_books WHERE book_code = 'SDAH'`).run();
+
+    // 3. Boot the same handle again through the bootstrap function
+    bootstrap(ad17Db);
+
+    // 4. Assert the row is still absent
+    const after = ad17Db
+      .prepare(`SELECT COUNT(*) AS count FROM song_books WHERE book_code = 'SDAH'`)
+      .get();
+    assert.equal(after.count, 0, 'AD-17: deleted SDAH row must NOT be resurrected on boot');
+  } finally {
+    ad17Db.close();
+  }
 });
 
 test('when another book is already default, SDAH arrives with is_default = 0', () => {

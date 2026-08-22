@@ -1,3 +1,5 @@
+// Package db provides database access, migrations, and bootstrap.
+// Mirrored on the TypeScript side by `src/lib/db/index.ts` (bootstrap).
 package db
 
 import (

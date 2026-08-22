@@ -57,6 +57,7 @@ func Open(dbPath string) (*sql.DB, error) {
 
 // Bootstrap seeds admin, corpora, and the artifact registry on a fresh DB.
 // root is the repository root (data/ corpora and default-registry.json).
+// Mirrored on the TypeScript side by `src/lib/db/index.ts` (bootstrap).
 func Bootstrap(handle *sql.DB, root string) error {
 	if err := authBootstrap(handle); err != nil {
 		return err
