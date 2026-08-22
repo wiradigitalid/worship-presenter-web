@@ -3,8 +3,8 @@ type: lifecycle
 component: presenter
 status: draft
 created: 2026-08-18
-updated: 2026-08-20
-entities: [ProjectorLiveness]
+updated: 2026-08-22
+entities: [ProjectorLiveness, RemotePairing]
 ---
 
 # State Lifecycle — Presenter
@@ -58,3 +58,28 @@ Sync reverts to the normal order.
 ### What is deliberately not modelled
 
 Slide index is not stored state; it is ephemeral on the channel (AD-10). Plan identity in the message is **not yet** present (OQ-26).
+
+## RemotePairing
+
+The remote's own lifecycle (UC-29, FR-35, AD-37). It is deliberately **not** part of
+`ProjectorLiveness`: a dead remote and a dead projector are different facts, and AD-29 owns the second
+one. Nothing in this table may move the projector's verdict.
+
+**States:** `unpaired` · `offered` · `paired` · `ended`
+**Initial:** `unpaired` — a presenting client with no remote, which is every session until someone asks
+**Terminal:** `ended`; pairing again starts a new `offered`
+
+| From | To | Trigger | Who may | Guard | Side effect |
+| --- | --- | --- | --- | --- | --- |
+| unpaired | offered | Operator asks the presenting client for a code | Operator | already `paired` → refused, never replaced (OQ-54) | a short-lived single-use code is displayed |
+| offered | paired | A signed-in Operator claims that code from a second device | Operator | code unused and unexpired; being signed in is not sufficient (AD-37) | the remote receives the session state and shows the presenter view |
+| offered | unpaired | The code expires unclaimed | System | — | the code is spent; nothing was ever bound |
+| paired | ended | Either side ends it deliberately | Operator | — | the remote stops controlling; **the service does not change** |
+| paired | ended | The presenting client's stream is gone | System | — | the remote is told to pair again rather than queueing intents (a stale intent is not an instruction) |
+| paired | paired | The remote's own connection drops and returns | System | — | the remote refuses input while dark, then resumes. **The room screen never noticed** |
+
+The last row is the one this feature lives or dies by. A remote that drops is an inconvenience to one
+person; a room screen that follows it into the dark is a broken service. Nothing in this lifecycle
+reaches the projector — the intent path enters where the Operator's own hand enters, upstream of the
+single controller (AD-37).
+

@@ -1,7 +1,7 @@
 ---
 topic: Presenter
 artifact: .what/presenter/SRS-presenter.md
-updated: 2026-08-20T19:16
+updated: 2026-08-22T14:25
 ---
 
 - (event) G4 guarded as-built: UC-11..13; LC-9, LC-10. Plan identity AD-10 still [MISSING].
@@ -19,3 +19,4 @@ updated: 2026-08-20T19:16
 - (event) DEC-003: Presenter screens and LC-10/14 on spa; LC-9 on api; AD-30 quoted.
 - (decision by wdi-blueprint) G3 catalog amended for DEC-004: UC-27 (FR-33, live Verse/Reff background switch) added to SRS-presenter.md.
 - (event) wdi-component G4 (behaviour+design) for DEC-004 background switch: UC-27 (FR-33) full flow, BR-8 (session-only override, normal-order revert), BR-9 (group markers never numbered/projected); state-machines.md live-background facet added. SDD: AD-33/AD-34 quoted, Decision Summary/Structure note, Failure Behaviour LC-10 background row, ABCE UC-27 row, present-channel.md background operation + error rows, LC-14 responsibility updated. Evidence [MISSING]: PresentMessage background variant, Background Library reader, Announcement Set group row on presenter-model.ts (shared preview-model.ts change deferred to Hub's G4). No new LC registered — background rides existing LC-10/LC-14. wdi-review not run (owner to trigger).
+- (event) G4 design + behaviour for FR-35/UC-29 (DEC-006, AD-37). Registered LC-17 relay gateway and LC-18 pairing service on api under a new area remote-control. New contract 03-remote-control.md chooses SSE plus POST and answers all five lanes; pairing lives in process memory, no table, no data_version bump. Failure behaviour for five new boundaries, all [MISSING]. RemotePairing lifecycle in state-machines.md and SCN-6 for the drop-mid-service branch. Found and corrected while writing: 02-present-channel.md labelled plan identity and the background variant [MISSING] although both shipped; overlay-on-sync is still genuinely missing (OQ-25). Three design questions filed: OQ-53, OQ-54, OQ-55.

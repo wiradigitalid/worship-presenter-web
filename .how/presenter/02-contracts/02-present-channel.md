@@ -4,7 +4,7 @@ component: presenter
 lc: LC-10
 direction: exposed
 created: 2026-08-18
-updated: 2026-08-20
+updated: 2026-08-22
 ---
 
 # Contract — Present channel
@@ -23,7 +23,7 @@ UC-12, UC-13, UC-27, AD-10, AD-29. Session display: showing / blanked / overlay 
 | --- | --- | --- |
 | index / blank / overlay | Controls → projector | UC-12 · UC-13 |
 | transition | Live-session override of app-wide style (AD-23); PPTX does not follow | UC-12 |
-| background | Live-session override of the current Verse/Reff background (AD-34), same shape as `transition`: a value the sender intends, not a toggle; resends on `sync` so a reload does not lose it. Neither the Service payload nor the Registry follow. **[MISSING]** — no variant exists yet on `PresentMessage`; planned for the wave that builds UC-27 | UC-27 |
+| background | Live-session override of the current Verse/Reff background (AD-34), same shape as `transition`: a value the sender intends, not a toggle; resends on `sync` so a reload does not lose it. Neither the Service payload nor the Registry follow. **Shipped** — `PresentMessage` carries a `background` variant and `sync` resends it (`src/lib/present-channel.ts`). This row read `[MISSING]` until 2026-08-22 | UC-27 |
 | clear-scripture | Dismiss overlay | UC-13 |
 | request-sync | Projector asks for state; answer resends index, overlay, and blank (OQ-25) | UC-12 |
 | liveness ack | Projector → presenter, own condition only | AD-29 |
@@ -34,7 +34,7 @@ UC-12, UC-13, UC-27, AD-10, AD-29. Session display: showing / blanked / overlay 
 | --- | --- |
 | Authentication | Same-origin BroadcastChannel; not a server session |
 | Validation | Only the shape in the shared module; a surface may not open another channel name (AD-10) |
-| Error handling | Plan identity: **not yet** on the message — receiver does not reject a slide offset [MISSING]. Overlay on `sync`: **not yet** on the message — a projector reload clears overlay [MISSING] (OQ-25). `background` on `sync`: same discipline as `transition` — a reload must resend the current override, not lose it [MISSING], planned with UC-27 |
+| Error handling | Plan identity: **shipped** — every shared-state variant carries `planIdentity` and a receiver whose own identity differs refuses the index (`src/lib/present-channel.ts`, 8 occurrences). `background` on `sync`: **shipped** — `sync` carries `background?` so a reload resends the current override. Overlay on `sync`: still **not** on the message, so a projector reload clears the overlay [MISSING] (OQ-25) — the one of the three that is still open. The first two read `[MISSING]` here until 2026-08-22 |
 | Rate limiting | Heartbeat interval exported once from the liveness evaluator (`PROJECTOR_HEARTBEAT_INTERVAL_MS`); not unbounded and not silent. No HTTP quota — this is not an HTTP API. |
 | Idempotency | Intended values on the wire (`blank`, `index`, `transition`, overlay text). Ack idempotent by construction (AD-29). `request-sync` may be answered twice with the same triple. |
 

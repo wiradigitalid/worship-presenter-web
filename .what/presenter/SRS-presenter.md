@@ -88,7 +88,7 @@ Slideshow is mistaken for the Sabbath guarantee.
 
 ## Slots
 
-`mode: deep`. No `critical` UC. Rules: `02-rules/rules-presenter.md`. Domain: `03-domain/domain-model.md`, `state-machines.md`. Component flows: `04-usecases/UC-11-fullscreen-slideshow.md`, `UC-12-two-screen-presenter.md`, `UC-13-on-demand-verse.md`, `UC-27-live-background-switch.md`. Branches: `05-scenarios/SCN-4-verse-lookup-failed.md`.
+`mode: deep`. No `critical` UC. Rules: `02-rules/rules-presenter.md`. Domain: `03-domain/domain-model.md`, `state-machines.md`. Component flows: `04-usecases/UC-11-fullscreen-slideshow.md`, `UC-12-two-screen-presenter.md`, `UC-13-on-demand-verse.md`, `UC-27-live-background-switch.md`. Branches: `05-scenarios/SCN-4-verse-lookup-failed.md`, `SCN-6-remote-drops-mid-service.md`.
 
 ## Open Items
 
