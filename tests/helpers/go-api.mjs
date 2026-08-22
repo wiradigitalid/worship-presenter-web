@@ -93,58 +93,18 @@ export function stopProcess(proc) {
     return;
   }
 
-  const sleepSync = (ms) => {
-    try {
-      const sab = new SharedArrayBuffer(4);
-      const int32 = new Int32Array(sab);
-      Atomics.wait(int32, 0, 0, ms);
-    } catch {
-      const end = Date.now() + ms;
-      while (Date.now() < end) {}
-    }
-  };
-
   const pid = proc.pid;
-  const isAlive = (targetPid) => {
-    try {
-      process.kill(targetPid, 0);
-      return true;
-    } catch (err) {
-      return err.code === 'EPERM';
-    }
-  };
-
-  if (!isAlive(pid)) {
-    return;
-  }
-
   try {
     process.kill(-pid, 'SIGTERM');
   } catch (err) {
     if (err.code !== 'ESRCH') throw err;
   }
-
-  const start = Date.now();
-  while (Date.now() - start < 1000) {
-    if (!isAlive(pid)) return;
-    sleepSync(50);
-  }
-
   try {
     process.kill(-pid, 'SIGKILL');
   } catch (err) {
     if (err.code !== 'ESRCH') throw err;
   }
-
-  const killStart = Date.now();
-  while (Date.now() - killStart < 1000) {
-    if (!isAlive(pid)) return;
-    sleepSync(50);
-  }
-
-  if (isAlive(pid)) {
-    throw new Error(`Failed to stop process group for pid ${pid}`);
-  }
+  // No synchronous verification: a zombie satisfies kill(pid, 0), and a blocking wait prevents the reap it waits for.
 }
 
 export async function spawnGoApi({
