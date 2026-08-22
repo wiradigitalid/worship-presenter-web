@@ -91,6 +91,9 @@ export default function RunSheetPage() {
           <Link href={`/services/${svc.id}/present`} className={actionClass}>
             {t('edit.actions.present')}
           </Link>
+          <Link href={`/services/${svc.id}/remote`} className={actionClass}>
+            {t('edit.actions.remote')}
+          </Link>
           {isAdmin ? (
             <SyncArtifactButton
               serviceId={svc.id}

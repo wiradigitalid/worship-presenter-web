@@ -2,8 +2,8 @@
 title: 'The remote screen on the phone'
 type: 'feature'
 created: '2026-08-22'
-status: 'ready-for-dev'
-baseline_revision: 'pending-5-2'
+status: 'done'
+baseline_revision: 'c1a1e8a'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:

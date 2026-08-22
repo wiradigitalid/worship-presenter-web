@@ -8,6 +8,7 @@ import DashboardPage from './pages/DashboardPage';
 import CreateServicePage from './pages/CreateServicePage';
 import RunSheetPage from './pages/RunSheetPage';
 import PresentPage from './pages/PresentPage';
+import RemotePage from './pages/RemotePage';
 import SlideshowPage from './pages/SlideshowPage';
 import ProjectorPage from './pages/ProjectorPage';
 import AdminPage from './pages/AdminPage';
@@ -40,6 +41,7 @@ export default function App() {
       </Route>
       <Route element={<SessionProvider><PresentGate /></SessionProvider>}>
         <Route path="/services/:id/present" element={<PresentPage />} />
+        <Route path="/services/:id/remote" element={<RemotePage />} />
       </Route>
     </Routes>
   );

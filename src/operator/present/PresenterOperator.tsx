@@ -720,6 +720,14 @@ export default function PresenterOperator({
           <Button variant="outline" onClick={openProjector}>
             Open projector
           </Button>
+          {remoteCode ? (
+            <span
+              className={`${BADGE_CLASS} border-border bg-muted text-muted-foreground text-xs px-2 py-1 flex items-center gap-1 font-mono`}
+              title="Remote pairing code"
+            >
+              Remote code: {remoteCode}
+            </span>
+          ) : null}
           {/* `nativeButton={false}` because this one really is a link: Base UI
               otherwise warns that a component acting as a button was handed
               something that is not a native `<button>`. */}

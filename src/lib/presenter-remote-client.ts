@@ -216,3 +216,121 @@ export class PresenterRemoteSession {
     this.onStateChange?.('idle');
   }
 }
+
+export type RemoteControlSessionState = {
+  index?: number;
+  blank?: boolean;
+  transition?: SlideTransition;
+  background?: string | null;
+  planIdentity?: string;
+};
+
+export type RemoteControlConnectionState =
+  | 'idle'
+  | 'claiming'
+  | 'connected'
+  | 'disconnected'
+  | 'error';
+
+export interface RemoteControlSessionOptions {
+  serviceId: number;
+  onState: (state: RemoteControlSessionState) => void;
+  onConnectionChange?: (state: RemoteControlConnectionState) => void;
+}
+
+export class RemoteControlSession {
+  private serviceId: number;
+  private onState: (state: RemoteControlSessionState) => void;
+  private onConnectionChange?: (state: RemoteControlConnectionState) => void;
+  private eventSource: EventSource | null = null;
+  private stopped = false;
+
+  constructor(options: RemoteControlSessionOptions) {
+    this.serviceId = options.serviceId;
+    this.onState = options.onState;
+    this.onConnectionChange = options.onConnectionChange;
+  }
+
+  public async claim(code: string): Promise<{ ok: boolean; error?: string }> {
+    this.stopped = false;
+    this.onConnectionChange?.('claiming');
+    try {
+      const res = await fetch(`/api/present/${this.serviceId}/remote/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.trim() }),
+        credentials: 'same-origin',
+      });
+      if (!res.ok) {
+        this.onConnectionChange?.('error');
+        return { ok: false, error: res.status === 409 ? 'conflict' : 'invalid' };
+      }
+      const data = (await res.json()) as { paired?: boolean; state?: RemoteControlSessionState };
+      if (data.state) {
+        this.onState(data.state);
+      }
+      this.openStream();
+      return { ok: true };
+    } catch {
+      this.onConnectionChange?.('error');
+      return { ok: false, error: 'network' };
+    }
+  }
+
+  private openStream(): void {
+    if (this.stopped) return;
+    if (typeof EventSource === 'undefined') return;
+
+    const url = `/api/present/${this.serviceId}/remote/stream?role=remote`;
+    const es = new EventSource(url, { withCredentials: true });
+    this.eventSource = es;
+
+    es.onopen = () => {
+      if (!this.stopped) {
+        this.onConnectionChange?.('connected');
+      }
+    };
+
+    es.onmessage = (event) => {
+      if (this.stopped) return;
+      try {
+        const data = JSON.parse(event.data) as RemoteControlSessionState;
+        this.onState(data);
+      } catch {
+        // Ignore unparseable data
+      }
+    };
+
+    es.onerror = () => {
+      if (!this.stopped) {
+        this.onConnectionChange?.('disconnected');
+      }
+      es.close();
+      this.eventSource = null;
+    };
+  }
+
+  public async sendIntent(intent: PresenterRemoteIntent): Promise<boolean> {
+    if (this.stopped) return false;
+    try {
+      const res = await fetch(`/api/present/${this.serviceId}/remote/intent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(intent),
+        credentials: 'same-origin',
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  public stop(): void {
+    this.stopped = true;
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+    this.onConnectionChange?.('idle');
+  }
+}
