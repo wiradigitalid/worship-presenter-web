@@ -278,6 +278,8 @@ func (s *Server) getRemoteStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache, no-store")
 	w.Header().Set("Connection", "keep-alive")
+	// Disable proxy buffering in nginx so SSE events reach clients immediately without waiting for buffer flushes
+	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
 

@@ -211,11 +211,61 @@ export function scanLivenessReducerInputs(source) {
   return { hasRemoteInput, unionTypes };
 }
 
+export function scanDispatchLivenessRemoteConditions(source) {
+  const file = ts.createSourceFile('test-operator.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const violations = [];
+
+  // Find all calls to dispatchLiveness(...)
+  const calls = nodes(
+    file,
+    (n) => ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === 'dispatchLiveness'
+  );
+
+  for (const call of calls) {
+    // Check all enclosing conditions (if statements, conditional ternary expressions, logical expressions)
+    let curr = call.parent;
+    while (curr) {
+      if (ts.isIfStatement(curr)) {
+        const condText = curr.expression.getText();
+        if (/remote/i.test(condText)) {
+          violations.push(`if-condition: ${condText}`);
+        }
+      } else if (ts.isConditionalExpression(curr)) {
+        const condText = curr.condition.getText();
+        if (/remote/i.test(condText)) {
+          violations.push(`ternary-condition: ${condText}`);
+        }
+      } else if (
+        ts.isBinaryExpression(curr) &&
+        (curr.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
+          curr.operatorToken.kind === ts.SyntaxKind.BarBarToken)
+      ) {
+        // e.g. remoteConnected && dispatchLiveness(...)
+        const leftText = curr.left.getText();
+        if (/remote/i.test(leftText)) {
+          violations.push(`logical-condition: ${leftText}`);
+        }
+      }
+      curr = curr.parent;
+    }
+  }
+
+  return violations;
+}
+
 test('AC-5: No remote input reaches the liveness evaluator (AD-29)', () => {
   const livenessSource = readRaw('src/lib/projector-liveness.ts');
   const scan = scanLivenessReducerInputs(livenessSource);
   assert.equal(scan.hasRemoteInput, false, 'projector-liveness must not accept remote input events');
   assert.deepEqual(scan.unionTypes.sort(), ['ack', 'handle-closed', 'opened', 'tick'].sort());
+
+  const operatorSource = readRaw('src/operator/present/PresenterOperator.tsx');
+  const condViolations = scanDispatchLivenessRemoteConditions(operatorSource);
+  assert.deepEqual(
+    condViolations,
+    [],
+    'No dispatchLiveness call site in PresenterOperator.tsx may be conditioned on remote state'
+  );
 });
 
 test('AC-5 guard proof: injecting a remote signal into liveness reducer fails guard', () => {
@@ -229,6 +279,17 @@ test('AC-5 guard proof: injecting a remote signal into liveness reducer fails gu
   `;
   const scan = scanLivenessReducerInputs(injectedSource);
   assert.equal(scan.hasRemoteInput, true, 'Guard must detect remote signal injection');
+});
+
+test('AC-5 guard proof: injecting remote-conditioned dispatchLiveness fails guard', () => {
+  const injectedOperator = `
+    function TestComponent() {
+      dispatchLiveness({ type: 'ack' });
+      if (remoteConnected) dispatchLiveness({ type: 'ack' });
+    }
+  `;
+  const violations = scanDispatchLivenessRemoteConditions(injectedOperator);
+  assert.ok(violations.length > 0, 'Guard must detect dispatchLiveness conditioned on remoteConnected');
 });
 
 // -----------------------------------------------------------------------------

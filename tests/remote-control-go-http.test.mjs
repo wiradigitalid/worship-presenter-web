@@ -382,6 +382,7 @@ test('5. GET /api/present/{id}/remote/stream emits SSE, delivers intent, and clo
     (res) => {
       assert.equal(res.statusCode, 200);
       assert.match(String(res.headers['content-type']), /text\/event-stream/);
+      assert.equal(res.headers['x-accel-buffering'], 'no');
       res.on('data', (chunk) => {
         receivedData.push(chunk.toString());
       });
