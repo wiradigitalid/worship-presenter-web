@@ -2,7 +2,7 @@
 title: 'The remote relay and the pairing, in Go'
 type: 'feature'
 created: '2026-08-22'
-status: 'ready-for-dev'
+status: 'done'
 baseline_revision: 'cdf161b'
 review_loop_iteration: 0
 followup_review_recommended: false
@@ -69,10 +69,14 @@ Each line is a test in `tests/remote-control-go-http.test.mjs` unless it names a
 6. **A second client claiming the presenting role** takes it; the first client's stream is closed and
    its pairing ends. Both must not believe they hold the role.
 7. **`DELETE …/remote/pair`** ends the pairing and is idempotent — a second call is 204.
-8. **Every one of the five paths returns 401 without a session**, asserted in
-   `tests/go-http-gate.test.mjs`. Prove this guard by removing one path from the matcher and watching
-   that test fail, then revert — a matcher assertion nobody has seen fail is the exact shape AD-5
-   exists to prevent.
+8. **Every one of the five paths returns 401 without a session.** Two guards, and they prove different
+   things — this criterion was corrected on 2026-08-22 after the proof was actually run. `internal/gate`
+   gates everything under `/api/` that is not on an explicit exempt list, so a new path is safe by
+   default and there is no per-path matcher entry to omit; the AD-5 danger here is an **exemption**.
+   `internal/gate/gate_test.go` is therefore the guard that proves the boundary, and it MUST be seen to
+   fail when `/api/present` is added to `exemptPrefixes`. `tests/go-http-gate.test.mjs` asserts the 401
+   over real HTTP but **cannot** prove the boundary, because the handler's own `sessionFrom` check
+   answers 401 too — it passes with the paths exempted. Both are kept; only the first is the proof.
 9. **An API restart ends every pairing.** After a restart the remote's next intent is 409 with
    pair-again, and no pairing is resurrected.
 10. `tests/remote-control-go-http.test.mjs` is registered in `package.json` `scripts.test`. That list
