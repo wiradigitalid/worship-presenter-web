@@ -1,7 +1,7 @@
-promise_progress: 34%
+promise_progress: 33%
 rtm_rows:
   green: 14
-  counted: 41
+  counted: 42
   excluded_no_uc: 1
 work_progress:
 - wave: W1
@@ -32,7 +32,7 @@ validators_skipped:
   V19: 'advisory — wave S/M closed without an RTR-: W1, W3, W4'
 open_questions:
   blocking: 0
-  assumptions: 43
+  assumptions: 44
   external: 1
   answered: 7
   blocking_budget: 9

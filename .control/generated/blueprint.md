@@ -8,7 +8,7 @@ This is what the owner reads at **G3 Blueprint**, instead of seven files. Its co
 
 ## Use case catalogue
 
-**28 use cases**, 7 marked `critical`.
+**29 use cases**, 7 marked `critical`.
 
 | id | Use case | Component | Satisfies | critical |
 | --- | --- | --- | --- | --- |
@@ -33,6 +33,7 @@ This is what the owner reads at **G3 Blueprint**, instead of seven files. Its co
 | `UC-26` | I enter this week's song numbers, books, and backgrounds for however many songs are configured | `hub` | `FR-32` | no |
 | `UC-27` | I switch the live Verse/Reff background during the service | `presenter` | `FR-33` | no |
 | `UC-28` | I correct a song's lyrics for this Service, and optionally save the fix back to the Song Book | `hub` | `FR-34` | yes |
+| `UC-29` | I control the presenting laptop from my phone while standing away from it | `presenter` | `FR-35` | no |
 | `UC-3` | I open the dated Service list | `hub` | `FR-8` | no |
 | `UC-4` | I follow the worship order from the Run-Sheet | `hub` | `FR-17` | no |
 | `UC-5` | I edit Service fields in Hub | `hub` | `FR-11` | yes |

@@ -452,6 +452,19 @@ rtm:
   green: false
   exempt: false
   broken_at: story
+- BG: BG-2
+  CAP: CAP-6
+  FR: FR-35
+  DEC: []
+  UC: UC-29
+  story: ''
+  wave: ''
+  release: ''
+  test: []
+  status: ''
+  green: false
+  exempt: false
+  broken_at: story
 - BG: BG-1
   CAP: CAP-2
   FR: FR-4

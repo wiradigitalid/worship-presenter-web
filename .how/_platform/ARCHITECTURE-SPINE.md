@@ -13,7 +13,7 @@ sources: []
 companions: []
 reviewed:
   date: '2026-08-22'
-  sha: 'af3b6f3f641f14560778d8badccff85e12e1be7e'
+  sha: 'bfb680a2c9303117442be6218b40e0b2e709e85a'
   lenses: [structure, prose]
   note: 'working tree dirty; no commit exists yet capturing it. Re-reviewed via wdi-review/bmad-review (structure, prose) after OQ-39 (admin-created song_books registered-entity fields) was closed by owner ruling: AD-26''s Rule and uniqueness bullets, and AD-36''s Extended bullet, gained new clauses stating positively that an admin-created book carries all five AD-26 fields (code, name Admin-supplied at creation; locale, licence, provenance now also Admin-supplied, OQ-39) and clarifying that an admin-created code is inside AD-26''s global uniqueness (enforced at the write path, 409, never a boot-time check) while a later corpus-file collision resolves as inert per AD-36. Structure lens found two findings: a duplicated collision statement (AD-26''s uniqueness bullet had restated AD-36''s marker-inert mechanism in full) and a miscount (AD-26 said "fifth-field hole" where AD-36 settles three fields, not one) — both fixed: AD-26 now bare-cites AD-36 for the collision instead of restating it, and the field count reads three (locale, licence, provenance) consistently across both ADs. Prose lens found two clarity fixes, both applied: a missing comma in "one constraint whichever writer reaches it", and the ambiguous idiom "in exactly one piece" replaced with "intact". Re-verified clean after fixes; OQ-39 gap fully closed, nothing open.'
 ---
