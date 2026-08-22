@@ -113,6 +113,70 @@ export function upsertHymns(database: Database.Database) {
 }
 
 /**
+ * Seed the SDAH song_books registry row from the corpus file.
+ *
+ * Hand-mirrored port: internal/db/bootstrap.go <-> src/lib/db/index.ts.
+ *
+ * CRITICAL: This is intentionally NOT inside upsertHymns and is NOT gated by
+ * the per-book marker song_book_bootstrapped_SDAH. Migration 5->6 stamped that
+ * marker for every book already in hymns, so an existing database has the marker
+ * while song_books is completely empty. Seeding song_books separately ensures
+ * existing databases heal on the next boot while remaining idempotent via
+ * ON CONFLICT(book_code) DO NOTHING.
+ *
+ * Exported for `tests/song-books-seed.test.mjs`.
+ */
+export function seedSongBooks(database: Database.Database): void {
+  const corpusPath = songBookCorpusPath(DEFAULT_SONG_BOOK);
+  if (!fs.existsSync(corpusPath)) return;
+
+  let raw: Record<string, unknown>;
+  try {
+    raw = JSON.parse(fs.readFileSync(corpusPath, 'utf8')) as Record<string, unknown>;
+  } catch (err) {
+    throw new Error(
+      `song book corpus metadata: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+
+  const meta = (raw?.book ?? {}) as Record<string, unknown>;
+  const code = String(meta.code ?? DEFAULT_SONG_BOOK).trim().toUpperCase() || DEFAULT_SONG_BOOK;
+  const name = String(meta.name ?? '').trim();
+  const locale = String(meta.language ?? '').trim();
+  const licence = String(meta.licence ?? '').trim();
+  const provenance = String(meta.attribution ?? '').trim();
+
+  let inserted = false;
+  let isDefault = 0;
+
+  const tx = database.transaction(() => {
+    const defaultRow = database
+      .prepare(`SELECT COUNT(*) AS count FROM song_books WHERE is_default = 1`)
+      .get() as { count: number } | undefined;
+    const defaultCount = defaultRow?.count ?? 0;
+    isDefault = defaultCount === 0 ? 1 : 0;
+
+    const res = database
+      .prepare(`
+        INSERT INTO song_books (book_code, name, locale, licence, provenance, is_default, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ${STAMP_NOW_SQL})
+        ON CONFLICT(book_code) DO NOTHING
+      `)
+      .run(code, name, locale, licence, provenance, isDefault);
+
+    if (res.changes > 0) {
+      inserted = true;
+    }
+  });
+
+  tx.immediate();
+
+  if (inserted) {
+    console.info(`[corpus] seeded song book ${code} (is_default=${isDefault})`);
+  }
+}
+
+/**
  * `bible_verses.translation` was renamed to `translation_code` (Story 21.2).
  * SQLite cannot rename a column in place when the UNIQUE constraint names it,
  * so the table is rebuilt once.
@@ -788,6 +852,7 @@ export function getDb() {
     // marked first and never re-seeded. The bible reconcile (AD-25) is
     // untouched by DEC-005.
     upsertHymns(db);
+    seedSongBooks(db);
     reconcileBibleCorpus(db);
 
     migrateDataVersionToCurrent(db);

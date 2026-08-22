@@ -97,6 +97,9 @@ func seedHub(handle *sql.DB, root string) error {
 	if err := upsertHymns(handle, root); err != nil {
 		return err
 	}
+	if err := seedSongBooks(handle, root); err != nil {
+		return err
+	}
 	if err := reconcileBible(handle, root); err != nil {
 		return err
 	}
@@ -271,6 +274,88 @@ func upsertHymns(db *sql.DB, root string) error {
 		return err
 	}
 	return tx.Commit()
+}
+
+// seedSongBooks seeds the SDAH song_books registry row from the corpus file.
+//
+// Hand-mirrored port: internal/db/bootstrap.go <-> src/lib/db/index.ts.
+//
+// CRITICAL: This is intentionally NOT inside upsertHymns and is NOT gated by
+// the per-book marker song_book_bootstrapped_SDAH. Migration 5->6 stamped that
+// marker for every book already in hymns, so an existing database has the marker
+// while song_books is completely empty. Seeding song_books separately ensures
+// existing databases heal on the next boot while remaining idempotent via
+// ON CONFLICT(book_code) DO NOTHING.
+func seedSongBooks(db *sql.DB, root string) error {
+	path := filepath.Join(root, "data", "song-book", strings.ToLower(DefaultSongBook)+".json")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	var file struct {
+		Book struct {
+			Code        string `json:"code"`
+			Name        string `json:"name"`
+			Language    string `json:"language"`
+			Attribution string `json:"attribution"`
+			Licence     string `json:"licence"`
+		} `json:"book"`
+	}
+	if err := json.Unmarshal(raw, &file); err != nil {
+		return fmt.Errorf("song book corpus metadata: %w", err)
+	}
+	code := strings.ToUpper(strings.TrimSpace(file.Book.Code))
+	if code == "" {
+		code = DefaultSongBook
+	}
+	name := strings.TrimSpace(file.Book.Name)
+	locale := strings.TrimSpace(file.Book.Language)
+	licence := strings.TrimSpace(file.Book.Licence)
+	provenance := strings.TrimSpace(file.Book.Attribution)
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var defaultCount int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM song_books WHERE is_default = 1`).Scan(&defaultCount); err != nil {
+		return err
+	}
+	isDefault := 0
+	if defaultCount == 0 {
+		isDefault = 1
+	}
+
+	now := nowUTCString()
+	res, err := tx.Exec(`
+		INSERT INTO song_books (book_code, name, locale, licence, provenance, is_default, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(book_code) DO NOTHING`,
+		code, name, locale, licence, provenance, isDefault, now,
+	)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	if rowsAffected > 0 {
+		log.Printf("[corpus] seeded song book %s (is_default=%d)", code, isDefault)
+	}
+
+	return nil
 }
 
 func reconcileBible(db *sql.DB, root string) error {
