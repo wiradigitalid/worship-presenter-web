@@ -164,10 +164,6 @@ export function resolvePreviewBadge(
     return ordinal !== undefined ? `ann-set-${ordinal}` : 'ann-set';
   }
 
-  if (chip && chip !== 'unknown') {
-    return chip;
-  }
-
   return 'general';
 }
 

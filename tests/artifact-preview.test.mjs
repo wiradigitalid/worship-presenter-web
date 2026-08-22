@@ -305,6 +305,14 @@ test('preview row badge resolution produces type, song-set-N, ann-set-N, and lyr
   assert.equal(resolvePreviewBadge(undefined, generalEntry, undefined, enT), 'general');
   assert.equal(resolvePreviewBadge(undefined, generalEntry, undefined, idT), 'general');
 
+  // Standalone slide tests (closed badge vocabulary: 'general', 'song-set-N', 'ann-set-N')
+  assert.equal(resolvePreviewBadge({ kind: 'slide', title: 'Sermon Title' }, undefined, undefined, enT), 'general');
+  assert.equal(resolvePreviewBadge({ kind: 'song-lyric', title: 'Hymn Title' }, undefined, undefined, enT), 'general');
+  assert.equal(resolvePreviewBadge({ kind: 'scripture', title: 'Verse 1' }, undefined, undefined, enT), 'general');
+  assert.equal(resolvePreviewBadge({ kind: 'custom-unrecognized-kind', title: 'Custom' }, undefined, undefined, enT), 'general');
+  assert.equal(resolvePreviewBadge({ kind: 'slide' }, { baseType: 'general', label: 'Sermon' }, undefined, enT), 'general');
+  assert.equal(resolvePreviewBadge({ kind: 'song-lyric' }, { baseType: 'general', label: 'Hymn' }, undefined, enT), 'general');
+
   // 2. Standalone song-set row badge with ordinal (e.g. song-set-1, song-set-2)
   const songSetEntry1 = { baseType: 'song-set-entry', templateId: 'bt-opening-song', label: 'Opening Song' };
   assert.equal(resolvePreviewBadge(undefined, songSetEntry1, { groupOrdinal: 1 }, enT), 'song-set-1');
