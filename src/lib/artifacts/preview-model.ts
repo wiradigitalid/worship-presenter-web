@@ -99,54 +99,50 @@ export function previewLabel(instance: ArtifactInstance): string {
  * - song-set child with role 'lyric': localized lyric role ('verse N', 'reff', 'chorus')
  * - standalone song-set row: 'song-set-N' (or 'song-set' if no ordinal)
  * - standalone ann-set row: 'ann-set-N' (or 'ann-set' if no ordinal)
- * - general row or fallback: baseType / kind chip (e.g. 'general')
+ * - every other row: 'general'. The badge vocabulary is a closed set, so a
+ *   slide's internal kind is never surfaced in it; the title cell beside the
+ *   badge carries the specifics.
  */
 export function resolvePreviewBadge(
-  slide?: { title?: string; kind?: string },
-  entry?: {
-    label?: string;
-    baseType?: ArtifactBaseType;
-    role?: 'title' | 'lyric';
-    groupId?: string;
-  },
-  options?: {
-    groupOrdinal?: number;
-  },
-  t?: (key: I18nKey, params?: Record<string, string | number>) => string
+  slide: { title?: string; kind?: string } | undefined,
+  entry:
+    | {
+        label?: string;
+        baseType?: ArtifactBaseType;
+        role?: 'title' | 'lyric';
+        groupId?: string;
+      }
+    | undefined,
+  options:
+    | {
+        groupOrdinal?: number;
+      }
+    | undefined,
+  t: (key: I18nKey, params?: Record<string, string | number>) => string
 ): string {
-  const translate =
-    t ??
-    ((key: I18nKey, params?: Record<string, string | number>) => {
-      if (key === 'form.preview.role.title') return 'title';
-      if (key === 'form.preview.role.verse') return `verse ${params?.n ?? ''}`.trim();
-      if (key === 'form.preview.role.reff') return 'reff';
-      if (key === 'form.preview.role.chorus') return 'chorus';
-      return key;
-    });
-
   // 1. Song set child rows
   if (entry?.groupId || entry?.role) {
     if (entry.role === 'title') {
-      return translate('form.preview.role.title');
+      return t('form.preview.role.title');
     }
     if (entry.role === 'lyric' || slide?.kind === 'song-lyric') {
       const lyricLabel = slide?.title?.trim() || '';
       const lower = lyricLabel.toLowerCase();
       if (lower === 'reff' || lower.startsWith('reff')) {
-        return translate('form.preview.role.reff');
+        return t('form.preview.role.reff');
       }
       if (lower === 'chorus' || lower.startsWith('chorus')) {
-        return translate('form.preview.role.chorus');
+        return t('form.preview.role.chorus');
       }
       // Check for verse number like "1/3", "1", "Verse 1", etc.
       const match = lyricLabel.match(/^(\d+)(?:\/\d+)?$/) || lyricLabel.match(/^verse\s*(\d+)/i);
       if (match) {
-        return translate('form.preview.role.verse', { n: match[1] });
+        return t('form.preview.role.verse', { n: match[1] });
       }
       if (lyricLabel) {
         return lyricLabel.toLowerCase();
       }
-      return translate('form.preview.role.verse', { n: 1 });
+      return t('form.preview.role.verse', { n: 1 });
     }
   }
 
