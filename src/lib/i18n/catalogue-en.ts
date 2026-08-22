@@ -219,6 +219,10 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'form.preview.description':
     'Real-time generated Order of Service slides mapping.',
   'form.preview.untitledSlide': 'Untitled slide',
+  'form.preview.role.title': 'title',
+  'form.preview.role.verse': 'verse {n}',
+  'form.preview.role.reff': 'reff',
+  'form.preview.role.chorus': 'chorus',
   'edit.actions.back': '← Back to Dashboard',
   'edit.actions.preview': 'Preview (Slideshow)',
   'edit.actions.present': 'Present',

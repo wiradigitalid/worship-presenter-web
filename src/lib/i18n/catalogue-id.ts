@@ -221,6 +221,10 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'form.preview.description':
     'Pemetaan slide urutan ibadah yang dibuat secara langsung.',
   'form.preview.untitledSlide': 'Slide tanpa judul',
+  'form.preview.role.title': 'judul',
+  'form.preview.role.verse': 'bait {n}',
+  'form.preview.role.reff': 'reff',
+  'form.preview.role.chorus': 'chorus',
   'edit.actions.back': '← Kembali ke dasbor',
   'edit.actions.preview': 'Pratinjau (Slideshow)',
   'edit.actions.present': 'Presentasikan',

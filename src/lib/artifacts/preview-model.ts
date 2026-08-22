@@ -14,6 +14,7 @@
  * or renumber slides.
  */
 import { kindChipLabel, type ArtifactBaseType } from '@/lib/registry/types';
+import type { I18nKey } from '@/lib/i18n';
 import {
   flattenArtifactPlan,
   type ArtifactInstance,
@@ -93,14 +94,127 @@ export function previewLabel(instance: ArtifactInstance): string {
 }
 
 /**
+ * Resolves the badge string for a preview row following DEC-004:
+ * - song-set child with role 'title': localized role 'title'
+ * - song-set child with role 'lyric': localized lyric role ('verse N', 'reff', 'chorus')
+ * - standalone song-set row: 'song-set-N' (or 'song-set' if no ordinal)
+ * - standalone ann-set row: 'ann-set-N' (or 'ann-set' if no ordinal)
+ * - general row or fallback: baseType / kind chip (e.g. 'general')
+ */
+export function resolvePreviewBadge(
+  slide?: { title?: string; kind?: string },
+  entry?: {
+    label?: string;
+    baseType?: ArtifactBaseType;
+    role?: 'title' | 'lyric';
+    groupId?: string;
+  },
+  options?: {
+    groupOrdinal?: number;
+  },
+  t?: (key: I18nKey, params?: Record<string, string | number>) => string
+): string {
+  const translate =
+    t ??
+    ((key: I18nKey, params?: Record<string, string | number>) => {
+      if (key === 'form.preview.role.title') return 'title';
+      if (key === 'form.preview.role.verse') return `verse ${params?.n ?? ''}`.trim();
+      if (key === 'form.preview.role.reff') return 'reff';
+      if (key === 'form.preview.role.chorus') return 'chorus';
+      return key;
+    });
+
+  // 1. Song set child rows
+  if (entry?.groupId || entry?.role) {
+    if (entry.role === 'title') {
+      return translate('form.preview.role.title');
+    }
+    if (entry.role === 'lyric' || slide?.kind === 'song-lyric') {
+      const lyricLabel = slide?.title?.trim() || '';
+      const lower = lyricLabel.toLowerCase();
+      if (lower === 'reff' || lower.startsWith('reff')) {
+        return translate('form.preview.role.reff');
+      }
+      if (lower === 'chorus' || lower.startsWith('chorus')) {
+        return translate('form.preview.role.chorus');
+      }
+      // Check for verse number like "1/3", "1", "Verse 1", etc.
+      const match = lyricLabel.match(/^(\d+)(?:\/\d+)?$/) || lyricLabel.match(/^verse\s*(\d+)/i);
+      if (match) {
+        return translate('form.preview.role.verse', { n: match[1] });
+      }
+      if (lyricLabel) {
+        return lyricLabel.toLowerCase();
+      }
+      return translate('form.preview.role.verse', { n: 1 });
+    }
+  }
+
+  // 2. Base type / kind check
+  const baseType = entry?.baseType;
+  const chip = baseType ? kindChipLabel(baseType) : (slide?.kind?.trim() || 'general');
+
+  if (chip === 'song-set') {
+    const ordinal = options?.groupOrdinal;
+    return ordinal !== undefined ? `song-set-${ordinal}` : 'song-set';
+  }
+
+  if (chip === 'marker' || baseType === 'ann-set-marker' || chip === 'announcement') {
+    const ordinal = options?.groupOrdinal;
+    return ordinal !== undefined ? `ann-set-${ordinal}` : 'ann-set';
+  }
+
+  if (chip && chip !== 'unknown') {
+    return chip;
+  }
+
+  return 'general';
+}
+
+/**
  * Derives the title displayed for a preview row following the priority chain:
  * explicit slide title -> entry label -> entry baseType chip -> slide kind -> fallback.
  */
 export function resolvePreviewTitle(
   slide?: { title?: string; kind?: string },
-  entry?: { label?: string; baseType?: ArtifactBaseType },
+  entry?: {
+    label?: string;
+    baseType?: ArtifactBaseType;
+    role?: 'title' | 'lyric';
+    groupId?: string;
+    groupLabel?: string;
+  },
   fallback = 'Untitled slide'
 ): string {
+  // If it's a song-set lyric child, the badge says the verse role (e.g. "verse 1", "reff"),
+  // so the title cell may be empty or show slide.title if it is a real title (not just the verse label).
+  if (entry?.role === 'lyric') {
+    // If slide.title is just a verse number/reff label (e.g. "1/3", "Reff"), omit it so title cell is empty
+    const slideTitle = slide?.title?.trim();
+    if (slideTitle) {
+      const lower = slideTitle.toLowerCase();
+      if (
+        lower === 'reff' ||
+        lower === 'chorus' ||
+        /^\d+(\/\d+)?$/.test(slideTitle) ||
+        /^verse\s*\d+/i.test(slideTitle)
+      ) {
+        return '';
+      }
+      return slideTitle;
+    }
+    return '';
+  }
+
+  // If it's a song-set title child, show the groupLabel (hymn title) or slide.title
+  if (entry?.role === 'title') {
+    const slideTitle = slide?.title?.trim();
+    if (slideTitle) return slideTitle;
+    if (entry.groupLabel?.trim()) return entry.groupLabel.trim();
+    if (entry.label?.trim() && entry.label !== 'Song Title') return entry.label.trim();
+    return '';
+  }
+
   const slideTitle = slide?.title?.trim();
   if (slideTitle) return slideTitle;
 

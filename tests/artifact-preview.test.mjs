@@ -19,7 +19,7 @@ delete process.env.IMAGE_URL_ALLOWLIST;
 const srcUrl = (...parts) =>
   pathToFileURL(path.join(root, 'src', ...parts)).href;
 
-const { buildPreviewEntries, previewBadgeTone, previewLabel, resolvePreviewTitle } = await import(
+const { buildPreviewEntries, previewBadgeTone, previewLabel, resolvePreviewTitle, resolvePreviewBadge } = await import(
   srcUrl('lib', 'artifacts', 'preview-model.ts')
 );
 const { parseRundown } = await import(srcUrl('lib', 'parser.ts'));
@@ -275,6 +275,89 @@ test('badge tone is derived once for both preview surfaces', () => {
       `unknown tone ${tone}`
     );
   }
+});
+
+test('preview row badge resolution produces type, song-set-N, ann-set-N, and lyric roles with i18n support', async () => {
+  const { resolveString } = await import(srcUrl('lib', 'i18n', 'index.ts'));
+
+  const enT = (key, params) => {
+    let s = resolveString(key, 'en');
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        s = s.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+      }
+    }
+    return s;
+  };
+
+  const idT = (key, params) => {
+    let s = resolveString(key, 'id');
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        s = s.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+      }
+    }
+    return s;
+  };
+
+  // 1. General row badge shows slide type 'general'
+  const generalEntry = { baseType: 'general', templateId: 'welcome', label: 'Welcome' };
+  assert.equal(resolvePreviewBadge(undefined, generalEntry, undefined, enT), 'general');
+  assert.equal(resolvePreviewBadge(undefined, generalEntry, undefined, idT), 'general');
+
+  // 2. Standalone song-set row badge with ordinal (e.g. song-set-1, song-set-2)
+  const songSetEntry1 = { baseType: 'song-set-entry', templateId: 'bt-opening-song', label: 'Opening Song' };
+  assert.equal(resolvePreviewBadge(undefined, songSetEntry1, { groupOrdinal: 1 }, enT), 'song-set-1');
+  const songSetEntry2 = { baseType: 'song-set-entry', templateId: 'bt-closing-song', label: 'Closing Song' };
+  assert.equal(resolvePreviewBadge(undefined, songSetEntry2, { groupOrdinal: 2 }, enT), 'song-set-2');
+
+  // 3. Standalone ann-set row badge with ordinal (e.g. ann-set-1, ann-set-2)
+  const annSetEntry1 = { baseType: 'ann-set-marker', templateId: 'ann-set-1', label: 'Announcements 1' };
+  assert.equal(resolvePreviewBadge(undefined, annSetEntry1, { groupOrdinal: 1 }, enT), 'ann-set-1');
+  const annSetEntry2 = { baseType: 'ann-set-marker', templateId: 'ann-set-2', label: 'Announcements 2' };
+  assert.equal(resolvePreviewBadge(undefined, annSetEntry2, { groupOrdinal: 2 }, enT), 'ann-set-2');
+
+  // 4. Song-set child: title role badge is localized (e.g. "title" / "judul")
+  const childTitleEntry = {
+    baseType: 'song-set-entry',
+    templateId: 'bt-opening-song',
+    label: 'Song Title',
+    groupId: 'bt-opening',
+    role: 'title',
+  };
+  assert.equal(resolvePreviewBadge(undefined, childTitleEntry, undefined, enT), 'title');
+  assert.equal(resolvePreviewBadge(undefined, childTitleEntry, undefined, idT), 'judul');
+
+  // 5. Song-set child: lyric role with verse number (e.g. "1/3" -> "verse 1" / "bait 1")
+  const childVerse1Entry = {
+    baseType: 'song-set-entry',
+    templateId: 'bt-opening-song',
+    label: 'Song Lyric',
+    groupId: 'bt-opening',
+    role: 'lyric',
+  };
+  const slideVerse1 = { kind: 'song-lyric', title: '1/3', body: 'Verse 1 text part 1' };
+  assert.equal(resolvePreviewBadge(slideVerse1, childVerse1Entry, undefined, enT), 'verse 1');
+  assert.equal(resolvePreviewBadge(slideVerse1, childVerse1Entry, undefined, idT), 'bait 1');
+
+  // 6. Song-set child continuation verse (same label "1/3" across multiple slides -> repeats "verse 1" / "bait 1")
+  const slideVerse1Cont = { kind: 'song-lyric', title: '1/3', body: 'Verse 1 text part 2' };
+  assert.equal(resolvePreviewBadge(slideVerse1Cont, childVerse1Entry, undefined, enT), 'verse 1');
+  assert.equal(resolvePreviewBadge(slideVerse1Cont, childVerse1Entry, undefined, idT), 'bait 1');
+
+  // 7. Song-set child: reff / chorus role (e.g. "reff" / "chorus")
+  const slideReff = { kind: 'song-lyric', title: 'Reff', body: 'Refrain text' };
+  assert.equal(resolvePreviewBadge(slideReff, childVerse1Entry, undefined, enT), 'reff');
+  assert.equal(resolvePreviewBadge(slideReff, childVerse1Entry, undefined, idT), 'reff');
+
+  const slideChorus = { kind: 'song-lyric', title: 'Chorus', body: 'Chorus text' };
+  assert.equal(resolvePreviewBadge(slideChorus, childVerse1Entry, undefined, enT), 'chorus');
+  assert.equal(resolvePreviewBadge(slideChorus, childVerse1Entry, undefined, idT), 'chorus');
+
+  // 8. Song-set child: verse 2 ("2/3" -> "verse 2" / "bait 2")
+  const slideVerse2 = { kind: 'song-lyric', title: '2/3', body: 'Verse 2 text' };
+  assert.equal(resolvePreviewBadge(slideVerse2, childVerse1Entry, undefined, enT), 'verse 2');
+  assert.equal(resolvePreviewBadge(slideVerse2, childVerse1Entry, undefined, idT), 'bait 2');
 });
 
 test('preview row title resolution prefers title -> entry.label -> entry.baseType/kind -> fallback', async () => {
