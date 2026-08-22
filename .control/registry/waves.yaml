@@ -219,3 +219,46 @@ waves:
               - tests/services-create.test.mjs
               - tests/i18n.test.mjs
             touches: [services]
+
+  - id: W5
+    status: open
+    release: presenter-remote
+    prd: [operator-turn]
+    fr: [FR-35]
+    size: M
+    depends_on: []
+    spec_folder: _bmad-output/specs/spec-w5-presenter-remote/
+    # Isolation: this wave runs in the orca worktree on branch `kodesh87/auto1`, NOT on main --
+    # unlike W1 and W2, whose main-branch override is what disarmed wdi-build Step 5 (no pushed
+    # head means no CI to watch; see RTR-W2 and OQ-51). PR #44 already tracks this branch and is
+    # unmerged, so W5's commits ride it rather than opening a stacked branch. Step 5 therefore has
+    # a real head and a real PR to attend to.
+    # Retrospective: V19 makes it advisory at size M. It will be run anyway -- W2's lesson was that
+    # the wave nobody closed is the one that cost the most.
+    # G4 for presenter closed 2026-08-22 (mode deep, risk_accepted medium), reviewed and stamped.
+    # Design: .how/presenter/02-contracts/03-remote-control.md -- SSE plus POST, pairing in process
+    # memory with no table, intents as intended values so no queue and no replay.
+    epics:
+      - id: presenter-remote
+        stories:
+          - id: "5-1"
+            spec_folder: _bmad-output/specs/spec-w5-presenter-remote/
+            satisfies: [UC-29]
+            tests:
+              - tests/remote-control-go-http.test.mjs
+              - tests/go-http-gate.test.mjs
+            touches: [remote-control]
+          - id: "5-2"
+            spec_folder: _bmad-output/specs/spec-w5-presenter-remote/
+            satisfies: [UC-29]
+            depends_on: ["5-1"]
+            tests:
+              - tests/remote-presenting-client.test.mjs
+            touches: [remote-control, present-channel]
+          - id: "5-3"
+            spec_folder: _bmad-output/specs/spec-w5-presenter-remote/
+            satisfies: [UC-29]
+            depends_on: ["5-2"]
+            tests:
+              - tests/remote-screen.test.mjs
+            touches: [remote-control]
