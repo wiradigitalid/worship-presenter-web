@@ -15,7 +15,7 @@ work_progress:
   stories_total: 2
   work_progress: 100%
 - wave: W2
-  status: open
+  status: closed
   stories_done: 3
   stories_total: 3
   work_progress: 100%
@@ -37,7 +37,7 @@ validators_skipped:
   V19: 'advisory — wave S/M closed without an RTR-: W1, W3, W4'
 open_questions:
   blocking: 0
-  assumptions: 42
+  assumptions: 43
   external: 1
   answered: 7
   blocking_budget: 9

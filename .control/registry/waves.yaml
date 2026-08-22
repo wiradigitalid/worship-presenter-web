@@ -35,7 +35,7 @@ waves:
               - tests/registry-sync-artifact.test.mjs
             touches: [artifacts, services, slide-plan]
   - id: W2
-    status: open
+    status: closed
     release: go-spa-cutover
     prd: [operator-turn, offline-deck]
     fr: [FR-14]
@@ -49,9 +49,17 @@ waves:
     # Reviewed 2026-08-21 to clear its V13 finding. Three redundancies and one stale
     # sentence found and accepted without action, filed as OQ-47: this wave shipped long
     # ago, so its SPEC is a historical record and re-deriving it would be churn.
-    # W2 is still : its own Phase 4 -- distillation, inventories, RTM -- has never
-    # run, and stamping a review trace does not close a wave. That is a separate
-    # wdi-build invocation and MUST NOT be faked here.
+    # Phase 4 ran 2026-08-22 and the wave is closed. In order: registry catch-up and
+    # touches resolved (V12 green); inventories refreshed from code, 45 plan-versus-code
+    # gaps to 0; both structure maps re-derived -- the codebase map was missing six
+    # internal/ packages, internal/gate among them, which AD-5 names as the authorization
+    # boundary; distillation landed four durable conventions from spec-w2-hub/conventions.md
+    # into .constitution/project/codebase-conventions-guide.md and named three wave-scoped
+    # rules as retired; retrospective run and archived as .control/reports/RTR-W2.md
+    # (required, not advisory -- size L); RTM green, all three stories done.
+    # Verdict: accepted-with-open-items. Two open items are method changes this repo may
+    # not make and are filed as OQ-51: an isolation override disarms wdi-build Step 5, and
+    # nothing flags a wave left open after its last story is done.
     # Owner held G3/G4 on the DEC-003 delta 2026-08-19 ("oke, kerjakan aja semua otomatis saya setuju").
     # Isolation: this checkout is main (same override as W1).
     epics:
@@ -62,7 +70,9 @@ waves:
             satisfies: [UC-18]
             tests:
               - tests/go-http-gate.test.mjs
-            touches: [api]
+            # `api` was a container, not an LC `area`, so V12 could not resolve it.
+            # The story is the request gate, which is AD-5's authorization boundary: `auth`.
+            touches: [auth]
           - id: "2-2"
             spec_folder: _bmad-output/specs/spec-w2-hub/
             satisfies: [UC-18]
@@ -76,7 +86,9 @@ waves:
             depends_on: ["2-2"]
             tests:
               - tests/pptx-go-http.test.mjs
-            touches: [api, pptx, slide-plan]
+            # `api` was a container, not an LC `area`. The route is
+            # /api/services/{id}/pptx, owned by LC-2: `services`.
+            touches: [services, pptx, slide-plan]
 
   - id: W3
     status: closed

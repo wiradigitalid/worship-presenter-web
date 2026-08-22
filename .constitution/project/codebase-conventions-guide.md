@@ -7,7 +7,14 @@ ratified_by: null
 
 **Loaded when:** writing or reviewing code.
 
-Filled at W1 close from `_bmad-output/specs/spec-w1-registry/conventions.md` plus as-built Sync/delete routes. While `draft`, MAY be read as guidance and MUST NOT reject a change.
+Filled at W1 close from `_bmad-output/specs/spec-w1-registry/conventions.md` plus as-built Sync/delete
+routes, and at W2 close from `spec-w2-hub/conventions.md`. While `Draft`, MAY be read as guidance and
+MUST NOT reject a change.
+
+W2's companion also carried three rules that were true only inside that wave and MUST NOT be revived:
+keeping a proxy-matcher suite in step with the gate until the Next.js middleware file was deleted,
+not running Next's `getDb()` beside the Go API, and "inventory numbers 1–33 do not change". Next is
+gone (DEC-003) and the API inventory reaches 69.
 
 ## API handler shape
 
@@ -21,6 +28,34 @@ Go handlers in `internal/httpapi` own the live HTTP surface. Specimens: registry
 Registry write tokens are camelCase `updatedAt`. Hub Service tokens are snake_case `updated_at`. Do not mix them on one resource.
 
 The client never sees an internal message. Log `console.error` server-side; return `{ error: string }`.
+
+## Gated JSON responses
+
+`{ error: string }` as the body, plus `Cache-Control: private, no-store` and `Vary: Cookie` — a gated
+response cached by a shared proxy is one operator's data served to the next. Status map: `401` session
+absent, `403` role insufficient, `400` invalid input, `404` row absent, `500` a generic client message
+with the real error logged server-side.
+
+## The session cookie is not trusted on its signature alone
+
+Cookie `auth_session`, HMAC-SHA256 over a base64url payload carrying `uid`, `role`, `sid`, `tv`, `exp`.
+A valid signature is **not** sufficient: `accounts` and `revoked_sessions` are re-checked in-process on
+every gated request, so a revoked session or a demoted role takes effect immediately rather than at
+expiry. Specimen: `internal/auth`.
+
+## The PPTX worker is isolated by import, not by convention
+
+The child receives a finished plan as JSON on stdin, draws it, and exits (AD-30). It MUST NOT import
+`getDb`, `src/lib/db`, `buildSlidePlan`, or `src/lib/settings.ts`. The transition is a **field on that
+JSON**, never a database read — the worker has no database. `internal/pptx` execs it under a deadline
+(`DefaultDrawTimeout`); a wedged render must not hold an HTTP handler open forever.
+
+## The planner is the only source of slide order
+
+`buildSlidePlan` / Go `BuildSlidePlan` decides sequence and content for every surface (AD-7). Order comes
+from `artifact_templates.position`, or from the AD-16 per-service freeze — never from the order rows
+happen to appear in a handler. A missing or invalid template row is **omitted and logged**, never
+substituted from seed (AD-17).
 
 ## Errors are classes, not status codes, below the route
 
@@ -43,4 +78,4 @@ Cite `AD-n` / `OQ-n` / `BR-n` inline rather than restating the decision.
 
 ## Naming
 
-`.constitution/method/language-guide.md` owns naming. `RegistrySnapshot` (live map) and `ServiceRegistrySnapshot` (AD-16 freeze) are two different things.
+`.constitution/method/language-guide.md` owns naming. `RegistrySnapshot` (live map) and `ServiceRegistrySnapshot` (AD-16 freeze) are two different things. Go packages under `internal/` are lowercase and single-word. JSON field names on the wire stay camelCase to match the as-built Hub contracts, whatever the column is called.
