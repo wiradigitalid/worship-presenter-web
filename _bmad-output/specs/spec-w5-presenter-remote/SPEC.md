@@ -104,8 +104,8 @@ No capability is minted here.
 
 ## What the named tests can and cannot prove
 
-Stated here because a green suite must not be mistaken for a working remote. This project has **no DOM
-or component testing** — every UI test is a source scan (`tests/operator-shadcn-guard.test.mjs` is the
+Stated here because a green suite must not be mistaken for a working remote. This project has **no DOM and
+nothing that renders a React component in a test** — every UI test is a source scan (`tests/operator-shadcn-guard.test.mjs` is the
 specimen), and nothing renders a component to assert on it.
 
 - `tests/remote-control-go-http.test.mjs` proves the relay for real: it starts the Go API and exercises

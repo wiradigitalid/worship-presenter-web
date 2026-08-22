@@ -282,7 +282,7 @@ so. Do not spend your time here expecting it to be finished. Filed under OQ-27.
 
 ## What this list cannot cover
 
-This project has **no component testing** — every UI test is a source scan — so nothing here was
+This project has **nothing that renders a React component in a test** — every UI test is a source scan — so nothing here was
 verified by a machine pressing a button. That is why the list exists.
 
 Seven decisions are waiting on you and each changes what "correct" means for something above:

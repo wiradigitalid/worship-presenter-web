@@ -43,8 +43,8 @@ AD-10 and is not this wave's.
 
 ## Acceptance
 
-`tests/remote-screen.test.mjs` is a **source guard, not a behaviour test** — this project has no DOM or
-component testing, and pretending otherwise would make this story pass on a test that cannot fail. What
+`tests/remote-screen.test.mjs` is a **source guard, not a behaviour test** — this project has no DOM and nothing that renders a React
+component in a test, and pretending otherwise would make this story pass on a test that cannot fail. What
 the guard asserts:
 
 1. Only shadcn primitives from `src/components/ui/` are imported for interactive controls;

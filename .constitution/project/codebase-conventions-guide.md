@@ -76,12 +76,13 @@ Registry: `RegistryNotFoundError`, `RegistryStaleError`, `RegistryValidationErro
 
 Cite `AD-n` / `OQ-n` / `BR-n` inline rather than restating the decision.
 
-## There is no component testing, so a UI test is a source scan
+## Nothing renders a React component in a test, so a UI test is a source scan
 
 Distilled at W5 close from `spec-w5-presenter-remote/SPEC.md`, where it had to be
 said before a story could be honest about what its test proved.
 
-No DOM, no renderer, no `@testing-library` — nothing in this repository mounts a component to assert on
+**"Component" here means a React component, not a Product Component (`method-glossary.md`) — this
+says nothing about how hub, presenter or registry are tested.** No DOM, no renderer, no `@testing-library` — nothing in this repository mounts a component to assert on
 it. Every UI test is therefore a **source scan**: `tests/operator-shadcn-guard.test.mjs` is the
 specimen, and `tests/remote-screen.test.mjs` the most recent. A scan can prove that only shadcn
 primitives are imported, that every rendered string resolves through `t` and exists in all three
