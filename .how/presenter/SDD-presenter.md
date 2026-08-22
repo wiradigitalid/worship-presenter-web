@@ -3,7 +3,7 @@ type: sdd
 component: presenter
 status: draft
 created: 2026-08-18
-updated: 2026-08-20
+updated: 2026-08-22
 realizes: [UC-11, UC-12, UC-13, UC-27]
 binds: [AD-1, AD-5, AD-7, AD-10, AD-12, AD-23, AD-24, AD-25, AD-26, AD-27, AD-28, AD-29, AD-30, AD-33, AD-34]
 reviewed:
@@ -59,16 +59,16 @@ Direction: Operator controls → LC-14 → LC-10 → projector. Slideshow is a s
 
 ## Failure Behaviour · [guarded]
 
-Process timeout: Go API after cutover. As-built Next/Node default. Presenter does not retry to the client; the Operator presses again. No numeric per-route timeout was read [ASSUMED].
+Process timeout: the Go API default. The "Next/Node default" this line used to name is gone — DEC-003 retired the Next.js shape and these three screens are Vite SPA routes under `spa/src/pages/`. Presenter does not retry to the client; the Operator presses again. No numeric per-route timeout was read [ASSUMED].
 
 | Boundary | Slow | Absent | Lying | User | Logged |
 | --- | --- | --- | --- | --- | --- |
 | GET /api/scripture | Overlay waits. After timeout, fail closed (SCN-4); no retry | 500; empty corpus → 503 reported as absent (FR-22) | Ambiguous / not found → no guess (NFR-5, SCN-4). Empty `ref` → 400 (SCN-4, not a silent no-op). No session → 401. Unknown translation → 400 | Verse does not appear; Deck stays; Operator sees lookup failed | `console.error` on 500 (`internal/httpapi`) |
 | LC-10 channel | Delayed message; no spinner on the room screen | Projector `lost` (AD-29). `BroadcastChannel` missing → no sync | Another tab on the same name; plan identity mismatch refuses the index (AD-10) | Control: `lost` verdict. Congregation: room-facing refuse copy, not an offset slide | — |
 | LC-10 background override (UC-27) | Delayed message; projector keeps its last-known background until the message lands | No projector live yet: choice is held in LC-14 session state and applied on the projector's first sync (same shape as index/blank/transition) | Background Library empty → resolution falls through to AD-33's normal order, no error; plan identity mismatch refuses the override exactly as it refuses an index | Congregation: no visible change until a projector is live. Operator: no error — the choice is simply pending | — |
-| /services/[id]/slideshow | Slow RSC. After load, in-memory show may continue (OQ-5) | Required: missing Service → Hub, slideshow does not open (UC-11). As-built: `notFound()` → projected "Slides unavailable" [PARTIAL] | Plan failed | Required: Hub; PPTX remains the guarantee (OQ-26). As-built: black failure copy on this URL with run-sheet links [PARTIAL] | `console.error` on plan fail (`slideshow/page.tsx`) |
-| /services/[id]/present | Slow RSC | Required: missing Service or plan → Hub as UC-11; presenter does not open (OQ-26). As-built: missing Service → `notFound()` [PARTIAL] | Plan failed | Required: Hub. As-built: error card on this URL (run-sheet / PPTX); `PresenterOperator` does not mount [PARTIAL] | `console.error` on plan fail (`present/page.tsx`) |
-| /services/[id]/present/projector | Slow RSC | Window closed → `lost`. Presenter open with no projector yet → AD-29 `no evidence yet` (silent), not `lost`. Missing Service → projected not-found | Slideshow tab answering as projector; a second projector window | Forbidden by AD-29; only one projector window may ack. Plan fail: black "Slides unavailable", no Operator chrome | `console.error` on plan fail (`projector/page.tsx`) |
+| /services/[id]/slideshow | Slow first load. After load, in-memory show may continue (OQ-5) | Required: missing Service → Hub, slideshow does not open (UC-11). As-built: `notFound()` → projected "Slides unavailable" [PARTIAL] | Plan failed | Required: Hub; PPTX remains the guarantee (OQ-26). As-built: black failure copy on this URL with run-sheet links [PARTIAL] | `console.error` on plan fail (`spa/src/pages/SlideshowPage.tsx`) |
+| /services/[id]/present | Slow first load | Required: missing Service or plan → Hub as UC-11; presenter does not open (OQ-26). As-built: missing Service → `notFound()` [PARTIAL] | Plan failed | Required: Hub. As-built: error card on this URL (run-sheet / PPTX); `PresenterOperator` does not mount [PARTIAL] | `console.error` on plan fail (`spa/src/pages/PresentPage.tsx`) |
+| /services/[id]/present/projector | Slow first load | Window closed → `lost`. Presenter open with no projector yet → AD-29 `no evidence yet` (silent), not `lost`. Missing Service → projected not-found | Slideshow tab answering as projector; a second projector window | Forbidden by AD-29; only one projector window may ack. Plan fail: black "Slides unavailable", no Operator chrome | `console.error` on plan fail (`spa/src/pages/ProjectorPage.tsx`) |
 
 No server retry. Operator re-opens the URL or the projector from control.
 
@@ -94,7 +94,7 @@ Contracts: `02-contracts/`. No `06-flows/` — not money, not delete, not a thir
 | Overlay on `sync` / request-sync resend of overlay | [MISSING] | `PresentMessage` `sync` is `index`, `blank`, `transition` only; `PresenterOperator` `currentState()` matches; `ProjectorClient` `setOverlay(null)` on `sync` | planned: OQ-25; not a BUG until a wave closes it |
 | Unblank reveals overlay if still open | verified | `ProjectorClient.tsx` blank is a covering `z-50` layer; overlay state is not cleared by blank | matches OQ-25 / BR-6 |
 | No projector → refuse verse lookup | [MISSING] | `PresenterOperator.pushScripture` fetches and broadcasts with no liveness check | planned: OQ-26 |
-| Missing Service/plan → Hub | [PARTIAL] | `present/page.tsx`, `slideshow/page.tsx`: missing Service → `notFound()`; plan fail → error card / black copy, `PresenterOperator` does not mount | required UC-11/OQ-26 is Hub; as-built is not a redirect |
+| Missing Service/plan → Hub | [PARTIAL] | `spa/src/pages/PresentPage.tsx`, `spa/src/pages/SlideshowPage.tsx`: missing Service → `notFound()`; plan fail → error card / black copy, `PresenterOperator` does not mount | required UC-11/OQ-26 is Hub; as-built is not a redirect |
 | Presenter scripture fetch omits `translation` | [PARTIAL] | `PresenterOperator.pushScripture` query is `ref` only; route falls back to `DEFAULT_TRANSLATION` | AD-28 required param not yet on this caller |
 | Projected shell is literal black | verified | AD-24; `tests/theme-chrome.test.mjs` guards it | — |
 | LC-14 session in window memory | verified | `src/lib/present-channel.ts`; `PresenterOperator` refs; not a table | — |

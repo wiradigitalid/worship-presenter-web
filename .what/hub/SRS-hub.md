@@ -3,8 +3,8 @@ type: srs
 component: hub
 status: draft
 created: 2026-08-18
-updated: 2026-08-19
-satisfies: [FR-1, FR-2, FR-3, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-17, FR-18, FR-23, FR-24, FR-25, FR-27, FR-28, FR-32, FR-34]
+updated: 2026-08-22
+satisfies: [FR-1, FR-2, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-17, FR-18, FR-23, FR-24, FR-25, FR-27, FR-28, FR-32, FR-34]
 reviewed:
   date: '2026-08-20'
   sha: 'ea54cdb3f80610648510ed95120b3c1b1afcbd30'
@@ -15,7 +15,7 @@ reviewed:
 
 ## Decision Summary · [G3]
 
-Hub is the Operator's door: sign in, create a Service from this week's Rundown, list, Run-Sheet, edit, generate, download PPTX, announcements, accounts, language settings. Telegram via picoclaw (UC-1, UC-17) is last-phase intake, not this phase's handover.
+Hub is the Operator's door: sign in, create a Service from this week's Rundown, list, Run-Sheet, edit, generate, download PPTX, accounts, language settings. **Not announcements** — composing them moved to the Artifact Registry when FR-3 was retired (DEC-004), which is why UC-21 below is struck through. This sentence listed them until 2026-08-22. Telegram via picoclaw (UC-1, UC-17) is last-phase intake, not this phase's handover.
 
 ## Why · [G3]
 
@@ -25,11 +25,13 @@ Without Hub, the multimedia turn falls back to one person assembling files. This
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Operator | Multimedia team | List, create, edit, generate, download, delete, Run-Sheet, announcements |
+| Operator | Multimedia team | List, create, edit, generate, download, delete, Run-Sheet. **Not announcements** (FR-3 retired, DEC-004) |
 | Events | Later: Rundown sender on Telegram | Not a Hub user this phase |
 | Admin | Account and settings manager | Accounts, transitions, locale |
 
 ## UC Catalogue · [G3]
+
+FR-3 left `satisfies:` on 2026-08-22: it is retired, and a component cannot satisfy a withdrawn promise. UC-21 stays in the table, struck through, because the table is also the record that the promise once existed.
 
 | id | Use case | Actor | Satisfies | critical |
 | --- | --- | --- | --- | --- |
@@ -60,7 +62,7 @@ UC-21's promise is withdrawn with FR-3: Hub no longer composes or reorders any a
 
 - Hub is not public — brief Constraints. Source: brief.
 - Congregation data does not enter git — brief. Source: `.constitution/project/public-repository.md`.
-- Create and edit share one field set and card order. Weekly values (hymn numbers, names, verses, flyers) are entered in Hub, not on the Artifact Registry. Source: as-built forms; FR-27 · FR-11.
+- Create and edit share one field set and card order. Weekly values (hymn numbers, song books, backgrounds, names, verses, lyric corrections) are entered in Hub, not on the Artifact Registry. **Flyers are not among them any more** — they were until FR-3 was retired (DEC-004); an Announcement Set is authored structure in the Registry, and Hub only previews how it expands. Source: as-built forms; FR-27 · FR-11 · FR-32 · FR-34.
 
 ## Non-Goals · [G3]
 

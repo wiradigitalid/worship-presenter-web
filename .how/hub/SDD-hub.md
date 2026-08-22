@@ -3,7 +3,7 @@ type: sdd
 component: hub
 status: draft
 created: 2026-08-18
-updated: 2026-08-20
+updated: 2026-08-22
 realizes: [UC-1, UC-2, UC-3, UC-4, UC-5, UC-6, UC-7, UC-8, UC-9, UC-10, UC-16, UC-17, UC-18, UC-19, UC-22, UC-23, UC-26, UC-28]
 binds: [AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-7, AD-8, AD-9, AD-12, AD-16, AD-23, AD-24, AD-25, AD-26, AD-28, AD-30, AD-31, AD-34, AD-35, AD-36]
 reviewed:
@@ -25,8 +25,9 @@ entirely — the form only previews how the Registry's Announcement Sets expand 
 place, two things the form did not do before: a Song Set group per Registry-configured entry, replacing
 four hardcoded song fields (FR-32), and an inline per-entry lyric editor with a this-service-only
 default and a separate explicit save-to-book action (FR-34) — the latter was blocked on a conflict with
-AD-25, now closed by **DEC-005 / AD-36** (see `05-model/data-model.md` § *Resolved*): the route ships,
-gated only on landing the AD-36 bootstrap-once migration first.
+AD-25, now closed by **DEC-005 / AD-36** (see `05-model/data-model.md` § *Resolved*). **Both have
+shipped:** the bootstrap-once path landed first, as required, and the route is as-built at
+`internal/httpapi/server.go:41` (`POST /api/services/{id}/song-sets/{variableName}/save-to-book`).
 
 Two expensive choices reversed: (1) one authorization gate on the Go API plus a SQLite check per request (AD-5); (2) PPTX as the Sabbath guarantee, not the slideshow (AD-1).
 
@@ -76,17 +77,18 @@ Quotes are the spine **Rule** sentences. Full text in `.how/_platform/ARCHITECTU
 | AD-31 | "A Song Set entry's `variable_name` and title **are** Admin-authored (FR-29): Admin adds, renames, and removes entries directly in the Registry, and a Service with more than four songs is a normal shape the Registry accepts, not a limit worked around." | Hub reads the live entry list (same-process, `artifact_templates` `base_type = 'song-set-entry'`), never authors it; the Service form's Song Set group repeats once per entry, not four fixed fields (FR-32, `05-model/form-fields.md`). |
 | AD-34 | "A live background choice ... travels over AD-10's channel ... It does not survive past that session — the next generate, and any Sync, resolves the background through AD-33's normal order ... exactly as if the live override had never happened." | Hub's `song_set_inputs.background_id` is the **weekly** choice only; Hub never reads or writes a live in-service background override — that stays on the presenter/projector channel entirely outside this component. |
 | AD-35 | "Creating a Service **clones** the whole spliced structure — the main spine plus every Announcement Set it references — into the service-bound snapshot, and only Sync Artifact replaces it thereafter." | LC-12's create/Sync clone widens from "spine only" to "spine + every spliced Announcement Set"; `announcement_items`'s old live-membership shape (superseded AD-16 clause) is gone from Hub's model. |
-| AD-36 | "The `hymns` table becomes authored data after its one-time bootstrap ... from that moment the table, not the file, is authoritative." | `upsertHymns` becomes insert-only-for-absent-rows, gated by a per-book-code marker; that migration is the precondition for LC-2's save-to-book route (UC-28) to ship — see `06-flows/lyric-save-to-book.md`. **The marker gates corpus-seeding only** (whether the shipped file's hymns get bulk-inserted for that `book_code`) — it never gates an administrator's own per-row write, so authoring hymns one at a time into an admin-created book (`02-contracts/05-song-books.md`) and the save-to-book override (UC-28) both work regardless of whether the marker is set. |
+| AD-36 | *(Rule, quoted)* "A song book's rows in `hymns`, **and its own row in `song_books`, are bootstrapped once, from the committed corpus file, and are administrator-owned data from that moment on** … **A corpus-level correction to an already-installed book — content or its registry metadata — reaches a live database only as an explicit, numbered data migration** under the single `data_version` counter (AD-18, AD-21) — **never as a boot-time reconcile** and never a second counter." | `upsertHymns` becomes insert-only-for-absent-rows, gated by a per-book-code marker; that migration is the precondition for LC-2's save-to-book route (UC-28) to ship — see `06-flows/lyric-save-to-book.md`. **The marker gates corpus-seeding only** (whether the shipped file's hymns get bulk-inserted for that `book_code`) — it never gates an administrator's own per-row write, so authoring hymns one at a time into an admin-created book (`02-contracts/05-song-books.md`) and the save-to-book override (UC-28) both work regardless of whether the marker is set. |
 
 ## Failure Behaviour · [guarded]
 
-Hub does not retry a failed call; the Operator (or picoclaw) must press again. Process timeout is the Go API default after cutover — [ASSUMED]: as-built has no `maxDuration` in Hub `route.ts` files (grep 2026-08-19). The one named timeout is `POST /api/upload/from-url`: `REMOTE_IMAGE_TIMEOUT_MS = 8000` in `src/lib/remote-image.ts`.
+Hub does not retry a failed call; the Operator (or picoclaw) must press again. Process timeout is the Go API default — [ASSUMED], never read as a number. The `route.ts` files that phrase once referred to are gone: DEC-003 retired the Next.js shape and the operator UI is a Vite SPA under `spa/` with shared modules in `src/`. The one named timeout is `POST /api/upload/from-url`: `REMOTE_IMAGE_TIMEOUT_MS = 8000` in `src/lib/remote-image.ts`.
 
 This phase's create boundary is `/services/new` (UC-2). `POST /api/webhook` is as-built CAP-11 later; do not treat it as this phase's handover.
 
-Every Hub-owned row from `inventory-api.md` (1–24, 30, 33) and `inventory-screen.md` (1–6). Rows
-11–14 (`/api/announcements*`) are retired (DEC-004); two proposed Song Set / save-to-book operations
-are not yet numbered there (see `00-inventory.md` Findings).
+Every Hub-owned row in `.how/_platform/inventory-api.md` — **24 rows** after the 2026-08-22 refresh
+(commit `0b24d5e`) — plus `inventory-screen.md` 1–6. Rows 10–14 (`/api/announcements*`) are retired
+(DEC-004, FR-3) and now sit in that file's `## Retired` section. Save-to-book is **numbered 67**; the
+separate Song Set PUT this design proposed was never built (see its row below).
 
 | Boundary | Slow | Absent | Lying | What the user sees | What is logged |
 | --- | --- | --- | --- | --- | --- |
@@ -100,8 +102,8 @@ are not yet numbered there (see `00-inventory.md` Findings).
 | GET `/api/services/[id]/pptx` | Generate waits (UC-6 / UC-18); does **not** edit the Service (OQ-20) | 404 `Service not found or not parsed` | Corrupt `parsed_data` → 500 `Corrupt parsed data`. Bad id → 400 | Browser download fails; Sabbath keeps any earlier cached file | `Error generating PPTX:` on 500. Cache write miss: `PPTX cache write/cleanup failed:` (`internal/httpapi`) |
 | POST `/api/services/preview` | Plan build waits; no Service write (OQ-20) | 500 | No date / empty `raw_payload` → 400. Bad image URL → 400 | Preview pane empty or last good preview; form not saved | `Error generating preview:` (`internal/httpapi`) |
 | ~~GET/POST/PUT/PATCH/DELETE `/api/announcements*`~~ | — | — | — | **Retired** (DEC-004, FR-3). See `02-contracts/03-announcements.md`. | — |
-| PUT `/api/services/[id]/song-sets` (proposed) | Timeout; retry may double-apply an upsert (idempotent by `(service_id, variable_name)` PK) | 500 | Unknown `variableName` written anyway (inert row, AD-19/AD-31 posture) — no 400 for that case; same posture for a `songBookCode` naming a book no longer in `song_books` (written anyway, inert, resolved at render time per `05-model/form-fields.md`); bad song number format → 400 | Form: song/book/background stays as last saved on failure | `Error updating song set inputs:` (proposed logging site) |
-| POST `/api/services/[id]/song-sets/[variableName]/save-to-book` (proposed, **designed** — closed by DEC-005/AD-36; MUST NOT ship ahead of the AD-36 bootstrap-once migration, see `06-flows/lyric-save-to-book.md`) | Timeout; a successful write already landed in `hymns` | 500 | Hymn moved under the Operator → 409 (SCN-4); no resolvable hymn → 400 | Editor shows the conflict or the failure; the Service's own override is unaffected either way | `Error saving lyric to song book:` (proposed logging site) |
+| ~~PUT `/api/services/[id]/song-sets`~~ (**never built** — the weekly inputs ride the Service mutation instead: `internal/httpapi/services.go:207` upserts `song_set_inputs` inside the create/update path, so AD-6's precondition is the Service's own `updated_at` and there is no second token. The row is kept because this design predicted a separate endpoint and the build chose otherwise) | Timeout; retry may double-apply an upsert (idempotent by `(service_id, variable_name)` PK) | 500 | Unknown `variableName` written anyway (inert row, AD-19/AD-31 posture) — no 400 for that case; same posture for a `songBookCode` naming a book no longer in `song_books` (written anyway, inert, resolved at render time per `05-model/form-fields.md`); bad song number format → 400 | Form: song/book/background stays as last saved on failure | `Error updating song set inputs:` (proposed logging site) |
+| POST `/api/services/[id]/song-sets/[variableName]/save-to-book` (**as-built**, platform row 67; `internal/httpapi/server.go:41`. Its precondition held: the AD-36 bootstrap-once path landed first) | Timeout; a successful write already landed in `hymns` | 500 | Hymn moved under the Operator → 409 (SCN-4); no resolvable hymn → 400 | Editor shows the conflict or the failure; the Service's own override is unaffected either way | `Error saving lyric to song book:` (proposed logging site) |
 | POST `/api/upload` | Large file waits | Disk fail → 500 `Failed to upload image` | No file / not an image / bad ext → 400 | Upload widget shows failed; no new ref | `Upload error:` (`internal/httpapi`) |
 | POST `/api/upload/from-url` | Aborts at 8000 ms → 504 `That host took too long to answer.` | Unreachable / HTTP error / empty → 502 with that host message | Allowlist/SSRF/malformed/redirect/not-an-image → 400; too large → 413 | Fetch failed with that sentence; no new ref | `Image fetch refused (reason) for <url>:` (`internal/httpapi`) |
 | GET `/api/uploads/[filename]` | File read waits | Missing file or unresolved name → 404 `Not Found` | Name that is not a local upload ref → 404 (resolver refuses) | Broken image in Hub / PPTX | nothing on 404 (`internal/httpapi`) |
@@ -114,12 +116,12 @@ are not yet numbered there (see `00-inventory.md` Findings).
 | PUT `/api/admin/settings` | Timeout | 500 | Unknown transition / locale → 400; `pptx_retention_days` present and not a non-negative integer → 400; not Admin → 403. Keys written: `pptx_retention_days`, `slide_transition`, `ui_locale` | Previous settings remain | `Error updating settings:` (`internal/httpapi`) |
 | POST `/api/webhook` | Timeout is on picoclaw; Hub does not retry | Secret unset → 503. Agent down: Hub silent | Wrong secret → 401 (secret not logged). Bad JSON → 400. Specified: no date → no row (OQ-21); images attach or fail visibly (OQ-22) | CAP-11 later: Events get no read-back. Operator sees Hub. Not this phase's handover | `Error processing webhook:` on 500 (`internal/httpapi`). Does not log the secret |
 | `/login` | Waits on POST login | Login API 500 → form error | Wrong credentials → same 401 copy | Login form; never Hub | none on the page (client shows the API body) |
-| `/` | RSC list waits on SQLite | Uncaught DB throw → framework error page | Corrupt `parsed_data` still listed by date | Dated list, or error page — not a silent empty Hub | none in `src/app/(operator)/page.tsx`; API list logs as above if the client refetch fails |
-| `/services/new` | Preview POST may lag on each paste | Preview 500 → empty preview pane | No date → 400, no row. Partial parse with date → save what was readable (OQ-22) | Form names the miss (UC-2). Cards: Bible Talk → Divine Worship → Sermon → Family → Youth, each Song Set entry rendering its own group (FR-32) with an inline lyric editor (UC-28). No Announcement Flyers card (DEC-004, FR-3 retired). Live Slide Preview only | `Preview error:` in `src/app/(operator)/services/new/CreateForm.tsx` |
+| `/` | List fetch waits on the API | Uncaught DB throw → framework error page | Corrupt `parsed_data` still listed by date | Dated list, or error page — not a silent empty Hub | none in `spa/src/pages/ServicesListPage.tsx`; API list logs as above if the client refetch fails |
+| `/services/new` | Preview POST may lag on each paste | Preview 500 → empty preview pane | No date → 400, no row. Partial parse with date → save what was readable (OQ-22) | Form names the miss (UC-2). Cards: Bible Talk → Divine Worship → Sermon → Family → Youth, each Song Set entry rendering its own group (FR-32) with an inline lyric editor (UC-28). No Announcement Flyers card (DEC-004, FR-3 retired). Live Slide Preview only | `Preview error:` in `src/operator/CreateForm.tsx` |
 | POST `/api/services/[id]/sync-artifact` | Clone until browser timeout | 403 Operator; 404 missing; 400 missing token | Stale `updated_at` → 409 + current token | Run-Sheet stays on the previous freeze until success; entered fields unchanged | `Error syncing artifact registry:` on 500 |
-| `/services/[id]` | RSC + PUT save wait | Missing row → `notFound()` | Stale save → 409 then refresh. Gone after reject → UC-7 not-found (OQ-23). Session expiry at save → 401, no partial write. Save-to-book race → 409 (SCN-4), Service-level fields still save normally | Same form cards as create. Chrome: Preview, Present, Delete Service, Download PPTX, Live Slide Preview, read-only Deck preview strip (renamed from the old announcement strip; no "Manage list" — DEC-004). Admin: Sync Artifact. No Order of Service card | `Preview error:` / save `console.error` in `EditForm.tsx`; delete `console.error` in `DeleteButton.tsx` |
+| `/services/[id]` | Detail fetch + PUT save wait | Missing row → `notFound()` | Stale save → 409 then refresh. Gone after reject → UC-7 not-found (OQ-23). Session expiry at save → 401, no partial write. Save-to-book race → 409 (SCN-4), Service-level fields still save normally | Same form cards as create. Chrome: Preview, Present, Delete Service, Download PPTX, Live Slide Preview, read-only Deck preview strip (renamed from the old announcement strip; no "Manage list" — DEC-004). Admin: Sync Artifact. No Order of Service card | `Preview error:` / save `console.error` in `EditForm.tsx`; delete `console.error` in `DeleteButton.tsx` |
 | ~~`/announcements`~~ | — | — | — | **Retired** (DEC-004, FR-3). Composing announcement content moved to the Artifact Registry. | — |
-| `/admin` | RSC waits | Not Admin → 403 `Forbidden` from the gate | Bad settings body → 400; previous values remain | Accounts, transition, locale, retention | accounts/settings `console.error` as above |
+| `/admin` | Admin fetch waits | Not Admin → 403 `Forbidden` from the gate | Bad settings body → 400; previous values remain | Accounts, transition, locale, retention | accounts/settings `console.error` as above |
 
 ## Robustness Analysis · [deep]
 
@@ -153,12 +155,12 @@ are not yet numbered there (see `00-inventory.md` Findings).
 | LC-16 `buildSlidePlan` | verified (pre-DEC-004 shape) | `src/lib/slide-plan.ts` | lyric join/chorus: `src/lib/lyrics.ts` (BR-6 as amended by DEC-004 S7 — the char-budget/continuous-prose join this row's original claim described is retired by that amendment, not by anything read new this pass) |
 | Song number overlays are positional (`song1Number`..`song4Number`, slot 0..3 into `items`), not list-driven | verified | `src/lib/worship-form-fields.ts:6-9`, `internal/parse/fields.go:11-16`, `internal/httpapi/services.go:745-748`, `src/lib/parsed-fields.ts:20-23` | [MISSING] against FR-32 — this is exactly the hardcode DEC-004/G3 identified; build replaces it with `song_set_inputs`, not this SDD |
 | `familyPrayerRequest` / `youthPrayerRequest` already split from legacy `familyYouth`; `themeVerse` already independent of `verseReading`; `verseReading.translation` already exists | verified | `src/lib/parsed-fields.ts` (`coerceScripture`, `normalizeParsedRundown`), `src/lib/worship-form-fields.ts` (`verseTranslation`) | Corrects DEC-004 Supplement S1's claim that `scripture_bible_version` and the scripture/theme split are new work — they are renames of as-built fields, not new fields (see `05-model/data-model.md`) |
-| No `song_set_inputs` table, no per-service lyric override anywhere in `internal/db/schema.sql` | verified | `internal/db/schema.sql` (grepped 2026-08-20) | [MISSING] — planned table, numbered migration required (AD-9, AD-21); this is genuinely new, unlike the row above |
-| No write path into `hymns` exists today | verified | `internal/httpapi` — no `INSERT`/`UPDATE`/`DELETE` against `hymns` outside `src/lib/db/index.ts`'s corpus loader (same closure AD-25 names) | Confirmed the AD-25 vs. FR-34 conflict was real, not a stale reading of the spine; now closed by DEC-005/AD-36 (see `05-model/data-model.md` § *Resolved*) |
+| `song_set_inputs` exists, carrying the per-service lyric override | verified | `internal/db/schema.sql:186` (`lyric_override TEXT`); mirrored in `src/lib/db/index.ts:722`; written by `internal/httpapi/services.go:207` | **Corrected 2026-08-22.** This row read "No `song_set_inputs` table, no per-service lyric override anywhere in `internal/db/schema.sql`" and labelled it `[MISSING]`, which was true when written and false once the table shipped. Kept rather than deleted per the evidence ladder |
+| A write path into `hymns` exists: save-to-book | verified | `internal/httpapi/server.go:41` → `saveSongSetToBook`; flow in `06-flows/lyric-save-to-book.md` | **Corrected 2026-08-22.** This row read "No write path into `hymns` exists today", which is how the AD-25 vs FR-34 conflict was proved real rather than misread. DEC-005/AD-36 closed the conflict and the route then shipped, so the sentence is now history and is kept as such |
 | Create/edit field set | verified | `CreateForm.tsx` / `EditForm.tsx` | `.how/hub/05-model/form-fields.md` |
 | Deleting a Service unlinks unreferenced local uploads | verified | `src/lib/services/queries.ts` `deleteService`; `tests/services-lib.test.mjs` | OQ-7 |
 | Session expiry at PUT/DELETE refuses before the handler | verified | `internal/gate` `unauthorized` 401 JSON for `/api/` | OQ-23: no partial write |
-| PUT gone → 404, page `notFound()`, EditForm does not POST create | verified | `src/lib/services/update-service.ts`; `src/app/(operator)/services/[id]/page.tsx`; `EditForm.tsx` | OQ-23: UC-7 not-found, do not recreate |
+| PUT gone → 404, page `notFound()`, EditForm does not POST create | verified | `src/lib/services/update-service.ts`; `spa/src/pages/ServiceDetailPage.tsx`; `EditForm.tsx` | OQ-23: UC-7 not-found, do not recreate |
 | Hub create refuses when `parsedData.date` is missing | verified | `src/lib/services/create-service.ts` | OQ-21 on UC-2 |
 | Webhook rundown with no date still inserts using `localIsoDate()` | [MISSING] specified OQ-21 refuse | `internal/httpapi` `parsedData.date \|\| localIsoDate()` | planned CAP-11 (OQ-27) — not a `BUG-` row this wave. Sentence kept |
 | Telegram correction has no nearest-Sabbath lookup | verified | `internal/httpapi` `findServiceByDateOrId` / `handleCorrection` | OQ-21: document used to claim nearest Sabbath; code already rejects. Correction of the claim, not a new lookup |
@@ -177,10 +179,12 @@ OQ-17 · OQ-2 · OQ-4. OQ-6 answered (DEC-003). OQ-1 is parked on CAP-11. Taken 
 
 **New from this pass (DEC-004 G4), routed rather than answered here:**
 
-- **AD-25 vs. FR-34/UC-28/BR-7** — closed by **DEC-005 / AD-36** (2026-08-20): the song book is
-  administrator-owned data after a one-time bootstrap; see `05-model/data-model.md` § *Resolved* and
-  `06-flows/lyric-save-to-book.md`. The one remaining precondition is build-order — the AD-36
-  bootstrap-once migration MUST land before the save-to-book route ships.
-- **Endpoint numbering** — the two proposed Song Set / save-to-book operations have no row in `.how/_platform/inventory-api.md`; out of this component's scope, reported to the platform/blueprint owner (`00-inventory.md` Findings).
+- **AD-25 vs. FR-34/UC-28/BR-7** — closed by **DEC-005 / AD-36** (2026-08-20) and **both halves have
+  shipped** (2026-08-22): the bootstrap-once path landed first, as this item required, then the
+  save-to-book route. Nothing is open here. One caution earned the hard way: AD-36's rule covers the
+  `song_books` registry row as well as `hymns`, and an every-boot reconcile of that row shipped and had
+  to be replaced by a numbered migration the same day. Quote the rule; do not paraphrase it.
+- **Endpoint numbering** — closed. `wdi-blueprint` refreshed the platform inventories from code on
+  2026-08-22 (`0b24d5e`); save-to-book is row 67 and the separate Song Set PUT was never built.
 - **`default_song_book` setting's home** — not decided in this pass (`02-contracts/07-settings.md`).
 - **Unlink-on-delete must widen to check Registry-side references** before the delete cascade above ships, or a shared image could be removed out from under an Announcement Set (`06-flows/delete-service.md` Guarantees).
