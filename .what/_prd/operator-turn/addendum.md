@@ -37,3 +37,32 @@ DEC-001. Old PRD §4.3–4.9, §4.11–4.12 — mapped, not copied. Operator chr
 ## `weekly-sabbath` folder
 
 Withdrawn 2026-08-18. FR IDs were not moved and were not restarted; what changed is only *which document states that promise*.
+
+## FR-35 — mechanism notes, deliberately kept out of the PRD
+
+Recorded here because a promise is not a transport. None of this is decided; the decision record and G3
+own it. Captured so the reasoning is not lost between the ask and the design.
+
+**Why a server channel is needed at all.** Presenter and projector sync today through
+`BroadcastChannel`, which reaches only tabs in the same browser on the same device. A phone cannot join
+it. This is not an obstacle to route around: AD-10 chose it on purpose, "keeping the venue path
+independent of hub connectivity". AD-10 also names its own exit — "No server realtime channel
+(WebSocket/SSE) is introduced **unless product direction changes**" — and FR-35 is that change.
+
+**Shape considered and preferred: SSE plus POST, not WebSocket.** Server-to-client over
+`text/event-stream`, client-to-server as ordinary POSTs. It needs no dependency beyond the Go standard
+library, survives nginx and Cloudflare without upgrade configuration, and is one-directional per stream,
+which matches a topology with exactly one controller. WebSocket stays available if low-latency
+bidirectional traffic is later shown to be needed, and that would be its own decision.
+
+**What must not be admitted.** AD-10's *Prevents* is a projector following one controller while ignoring
+another; AD-29 says a second sender on that channel "is a new decision, not an implementation choice".
+The phone therefore sends intents to the laptop, and the laptop stays the projector's only sender. No new
+message vocabulary is needed: index (inside `sync`), `blank`, `transition`, `background`, `scripture` and
+`clear-scripture` already exist.
+
+**Two properties the design owes the promise.** The laptop must keep driving the room screen with the
+remote gone — so the remote is an input, never a link in the chain. And a remote must reach one
+deliberately chosen laptop: AD-5 puts every new path inside the gate matcher with its assertion test in
+the same change set, but signing in cannot by itself be what selects which screen you drive.
+
