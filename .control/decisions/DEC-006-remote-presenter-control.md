@@ -5,7 +5,6 @@ status: applied
 touches:
   - .how/_platform/ARCHITECTURE-SPINE.md
   - .control/registry/usecases.yaml
-  - .control/registry/requirements.yaml
   - .what/presenter/SRS-presenter.md
 supersedes: AD-10
 superseded_by: null
@@ -83,7 +82,7 @@ has replaced it.
   server anyway, so the connectivity cost is not avoided, and it adds NAT traversal and a second
   realtime stack for no gain.
 - **WebSocket instead of SSE plus POST.** Not rejected on merit, and not decided here — the transport
-  belongs to G3. Recorded so the mechanism argument is not mistaken for this decision's content:
+  belongs to G4, where this component's design is written. Recorded so the mechanism argument is not mistaken for this decision's content:
   SSE plus POST needs nothing beyond the Go standard library, survives proxies without upgrade
   configuration, and is one-directional per stream, which matches a one-controller topology.
 - **Poll the API instead of streaming.** Rejected: an Operator advancing a slide expects the room to

@@ -170,5 +170,4 @@ decisions:
     touches:
       - .how/_platform/ARCHITECTURE-SPINE.md
       - .control/registry/usecases.yaml
-      - .control/registry/requirements.yaml
       - .what/presenter/SRS-presenter.md
