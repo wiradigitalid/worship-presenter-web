@@ -1,0 +1,218 @@
+import type { SlideTransition } from './transitions';
+import type { PresentMessage } from './present-channel';
+
+export type PresenterRemoteIntent =
+  | {
+      type: 'sync';
+      index: number;
+      blank: boolean;
+      transition: SlideTransition;
+      background?: string | null;
+      planIdentity: string;
+    }
+  | { type: 'blank'; blank: boolean; planIdentity: string }
+  | { type: 'transition'; transition: SlideTransition; planIdentity: string }
+  | {
+      type: 'background';
+      background: string | null;
+      planIdentity: string;
+    }
+  | {
+      type: 'scripture';
+      reference: string;
+      text: string;
+      planIdentity: string;
+    }
+  | { type: 'clear-scripture'; planIdentity: string };
+
+export interface PresenterActionHandlers {
+  setIndexAndSync: (index: number) => void;
+  setBlankAndSync: (blank: boolean) => void;
+  setTransitionAndSync: (transition: SlideTransition) => void;
+  setBackgroundAndSync: (background: string | null) => void;
+  broadcast: (msg: PresentMessage) => void;
+}
+
+/**
+ * Applies an arriving remote intent by calling the local presenter handler methods.
+ *
+ * Rules:
+ * 1. An arriving intent calls the exact same handler function as local UI/key presses.
+ * 2. If the intent's planIdentity does not match current planIdentity, the intent is refused
+ *    and the deck does not move (AD-10 / Story 5-2 AC-2).
+ * 3. Returns true if the intent was applied, false if refused or unrecognized.
+ */
+export function applyRemoteIntent(
+  rawIntent: unknown,
+  currentPlanIdentity: string,
+  handlers: PresenterActionHandlers
+): boolean {
+  if (!rawIntent || typeof rawIntent !== 'object') {
+    return false;
+  }
+
+  const intent = rawIntent as Partial<PresenterRemoteIntent>;
+  if (typeof intent.planIdentity !== 'string' || intent.planIdentity !== currentPlanIdentity) {
+    return false;
+  }
+
+  switch (intent.type) {
+    case 'sync': {
+      if (typeof intent.index === 'number') {
+        handlers.setIndexAndSync(intent.index);
+        return true;
+      }
+      return false;
+    }
+    case 'blank': {
+      if (typeof intent.blank === 'boolean') {
+        handlers.setBlankAndSync(intent.blank);
+        return true;
+      }
+      return false;
+    }
+    case 'transition': {
+      if (typeof intent.transition === 'string') {
+        handlers.setTransitionAndSync(intent.transition as SlideTransition);
+        return true;
+      }
+      return false;
+    }
+    case 'background': {
+      if (intent.background === null || typeof intent.background === 'string') {
+        handlers.setBackgroundAndSync(intent.background ?? null);
+        return true;
+      }
+      return false;
+    }
+    case 'scripture': {
+      if (typeof intent.reference === 'string' && typeof intent.text === 'string') {
+        handlers.broadcast({
+          type: 'scripture',
+          reference: intent.reference,
+          text: intent.text,
+          planIdentity: currentPlanIdentity,
+        });
+        return true;
+      }
+      return false;
+    }
+    case 'clear-scripture': {
+      handlers.broadcast({
+        type: 'clear-scripture',
+        planIdentity: currentPlanIdentity,
+      });
+      return true;
+    }
+    default:
+      return false;
+  }
+}
+
+export type PresenterRemoteConnectionState =
+  | 'idle'
+  | 'pairing'
+  | 'connected'
+  | 'role-lost'
+  | 'error';
+
+export interface PresenterRemoteSessionOptions {
+  serviceId: number;
+  getPlanIdentity: () => string;
+  handlers: PresenterActionHandlers;
+  onCode?: (code: string, expiresIn: number) => void;
+  onStateChange?: (state: PresenterRemoteConnectionState) => void;
+}
+
+/**
+ * Manages the presenting client's pairing code and incoming SSE stream.
+ * Connects on start, handles incoming intents, and cleans up on stop.
+ * Strictly stateless regarding queue/retry: no queue, no replay, no buffer (SCN-6).
+ */
+export class PresenterRemoteSession {
+  private serviceId: number;
+  private getPlanIdentity: () => string;
+  private handlers: PresenterActionHandlers;
+  private onCode?: (code: string, expiresIn: number) => void;
+  private onStateChange?: (state: PresenterRemoteConnectionState) => void;
+  private eventSource: EventSource | null = null;
+  private stopped = false;
+
+  constructor(options: PresenterRemoteSessionOptions) {
+    this.serviceId = options.serviceId;
+    this.getPlanIdentity = options.getPlanIdentity;
+    this.handlers = options.handlers;
+    this.onCode = options.onCode;
+    this.onStateChange = options.onStateChange;
+  }
+
+  public async start(): Promise<void> {
+    this.stopped = false;
+    this.onStateChange?.('pairing');
+    try {
+      const res = await fetch(`/api/present/${this.serviceId}/remote/pair`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+      if (!res.ok) {
+        if (!this.stopped) {
+          this.onStateChange?.('error');
+        }
+        return;
+      }
+      const body = (await res.json()) as { code?: string; expiresIn?: number };
+      if (this.stopped) return;
+      if (body.code) {
+        this.onCode?.(body.code, body.expiresIn ?? 60);
+      }
+      this.openStream();
+    } catch {
+      if (!this.stopped) {
+        this.onStateChange?.('error');
+      }
+    }
+  }
+
+  private openStream(): void {
+    if (this.stopped) return;
+    if (typeof EventSource === 'undefined') return;
+
+    const url = `/api/present/${this.serviceId}/remote/stream?role=presenter`;
+    const es = new EventSource(url, { withCredentials: true });
+    this.eventSource = es;
+
+    es.onopen = () => {
+      if (!this.stopped) {
+        this.onStateChange?.('connected');
+      }
+    };
+
+    es.onmessage = (event) => {
+      if (this.stopped) return;
+      try {
+        const data = JSON.parse(event.data);
+        applyRemoteIntent(data, this.getPlanIdentity(), this.handlers);
+      } catch {
+        // Ignore unparseable data
+      }
+    };
+
+    es.onerror = () => {
+      // If the server closed the stream because another client took the presenting role or connection dropped
+      if (!this.stopped) {
+        this.onStateChange?.('role-lost');
+      }
+      es.close();
+      this.eventSource = null;
+    };
+  }
+
+  public stop(): void {
+    this.stopped = true;
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+    this.onStateChange?.('idle');
+  }
+}

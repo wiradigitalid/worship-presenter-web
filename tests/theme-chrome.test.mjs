@@ -2960,6 +2960,7 @@ const UNPAIRED_CHROMATIC_TEXT = [
   // amber treatment as the four sites above rather than adding a new hue, so
   // this is the fifth site sharing one already-filed exception, not a new one.
   'src/operator/present/PresenterOperator.tsx: text-amber-300 [:604, pinned dark, AC-3/Story 17.5 AC-5]',
+  'src/operator/present/PresenterOperator.tsx: text-amber-300 [pinned dark, Story 5-2 AC-7]',
   'src/operator/present/presenter-model.ts: text-amber-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
   'src/operator/present/presenter-model.ts: text-emerald-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',
   'src/operator/present/presenter-model.ts: text-indigo-200 [PRESENTER_TONE_CLASS, pinned dark, AC-3]',

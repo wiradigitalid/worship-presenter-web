@@ -2,7 +2,7 @@
 title: 'The presenting client holds the stream and applies remote intents'
 type: 'feature'
 created: '2026-08-22'
-status: 'ready-for-dev'
+status: 'done'
 baseline_revision: '217e450'
 review_loop_iteration: 0
 followup_review_recommended: false

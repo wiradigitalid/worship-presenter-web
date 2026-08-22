@@ -60,6 +60,10 @@ import {
 } from '@/components/ui/select';
 import { ScriptureRefAutocomplete } from '@/components/ScriptureRefAutocomplete';
 import { useT } from '@/lib/i18n/operator';
+import {
+  PresenterRemoteSession,
+  type PresenterRemoteConnectionState,
+} from '@/lib/presenter-remote-client';
 import SlideGridDialog from './SlideGridDialog';
 import {
   PRESENTER_TONE_CLASS,
@@ -301,6 +305,9 @@ export default function PresenterOperator({
   >([]);
   const [bibleDefaultMissing, setBibleDefaultMissing] = useState(false);
   const [projectorBlocked, setProjectorBlocked] = useState(false);
+  const [remoteState, setRemoteState] =
+    useState<PresenterRemoteConnectionState>('idle');
+  const [remoteCode, setRemoteCode] = useState<string | null>(null);
   // The liveness verdict (`AD-29`): whether the projector is answering. Never
   // a second flag alongside it — the whole point of `nextLivenessState` is
   // that this is the only place the verdict is decided, so a boundary added
@@ -564,6 +571,37 @@ export default function PresenterOperator({
   // a clean window close reportable in well under a second rather than after
   // a timeout.
   useEffect(() => {
+    const session = new PresenterRemoteSession({
+      serviceId,
+      getPlanIdentity: () => planIdentityRef.current,
+      handlers: {
+        setIndexAndSync,
+        setBlankAndSync,
+        setTransitionAndSync,
+        setBackgroundAndSync,
+        broadcast,
+      },
+      onCode: (code) => {
+        setRemoteCode(code);
+      },
+      onStateChange: (state) => {
+        setRemoteState(state);
+      },
+    });
+    void session.start();
+    return () => {
+      session.stop();
+    };
+  }, [
+    serviceId,
+    setIndexAndSync,
+    setBlankAndSync,
+    setTransitionAndSync,
+    setBackgroundAndSync,
+    broadcast,
+  ]);
+
+  useEffect(() => {
     const poll = setInterval(() => {
       if (projectorRef.current && projectorRef.current.closed) {
         dispatchLiveness({ type: 'handle-closed' });
@@ -719,6 +757,11 @@ export default function PresenterOperator({
             The projector is not answering. Use{' '}
             <span className="font-medium">Open projector</span> above to
             reconnect it.
+          </p>
+        ) : null}
+        {remoteState === 'role-lost' ? (
+          <p role="status" className="basis-full text-xs text-amber-300">
+            Remote link disconnected. Another device claimed presenting control or the connection was lost.
           </p>
         ) : null}
       </header>
