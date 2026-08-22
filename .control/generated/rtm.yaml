@@ -202,14 +202,19 @@ rtm:
   FR: FR-20
   DEC: []
   UC: UC-14
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: '1'
+  wave: W3
+  release: dec004-completion
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  - tests/artifacts-api.test.mjs
+  - tests/registry.test.mjs
+  - tests/copy-paste-share-by-reference.test.mjs
+  - tests/canvas-dirty-guard.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-21
@@ -234,6 +239,23 @@ rtm:
   release: registry-order
   test:
   - tests/registry-sync-artifact.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-21
+  DEC: []
+  UC: UC-16
+  story: '3'
+  wave: W3
+  release: dec004-completion
+  test:
+  - tests/sync-artifact-button.test.mjs
+  - tests/registry-sync-artifact.test.mjs
+  - tests/no-router-refresh-guard.test.mjs
+  - tests/i18n.test.mjs
   status: done
   exempt: false
   green: true
@@ -360,14 +382,19 @@ rtm:
   FR: FR-30
   DEC: []
   UC: UC-14
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: '1'
+  wave: W3
+  release: dec004-completion
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  - tests/artifacts-api.test.mjs
+  - tests/registry.test.mjs
+  - tests/copy-paste-share-by-reference.test.mjs
+  - tests/canvas-dirty-guard.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-31
@@ -425,40 +452,94 @@ rtm:
   FR: FR-4
   DEC: []
   UC: UC-20
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: '1'
+  wave: W4
+  release: dec004-completion
+  test:
+  - tests/worship-form-fields.test.mjs
+  - tests/services-create.test.mjs
+  - tests/i18n.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-2
+  FR: FR-4
+  DEC: []
+  UC: UC-20
+  story: '2'
+  wave: W3
+  release: dec004-completion
+  test:
+  - tests/artifact-preview.test.mjs
+  - tests/i18n.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-2
   FR: FR-5
   DEC: []
   UC: UC-20
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: '1'
+  wave: W4
+  release: dec004-completion
+  test:
+  - tests/worship-form-fields.test.mjs
+  - tests/services-create.test.mjs
+  - tests/i18n.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-2
+  FR: FR-5
+  DEC: []
+  UC: UC-20
+  story: '2'
+  wave: W3
+  release: dec004-completion
+  test:
+  - tests/artifact-preview.test.mjs
+  - tests/i18n.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-2
   FR: FR-6
   DEC: []
   UC: UC-20
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: '1'
+  wave: W4
+  release: dec004-completion
+  test:
+  - tests/worship-form-fields.test.mjs
+  - tests/services-create.test.mjs
+  - tests/i18n.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-2
+  FR: FR-6
+  DEC: []
+  UC: UC-20
+  story: '2'
+  wave: W3
+  release: dec004-completion
+  test:
+  - tests/artifact-preview.test.mjs
+  - tests/i18n.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-2
   FR: FR-7

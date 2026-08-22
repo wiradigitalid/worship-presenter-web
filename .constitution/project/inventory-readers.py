@@ -44,6 +44,38 @@ API_HOST = "api"
 SPA_HOST = "spa"
 
 DEFAULT_API_DESC = {
+    # DEC-004 / DEC-005 surfaces.
+    "POST /api/admin/announcement-sets": "Create Announcement Set",
+    "GET /api/admin/announcement-sets": "List Announcement Sets",
+    "PATCH /api/admin/announcement-sets/[id]": "Rename Announcement Set",
+    "DELETE /api/admin/announcement-sets/[id]": "Delete Announcement Set — refused while a spine marker references it (S13 R3)",
+    "GET /api/admin/announcement-sets/[id]/slides": "List slides in an Announcement Set",
+    "POST /api/admin/announcement-sets/[id]/slides": "Create a slide in an Announcement Set",
+    "PUT /api/admin/announcement-sets/[id]/slides/order": "Reorder slides in an Announcement Set",
+    "GET /api/admin/announcement-sets/[id]/slides/[slideId]": "One Announcement Set slide",
+    "PUT /api/admin/announcement-sets/[id]/slides/[slideId]": "Save an Announcement Set slide layout (AD-6)",
+    "PATCH /api/admin/announcement-sets/[id]/slides/[slideId]": "Rename an Announcement Set slide",
+    "DELETE /api/admin/announcement-sets/[id]/slides/[slideId]": "Delete an Announcement Set slide — the shared image file survives (DEC-004 Copy / paste)",
+    "POST /api/admin/announcement-sets/[id]/slides/[slideId]/reset": "Restore an Announcement Set slide to its shipped seed",
+    "GET /api/admin/background-library": "List the background library",
+    "POST /api/admin/background-library": "Add a background image (images only, S10)",
+    "PATCH /api/admin/background-library/[id]": "Rename a background image",
+    "DELETE /api/admin/background-library/[id]": "Remove a background image from the library",
+    "GET /api/background-library": "Backgrounds the Operator may switch to during the service (S11)",
+    "GET /api/admin/song-books": "List song books",
+    "POST /api/admin/song-books": "Create a song book",
+    "PATCH /api/admin/song-books/[bookCode]": "Update song book metadata (AD-6)",
+    "DELETE /api/admin/song-books/[bookCode]": "Delete a song book — not resurrected on a later boot (AD-17)",
+    "GET /api/song-books": "Song books the Operator may choose from",
+    "GET /api/admin/song-set-entries": "List Song Set entries",
+    "POST /api/admin/song-set-entries": "Create a Song Set entry",
+    "PATCH /api/admin/song-set-entries/[variableName]": "Rename a Song Set entry",
+    "DELETE /api/admin/song-set-entries/[variableName]": "Delete a Song Set entry — its variable_name may be reused (S13 R2)",
+    "GET /api/song-set-entries": "Song Set entries the Service form renders",
+    "GET /api/admin/song-set-layouts/[role]": "One layout of the shared Title / Verse / Reff trio (S4)",
+    "PUT /api/admin/song-set-layouts/[role]": "Save a shared trio layout (AD-6)",
+    "POST /api/admin/song-set-layouts/[role]/reset": "Restore a shared trio layout to its shipped seed",
+    "POST /api/services/[id]/song-sets/[variableName]/save-to-book": "Write edited lyrics back to the song book (S12, UC-28)",
     "POST /api/auth/login": "Log in",
     "POST /api/auth/logout": "Log out",
     "POST /api/auth/change-password": "Change password",
@@ -94,6 +126,14 @@ DEFAULT_DB_HOLDS = {
     "bible_verses": "Verse text",
     "artifact_templates": "Slide order and layout",
     "service_registry_snapshots": "Per-Service frozen registry clone (AD-16)",
+    "announcement_sets": "Admin-authored Announcement Sets (DEC-004)",
+    "announcement_set_slides": "Slides inside an Announcement Set",
+    "background_library_images": "Admin-owned background image library (S10)",
+    "song_books": "Song book registry rows (DEC-005 / AD-36)",
+    "song_set_layouts": "Shared Title / Verse / Reff layout trio (S4)",
+    "service_song_set_layouts": "Per-Service frozen copy of the shared trio (S13 R4)",
+    "song_set_inputs": "Per-Service weekly song-set input: number, book, background, lyric override",
+    "bible_book_names": "Book names per translation",
 }
 
 # Table → PC: from `owns:` in components.yaml against the DDL names in db/index.ts.
@@ -111,6 +151,21 @@ TABLE_PC = {
     "bible_verses": "presenter",
     "artifact_templates": "registry",
     "service_registry_snapshots": "registry",
+    # DEC-004 moved announcement composition, the song-set list, the shared layout
+    # trio and the background library into the Registry, so the Admin owns them.
+    "announcement_sets": "registry",
+    "announcement_set_slides": "registry",
+    "background_library_images": "registry",
+    "song_books": "registry",
+    "song_set_layouts": "registry",
+    # Per-Service frozen copy of the trio (S13 R4), parallel to
+    # service_registry_snapshots and owned by the same component.
+    "service_song_set_layouts": "registry",
+    # The weekly values an Operator types for a Service: hymn number, book choice,
+    # background, lyric override. That is Service data, so Hub owns it.
+    "song_set_inputs": "hub",
+    # Sits beside bible_books, per translation.
+    "bible_book_names": "presenter",
 }
 
 # One-shot rebuild names in the same file: created, copied, dropped, renamed. Not live tables.
@@ -245,11 +300,40 @@ METHOD_RE = re.compile(
 )
 
 
+# Endpoints whose resource the Registry owns. DEC-004 moved announcement
+# composition, the song-set list, the shared layout trio and the background
+# library there, so an `owner` of `hub` for these would put them in the wrong
+# component's Failure Behaviour list at G4.
+REGISTRY_API_PREFIXES = (
+    "/api/admin/artifacts",
+    "/api/admin/announcement-sets",
+    "/api/admin/background-library",
+    "/api/admin/song-books",
+    "/api/admin/song-set-entries",
+    "/api/admin/song-set-layouts",
+    "/api/background-library",
+    "/api/song-books",
+    "/api/song-set-entries",
+)
+
+
+# The owner column is DERIVED, never read back from the recorded row — unlike
+# Description. So a hand-curated owner that disagrees with this function is
+# silently overwritten on the next `inventory --write`. Fix the function, not
+# the table. `/api/bible-translations` was lost that way once.
+PRESENTER_API_PREFIXES = (
+    "/api/scripture",
+    "/api/bible-translations",
+)
+
+
 def _api_owner(path: str) -> str:
-    if path.startswith("/api/admin/artifacts"):
+    if path.startswith(REGISTRY_API_PREFIXES):
         return "registry"
-    if path.startswith("/api/scripture"):
+    if path.startswith(PRESENTER_API_PREFIXES):
         return "presenter"
+    # save-to-book writes hymns, which Hub owns, even though the Registry owns
+    # the song-set entry the edit came from.
     return "hub"
 
 

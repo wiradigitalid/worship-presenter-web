@@ -26,6 +26,7 @@ product_components:
       - Service
       - Account
       - AppSetting
+      - SongSetInput
     srs: .what/hub/SRS-hub.md
     sdd: .how/hub/SDD-hub.md
     containers:
@@ -43,6 +44,7 @@ product_components:
       - BibleTranslation
       - BibleBook
       - BibleVerse
+      - BibleBookName
     srs: .what/presenter/SRS-presenter.md
     sdd: .how/presenter/SDD-presenter.md
     containers:
@@ -59,6 +61,11 @@ product_components:
       - ArtifactTemplate
       - ServiceRegistrySnapshot
       - AnnouncementSet
+      - AnnouncementSetSlide
+      - BackgroundImage
+      - SongBook
+      - SongSetLayout
+      - ServiceSongSetLayout
     srs: .what/registry/SRS-registry.md
     sdd: .how/registry/SDD-registry.md
     containers:

@@ -18,4 +18,16 @@ dag:
     - 2-2
   - parallel:
     - 2-3
+- wave: W3
+  order:
+  - parallel:
+    - '1'
+  - parallel:
+    - '2'
+  - parallel:
+    - '3'
+- wave: W4
+  order:
+  - parallel:
+    - '1'
 ```
