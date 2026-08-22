@@ -30,4 +30,12 @@ dag:
   order:
   - parallel:
     - '1'
+- wave: W5
+  order:
+  - parallel:
+    - 5-1
+  - parallel:
+    - 5-2
+  - parallel:
+    - 5-3
 ```

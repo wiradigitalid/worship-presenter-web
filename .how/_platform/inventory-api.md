@@ -65,6 +65,11 @@ Derived by `inventory.py` from `mux.HandleFunc` in `internal/httpapi/server.go`.
 | 66 | api | GET | `/api/background-library` | registry | Backgrounds the Operator may switch to during the service (S11) | published |
 | 36 | api | GET | `/api/bible-translations` | presenter | Installed bible translations (code, name, locale, licence, provenance) plus resolved default | published |
 | 18 | api | GET | `/api/hymns` | hub | Search hymns | published |
+| 70 | api | POST | `/api/present/[id]/remote/claim` | presenter | Bind a remote device to one presenting client using the displayed code | published |
+| 71 | api | POST | `/api/present/[id]/remote/intent` | presenter | One control intent from the remote — index, blank, transition, background, scripture, clear-scripture | published |
+| 72 | api | DELETE | `/api/present/[id]/remote/pair` | presenter | End the pairing deliberately; idempotent | published |
+| 73 | api | POST | `/api/present/[id]/remote/pair` | presenter | Claim the presenting role and get a pairing code to display | published |
+| 74 | api | GET | `/api/present/[id]/remote/stream` | presenter | Role-scoped SSE stream: intents to the presenting client, mirrored state to the remote | published |
 | 29 | api | GET | `/api/scripture` | presenter | Verse lookup (`ref`) and book suggestions (`q`) | published |
 | 8 | api | GET | `/api/services/[id]/pptx` | hub | Download PPTX | published |
 | 67 | api | POST | `/api/services/[id]/song-sets/[variableName]/save-to-book` | hub | Write edited lyrics back to the song book (S12, UC-28) | published |

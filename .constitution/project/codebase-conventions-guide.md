@@ -76,6 +76,29 @@ Registry: `RegistryNotFoundError`, `RegistryStaleError`, `RegistryValidationErro
 
 Cite `AD-n` / `OQ-n` / `BR-n` inline rather than restating the decision.
 
+## There is no component testing, so a UI test is a source scan
+
+Distilled at W5 close from `spec-w5-presenter-remote/SPEC.md`, where it had to be
+said before a story could be honest about what its test proved.
+
+No DOM, no renderer, no `@testing-library` — nothing in this repository mounts a component to assert on
+it. Every UI test is therefore a **source scan**: `tests/operator-shadcn-guard.test.mjs` is the
+specimen, and `tests/remote-screen.test.mjs` the most recent. A scan can prove that only shadcn
+primitives are imported, that every rendered string resolves through `t` and exists in all three
+catalogues, that a forbidden pattern is absent, and that a union of allowed message types has not
+quietly grown. It cannot prove that a control is reachable, legible, or in the right place.
+
+Two consequences, and the second is the one that gets forgotten:
+
+- **A guard is proved by injecting the defect into the real file**, not by feeding a synthetic string to
+  the scanner function. A scanner unit test stays green when the file walk is broken or points at the
+  wrong path, and that has happened here more than once — a guard scanning `src/` while the violation
+  was written in `spa/src/`, and a liveness guard reading a type union while the violation was a
+  condition on an existing call.
+- **A story whose acceptance is visual names its human smoke test as a deliverable.** Otherwise the
+  story closes green on a test that never could have failed, which is the shape this project's whole
+  guard discipline exists to prevent.
+
 ## Naming
 
 `.constitution/method/language-guide.md` owns naming. `RegistrySnapshot` (live map) and `ServiceRegistrySnapshot` (AD-16 freeze) are two different things. Go packages under `internal/` are lowercase and single-word. JSON field names on the wire stay camelCase to match the as-built Hub contracts, whatever the column is called.

@@ -25,6 +25,7 @@ Derived by `inventory.py` from `<Route>` in `spa/src/App.tsx`. Screen identity i
 | 1 | spa/LoginPage | `/login` | — | hub | UC-9 |
 | 10 | spa/ProjectorPage | `/services/[id]/present/projector` | — | presenter | UC-12 |
 | 9 | spa/PresentPage | `/services/[id]/present` | — | presenter | UC-12, UC-13 |
+| 11 | spa/RemotePage | `/services/[id]/remote` | — | presenter | UC-29 |
 | 8 | spa/SlideshowPage | `/services/[id]/slideshow` | — | presenter | UC-11 |
 | 4 | spa/ServiceRunSheet | `/services/[id]` | — | hub | UC-4, UC-5, UC-6, UC-7, UC-16, UC-18 |
 | 3 | spa/CreateServicePage | `/services/new` | — | hub | UC-2 |

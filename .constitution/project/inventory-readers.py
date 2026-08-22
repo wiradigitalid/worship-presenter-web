@@ -44,6 +44,12 @@ API_HOST = "api"
 SPA_HOST = "spa"
 
 DEFAULT_API_DESC = {
+    # DEC-006 remote control relay.
+    "POST /api/present/[id]/remote/pair": "Claim the presenting role and get a pairing code to display",
+    "DELETE /api/present/[id]/remote/pair": "End the pairing deliberately; idempotent",
+    "POST /api/present/[id]/remote/claim": "Bind a remote device to one presenting client using the displayed code",
+    "GET /api/present/[id]/remote/stream": "Role-scoped SSE stream: intents to the presenting client, mirrored state to the remote",
+    "POST /api/present/[id]/remote/intent": "One control intent from the remote — index, blank, transition, background, scripture, clear-scripture",
     # DEC-004 / DEC-005 surfaces.
     "POST /api/admin/announcement-sets": "Create Announcement Set",
     "GET /api/admin/announcement-sets": "List Announcement Sets",
@@ -324,6 +330,9 @@ REGISTRY_API_PREFIXES = (
 PRESENTER_API_PREFIXES = (
     "/api/scripture",
     "/api/bible-translations",
+    # The remote relay (LC-17/LC-18, DEC-006/AD-37). Presenter-owned even though it
+    # lives on `api`: a relay between two browsers cannot live in either browser.
+    "/api/present",
 )
 
 
@@ -448,13 +457,16 @@ DEFAULT_SCREEN_UC = {
     "/services/[id]/slideshow": "UC-11",
     "/services/[id]/present": "UC-12, UC-13",
     "/services/[id]/present/projector": "UC-12",
+    "/services/[id]/remote": "UC-29",
 }
 
 
 def _screen_owner(route: str) -> str:
     if route.startswith("/admin/artifacts"):
         return "registry"
-    if "/slideshow" in route or "/present" in route:
+    # `/remote` is presenter-owned too (UC-29, DEC-006): it is the presenter view on a
+    # second device. It does not contain "/present", so it fell to hub until 2026-08-22.
+    if "/slideshow" in route or "/present" in route or route.endswith("/remote"):
         return "presenter"
     return "hub"
 

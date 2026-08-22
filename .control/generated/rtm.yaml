@@ -452,14 +452,44 @@ rtm:
   FR: FR-35
   DEC: []
   UC: UC-29
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: 5-1
+  wave: W5
+  release: presenter-remote
+  test:
+  - tests/remote-control-go-http.test.mjs
+  - tests/go-http-gate.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
+- BG: BG-2
+  CAP: CAP-6
+  FR: FR-35
+  DEC: []
+  UC: UC-29
+  story: 5-2
+  wave: W5
+  release: presenter-remote
+  test:
+  - tests/remote-presenting-client.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-2
+  CAP: CAP-6
+  FR: FR-35
+  DEC: []
+  UC: UC-29
+  story: 5-3
+  wave: W5
+  release: presenter-remote
+  test:
+  - tests/remote-screen.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-2
   FR: FR-4
