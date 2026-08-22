@@ -72,11 +72,17 @@ one. Nothing in this table may move the projector's verdict.
 | From | To | Trigger | Who may | Guard | Side effect |
 | --- | --- | --- | --- | --- | --- |
 | unpaired | offered | Operator asks the presenting client for a code | Operator | already `paired` → refused, never replaced (OQ-54) | a short-lived single-use code is displayed |
+| offered | offered | Operator asks again before the first code is claimed | Operator | — | the new code replaces the old one and **invalidates it**. Two live codes for one screen is two keys to one door, and the older is the one nobody is watching |
+| any | unpaired | A different client claims the presenting role for this Service | Operator | — | the role moves; the previous client is told it lost it rather than both believing they hold it (AD-29 paid for the neighbouring version of this — a slideshow tab answering as the projector) |
 | offered | paired | A signed-in Operator claims that code from a second device | Operator | code unused and unexpired; being signed in is not sufficient (AD-37) | the remote receives the session state and shows the presenter view |
 | offered | unpaired | The code expires unclaimed | System | — | the code is spent; nothing was ever bound |
 | paired | ended | Either side ends it deliberately | Operator | — | the remote stops controlling; **the service does not change** |
-| paired | ended | The presenting client's stream is gone | System | — | the remote is told to pair again rather than queueing intents (a stale intent is not an instruction) |
+| paired | ended | The presenting client **loses the role** — not merely its stream | System | a stream that drops and returns under the same role does **not** end the pairing | the remote is told to pair again rather than queueing intents (a stale intent is not an instruction) |
 | paired | paired | The remote's own connection drops and returns | System | — | the remote refuses input while dark, then resumes. **The room screen never noticed** |
+
+The pairing is keyed to the presenting **role**, never to a stream connection. That asymmetry is
+deliberate and it is what makes the two drop rows differ: the remote is disposable, and the presenting
+client is the thing the projector follows.
 
 The last row is the one this feature lives or dies by. A remote that drops is an inconvenience to one
 person; a room screen that follows it into the dark is a broken service. Nothing in this lifecycle
