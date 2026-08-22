@@ -30,6 +30,8 @@ product_components:
   logical_components:
   - LC-10
   - LC-14
+  - LC-17
+  - LC-18
   - LC-9
 - id: registry
   name: Registry
@@ -79,6 +81,16 @@ logical_components:
   type: service
   component: hub
   area: slide-plan
+  owner: null
+- id: LC-17
+  type: gateway
+  component: presenter
+  area: remote-control
+  owner: null
+- id: LC-18
+  type: service
+  component: presenter
+  area: remote-control
   owner: null
 - id: LC-2
   type: gateway
