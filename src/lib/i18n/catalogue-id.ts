@@ -223,6 +223,7 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'form.preview.untitledSlide': 'Slide tanpa judul',
   'form.preview.role.title': 'judul',
   'form.preview.role.verse': 'bait {n}',
+  'form.preview.role.lyric': 'lirik',
   'form.preview.role.reff': 'reff',
   'form.preview.role.chorus': 'chorus',
   'edit.actions.back': '← Kembali ke dasbor',

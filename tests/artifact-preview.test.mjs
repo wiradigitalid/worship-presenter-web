@@ -280,25 +280,8 @@ test('badge tone is derived once for both preview surfaces', () => {
 test('preview row badge resolution produces type, song-set-N, ann-set-N, and lyric roles with i18n support', async () => {
   const { resolveString } = await import(srcUrl('lib', 'i18n', 'index.ts'));
 
-  const enT = (key, params) => {
-    let s = resolveString(key, 'en');
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        s = s.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
-      }
-    }
-    return s;
-  };
-
-  const idT = (key, params) => {
-    let s = resolveString(key, 'id');
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        s = s.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
-      }
-    }
-    return s;
-  };
+  const enT = (key) => resolveString(key, 'en');
+  const idT = (key) => resolveString(key, 'id');
 
   // 1. General row badge shows slide type 'general'
   const generalEntry = { baseType: 'general', templateId: 'welcome', label: 'Welcome' };
@@ -366,6 +349,19 @@ test('preview row badge resolution produces type, song-set-N, ann-set-N, and lyr
   const slideVerse2 = { kind: 'song-lyric', title: '2/3', body: 'Verse 2 text' };
   assert.equal(resolvePreviewBadge(slideVerse2, childVerse1Entry, undefined, enT), 'verse 2');
   assert.equal(resolvePreviewBadge(slideVerse2, childVerse1Entry, undefined, idT), 'bait 2');
+
+  // 9. Song-set child: unlabelled lyric row (body section / empty title) -> "lyric" / "lirik" (not "verse 1" / "bait 1")
+  const slideUnlabelled = { kind: 'song-lyric', title: '', body: 'Unlabelled body text' };
+  assert.equal(resolvePreviewBadge(slideUnlabelled, childVerse1Entry, undefined, enT), 'lyric');
+  assert.equal(resolvePreviewBadge(slideUnlabelled, childVerse1Entry, undefined, idT), 'lirik');
+  assert.notEqual(resolvePreviewBadge(slideUnlabelled, childVerse1Entry, undefined, enT), 'verse 1');
+  assert.notEqual(resolvePreviewBadge(slideUnlabelled, childVerse1Entry, undefined, idT), 'bait 1');
+
+  const slideUndefinedTitle = { kind: 'song-lyric', body: 'Unlabelled body text without title' };
+  assert.equal(resolvePreviewBadge(slideUndefinedTitle, childVerse1Entry, undefined, enT), 'lyric');
+  assert.equal(resolvePreviewBadge(slideUndefinedTitle, childVerse1Entry, undefined, idT), 'lirik');
+  assert.notEqual(resolvePreviewBadge(slideUndefinedTitle, childVerse1Entry, undefined, enT), 'verse 1');
+  assert.notEqual(resolvePreviewBadge(slideUndefinedTitle, childVerse1Entry, undefined, idT), 'bait 1');
 });
 
 test('preview row title resolution prefers title -> entry.label -> entry.baseType/kind -> fallback', async () => {

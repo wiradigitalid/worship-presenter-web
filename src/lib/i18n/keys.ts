@@ -196,6 +196,7 @@ export const I18N_KEYS = [
   'form.preview.untitledSlide',
   'form.preview.role.title',
   'form.preview.role.verse',
+  'form.preview.role.lyric',
   'form.preview.role.reff',
   'form.preview.role.chorus',
   'edit.actions.back',

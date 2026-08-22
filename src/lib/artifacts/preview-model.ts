@@ -118,7 +118,7 @@ export function resolvePreviewBadge(
         groupOrdinal?: number;
       }
     | undefined,
-  t: (key: I18nKey, params?: Record<string, string | number>) => string
+  t: (key: I18nKey) => string
 ): string {
   // 1. Song set child rows
   if (entry?.groupId || entry?.role) {
@@ -137,12 +137,12 @@ export function resolvePreviewBadge(
       // Check for verse number like "1/3", "1", "Verse 1", etc.
       const match = lyricLabel.match(/^(\d+)(?:\/\d+)?$/) || lyricLabel.match(/^verse\s*(\d+)/i);
       if (match) {
-        return t('form.preview.role.verse', { n: match[1] });
+        return t('form.preview.role.verse').replace(/\{n\}/g, match[1]);
       }
       if (lyricLabel) {
         return lyricLabel.toLowerCase();
       }
-      return t('form.preview.role.verse', { n: 1 });
+      return t('form.preview.role.lyric');
     }
   }
 
