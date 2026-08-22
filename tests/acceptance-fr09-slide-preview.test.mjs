@@ -86,8 +86,8 @@ ANNOUNCEMENTS
     console.log('--- EXTRACTED PREVIEW BADGES:', badges);
 
     // 1. Invariant: Closed badge vocabulary
-    // Allowed badges: general, song-set-N, ann-set-N, Song Set, title/judul, verse N/bait N, reff, chorus, lyric
-    const allowedBadgePattern = /^(general|song-set(-\d+)?|ann-set(-\d+)?|song set|title|judul|verse\s*\d+|bait\s*\d+|reff|chorus|lyric|lagu|khotbah|ayat)$/i;
+    // Allowed badges: general, song-set-N, ann-set-N, title/judul, verse N/bait N, reff, chorus, lyric
+    const allowedBadgePattern = /^(general|song-set(-\d+)?|ann-set(-\d+)?|title|judul|verse\s*\d+|bait\s*\d+|reff|chorus|lyric)$/i;
     for (const badge of badges) {
       assert.match(
         badge,
@@ -99,6 +99,16 @@ ANNOUNCEMENTS
       assert.doesNotMatch(badge, /song-lyric/i, `Badge "${badge}" leaked internal word "song-lyric"`);
       assert.doesNotMatch(badge, /\{n\}/i, `Badge "${badge}" contains un-interpolated template "{n}"`);
       assert.doesNotMatch(badge, /\{current\}/i, `Badge "${badge}" contains un-interpolated template "{current}"`);
+    }
+
+    // Every hymn in this fixture (SDAH 159, SDAH 200) has labeled verses and refrains, so no badge
+    // in this fixture may be "lyric" (a "lyric" badge here means the role label was lost between the plan and preview).
+    for (const badge of badges) {
+      assert.notEqual(
+        badge.toLowerCase(),
+        'lyric',
+        `Badge "${badge}" is fallback "lyric" — role label was lost between plan and preview for labeled hymn fixture`
+      );
     }
 
     // 2. Invariant: At least one song-set group or song-set badge present

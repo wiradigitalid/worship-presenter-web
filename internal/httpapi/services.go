@@ -747,6 +747,9 @@ func (s *Server) previewService(w http.ResponseWriter, r *http.Request) {
 			entry["groupId"] = it.Artifact.Group.ID
 			entry["groupLabel"] = it.Artifact.Group.Label
 			entry["role"] = it.Artifact.Group.Role
+			if it.Artifact.Group.RoleLabel != "" {
+				entry["roleLabel"] = it.Artifact.Group.RoleLabel
+			}
 		}
 		preview = append(preview, entry)
 	}

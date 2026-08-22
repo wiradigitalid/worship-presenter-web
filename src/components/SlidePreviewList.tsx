@@ -10,6 +10,7 @@ import {
   previewBadgeTone,
   resolvePreviewBadge,
   resolvePreviewTitle,
+  resolveSongSetGroupBadge,
   type PreviewBadgeTone,
   type PreviewEntry,
 } from '@/lib/artifacts/preview-model';
@@ -137,7 +138,7 @@ function buildRows(
     rows.push({
       kind: 'group',
       key: entry.groupId,
-      label: entry.groupLabel || 'Song Set',
+      label: entry.groupLabel || '',
       groupOrdinal: songSetCount,
       children: [child],
     });
@@ -230,11 +231,13 @@ export function SlidePreviewList({
               <span
                 className={`${BADGE_CLASS} bg-primary/10 text-primary border-primary/20`}
               >
-                Song Set
+                {resolveSongSetGroupBadge(row.groupOrdinal)}
               </span>
-              <span className="font-bold text-xs truncate text-foreground">
-                {row.label}
-              </span>
+              {row.label ? (
+                <span className="font-bold text-xs truncate text-foreground">
+                  {row.label}
+                </span>
+              ) : null}
             </div>
             <div className="ml-4 border-l-2 border-primary/30 divide-y divide-border/40">
               {row.children.map((child) => (

@@ -22,6 +22,7 @@ import { catalogValuesFromWeekly } from '@/lib/registry/placeholder-catalog';
 import {
   findResolvedText,
   flattenArtifactPlan,
+  type ArtifactGroupRef,
   type ArtifactInstance,
   type ArtifactLayoutKey,
   type ArtifactLeafNode,
@@ -80,7 +81,11 @@ type SlideRequest = {
 
 type RequestLeaf = { kind: 'artifact'; request: SlideRequest };
 
-type RequestGroupChild = { role: 'title' | 'lyric'; request: SlideRequest };
+type RequestGroupChild = {
+  role: 'title' | 'lyric';
+  roleLabel?: string;
+  request: SlideRequest;
+};
 
 type RequestGroup = {
   kind: 'group';
@@ -170,6 +175,7 @@ function songGroupNodes(
       i += 1;
       children.push({
         role: 'lyric',
+        roleLabel: lyric.label || undefined,
         request: {
           id: `${idPrefix}-lyric-${i}`,
           templateId,
@@ -844,7 +850,7 @@ function hydrateLeaf(
   snapshot: RegistrySnapshot,
   request: SlideRequest,
   ctx: PlanContext,
-  group?: { id: string; label: string; role: 'title' | 'lyric' }
+  group?: ArtifactGroupRef
 ): ArtifactLeafNode {
   const template = snapshot.get(request.templateId);
   return {
@@ -870,7 +876,7 @@ function hydrateLeafOrOmit(
   snapshot: RegistrySnapshot,
   request: SlideRequest,
   ctx: PlanContext,
-  group?: { id: string; label: string; role: 'title' | 'lyric' },
+  group?: ArtifactGroupRef,
   db?: Database.Database
 ): ArtifactLeafNode | null {
   if (snapshot.has(request.templateId)) {
@@ -929,11 +935,15 @@ function hydrateRequestPlan(
     if (node.kind === 'group') {
       const children: ArtifactLeafNode[] = [];
       for (const child of node.children) {
-        const hydrated = hydrateLeafOrOmit(snapshot, child.request, ctx, {
+        const groupRef: ArtifactGroupRef = {
           id: node.id,
           label: node.label,
           role: child.role,
-        });
+        };
+        if (child.roleLabel) {
+          groupRef.roleLabel = child.roleLabel;
+        }
+        const hydrated = hydrateLeafOrOmit(snapshot, child.request, ctx, groupRef);
         if (!hydrated) continue;
         record(child.request, hydrated.instance);
         children.push(hydrated);
