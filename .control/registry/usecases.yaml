@@ -172,3 +172,9 @@ usecases:
     component: hub
     satisfies: [FR-34]
     critical: true
+  - id: UC-29
+    title: "I control the presenting laptop from my phone while standing away from it"
+    actor: Operator
+    component: presenter
+    satisfies: [FR-35]
+    critical: false

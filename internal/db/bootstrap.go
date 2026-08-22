@@ -1,3 +1,5 @@
+// Package db provides database access, migrations, and bootstrap.
+// Mirrored on the TypeScript side by `src/lib/db/index.ts` (bootstrap).
 package db
 
 import (
@@ -20,8 +22,8 @@ const (
 	artifactRegistryBootstrapKey = "artifact_registry_bootstrapped"
 	dataVersionKey               = "data_version"
 	bootstrapDataVersion         = "3"
-	currentDataVersionInt        = 10
-	currentDataVersion           = "10"
+	currentDataVersionInt        = 11
+	currentDataVersion           = "11"
 	// AD-26: the corpus code is the cross-boundary key. The shipped corpus is
 	// SDAH; a per-book settings marker (song_book_bootstrapped_<code>) gates
 	// its one-time bootstrap (DEC-005 / AD-36).
@@ -110,6 +112,11 @@ func seedHub(handle *sql.DB, root string) error {
 	// migrateSnapshots stamps currentDataVersion, which would skip this pass on
 	// every existing database.
 	if err := migrateAnnouncementItemsCascade(handle); err != nil {
+		return err
+	}
+	// AD-17 / AD-21: migration 10->11 seeds song_books row for existing installs
+	// where the marker was already stamped, and must run before migrateSnapshots.
+	if err := migrateSongBookRow(handle, root); err != nil {
 		return err
 	}
 	if err := migrateSnapshots(handle); err != nil {
@@ -212,9 +219,10 @@ type hymnSeed struct {
 // file at data/song-book/<code>.json seeds a book the first time it is seen
 // and never again. Gated by the per-book marker parallel to AD-17's registry
 // marker; when the marker is absent it inserts only rows absent from the
-// table (ON CONFLICT DO NOTHING) and stamps the marker in the same
-// transaction. Once a book is bootstrapped its rows are administrator-owned:
-// no boot path may overwrite title or lyrics, and a gap is never refilled.
+// table (ON CONFLICT DO NOTHING), seeds the song_books registry row with
+// corpus metadata if absent, and stamps the marker in the same transaction.
+// Once a book is bootstrapped its rows and song_books entry are administrator-owned:
+// no boot path may overwrite title, lyrics, or metadata, and a gap is never refilled.
 // The bible family stays under AD-25's full reconcile (reconcileBible).
 func upsertHymns(db *sql.DB, root string) error {
 	path := filepath.Join(root, "data", "song-book", strings.ToLower(DefaultSongBook)+".json")
@@ -227,7 +235,11 @@ func upsertHymns(db *sql.DB, root string) error {
 	}
 	var file struct {
 		Book struct {
-			Code string `json:"code"`
+			Code        string `json:"code"`
+			Name        string `json:"name"`
+			Language    string `json:"language"`
+			Attribution string `json:"attribution"`
+			Licence     string `json:"licence"`
 		} `json:"book"`
 		Hymns []hymnSeed `json:"hymns"`
 	}
@@ -251,6 +263,31 @@ func upsertHymns(db *sql.DB, root string) error {
 		return err
 	}
 	defer tx.Rollback()
+
+	var defaultCount int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM song_books WHERE is_default = 1`).Scan(&defaultCount); err != nil {
+		return err
+	}
+	isDefault := 0
+	if defaultCount == 0 {
+		isDefault = 1
+	}
+
+	name := strings.TrimSpace(file.Book.Name)
+	locale := strings.TrimSpace(file.Book.Language)
+	licence := strings.TrimSpace(file.Book.Licence)
+	provenance := strings.TrimSpace(file.Book.Attribution)
+	now := nowUTCString()
+
+	if _, err := tx.Exec(`
+		INSERT INTO song_books (book_code, name, locale, licence, provenance, is_default, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(book_code) DO NOTHING`,
+		code, name, locale, licence, provenance, isDefault, now,
+	); err != nil {
+		return err
+	}
+
 	stmt, err := tx.Prepare(`
 		INSERT INTO hymns (book_code, number, title, lyrics)
 		VALUES (?, ?, ?, ?)

@@ -4,9 +4,9 @@ kind: screen
 scope: _platform
 status: draft
 created: '2026-08-18'
-updated: '2026-08-20'
+updated: '2026-08-22'
 derived_from: code
-verified: '96dfd61'
+verified: 'c9ceae0'
 platform_rows: []
 states: {}
 ---
@@ -22,10 +22,10 @@ Derived by `inventory.py` from `<Route>` in `spa/src/App.tsx`. Screen identity i
 | 2 | spa/Dashboard | `/` | — | hub | UC-3 |
 | 7 | spa/AdminArtifactsPage | `/admin/artifacts` | — | registry | UC-14, UC-15 |
 | 6 | spa/AdminPage | `/admin` | — | hub | UC-9, UC-19, UC-22 |
-| 5 | spa/AnnouncementsPage | `/announcements` | — | hub | UC-21 |
 | 1 | spa/LoginPage | `/login` | — | hub | UC-9 |
 | 10 | spa/ProjectorPage | `/services/[id]/present/projector` | — | presenter | UC-12 |
 | 9 | spa/PresentPage | `/services/[id]/present` | — | presenter | UC-12, UC-13 |
+| 11 | spa/RemotePage | `/services/[id]/remote` | — | presenter | UC-29 |
 | 8 | spa/SlideshowPage | `/services/[id]/slideshow` | — | presenter | UC-11 |
 | 4 | spa/ServiceRunSheet | `/services/[id]` | — | hub | UC-4, UC-5, UC-6, UC-7, UC-16, UC-18 |
 | 3 | spa/CreateServicePage | `/services/new` | — | hub | UC-2 |
@@ -37,3 +37,10 @@ Derived by `inventory.py` from `<Route>` in `spa/src/App.tsx`. Screen identity i
 - UC-16 (Sync Artifact) is on row 4 (`/services/[id]`), Admin-only control. It is not on row 7.
 - Plan vs code (DEC-003): Screen identity prefix is `spa`. Operator and projected shells live under `spa/src/pages`; client trees remain in `src/operator` and `src/projected`.
 - **Plan vs code (DEC-004, not yet built):** row 5 (`spa/AnnouncementsPage`, UC-21) is retired by this decision — UC-21 leaves Hub's catalogue and its promise moves to the Registry (row 7, `spa/AdminArtifactsPage`), which is expected to gain the Announcement Set / Song Set Entry / Background Library authoring surfaces (UC-24, UC-25) once built. No new row is added for that surface here; the page does not exist yet.
+
+## Retired
+
+| No | Screen | Route | Retired | Why |
+| --- | --- | --- | --- | --- |
+| — | `spa/AnnouncementsPage` | `/announcements` | 2026-08-22 | FR-3 retired: the screen and its nav item are deleted; composition lives in the Artifact Registry (DEC-004). It served UC-21 |
+

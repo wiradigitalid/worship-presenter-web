@@ -3,11 +3,11 @@ type: srs
 component: presenter
 status: draft
 created: 2026-08-18
-updated: 2026-08-20
-satisfies: [FR-15, FR-16, FR-19, FR-22, FR-33]
+updated: 2026-08-22
+satisfies: [FR-15, FR-16, FR-19, FR-22, FR-33, FR-35]
 reviewed:
-  date: '2026-08-19'
-  sha: '02f8d3a124a8c4d4e266ec005f8fc0495879914e'
+  date: '2026-08-22'
+  sha: '411a59d45afe3252d67af11fb11ccbdfbc6b9bd1'
   lenses: [structure, prose, edge-case-hunter]
 ---
 
@@ -36,10 +36,13 @@ The Operator needs a control screen separate from what the Congregation sees. Th
 | UC-12 | I run the two-screen presenter | Operator | FR-16 | no |
 | UC-13 | I display an on-demand verse on the projector | Operator | FR-19, FR-22 | no |
 | UC-27 | I switch the live Verse/Reff background during the service | Operator | FR-33 | no |
+| UC-29 | I control the presenting laptop from my phone while standing away from it | Operator | FR-35 | no |
 
 ## Constraints · [G3]
 
 Operator Chrome does not reach the room screen. Source: AD-24 (adopted) in the spine.
+
+A remote control device (UC-29, DEC-006) is an **input to this component, never a second controller**: it sends intents to the presenting client, and the presenting client stays the only sender the projector follows. The laptop-to-projector path MUST keep working with the remote closed, asleep, or off the network — the room screen never depends on connectivity (AD-37, and AD-1's offline guarantee behind it). Reaching a presenting client is a deliberate act, not a consequence of being signed in.
 
 A live background switch (UC-27, DEC-004) changes what the projector shows for the current Verse/Reff slide only; it never rewrites the Service payload or the Registry, and it does not survive past this session the way a Sync Artifact does — the next generate still resolves the background through the normal order (weekly choice → global default → blank).
 
@@ -85,7 +88,7 @@ Slideshow is mistaken for the Sabbath guarantee.
 
 ## Slots
 
-`mode: deep`. No `critical` UC. Rules: `02-rules/rules-presenter.md`. Domain: `03-domain/domain-model.md`, `state-machines.md`. Component flows: `04-usecases/UC-11-fullscreen-slideshow.md`, `UC-12-two-screen-presenter.md`, `UC-13-on-demand-verse.md`, `UC-27-live-background-switch.md`. Branches: `05-scenarios/SCN-4-verse-lookup-failed.md`.
+`mode: deep`. No `critical` UC. Rules: `02-rules/rules-presenter.md`. Domain: `03-domain/domain-model.md`, `state-machines.md`. Component flows: `04-usecases/UC-11-fullscreen-slideshow.md`, `UC-12-two-screen-presenter.md`, `UC-13-on-demand-verse.md`, `UC-27-live-background-switch.md`. Branches: `05-scenarios/SCN-4-verse-lookup-failed.md`, `SCN-6-remote-drops-mid-service.md`.
 
 ## Open Items
 

@@ -115,6 +115,8 @@ type ParsedRundown struct {
 	FamilyYouth         *string          `json:"familyYouth"`
 	FamilyPrayerRequest *string          `json:"familyPrayerRequest"`
 	YouthPrayerRequest  *string          `json:"youthPrayerRequest"`
+	FamilyName          *string          `json:"familyName,omitempty"`
+	YouthName           *string          `json:"youthName,omitempty"`
 }
 
 type Media struct {

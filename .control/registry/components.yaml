@@ -26,6 +26,7 @@ product_components:
       - Service
       - Account
       - AppSetting
+      - SongSetInput
     srs: .what/hub/SRS-hub.md
     sdd: .how/hub/SDD-hub.md
     containers:
@@ -43,6 +44,7 @@ product_components:
       - BibleTranslation
       - BibleBook
       - BibleVerse
+      - BibleBookName
     srs: .what/presenter/SRS-presenter.md
     sdd: .how/presenter/SDD-presenter.md
     containers:
@@ -59,6 +61,11 @@ product_components:
       - ArtifactTemplate
       - ServiceRegistrySnapshot
       - AnnouncementSet
+      - AnnouncementSetSlide
+      - BackgroundImage
+      - SongBook
+      - SongSetLayout
+      - ServiceSongSetLayout
     srs: .what/registry/SRS-registry.md
     sdd: .how/registry/SDD-registry.md
     containers:
@@ -172,6 +179,18 @@ logical_components:
     component: registry
     container: api
     area: artifacts
+  - id: LC-17
+    name: "Presenter remote relay"
+    type: gateway
+    component: presenter
+    container: api
+    area: remote-control
+  - id: LC-18
+    name: "Remote pairing registry"
+    type: service
+    component: presenter
+    container: api
+    area: remote-control
   - id: LC-16
     name: "Slide plan builder"
     type: service

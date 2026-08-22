@@ -1,0 +1,33 @@
+- id: "1"
+  title: Family and Youth name inputs, and the S6 closing-prayer checkbox
+  description: >-
+    Binds the two weekly name fields whose storage already exists to inputs on
+    both Service forms, and replaces the silent closingPrayerPerson auto-fill
+    with the deliberate checkbox S6 asks for. Against SPEC CAP-2.
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: >-
+    Read src/lib/worship-form-fields.ts for the exact field names before wiring
+    anything; the storage landed in f393bfd and is not yours to rebuild.
+
+    The two inputs must reach create, update AND the preview request body. A field
+    that reaches create but not preview makes the Live Slide Preview lie about the
+    deck. Grep every place familyPrayerRequest is sent and match it exactly.
+
+    The checkbox replaces shouldAutoFill (CreateForm.tsx ~367, EditForm.tsx ~442),
+    which today overwrites closingPrayerPerson whenever the sermon speaker changes
+    and can destroy a name the operator typed. Delete that machinery - do not leave
+    it running beside the checkbox, or one field has two writers. Unchecked means
+    nothing writes to that field except the operator. On the edit form infer the
+    initial state from stored values: checked only when the stored closing-prayer
+    person already equals the stored sermon speaker. State your both-empty decision
+    in the report.
+
+    Prefer extracting the "should the box start checked" rule into a pure function
+    you can test directly over burying it in the component.
+
+    Every AC needs a test that can fail, and an absence AC needs a guard that scans
+    what it claims - prove each by injecting the defect, watching it fail, and
+    reverting. W3 was returned twice for exactly that gap. Follow the HALT protocol
+    and stamp the final status before exiting; W3's story 2 worker exited without
+    stamping and the step had to be redone.

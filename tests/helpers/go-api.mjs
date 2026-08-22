@@ -92,7 +92,19 @@ export function stopProcess(proc) {
     }
     return;
   }
-  proc.kill('SIGTERM');
+
+  const pid = proc.pid;
+  try {
+    process.kill(-pid, 'SIGTERM');
+  } catch (err) {
+    if (err.code !== 'ESRCH') throw err;
+  }
+  try {
+    process.kill(-pid, 'SIGKILL');
+  } catch (err) {
+    if (err.code !== 'ESRCH') throw err;
+  }
+  // No synchronous verification: a zombie satisfies kill(pid, 0), and a blocking wait prevents the reap it waits for.
 }
 
 export async function spawnGoApi({
@@ -105,6 +117,7 @@ export async function spawnGoApi({
   const output = [];
   const child = spawn('go', ['run', './cmd/api'], {
     cwd: root,
+    detached: process.platform !== 'win32',
     env: {
       ...process.env,
       PORT: String(port),

@@ -111,6 +111,7 @@ functional:
   - { id: FR-32, capability: CAP-4, text: "Weekly song inputs on the Hub form match the configured song-set list" }
   - { id: FR-33, capability: CAP-6, text: "Operator changes the live Verse/Reff background during the service" }
   - { id: FR-34, capability: CAP-4, text: "Operator edits a song's lyrics for this Service only, with an explicit action to save them back to the Song Book" }
+  - { id: FR-35, capability: CAP-6, text: "Operator controls the presenting laptop from a second signed-in device" }
 
 nonfunctional:
   - id: NFR-1

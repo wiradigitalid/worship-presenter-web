@@ -1,5 +1,14 @@
 import { toast } from 'sonner';
-import { ArrowDown, ArrowUp, Copy, Trash2 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Bold,
+  BringToFront,
+  Copy,
+  Italic,
+  SendToBack,
+  Trash2,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   ArtifactLayout,
@@ -37,42 +46,34 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const CANVAS_WIDTH = 960;
-const CANVAS_HEIGHT = 540;
-
-/**
- * Prefix for element ids authored in the editor. Shipped seed layouts only use
- * `e<n>` ids, so this prefix can never collide with one and doubles as the
- * client-side marker for "this element may be deleted".
- */
-const USER_ELEMENT_PREFIX = 'usr-';
-
-const NEW_TEXT_CONTENT = 'New text';
-const NEW_SHAPE_FILL = '#5C2E16';
-const NEW_TEXT_SIZE_PX = { w: 400, h: 80 };
-const NEW_SHAPE_SIZE_PX = { w: 300, h: 180 };
-/** Cascade offset so repeated inserts do not stack on the exact same pixel. */
-const INSERT_CASCADE_PX = 18;
-const INSERT_CASCADE_STEPS = 8;
-
-/**
- * Construction defaults for text objects. They intentionally mirror the render
- * defaults in `@/lib/artifacts/render-model` so a style key we omit renders
- * identically in the PPTX and on the projector.
- */
-const DEFAULT_FONT_COLOR = '#FFFFFF';
-const DEFAULT_FONT_FAMILY = 'Arial';
-const DEFAULT_TEXT_ALIGN = 'left' as const;
-const DEFAULT_FONT_SIZE = 32;
-/** Matches the `min`/`max` hints on the font-size input. */
-const MIN_FONT_SIZE = 8;
-const MAX_FONT_SIZE = 200;
-/**
- * The server rejects non-positive `w`/`h`, so a degenerate drag must never be
- * serialized as zero. ~1px of the 960x540 reference canvas.
- */
-const MIN_ELEMENT_W_PCT = pxToPct(1, CANVAS_WIDTH);
-const MIN_ELEMENT_H_PCT = pxToPct(1, CANVAS_HEIGHT);
+import {
+  CANVAS_HEIGHT,
+  CANVAS_WIDTH,
+  DEFAULT_FONT_COLOR,
+  DEFAULT_FONT_FAMILY,
+  DEFAULT_FONT_SIZE,
+  DEFAULT_TEXT_ALIGN,
+  FabricTextLike,
+  INSERT_CASCADE_PX,
+  INSERT_CASCADE_STEPS,
+  MAX_FONT_SIZE,
+  MIN_FONT_SIZE,
+  NEW_SHAPE_FILL,
+  NEW_SHAPE_SIZE_PX,
+  NEW_TEXT_CONTENT,
+  NEW_TEXT_SIZE_PX,
+  clampFontSize,
+  getElementId,
+  isFabricTextObject,
+  isUserAuthoredId,
+  nextElementId,
+  normalizeFontSize,
+  pctToPx,
+  pxToPct,
+  serializeCanvas,
+  serializeTextStyle,
+  toStrictHexColor,
+} from '@/lib/registry/canvas-utils';
 
 function placeholderLabelKey(key: string): I18nKey {
   return `admin.artifacts.placeholder.${key}` as I18nKey;
@@ -93,76 +94,9 @@ type EditorStatus =
   | 'error'
   | 'conflict';
 
-function pctToPx(value: number, total: number) {
-  return (value / 100) * total;
-}
-
-function pxToPct(value: number, total: number) {
-  return (value / total) * 100;
-}
-
-/** Normalize Fabric fill values to strict #RRGGBB for registry validation. */
-function toStrictHexColor(fill: unknown, fallback?: string): string | undefined {
-  if (typeof fill !== 'string' || !fill.trim()) return fallback;
-
-  const hexMatch = fill.match(/^#([0-9A-Fa-f]{6})$/);
-  if (hexMatch) return `#${hexMatch[1].toUpperCase()}`;
-
-  const rgbMatch = fill.match(
-    /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/
-  );
-  if (rgbMatch) {
-    const channels = [rgbMatch[1], rgbMatch[2], rgbMatch[3]].map(Number);
-    if (channels.every((n) => n >= 0 && n <= 255)) {
-      return `#${channels
-        .map((n) => n.toString(16).padStart(2, '0'))
-        .join('')
-        .toUpperCase()}`;
-    }
-  }
-
-  return fallback;
-}
-
-/** Font size typed by the admin: positive and inside the input's own bounds. */
-function clampFontSize(value: number) {
-  return Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, value));
-}
-
-/** Font size read back off the canvas: authored sizes are trusted as-is. */
-function normalizeFontSize(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0
-    ? value
-    : DEFAULT_FONT_SIZE;
-}
-
 function getEditableLayout(template: StoredArtifactTemplate): ArtifactLayout | null {
   if (!isCanvasAuthorable(template.baseType)) return null;
   return template.layouts.default ?? null;
-}
-
-function isFabricTextObject(
-  obj: import('fabric').FabricObject
-): obj is import('fabric').FabricText {
-  return obj.type === 'text';
-}
-
-function getElementId(obj: import('fabric').FabricObject): string | undefined {
-  return (obj.get('data') as { elementId?: string } | undefined)?.elementId;
-}
-
-function isUserAuthoredId(elementId: string) {
-  return elementId.startsWith(USER_ELEMENT_PREFIX);
-}
-
-function nextElementId(usedIds: Set<string>, counter: number) {
-  let candidate = `${USER_ELEMENT_PREFIX}${Date.now().toString(36)}-${counter.toString(36)}`;
-  let salt = 0;
-  while (usedIds.has(candidate)) {
-    salt += 1;
-    candidate = `${USER_ELEMENT_PREFIX}${Date.now().toString(36)}-${counter.toString(36)}-${salt}`;
-  }
-  return candidate;
 }
 
 function elementToFabricObject(
@@ -230,162 +164,24 @@ function elementToFabricObject(
   });
 }
 
-/**
- * Reads the text style back off a Fabric object without inventing keys.
- *
- * `elementToFabricObject` fills every unset style key with a construction
- * default, so a naive read-back would bake `fontFamily`/`fontWeight` into
- * layouts that never declared them. A key is written only when the source
- * already carried it or the admin actually moved it off the default, which
- * keeps an untouched template byte-identical across a save.
- */
-function serializeTextStyle(
-  source: CanvasElement,
-  textObj: import('fabric').FabricText
-): CanvasElement['style'] | undefined {
-  const style: NonNullable<CanvasElement['style']> = { ...source.style };
-
-  const setIfMeaningful = <K extends keyof NonNullable<CanvasElement['style']>>(
-    key: K,
-    current: NonNullable<CanvasElement['style']>[K] | undefined,
-    constructionDefault: NonNullable<CanvasElement['style']>[K]
-  ) => {
-    if (current === undefined) return;
-    if (source.style?.[key] === undefined && current === constructionDefault) return;
-    style[key] = current;
-  };
-
-  setIfMeaningful(
-    'fontColor',
-    toStrictHexColor(textObj.fill, source.style?.fontColor),
-    DEFAULT_FONT_COLOR
-  );
-  setIfMeaningful(
-    'fontSize',
-    typeof textObj.fontSize === 'number' ? textObj.fontSize : undefined,
-    DEFAULT_FONT_SIZE
-  );
-  setIfMeaningful('fontFamily', textObj.fontFamily, DEFAULT_FONT_FAMILY);
-  setIfMeaningful(
-    'fontWeight',
-    textObj.fontWeight === undefined ? undefined : String(textObj.fontWeight),
-    'normal'
-  );
-  setIfMeaningful('fontStyle', textObj.fontStyle, 'normal');
-  setIfMeaningful(
-    'textAlign',
-    textObj.textAlign === 'left' ||
-      textObj.textAlign === 'center' ||
-      textObj.textAlign === 'right'
-      ? textObj.textAlign
-      : undefined,
-    DEFAULT_TEXT_ALIGN
-  );
-
-  return Object.keys(style).length > 0 ? style : undefined;
-}
-
-/**
- * Reads the canvas back into registry elements. The returned list is the
- * complete element set for the layout: objects removed from the canvas are
- * absent (deletion) and objects added in this session are present (authoring).
- */
-function serializeCanvas(
-  canvas: import('fabric').Canvas,
-  layout: ArtifactLayout,
-  added: Map<string, CanvasElement>
-): CanvasElement[] {
-  // Persisted definitions win over the in-session copy after a save/reload.
-  const byId = new Map<string, CanvasElement>([
-    ...added,
-    ...layout.elements.map((e) => [e.id, e] as const),
-  ]);
-  // Canvas order is zIndex order; the stored array keeps template order so that
-  // `hydrate`'s source-order tie-break — and diffs against the seed — stay put.
-  const sourceRank = new Map(layout.elements.map((e, i) => [e.id, i] as const));
-
-  const serialized = canvas.getObjects().flatMap((obj, canvasIndex) => {
-    const elementId = getElementId(obj);
-    if (!elementId) return [];
-    const source = byId.get(elementId);
-    if (!source) return [];
-
-    const left = obj.left ?? 0;
-    const top = obj.top ?? 0;
-    const scaleX = Math.abs(obj.scaleX ?? 1);
-    const scaleY = Math.abs(obj.scaleY ?? 1);
-    const isText = source.type === 'text' && isFabricTextObject(obj);
-
-    // Percent -> px -> percent is not bit-exact, so an object that was never
-    // touched would still be written back with float dust. Keep the authored
-    // value unless Fabric actually reports something else.
-    const authoredLeft = pctToPx(source.x, CANVAS_WIDTH);
-    const authoredTop = pctToPx(source.y, CANVAS_HEIGHT);
-    const authoredWidth = pctToPx(source.w, CANVAS_WIDTH);
-    const authoredHeight = pctToPx(source.h, CANVAS_HEIGHT);
-    const measuredWidth = Math.abs(obj.width ?? 0) * scaleX;
-    const measuredHeight = Math.abs(obj.height ?? 0) * scaleY;
-
-    // Fabric v6's `Text.initDimensions()` overwrites `width`/`height` with
-    // measured glyph metrics and discards whatever we constructed the object
-    // with, so `obj.width` is NOT the authored box for text. Scale the authored
-    // percentages instead: an untouched object round-trips unchanged (scale is
-    // exactly 1) while a genuinely resized one still records its new size.
-    // Shapes and image boxes keep the measured path — Fabric leaves their
-    // dimensions alone, so it reports the truth for them.
-    const w = isText
-      ? source.w * scaleX
-      : measuredWidth === authoredWidth
-        ? source.w
-        : pxToPct(measuredWidth, CANVAS_WIDTH);
-    const h = isText
-      ? source.h * scaleY
-      : measuredHeight === authoredHeight
-        ? source.h
-        : pxToPct(measuredHeight, CANVAS_HEIGHT);
-
-    const next: CanvasElement = {
-      ...source,
-      x: left === authoredLeft ? source.x : pxToPct(left, CANVAS_WIDTH),
-      y: top === authoredTop ? source.y : pxToPct(top, CANVAS_HEIGHT),
-      // A degenerate drag can collapse an object to zero; the server rejects
-      // the whole save for that, losing every unsaved addition with it.
-      w: Math.max(w, MIN_ELEMENT_W_PCT),
-      h: Math.max(h, MIN_ELEMENT_H_PCT),
-    };
-
-    if (isText) {
-      const text = obj.text ?? '';
-      // Keep `content` absent on placeholder-driven elements that never had it.
-      if (source.content !== undefined || text !== '') {
-        next.content = text;
-      }
-      const style = serializeTextStyle(source, obj);
-      if (style) {
-        next.style = style;
-      } else {
-        delete next.style;
-      }
-    }
-
-    // Elements authored in this session have no template rank; they land after
-    // the shipped ones, in canvas order.
-    const rank =
-      sourceRank.get(elementId) ?? layout.elements.length + canvasIndex;
-    return [{ rank, next }];
-  });
-
-  return serialized
-    .map((entry, index) => ({ ...entry, index }))
-    .sort((a, b) => a.rank - b.rank || a.index - b.index)
-    .map((entry) => entry.next);
-}
-
 import {
   ArtifactEditorAdapter,
   CopiedSlide,
   mainSpineAdapter,
+  uploadImageFile,
 } from '@/lib/registry/canvas-adapters';
+
+export {
+  CANVAS_HEIGHT,
+  CANVAS_WIDTH,
+  DEFAULT_FONT_COLOR,
+  DEFAULT_FONT_FAMILY,
+  DEFAULT_FONT_SIZE,
+  DEFAULT_TEXT_ALIGN,
+  elementToFabricObject,
+  serializeCanvas,
+  serializeTextStyle,
+};
 
 export interface ArtifactEditorProps {
   adapter?: ArtifactEditorAdapter;
@@ -422,6 +218,8 @@ export default function ArtifactEditor({
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
   /** Raw input text, so the admin can clear the field without writing a 0. */
   const [fontSizeInput, setFontSizeInput] = useState(String(DEFAULT_FONT_SIZE));
+  const [fontWeight, setFontWeight] = useState<'normal' | 'bold'>('normal');
+  const [fontStyle, setFontStyle] = useState<'normal' | 'italic'>('normal');
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [selectedTextCount, setSelectedTextCount] = useState(0);
   const [textContent, setTextContent] = useState('');
@@ -479,11 +277,11 @@ export default function ArtifactEditor({
         .map(getElementId)
         .filter((id): id is string => typeof id === 'string' && id.length > 0)
     );
-    const texts = active.filter(isFabricTextObject);
+    const texts: FabricTextLike[] = active.filter(isFabricTextObject);
     setSelectedTextCount(texts.length);
-    // The content field edits one box at a time; anything else clears it.
-    setTextContent(texts.length === 1 ? (texts[0].text ?? '') : '');
     const selectedText = texts[0];
+    // The content field edits one box at a time; anything else clears it.
+    setTextContent(texts.length === 1 && selectedText ? (selectedText.text ?? '') : '');
     if (!selectedText) return;
     setFontColor(
       toStrictHexColor(selectedText.fill, DEFAULT_FONT_COLOR) ?? DEFAULT_FONT_COLOR
@@ -491,6 +289,8 @@ export default function ArtifactEditor({
     const size = normalizeFontSize(selectedText.fontSize);
     setFontSize(size);
     setFontSizeInput(String(size));
+    setFontWeight(selectedText.fontWeight === 'bold' ? 'bold' : 'normal');
+    setFontStyle(selectedText.fontStyle === 'italic' ? 'italic' : 'normal');
   }, []);
 
   const loadList = useCallback(async () => {
@@ -732,6 +532,108 @@ export default function ArtifactEditor({
     [template, fontColor, fontSize, syncSelection, markDirty]
   );
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const insertImage = useCallback(
+    async (file: File) => {
+      const canvas = fabricCanvasRef.current;
+      const layout = template ? getEditableLayout(template) : null;
+      if (!canvas || !layout) return;
+
+      setStatus('saving');
+      setMessage(null);
+      let url = '';
+      try {
+        const uploaded = await uploadImageFile(file);
+        url = uploaded.url;
+      } catch (err: unknown) {
+        setStatus('error');
+        setMessage(err instanceof Error ? err.message : t('admin.artifacts.uploadImageFailed'));
+        toast(err instanceof Error ? err.message : t('admin.artifacts.uploadImageFailed'));
+        return;
+      }
+
+      const usedIds = new Set<string>([
+        ...layout.elements.map((e) => e.id),
+        ...addedElementsRef.current.keys(),
+        ...canvas
+          .getObjects()
+          .map(getElementId)
+          .filter((id): id is string => typeof id === 'string'),
+      ]);
+      const id = nextElementId(usedIds, insertCounterRef.current);
+      const step = insertCounterRef.current % INSERT_CASCADE_STEPS;
+      insertCounterRef.current += 1;
+
+      const size = NEW_SHAPE_SIZE_PX;
+      const offset = step * INSERT_CASCADE_PX;
+      const leftPx = (CANVAS_WIDTH - size.w) / 2 + offset;
+      const topPx = (CANVAS_HEIGHT - size.h) / 2 + offset;
+      const maxZ = [
+        ...layout.elements,
+        ...addedElementsRef.current.values(),
+      ].reduce((acc, e) => Math.max(acc, e.zIndex), -1);
+
+      const element: CanvasElement = {
+        id,
+        type: 'image',
+        required: false,
+        x: pxToPct(leftPx, CANVAS_WIDTH),
+        y: pxToPct(topPx, CANVAS_HEIGHT),
+        w: pxToPct(size.w, CANVAS_WIDTH),
+        h: pxToPct(size.h, CANVAS_HEIGHT),
+        zIndex: maxZ + 1,
+        imageRef: url,
+      };
+
+      const fabric = await import('fabric');
+      if (fabricCanvasRef.current !== canvas) {
+        setStatus('idle');
+        return;
+      }
+
+      addedElementsRef.current.set(id, element);
+      const obj = elementToFabricObject(fabric, element, true);
+      canvas.add(obj);
+      canvas.setActiveObject(obj);
+      canvas.requestRenderAll();
+      syncSelection(canvas);
+      markDirty();
+      setStatus('idle');
+      setMessage(null);
+    },
+    [template, syncSelection, markDirty, t]
+  );
+
+  const handleReorderLayer = useCallback(
+    (action: 'forward' | 'backward' | 'front' | 'back') => {
+      const canvas = fabricCanvasRef.current;
+      if (!canvas) return;
+      const active = canvas.getActiveObjects();
+      if (active.length === 0) return;
+
+      let changed = false;
+      for (const obj of active) {
+        if (action === 'forward') {
+          if (canvas.bringObjectForward(obj)) changed = true;
+        } else if (action === 'backward') {
+          if (canvas.sendObjectBackwards(obj)) changed = true;
+        } else if (action === 'front') {
+          if (canvas.bringObjectToFront(obj)) changed = true;
+        } else if (action === 'back') {
+          if (canvas.sendObjectToBack(obj)) changed = true;
+        }
+      }
+
+      if (changed) {
+        canvas.requestRenderAll();
+        syncSelection(canvas);
+        markDirty();
+      }
+    },
+    [syncSelection, markDirty]
+  );
+
   const insertPlaceholder = useCallback(
     async (key: string) => {
       const canvas = fabricCanvasRef.current;
@@ -970,6 +872,34 @@ export default function ArtifactEditor({
       markDirty();
     }
   };
+
+  const handleToggleBold = useCallback(() => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const texts = canvas.getActiveObjects().filter(isFabricTextObject);
+    if (texts.length === 0) return;
+    const nextWeight: 'normal' | 'bold' = fontWeight === 'bold' ? 'normal' : 'bold';
+    setFontWeight(nextWeight);
+    for (const obj of texts) {
+      obj.set({ fontWeight: nextWeight });
+    }
+    canvas.requestRenderAll();
+    markDirty();
+  }, [fontWeight, markDirty]);
+
+  const handleToggleItalic = useCallback(() => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const texts = canvas.getActiveObjects().filter(isFabricTextObject);
+    if (texts.length === 0) return;
+    const nextStyle: 'normal' | 'italic' = fontStyle === 'italic' ? 'normal' : 'italic';
+    setFontStyle(nextStyle);
+    for (const obj of texts) {
+      obj.set({ fontStyle: nextStyle });
+    }
+    canvas.requestRenderAll();
+    markDirty();
+  }, [fontStyle, markDirty]);
 
   /**
    * Writes the words of the selected text box straight through to Fabric, so
@@ -1708,6 +1638,20 @@ export default function ArtifactEditor({
               <>
                 <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/40 p-4">
                   <span className="mr-1 text-sm font-medium">{t('admin.artifacts.elements')}</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={busy}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        void insertImage(file);
+                      }
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                  />
                   <Button
                     type="button"
                     variant="outline"
@@ -1730,9 +1674,24 @@ export default function ArtifactEditor({
                   >
                     {t('admin.artifacts.addRect')}
                   </Button>
+                  {allowImages ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        fileInputRef.current?.click();
+                      }}
+                      disabled={busy}
+                    >
+                      {t('admin.artifacts.addImage')}
+                    </Button>
+                  ) : null}
                   <Select
                     value={insertPlaceholderKey}
-                    onValueChange={setInsertPlaceholderKey}
+                    onValueChange={(val) => {
+                      if (val) setInsertPlaceholderKey(val);
+                    }}
                     disabled={busy}
                   >
                     <SelectTrigger
@@ -1763,6 +1722,53 @@ export default function ArtifactEditor({
                   >
                     {t('admin.artifacts.insertPlaceholder')}
                   </Button>
+                  <div className="mx-1 h-4 w-px bg-border/60" />
+                  <span className="mr-1 text-xs text-muted-foreground">{t('admin.artifacts.layerOrder')}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleReorderLayer('forward')}
+                    disabled={busy || selectedElementIds.length === 0}
+                    title={t('admin.artifacts.bringForward')}
+                  >
+                    <ArrowUp />
+                    <span className="sr-only sm:not-sr-only sm:inline">{t('admin.artifacts.bringForward')}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleReorderLayer('backward')}
+                    disabled={busy || selectedElementIds.length === 0}
+                    title={t('admin.artifacts.sendBackward')}
+                  >
+                    <ArrowDown />
+                    <span className="sr-only sm:not-sr-only sm:inline">{t('admin.artifacts.sendBackward')}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleReorderLayer('front')}
+                    disabled={busy || selectedElementIds.length === 0}
+                    title={t('admin.artifacts.bringToFront')}
+                  >
+                    <BringToFront />
+                    <span className="sr-only sm:not-sr-only sm:inline">{t('admin.artifacts.bringToFront')}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleReorderLayer('back')}
+                    disabled={busy || selectedElementIds.length === 0}
+                    title={t('admin.artifacts.sendToBack')}
+                  >
+                    <SendToBack />
+                    <span className="sr-only sm:not-sr-only sm:inline">{t('admin.artifacts.sendToBack')}</span>
+                  </Button>
+                  <div className="mx-1 h-4 w-px bg-border/60" />
                   <Button
                     type="button"
                     variant="outline"
@@ -1842,6 +1848,28 @@ export default function ArtifactEditor({
                       className="w-20"
                     />
                   </Label>
+                  <Button
+                    type="button"
+                    variant={fontWeight === 'bold' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={handleToggleBold}
+                    disabled={selectedTextCount === 0 || busy}
+                    title={t('admin.artifacts.bold')}
+                  >
+                    <Bold />
+                    <span className="sr-only sm:not-sr-only sm:inline">{t('admin.artifacts.bold')}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={fontStyle === 'italic' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={handleToggleItalic}
+                    disabled={selectedTextCount === 0 || busy}
+                    title={t('admin.artifacts.italic')}
+                  >
+                    <Italic />
+                    <span className="sr-only sm:not-sr-only sm:inline">{t('admin.artifacts.italic')}</span>
+                  </Button>
                   <Button
                     type="button"
                     variant="outline"

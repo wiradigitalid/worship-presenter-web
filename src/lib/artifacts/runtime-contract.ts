@@ -21,12 +21,14 @@ export const ARTIFACT_RUNTIME_VERSION = 1;
  */
 export const REFERENCE_CANVAS = { width: 960, height: 540 } as const;
 
-export type ArtifactLayoutKey = 'default' | 'title' | 'lyric';
+export type ArtifactLayoutKey = 'default' | 'title' | 'lyric' | 'verse' | 'reff';
 
 export const ARTIFACT_LAYOUT_KEYS: readonly ArtifactLayoutKey[] = [
   'default',
   'title',
   'lyric',
+  'verse',
+  'reff',
 ];
 
 /** Flat union of every supported style field (text + image + shape). */

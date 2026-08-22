@@ -8,7 +8,7 @@ This is what the owner reads at **G3 Blueprint**, instead of seven files. Its co
 
 ## Use case catalogue
 
-**28 use cases**, 7 marked `critical`.
+**29 use cases**, 7 marked `critical`.
 
 | id | Use case | Component | Satisfies | critical |
 | --- | --- | --- | --- | --- |
@@ -33,6 +33,7 @@ This is what the owner reads at **G3 Blueprint**, instead of seven files. Its co
 | `UC-26` | I enter this week's song numbers, books, and backgrounds for however many songs are configured | `hub` | `FR-32` | no |
 | `UC-27` | I switch the live Verse/Reff background during the service | `presenter` | `FR-33` | no |
 | `UC-28` | I correct a song's lyrics for this Service, and optionally save the fix back to the Song Book | `hub` | `FR-34` | yes |
+| `UC-29` | I control the presenting laptop from my phone while standing away from it | `presenter` | `FR-35` | no |
 | `UC-3` | I open the dated Service list | `hub` | `FR-8` | no |
 | `UC-4` | I follow the worship order from the Run-Sheet | `hub` | `FR-17` | no |
 | `UC-5` | I edit Service fields in Hub | `hub` | `FR-11` | yes |
@@ -48,7 +49,7 @@ This is what the owner reads at **G3 Blueprint**, instead of seven files. Its co
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Operator | Multimedia team | List, create, edit, generate, download, delete, Run-Sheet, announcements |
+| Operator | Multimedia team | List, create, edit, generate, download, delete, Run-Sheet. **Not announcements** (FR-3 retired, DEC-004) |
 | Events | Later: Rundown sender on Telegram | Not a Hub user this phase |
 | Admin | Account and settings manager | Accounts, transitions, locale |
 
@@ -93,7 +94,14 @@ The Operator form is one raw Rundown plus structured overlays. Physical field na
 
 ### Domain model — Presenter
 
-Has no write entities. Reads Service and renders the slide plan owned by Registry.
+Has no **persisted** write entities. Reads Service and renders the slide plan owned by Registry.
+
+One piece of state is written and it is deliberately not in this table: a **RemotePairing** (UC-29,
+AD-37) — which remote device may drive which presenting client, and until when. It lives in the Go
+process's memory and in **no table**, so it needs no schema change and no `data_version` bump, and an
+API restart ends every pairing rather than resurrecting one nobody remembers granting. Its lifecycle is
+in `state-machines.md`; whether it should survive a page reload is **OQ-55**. It is session state, not
+domain data, which is why it claims nothing in `owns:`.
 
 | Entity | Meaning | Relations |
 | --- | --- | --- |
@@ -141,7 +149,11 @@ Derived by `inventory.py` from `CREATE TABLE IF NOT EXISTS` in `src/lib/db/index
 | --- | --- | --- | --- | --- | --- |
 | 4 | accounts | hub | Per-person accounts | id | published |
 | 3 | announcement_items | hub | Announcement list | id | published |
+| 15 | announcement_set_slides | registry | Slides inside an Announcement Set | id | published |
+| 16 | announcement_sets | registry | Admin-authored Announcement Sets (DEC-004) | id | published |
 | 11 | artifact_templates | registry | Slide order and layout | id | published |
+| 17 | background_library_images | registry | Admin-owned background image library (S10) | id | published |
+| 18 | bible_book_names | presenter | Book names per translation | translation_code, book_id | published |
 | 9 | bible_books | presenter | Book names per translation | id | published |
 | 8 | bible_translations | presenter | Translation corpora | code | published |
 | 10 | bible_verses | presenter | Verse text | id, book_id, chapter, verse, translation_code | published |
@@ -149,8 +161,12 @@ Derived by `inventory.py` from `CREATE TABLE IF NOT EXISTS` in `src/lib/db/index
 | 5 | login_attempts | hub | Login trail | id | published |
 | 6 | revoked_sessions | hub | Revoked sessions | sid | published |
 | 14 | service_registry_snapshots | registry | Per-Service frozen registry clone (AD-16) | service_id, template_id | published |
+| 19 | service_song_set_layouts | registry | Per-Service frozen copy of the shared trio (S13 R4) | service_id, role | published |
 | 1 | services | hub | One dated Service and the week's payload | id | published |
 | 7 | settings | hub | Application settings | key | published |
+| 20 | song_books | registry | Song book registry rows (DEC-005 / AD-36) | book_code | published |
+| 21 | song_set_inputs | hub | Per-Service weekly song-set input: number, book, background, lyric override | service_id, variable_name | published |
+| 22 | song_set_layouts | registry | Shared Title / Verse / Reff layout trio (S4) | role | published |
 
 #### Findings
 
@@ -172,36 +188,67 @@ Derived by `inventory.py` from `mux.HandleFunc` in `internal/httpapi/server.go`.
 | 21 | api | PATCH | `/api/admin/accounts/[id]` | hub | Update account | published |
 | 19 | api | GET | `/api/admin/accounts` | hub | List accounts | published |
 | 20 | api | POST | `/api/admin/accounts` | hub | Create account | published |
+| 39 | api | POST | `/api/admin/announcement-sets/[id]/slides/[slideId]/reset` | registry | Restore an Announcement Set slide to its shipped seed | published |
+| 40 | api | DELETE | `/api/admin/announcement-sets/[id]/slides/[slideId]` | registry | Delete an Announcement Set slide — the shared image file survives (DEC-004 Copy / paste) | published |
+| 41 | api | GET | `/api/admin/announcement-sets/[id]/slides/[slideId]` | registry | One Announcement Set slide | published |
+| 42 | api | PATCH | `/api/admin/announcement-sets/[id]/slides/[slideId]` | registry | Rename an Announcement Set slide | published |
+| 43 | api | PUT | `/api/admin/announcement-sets/[id]/slides/[slideId]` | registry | Save an Announcement Set slide layout (AD-6) | published |
+| 44 | api | PUT | `/api/admin/announcement-sets/[id]/slides/order` | registry | Reorder slides in an Announcement Set | published |
+| 45 | api | GET | `/api/admin/announcement-sets/[id]/slides` | registry | List slides in an Announcement Set | published |
+| 46 | api | POST | `/api/admin/announcement-sets/[id]/slides` | registry | Create a slide in an Announcement Set | published |
+| 47 | api | DELETE | `/api/admin/announcement-sets/[id]` | registry | Delete Announcement Set — refused while a spine marker references it (S13 R3) | published |
+| 48 | api | PATCH | `/api/admin/announcement-sets/[id]` | registry | Rename Announcement Set | published |
+| 49 | api | GET | `/api/admin/announcement-sets` | registry | List Announcement Sets | published |
+| 50 | api | POST | `/api/admin/announcement-sets` | registry | Create Announcement Set | published |
 | 28 | api | POST | `/api/admin/artifacts/[id]/reset` | registry | Restore seed | published |
 | 31 | api | DELETE | `/api/admin/artifacts/[id]` | registry | Delete template | published |
 | 26 | api | GET | `/api/admin/artifacts/[id]` | registry | One template | published |
-| 27 | api | PUT | `/api/admin/artifacts/[id]` | registry | Save layout | published |
 | 38 | api | PATCH | `/api/admin/artifacts/[id]` | registry | Rename template | published |
+| 27 | api | PUT | `/api/admin/artifacts/[id]` | registry | Save layout | published |
 | 32 | api | PUT | `/api/admin/artifacts/order` | registry | Reorder templates | published |
 | 25 | api | GET | `/api/admin/artifacts` | registry | List templates | published |
 | 37 | api | POST | `/api/admin/artifacts` | registry | Create authored General | published |
+| 51 | api | DELETE | `/api/admin/background-library/[id]` | registry | Remove a background image from the library | published |
+| 52 | api | PATCH | `/api/admin/background-library/[id]` | registry | Rename a background image | published |
+| 53 | api | GET | `/api/admin/background-library` | registry | List the background library | published |
+| 54 | api | POST | `/api/admin/background-library` | registry | Add a background image (images only, S10) | published |
 | 23 | api | GET | `/api/admin/settings` | hub | Settings | published |
 | 24 | api | PUT | `/api/admin/settings` | hub | Update settings | published |
-| 14 | api | DELETE | `/api/announcements/[id]` | hub | Delete one item | published |
-| 13 | api | PATCH | `/api/announcements/[id]` | hub | Update one item | published |
-| 10 | api | GET | `/api/announcements` | hub | List announcements | published |
-| 11 | api | POST | `/api/announcements` | hub | Add announcement item | published |
-| 12 | api | PUT | `/api/announcements` | hub | Reorder list | published |
+| 55 | api | DELETE | `/api/admin/song-books/[bookCode]` | registry | Delete a song book — not resurrected on a later boot (AD-17) | published |
+| 56 | api | PATCH | `/api/admin/song-books/[bookCode]` | registry | Update song book metadata (AD-6) | published |
+| 57 | api | GET | `/api/admin/song-books` | registry | List song books | published |
+| 58 | api | POST | `/api/admin/song-books` | registry | Create a song book | published |
+| 59 | api | DELETE | `/api/admin/song-set-entries/[variableName]` | registry | Delete a Song Set entry — its variable_name may be reused (S13 R2) | published |
+| 60 | api | PATCH | `/api/admin/song-set-entries/[variableName]` | registry | Rename a Song Set entry | published |
+| 61 | api | GET | `/api/admin/song-set-entries` | registry | List Song Set entries | published |
+| 62 | api | POST | `/api/admin/song-set-entries` | registry | Create a Song Set entry | published |
+| 63 | api | POST | `/api/admin/song-set-layouts/[role]/reset` | registry | Restore a shared trio layout to its shipped seed | published |
+| 64 | api | GET | `/api/admin/song-set-layouts/[role]` | registry | One layout of the shared Title / Verse / Reff trio (S4) | published |
+| 65 | api | PUT | `/api/admin/song-set-layouts/[role]` | registry | Save a shared trio layout (AD-6) | published |
 | 3 | api | POST | `/api/auth/change-password` | hub | Change password | published |
 | 1 | api | POST | `/api/auth/login` | hub | Log in | published |
 | 2 | api | POST | `/api/auth/logout` | hub | Log out | published |
-| 18 | api | GET | `/api/hymns` | hub | Search hymns | published |
-| 29 | api | GET | `/api/scripture` | presenter | Verse lookup (`ref`) and book suggestions (`q`) | published |
+| 66 | api | GET | `/api/background-library` | registry | Backgrounds the Operator may switch to during the service (S11) | published |
 | 36 | api | GET | `/api/bible-translations` | presenter | Installed bible translations (code, name, locale, licence, provenance) plus resolved default | published |
-| 34 | api | GET | `/api/session` | hub | Current session | published |
+| 18 | api | GET | `/api/hymns` | hub | Search hymns | published |
+| 70 | api | POST | `/api/present/[id]/remote/claim` | presenter | Bind a remote device to one presenting client using the displayed code | published |
+| 71 | api | POST | `/api/present/[id]/remote/intent` | presenter | One control intent from the remote — index, blank, transition, background, scripture, clear-scripture | published |
+| 72 | api | DELETE | `/api/present/[id]/remote/pair` | presenter | End the pairing deliberately; idempotent | published |
+| 73 | api | POST | `/api/present/[id]/remote/pair` | presenter | Claim the presenting role and get a pairing code to display | published |
+| 74 | api | GET | `/api/present/[id]/remote/stream` | presenter | Role-scoped SSE stream: intents to the presenting client, mirrored state to the remote | published |
+| 29 | api | GET | `/api/scripture` | presenter | Verse lookup (`ref`) and book suggestions (`q`) | published |
 | 8 | api | GET | `/api/services/[id]/pptx` | hub | Download PPTX | published |
+| 67 | api | POST | `/api/services/[id]/song-sets/[variableName]/save-to-book` | hub | Write edited lyrics back to the song book (S12, UC-28) | published |
 | 33 | api | POST | `/api/services/[id]/sync-artifact` | hub | Sync Artifact (AD-16) | published |
-| 35 | api | GET | `/api/services/[id]` | hub | One Service plus assembled plan | published |
 | 7 | api | DELETE | `/api/services/[id]` | hub | Delete Service | published |
+| 35 | api | GET | `/api/services/[id]` | hub | One Service plus assembled plan | published |
 | 6 | api | PUT | `/api/services/[id]` | hub | Update Service (AD-6) | published |
 | 9 | api | POST | `/api/services/preview` | hub | Preview | published |
 | 4 | api | GET | `/api/services` | hub | List Services | published |
 | 5 | api | POST | `/api/services` | hub | Create Service | published |
+| 34 | api | GET | `/api/session` | hub | Current session | published |
+| 68 | api | GET | `/api/song-books` | registry | Song books the Operator may choose from | published |
+| 69 | api | GET | `/api/song-set-entries` | registry | Song Set entries the Service form renders | published |
 | 16 | api | POST | `/api/upload/from-url` | hub | Fetch image from URL | published |
 | 15 | api | POST | `/api/upload` | hub | Upload image | published |
 | 17 | api | GET | `/api/uploads/[filename]` | hub | Read upload | published |
@@ -218,6 +265,23 @@ Derived by `inventory.py` from `mux.HandleFunc` in `internal/httpapi/server.go`.
 - `POST /api/admin/artifacts` (37) creates an authored General (`seed_hash` NULL). `PATCH /api/admin/artifacts/[id]` (38) renames any kind, writing column and payload together (AD-18). List summaries include `resettable` from that hash. `PUT /api/admin/artifacts/[id]` (27) validates AD-15 and names the failing property; authored Generals without a planner handler still appear in the deck.
 - **Plan vs code (DEC-004, not yet built):** rows 10–14 (`/api/announcements*`) are the as-built Hub announcement-list API and stay published as long as the current code runs; DEC-004 retires the promise behind them (FR-3) and moves announcement composition to the Registry, so these rows are expected to be **removed** and replaced by Registry-side endpoints for Announcement Set / Song Set Entry / Background Library CRUD once that G4 work ships. No new rows are added here yet — none of that code exists, and a plan-only row would be a guess this inventory exists to prevent.
 
+#### Retired
+
+Rows removed from `## Rows` because the endpoint no longer exists in code. Their
+numbers are **not** reused (`inventory.py` numbers rows stably).
+
+| No | Method | Path | Retired | Why |
+| --- | --- | --- | --- | --- |
+| 10 | GET | `/api/announcements` | 2026-08-22 | FR-3 retired: announcement composition moved into the Artifact Registry (DEC-004) |
+| 11 | POST | `/api/announcements` | 2026-08-22 | same |
+| 12 | PUT | `/api/announcements` | 2026-08-22 | same |
+| 13 | PATCH | `/api/announcements/[id]` | 2026-08-22 | same |
+| 14 | DELETE | `/api/announcements/[id]` | 2026-08-22 | same |
+
+The `announcement_items` table is deliberately **not** dropped, and the Telegram
+webhook still accepts an `announcements[]` field and ignores it. That silence is
+an owner question (OQ-42), not a decision recorded here.
+
 ### List of screens — `inventory-screen.md`
 
 ### Inventory — screens
@@ -231,10 +295,10 @@ Derived by `inventory.py` from `<Route>` in `spa/src/App.tsx`. Screen identity i
 | 2 | spa/Dashboard | `/` | — | hub | UC-3 |
 | 7 | spa/AdminArtifactsPage | `/admin/artifacts` | — | registry | UC-14, UC-15 |
 | 6 | spa/AdminPage | `/admin` | — | hub | UC-9, UC-19, UC-22 |
-| 5 | spa/AnnouncementsPage | `/announcements` | — | hub | UC-21 |
 | 1 | spa/LoginPage | `/login` | — | hub | UC-9 |
 | 10 | spa/ProjectorPage | `/services/[id]/present/projector` | — | presenter | UC-12 |
 | 9 | spa/PresentPage | `/services/[id]/present` | — | presenter | UC-12, UC-13 |
+| 11 | spa/RemotePage | `/services/[id]/remote` | — | presenter | UC-29 |
 | 8 | spa/SlideshowPage | `/services/[id]/slideshow` | — | presenter | UC-11 |
 | 4 | spa/ServiceRunSheet | `/services/[id]` | — | hub | UC-4, UC-5, UC-6, UC-7, UC-16, UC-18 |
 | 3 | spa/CreateServicePage | `/services/new` | — | hub | UC-2 |
@@ -246,3 +310,9 @@ Derived by `inventory.py` from `<Route>` in `spa/src/App.tsx`. Screen identity i
 - UC-16 (Sync Artifact) is on row 4 (`/services/[id]`), Admin-only control. It is not on row 7.
 - Plan vs code (DEC-003): Screen identity prefix is `spa`. Operator and projected shells live under `spa/src/pages`; client trees remain in `src/operator` and `src/projected`.
 - **Plan vs code (DEC-004, not yet built):** row 5 (`spa/AnnouncementsPage`, UC-21) is retired by this decision — UC-21 leaves Hub's catalogue and its promise moves to the Registry (row 7, `spa/AdminArtifactsPage`), which is expected to gain the Announcement Set / Song Set Entry / Background Library authoring surfaces (UC-24, UC-25) once built. No new row is added for that surface here; the page does not exist yet.
+
+#### Retired
+
+| No | Screen | Route | Retired | Why |
+| --- | --- | --- | --- | --- |
+| — | `spa/AnnouncementsPage` | `/announcements` | 2026-08-22 | FR-3 retired: the screen and its nav item are deleted; composition lives in the Artifact Registry (DEC-004). It served UC-21 |

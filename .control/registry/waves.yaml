@@ -35,13 +35,31 @@ waves:
               - tests/registry-sync-artifact.test.mjs
             touches: [artifacts, services, slide-plan]
   - id: W2
-    status: open
+    status: closed
     release: go-spa-cutover
     prd: [operator-turn, offline-deck]
     fr: [FR-14]
     size: L
     depends_on: [W1]
     spec_folder: _bmad-output/specs/spec-w2-hub/
+    spec_reviewed:
+      date: '2026-08-21'
+      sha: '4d5128fb6b060a10b732550b9d67f79c4b2eafdf'
+      lenses: [structure, prose, edge-case-hunter]
+    # Reviewed 2026-08-21 to clear its V13 finding. Three redundancies and one stale
+    # sentence found and accepted without action, filed as OQ-47: this wave shipped long
+    # ago, so its SPEC is a historical record and re-deriving it would be churn.
+    # Phase 4 ran 2026-08-22 and the wave is closed. In order: registry catch-up and
+    # touches resolved (V12 green); inventories refreshed from code, 45 plan-versus-code
+    # gaps to 0; both structure maps re-derived -- the codebase map was missing six
+    # internal/ packages, internal/gate among them, which AD-5 names as the authorization
+    # boundary; distillation landed four durable conventions from spec-w2-hub/conventions.md
+    # into .constitution/project/codebase-conventions-guide.md and named three wave-scoped
+    # rules as retired; retrospective run and archived as .control/reports/RTR-W2.md
+    # (required, not advisory -- size L); RTM green, all three stories done.
+    # Verdict: accepted-with-open-items. Two open items are method changes this repo may
+    # not make and are filed as OQ-51: an isolation override disarms wdi-build Step 5, and
+    # nothing flags a wave left open after its last story is done.
     # Owner held G3/G4 on the DEC-003 delta 2026-08-19 ("oke, kerjakan aja semua otomatis saya setuju").
     # Isolation: this checkout is main (same override as W1).
     epics:
@@ -52,7 +70,9 @@ waves:
             satisfies: [UC-18]
             tests:
               - tests/go-http-gate.test.mjs
-            touches: [api]
+            # `api` was a container, not an LC `area`, so V12 could not resolve it.
+            # The story is the request gate, which is AD-5's authorization boundary: `auth`.
+            touches: [auth]
           - id: "2-2"
             spec_folder: _bmad-output/specs/spec-w2-hub/
             satisfies: [UC-18]
@@ -66,4 +86,197 @@ waves:
             depends_on: ["2-2"]
             tests:
               - tests/pptx-go-http.test.mjs
-            touches: [api, pptx, slide-plan]
+            # `api` was a container, not an LC `area`. The route is
+            # /api/services/{id}/pptx, owned by LC-2: `services`.
+            touches: [services, pptx, slide-plan]
+
+  - id: W3
+    status: closed
+    release: dec004-completion
+    prd: [offline-deck]
+    fr: [FR-20, FR-21]
+    size: M
+    depends_on: []
+    spec_folder: _bmad-output/specs/spec-w3-registry/
+    spec_reviewed:
+      date: '2026-08-21'
+      sha: '866c8a155f30d1975580dad373eb0febc99de149'
+      lenses: [structure, prose, edge-case-hunter]
+    # Split per Product Component. wdi-build SKILL.md says one spec_folder per wave;
+    # this project's bmad-spec override (_bmad/custom) says the slug MUST be
+    # w<N>-<pc>, one run per (wave x Product Component). Both hold only when a wave
+    # is single-PC -- which is how W1 (registry) and W2 (hub) already are. So the
+    # registry work is W3 and the hub work is W4 rather than one compound wave.
+    # Reported as a method contradiction; neither method file patched here.
+    # Owner rulings 2026-08-21: coding goes through wdi-build; no reviewer panel --
+    # the coordinator tests and reviews OpenCode's output (cross-family, so Step 3
+    # is satisfied as a coordinator review, not a dropped step).
+    # Isolation: Orca worktree auto1, separate from the canonical checkout.
+    # Pre-wave: f393bfd (S1 catalog + name-field storage) is committed but unpushed
+    # and lands in this wave's PR -- built before the ruling, reconciled not redone.
+    # PHASE 4 (2026-08-21) -- ran, did NOT complete. W3 stays `open`.
+    #  1 registry catch-up: PASS. No new LC named by these stories; `touches: [spa]`
+    #    resolves in components.yaml.
+    #  2 inventories from code: RAN, 45 plan-versus-code gaps reported as findings and
+    #    NOT patched. Nearly all are DEC-004 endpoints built today and absent from
+    #    inventory-api.md (song-set-entries, song-set-layouts, announcement-sets,
+    #    background-library, song-books, save-to-book), plus `spa:/announcements`
+    #    planned-but-deleted. The three inventories are wdi-blueprint's to write, so
+    #    `inventory.py --write` was deliberately not run here.
+    #  3 structure maps: NOT refreshed. No base folder was born, but new key files
+    #    landed (src/lib/registry/canvas-utils.ts, canvas-adapters.ts,
+    #    src/components/admin/*Panel.tsx). Routes to wdi-init intent `structure`.
+    #  4 distillation: PASS. Durable content left the spec folder as OQ-40 (ann-set
+    #    group chrome deferred), OQ-41 (underline not persistable), OQ-42 (webhook
+    #    still writes announcement_items) in .control/questions/assumptions.md.
+    #    Filed directly as coordinator registry work, not through wdi-question.
+    #  5 retrospective: SKIPPED. Advisory at size M per V19; stated rather than silent.
+    #  6 RTM green: FAIL -- this is what holds the wave open. V13 wants a `reviewed`
+    #    trace with date and sha on this wave; it comes from a wdi-review lens run over
+    #    the SPEC, and MUST NOT be stamped from the coordinator's own self-validate.
+    #    The memlog already records a prior pass that stamped a self-check and had to be
+    #    corrected -- not repeating it. Seven sibling V13 findings (SRS/SDD/spine stale
+    #    at 4847cc2) and W2's missing trace predate this session.
+    #  7 status closed: NOT DONE, blocked by item 6.
+    epics:
+      - id: dec004-completion-registry
+        stories:
+          - id: "1"
+            spec_folder: _bmad-output/specs/spec-w3-registry/
+            satisfies: [UC-14]
+            tests:
+              - tests/artifact-editor-controls.test.mjs
+              - tests/artifacts-api.test.mjs
+              - tests/registry.test.mjs
+              - tests/copy-paste-share-by-reference.test.mjs
+              - tests/canvas-dirty-guard.test.mjs
+            touches: [artifacts]
+          - id: "2"
+            spec_folder: _bmad-output/specs/spec-w3-registry/
+            satisfies: [UC-20]
+            depends_on: ["1"]
+            tests:
+              - tests/artifact-preview.test.mjs
+              - tests/i18n.test.mjs
+            touches: [artifacts, slide-plan]
+          - id: "3"
+            spec_folder: _bmad-output/specs/spec-w3-registry/
+            satisfies: [UC-16]
+            depends_on: ["2"]
+            tests:
+              - tests/sync-artifact-button.test.mjs
+              - tests/registry-sync-artifact.test.mjs
+              - tests/no-router-refresh-guard.test.mjs
+              - tests/i18n.test.mjs
+            touches: [artifacts, services]
+
+  - id: W4
+    status: closed
+    release: dec004-completion
+    prd: [operator-turn]
+    fr: [FR-6]
+    size: S
+    depends_on: []
+    spec_folder: _bmad-output/specs/spec-w4-hub/
+    spec_reviewed:
+      date: '2026-08-21'
+      sha: '866c8a155f30d1975580dad373eb0febc99de149'
+      lenses: [structure, prose, edge-case-hunter]
+    # The Hub half of dec004-completion: the Family/Youth name inputs whose storage
+    # landed in f393bfd with no input bound to them, and the S6 closing-prayer
+    # checkbox that replaces today's silent shouldAutoFill overwrite.
+    # PHASE 4 (2026-08-21) -- ran, did NOT complete. W4 stays `open`, same reason as W3.
+    #  1 registry catch-up: CORRECTED after V12. No new LC, but `touches: [spa]` was wrong -- V12
+    #    requires an `area` from an LC in components.yaml, and `spa` is a container, not an
+    #    area. Retargeted to artifacts / slide-plan / services. My first check scanned all ids
+    #    rather than the area set, so it passed something the validator rejects.
+    #  2 inventories from code: RAN. Still 45 plan-versus-code gaps, unchanged by this
+    #    wave (SPA-only story, no route added or removed). Reported, not patched; the
+    #    three inventories belong to wdi-blueprint.
+    #  3 structure maps: NOT refreshed. No base folder born; one new test file
+    #    (tests/worship-form-ui.test.mjs). Routes to wdi-init intent `structure`.
+    #  4 distillation: PASS, nothing left dangling. The one judgement call this wave
+    #    made -- the closing-prayer checkbox starts unchecked when speaker and
+    #    closing-prayer person are both empty -- left the spec folder into code as
+    #    `shouldClosingPrayerCheckboxStartChecked` in src/lib/worship-form-fields.ts,
+    #    pinned by AC-05 in tests/worship-form-fields.test.mjs.
+    #  5 retrospective: SKIPPED. Advisory at size S per V19; stated, not silent.
+    #  6 RTM green: FAIL -- V13 wants a `reviewed` trace with date and sha on this wave.
+    #    It comes from a wdi-review lens run over the SPEC and MUST NOT be stamped from
+    #    the coordinator's own self-validate.
+    #  7 status closed: NOT DONE, blocked by item 6.
+    # Flake noted, not masked: one `go test ./internal/...` run reported FAIL while the
+    # npm suite was still running its go-http tests in parallel. Re-run once, clean,
+    # all seven packages ok. Per wdi-build a second identical failure would be a defect.
+    epics:
+      - id: dec004-completion-hub
+        stories:
+          - id: "1"
+            spec_folder: _bmad-output/specs/spec-w4-hub/
+            satisfies: [UC-20]
+            tests:
+              - tests/worship-form-fields.test.mjs
+              - tests/services-create.test.mjs
+              - tests/i18n.test.mjs
+            touches: [services]
+
+  - id: W5
+    status: closed
+    release: presenter-remote
+    prd: [operator-turn]
+    fr: [FR-35]
+    size: M
+    depends_on: []
+    spec_folder: _bmad-output/specs/spec-w5-presenter-remote/
+    spec_reviewed:
+      date: '2026-08-22'
+      sha: 'cdf161b84d58035e4e60fdd877e459ea2a7f3e1f'
+      lenses: [structure, prose, edge-case-hunter]
+    # Reviewed 2026-08-22. Two findings against the kernel, both resolved before the stamp:
+    # the success clause tested control but not mirroring, though FR-35 promises the Operator
+    # SEES the presenter view; and the three named tests were presented as if all proved
+    # behaviour, when this project renders no React component in a test and remote-screen.test.mjs can
+    # only be a source guard. The phone screen's acceptance is now named as a human smoke
+    # test rather than left implied.
+    # Isolation: this wave runs in the orca worktree on branch `kodesh87/auto1`, NOT on main --
+    # unlike W1 and W2, whose main-branch override is what disarmed wdi-build Step 5 (no pushed
+    # head means no CI to watch; see RTR-W2 and OQ-51). PR #44 already tracks this branch and is
+    # unmerged, so W5's commits ride it rather than opening a stacked branch. Step 5 therefore has
+    # a real head and a real PR to attend to.
+    # Phase 4 ran 2026-08-22, the same day the wave opened, and the wave is closed. In order:
+    # registry catch-up green (LC-17/LC-18 registered at G4; touches resolve to the new
+    # remote-control area); inventories refreshed from code, 6 plan-versus-code gaps to 0, with
+    # BOTH owner columns wrong on the first derive and both fixed in the reader rather than the
+    # tables; structure maps unchanged -- no base folder born, no key file moved; distillation
+    # landed the one durable fact, that nothing here renders a React component in a test, so a UI test is a
+    # source scan, into .constitution/project/codebase-conventions-guide.md; retrospective run
+    # although V19 makes it advisory at M, archived as .control/reports/RTR-W5.md; RTM green, all
+    # three stories done. Verdict: accepted-with-open-items -- the open item is FR-35's own proof
+    # of done, a human holding a phone, which no test in this repository can supply.
+    # G4 for presenter closed 2026-08-22 (mode deep, risk_accepted medium), reviewed and stamped.
+    # Design: .how/presenter/02-contracts/03-remote-control.md -- SSE plus POST, pairing in process
+    # memory with no table, intents as intended values so no queue and no replay.
+    epics:
+      - id: presenter-remote
+        stories:
+          - id: "5-1"
+            spec_folder: _bmad-output/specs/spec-w5-presenter-remote/
+            satisfies: [UC-29]
+            tests:
+              - tests/remote-control-go-http.test.mjs
+              - tests/go-http-gate.test.mjs
+            touches: [remote-control]
+          - id: "5-2"
+            spec_folder: _bmad-output/specs/spec-w5-presenter-remote/
+            satisfies: [UC-29]
+            depends_on: ["5-1"]
+            tests:
+              - tests/remote-presenting-client.test.mjs
+            touches: [remote-control, present-channel]
+          - id: "5-3"
+            spec_folder: _bmad-output/specs/spec-w5-presenter-remote/
+            satisfies: [UC-29]
+            depends_on: ["5-2"]
+            tests:
+              - tests/remote-screen.test.mjs
+            touches: [remote-control]

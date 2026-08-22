@@ -1,3 +1,4 @@
+import type Database from 'better-sqlite3';
 import type { ParsedRundown, ParsedScripture, ParsedSermon } from './parser';
 import { INTERCESSORY_STANDING_NUMBERS, splitLyricsLabeled } from './lyrics';
 import { isAnnouncementImageUrl } from './announcements';
@@ -218,6 +219,8 @@ type PlanContext = {
   verseReading: ParsedScripture | null;
   familyPrayer: string | null;
   youthPrayer: string | null;
+  familyName: string | null;
+  youthName: string | null;
   legacyCombined: string | null;
   familyBody: string | null;
 };
@@ -261,6 +264,8 @@ function computePlanContext(
     : null;
   const familyPrayer = parsedData.familyPrayerRequest?.trim() || null;
   const youthPrayer = parsedData.youthPrayerRequest?.trim() || null;
+  const familyName = parsedData.familyName?.trim() || null;
+  const youthName = parsedData.youthName?.trim() || null;
   const legacyCombined =
     !familyPrayer && !youthPrayer
       ? parsedData.familyYouth?.trim() || null
@@ -297,6 +302,8 @@ function computePlanContext(
     verseReading,
     familyPrayer,
     youthPrayer,
+    familyName,
+    youthName,
     legacyCombined,
     familyBody,
   };
@@ -642,7 +649,7 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
 
   // Slide 56 — combined Family & Youth (text + both photos)
   'family-youth': (ctx) =>
-    ctx.familyBody || ctx.familyPhoto || ctx.youthPhoto
+    ctx.familyBody || ctx.familyPhoto || ctx.youthPhoto || ctx.familyName || ctx.youthName
       ? [
           leaf({
             id: 'family-youth',
@@ -650,6 +657,8 @@ const ROW_HANDLERS: Readonly<Record<string, (ctx: PlanContext) => RequestNode[]>
             values: {
               family_request: optional(ctx.familyPrayer ?? ctx.legacyCombined),
               youth_request: optional(ctx.youthPrayer),
+              family_name: optional(ctx.familyName),
+              youth_name: optional(ctx.youthName),
               family_photo: optional(ctx.familyPhoto),
               youth_photo: optional(ctx.youthPhoto),
             },
@@ -696,6 +705,7 @@ function catalogInputFromCtx(ctx: PlanContext) {
     serviceDate: ctx.serviceDate,
     verseReference: ctx.verseReading?.reference ?? undefined,
     verseText: ctx.verseReading?.text,
+    scriptureBibleVersion: ctx.verseReading?.translation ?? undefined,
     themeReference: ctx.themeVerse?.reference ?? undefined,
     themeText: ctx.themeVerse?.text,
     specialSong: ctx.specialSong,
@@ -705,6 +715,8 @@ function catalogInputFromCtx(ctx: PlanContext) {
     closingPrayer: ctx.closingPrayer,
     familyPrayer: ctx.familyPrayer || ctx.legacyCombined,
     youthPrayer: ctx.youthPrayer,
+    familyName: ctx.familyName,
+    youthName: ctx.youthName,
     familyPhoto: ctx.familyPhoto,
     youthPhoto: ctx.youthPhoto,
   };

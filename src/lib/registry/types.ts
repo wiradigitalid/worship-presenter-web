@@ -124,6 +124,8 @@ export type ArtifactTemplate = {
     default?: ArtifactLayout;
     title?: ArtifactLayout;
     lyric?: ArtifactLayout;
+    verse?: ArtifactLayout;
+    reff?: ArtifactLayout;
   };
 };
 

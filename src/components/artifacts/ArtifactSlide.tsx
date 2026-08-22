@@ -236,6 +236,7 @@ export default function ArtifactSlide({
   const isVerseOrReff =
     instance.layoutKey === 'verse' ||
     instance.layoutKey === 'reff' ||
+    instance.layoutKey === 'lyric' ||
     instance.group?.role === 'lyric';
   const effectiveBgImage =
     isVerseOrReff && backgroundOverride !== undefined

@@ -30,4 +30,10 @@ jobs:
 
     - run: npm run spa:build
 
+    # `vite build` does not type-check, and `npm test` does not run tsc. Two defects
+    # shipped on 2026-08-21 through that gap: `useT()` used as a function (white-screened
+    # the admin page) and a call to an unimported helper swallowed by a try/catch, which
+    # silently defaulted every backfilled song-book locale. This step closes it.
+    - run: npm run typecheck
+
     - run: npm test

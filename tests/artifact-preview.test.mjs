@@ -19,7 +19,7 @@ delete process.env.IMAGE_URL_ALLOWLIST;
 const srcUrl = (...parts) =>
   pathToFileURL(path.join(root, 'src', ...parts)).href;
 
-const { buildPreviewEntries, previewBadgeTone, previewLabel } = await import(
+const { buildPreviewEntries, previewBadgeTone, previewLabel, resolvePreviewTitle, resolvePreviewBadge } = await import(
   srcUrl('lib', 'artifacts', 'preview-model.ts')
 );
 const { parseRundown } = await import(srcUrl('lib', 'parser.ts'));
@@ -276,3 +276,212 @@ test('badge tone is derived once for both preview surfaces', () => {
     );
   }
 });
+
+test('preview row badge resolution produces type, song-set-N, ann-set-N, and lyric roles with i18n support', async () => {
+  const { resolveString } = await import(srcUrl('lib', 'i18n', 'index.ts'));
+
+  const enT = (key) => resolveString(key, 'en');
+  const idT = (key) => resolveString(key, 'id');
+
+  // 1. General row badge shows slide type 'general'
+  const generalEntry = { baseType: 'general', templateId: 'welcome', label: 'Welcome' };
+  assert.equal(resolvePreviewBadge(undefined, generalEntry, undefined, enT), 'general');
+  assert.equal(resolvePreviewBadge(undefined, generalEntry, undefined, idT), 'general');
+
+  // Standalone slide tests (closed badge vocabulary: 'general', 'song-set-N', 'ann-set-N')
+  assert.equal(resolvePreviewBadge({ kind: 'slide', title: 'Sermon Title' }, undefined, undefined, enT), 'general');
+  assert.equal(resolvePreviewBadge({ kind: 'song-lyric', title: 'Hymn Title' }, undefined, undefined, enT), 'general');
+  assert.equal(resolvePreviewBadge({ kind: 'scripture', title: 'Verse 1' }, undefined, undefined, enT), 'general');
+  assert.equal(resolvePreviewBadge({ kind: 'custom-unrecognized-kind', title: 'Custom' }, undefined, undefined, enT), 'general');
+  assert.equal(resolvePreviewBadge({ kind: 'slide' }, { baseType: 'general', label: 'Sermon' }, undefined, enT), 'general');
+  assert.equal(resolvePreviewBadge({ kind: 'song-lyric' }, { baseType: 'general', label: 'Hymn' }, undefined, enT), 'general');
+
+  // 2. Standalone song-set row badge with ordinal (e.g. song-set-1, song-set-2)
+  const songSetEntry1 = { baseType: 'song-set-entry', templateId: 'bt-opening-song', label: 'Opening Song' };
+  assert.equal(resolvePreviewBadge(undefined, songSetEntry1, { groupOrdinal: 1 }, enT), 'song-set-1');
+  const songSetEntry2 = { baseType: 'song-set-entry', templateId: 'bt-closing-song', label: 'Closing Song' };
+  assert.equal(resolvePreviewBadge(undefined, songSetEntry2, { groupOrdinal: 2 }, enT), 'song-set-2');
+
+  // 3. Standalone ann-set row badge with ordinal (e.g. ann-set-1, ann-set-2)
+  const annSetEntry1 = { baseType: 'ann-set-marker', templateId: 'ann-set-1', label: 'Announcements 1' };
+  assert.equal(resolvePreviewBadge(undefined, annSetEntry1, { groupOrdinal: 1 }, enT), 'ann-set-1');
+  const annSetEntry2 = { baseType: 'ann-set-marker', templateId: 'ann-set-2', label: 'Announcements 2' };
+  assert.equal(resolvePreviewBadge(undefined, annSetEntry2, { groupOrdinal: 2 }, enT), 'ann-set-2');
+
+  // 4. Song-set child: title role badge is localized (e.g. "title" / "judul")
+  const childTitleEntry = {
+    baseType: 'song-set-entry',
+    templateId: 'bt-opening-song',
+    label: 'Song Title',
+    groupId: 'bt-opening',
+    role: 'title',
+  };
+  assert.equal(resolvePreviewBadge(undefined, childTitleEntry, undefined, enT), 'title');
+  assert.equal(resolvePreviewBadge(undefined, childTitleEntry, undefined, idT), 'judul');
+
+  // 5. Song-set child: lyric role with verse number (e.g. "1/3" -> "verse 1" / "bait 1")
+  const childVerse1Entry = {
+    baseType: 'song-set-entry',
+    templateId: 'bt-opening-song',
+    label: 'Song Lyric',
+    groupId: 'bt-opening',
+    role: 'lyric',
+  };
+  const slideVerse1 = { kind: 'song-lyric', title: '1/3', body: 'Verse 1 text part 1' };
+  assert.equal(resolvePreviewBadge(slideVerse1, childVerse1Entry, undefined, enT), 'verse 1');
+  assert.equal(resolvePreviewBadge(slideVerse1, childVerse1Entry, undefined, idT), 'bait 1');
+
+  // 6. Song-set child continuation verse (same label "1/3" across multiple slides -> repeats "verse 1" / "bait 1")
+  const slideVerse1Cont = { kind: 'song-lyric', title: '1/3', body: 'Verse 1 text part 2' };
+  assert.equal(resolvePreviewBadge(slideVerse1Cont, childVerse1Entry, undefined, enT), 'verse 1');
+  assert.equal(resolvePreviewBadge(slideVerse1Cont, childVerse1Entry, undefined, idT), 'bait 1');
+
+  // 7. Song-set child: reff / chorus role (e.g. "reff" / "chorus")
+  const slideReff = { kind: 'song-lyric', title: 'Reff', body: 'Refrain text' };
+  assert.equal(resolvePreviewBadge(slideReff, childVerse1Entry, undefined, enT), 'reff');
+  assert.equal(resolvePreviewBadge(slideReff, childVerse1Entry, undefined, idT), 'reff');
+
+  const slideChorus = { kind: 'song-lyric', title: 'Chorus', body: 'Chorus text' };
+  assert.equal(resolvePreviewBadge(slideChorus, childVerse1Entry, undefined, enT), 'chorus');
+  assert.equal(resolvePreviewBadge(slideChorus, childVerse1Entry, undefined, idT), 'chorus');
+
+  // 8. Song-set child: verse 2 ("2/3" -> "verse 2" / "bait 2")
+  const slideVerse2 = { kind: 'song-lyric', title: '2/3', body: 'Verse 2 text' };
+  assert.equal(resolvePreviewBadge(slideVerse2, childVerse1Entry, undefined, enT), 'verse 2');
+  assert.equal(resolvePreviewBadge(slideVerse2, childVerse1Entry, undefined, idT), 'bait 2');
+
+  // 9. Song-set child: unlabelled lyric row (body section / empty title) -> "lyric" / "lirik" (not "verse 1" / "bait 1")
+  const slideUnlabelled = { kind: 'song-lyric', title: '', body: 'Unlabelled body text' };
+  assert.equal(resolvePreviewBadge(slideUnlabelled, childVerse1Entry, undefined, enT), 'lyric');
+  assert.equal(resolvePreviewBadge(slideUnlabelled, childVerse1Entry, undefined, idT), 'lirik');
+  assert.notEqual(resolvePreviewBadge(slideUnlabelled, childVerse1Entry, undefined, enT), 'verse 1');
+  assert.notEqual(resolvePreviewBadge(slideUnlabelled, childVerse1Entry, undefined, idT), 'bait 1');
+
+  const slideUndefinedTitle = { kind: 'song-lyric', body: 'Unlabelled body text without title' };
+  assert.equal(resolvePreviewBadge(slideUndefinedTitle, childVerse1Entry, undefined, enT), 'lyric');
+  assert.equal(resolvePreviewBadge(slideUndefinedTitle, childVerse1Entry, undefined, idT), 'lirik');
+  assert.notEqual(resolvePreviewBadge(slideUndefinedTitle, childVerse1Entry, undefined, enT), 'verse 1');
+  assert.notEqual(resolvePreviewBadge(slideUndefinedTitle, childVerse1Entry, undefined, idT), 'bait 1');
+});
+
+test('preview row title resolution prefers title -> entry.label -> entry.baseType/kind -> fallback', async () => {
+  const { resolveString } = await import(srcUrl('lib', 'i18n', 'index.ts'));
+
+  // 1. Explicit slide title wins
+  assert.equal(
+    resolvePreviewTitle(
+      { title: 'Opening Hymn' },
+      { label: 'Welcome', baseType: 'general' }
+    ),
+    'Opening Hymn'
+  );
+
+  // 2. Empty slide title falls back to entry.label
+  assert.equal(
+    resolvePreviewTitle(
+      { title: '' },
+      { label: 'Theme Verse', baseType: 'general' }
+    ),
+    'Theme Verse'
+  );
+
+  // 3. Missing slide title and missing entry.label falls back to entry.baseType chip label
+  assert.equal(
+    resolvePreviewTitle(
+      { title: '' },
+      { label: '', baseType: 'general' }
+    ),
+    'general'
+  );
+
+  // 4. Legacy slide without entry falls back to slide.kind
+  assert.equal(
+    resolvePreviewTitle(
+      { title: '', kind: 'scripture' },
+      undefined
+    ),
+    'scripture'
+  );
+
+  // 5. Empty slide without title, entry, or kind falls back to i18n
+  assert.equal(
+    resolvePreviewTitle(
+      { title: '', kind: '' },
+      undefined,
+      resolveString('form.preview.untitledSlide', 'en')
+    ),
+    'Untitled slide'
+  );
+
+  assert.equal(
+    resolvePreviewTitle(
+      { title: '', kind: '' },
+      undefined,
+      resolveString('form.preview.untitledSlide', 'id')
+    ),
+    'Slide tanpa judul'
+  );
+
+  // 6. Whitespace-only values fall back
+  assert.equal(
+    resolvePreviewTitle(
+      { title: '   ', kind: '   ' },
+      { label: '   ', baseType: 'unknown-kind' },
+      'Fallback'
+    ),
+    'Fallback'
+  );
+
+  // 7. Fully undefined inputs fall back
+  assert.equal(
+    resolvePreviewTitle(undefined, undefined, 'Fallback'),
+    'Fallback'
+  );
+});
+
+test('AC-03 guard: SlidePreviewList and preview rendering components contain no hardcoded "Untitled Slide" literal', () => {
+  const PREVIEW_COMPONENTS = [
+    path.join(root, 'src', 'components', 'SlidePreviewList.tsx'),
+  ];
+
+  const UNTITLED_SLIDE_LITERAL_REGEX = /['"`]untitled\s+slide['"`]/i;
+
+  for (const filePath of PREVIEW_COMPONENTS) {
+    const rel = path.relative(root, filePath).split(path.sep).join('/');
+    const source = fs.readFileSync(filePath, 'utf8');
+    // Strip comments to inspect code & JSX literals
+    const cleanSource = source
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
+
+    const match = UNTITLED_SLIDE_LITERAL_REGEX.exec(cleanSource);
+    assert.ok(
+      !match,
+      `Hardcoded user-facing literal "${match?.[0]}" found in ${rel} (AC-03 violation)`
+    );
+  }
+});
+
+test('ArtifactSlide permits background override for verse, reff, and lyric layout keys', () => {
+  const artifactSlidePath = path.join(root, 'src', 'components', 'artifacts', 'ArtifactSlide.tsx');
+  const source = fs.readFileSync(artifactSlidePath, 'utf8');
+
+  function getLayoutKeyMatches(src) {
+    const clean = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    const isVerseOrReffDecl = clean.match(/const\s+isVerseOrReff\s*=\s*([^;]+);/);
+    assert.ok(isVerseOrReffDecl, 'ArtifactSlide must define isVerseOrReff');
+    const expr = isVerseOrReffDecl[1];
+    const keys = [];
+    for (const m of expr.matchAll(/instance\.layoutKey\s*===?\s*['"]([^'"]+)['"]/g)) {
+      keys.push(m[1]);
+    }
+    return keys;
+  }
+
+  const keys = getLayoutKeyMatches(source);
+  assert.ok(keys.includes('verse'), 'ArtifactSlide must match layoutKey "verse"');
+  assert.ok(keys.includes('reff'), 'ArtifactSlide must match layoutKey "reff"');
+  assert.ok(keys.includes('lyric'), 'ArtifactSlide must match layoutKey "lyric"');
+});
+
+

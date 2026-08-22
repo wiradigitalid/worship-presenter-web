@@ -49,7 +49,7 @@ func TestHydrateWelcomeFromSeed(t *testing.T) {
 }
 
 func TestHydrateInlineTokensAndUnknown(t *testing.T) {
-	content := "Date: {service_date}, Title: {sermon_title}, Unknown: [{unknown_key}]"
+	content := "Date: {service_date}, Title: {sermon_title}, ScriptureVer: [{scripture_bible_version}], Family: [{family_name}], Youth: [{youth_name}], Unknown: [{unknown_key}]"
 	tmpl := Template{
 		SchemaVersion: 1,
 		ID:            "custom-test",
@@ -76,8 +76,11 @@ func TestHydrateInlineTokensAndUnknown(t *testing.T) {
 		},
 	}
 	inst, err := hydrateArtifact(tmpl, "inst-1", "default", map[string]interface{}{
-		"service_date": "2026-08-21",
-		"sermon_title": "Living Water",
+		"service_date":            "2026-08-21",
+		"sermon_title":            "Living Water",
+		"scripture_bible_version": "TB",
+		"family_name":             "Keluarga Lee",
+		// youth_name is left missing to test that it renders empty rather than erroring
 	}, nil)
 	if err != nil {
 		t.Fatalf("hydrateArtifact failed: %v", err)
@@ -89,7 +92,7 @@ func TestHydrateInlineTokensAndUnknown(t *testing.T) {
 	if el.Text == nil {
 		t.Fatalf("expected text on element")
 	}
-	expected := "Date: 2026-08-21, Title: Living Water, Unknown: []"
+	expected := "Date: 2026-08-21, Title: Living Water, ScriptureVer: [TB], Family: [Keluarga Lee], Youth: [], Unknown: []"
 	if *el.Text != expected {
 		t.Fatalf("expected %q, got %q", expected, *el.Text)
 	}

@@ -1,9 +1,10 @@
 /**
- * Placeholder Catalog (DEC-004 Supplement S1): the 15 admitted keys and the
+ * Placeholder Catalog (DEC-004 Supplement S1): the 17 admitted keys and the
  * weekly resolver that fills them.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
@@ -24,8 +25,8 @@ const {
 test('extractInlineTokens extracts tokens correctly from text', () => {
   assert.deepEqual(extractInlineTokens('Hello {service_date}!'), ['service_date']);
   assert.deepEqual(
-    extractInlineTokens('Family: {family_name}, req: {family_request}'),
-    ['family_name', 'family_request']
+    extractInlineTokens('Family: {family_name}, req: {family_request}, youth: {youth_name}'),
+    ['family_name', 'family_request', 'youth_name']
   );
   assert.deepEqual(extractInlineTokens('{duplicate} and {duplicate}'), ['duplicate']);
   assert.deepEqual(extractInlineTokens('No tokens here'), []);
@@ -38,7 +39,7 @@ test('findUnknownPredefinedFieldTokens detects unknown tokens and valid tokens',
     layouts: {
       default: {
         elements: [
-          { type: 'text', content: 'Date: {service_date} - {sermon_title}' },
+          { type: 'text', content: 'Date: {service_date} - {sermon_title} ({scripture_bible_version}) {youth_name}' },
           { type: 'image-placeholder', placeholderKey: 'sermon_poster' },
         ],
       },
@@ -63,12 +64,48 @@ test('findUnknownPredefinedFieldTokens detects unknown tokens and valid tokens',
   assert.ok(warnings.some((w) => w.includes('bad_image_key')));
 });
 
-test('catalog admits the 15 shipped General keys and excludes SongSet expansion keys', () => {
+test('validateArtifactTemplate accepts youth_name and scripture_bible_version placeholders in slide payload', async () => {
+  const { validateArtifactTemplate } = await import(
+    pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'validate.ts')).href
+  );
+  const validPayload = {
+    schemaVersion: 1,
+    id: 's1-keys-validation-test',
+    label: 'S1 Keys Test',
+    baseType: 'general',
+    placeholders: [
+      { key: 'youth_name', type: 'text', required: false },
+      { key: 'scripture_bible_version', type: 'text', required: false },
+    ],
+    layouts: {
+      default: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [
+          {
+            id: 'e1',
+            type: 'text',
+            x: 10,
+            y: 10,
+            w: 100,
+            h: 50,
+            zIndex: 1,
+            content: '{youth_name} ({scripture_bible_version})',
+          },
+        ],
+      },
+    },
+  };
+  assert.doesNotThrow(() => validateArtifactTemplate(validPayload));
+});
+
+test('catalog admits the 17 shipped General keys and excludes SongSet expansion keys', () => {
   const keys = PLACEHOLDER_CATALOG.map((entry) => entry.key);
   for (const key of [
     'service_date',
     'scripture_reference',
     'scripture_text',
+    'scripture_bible_version',
     'theme_reference',
     'theme_text',
     'special_song',
@@ -79,6 +116,7 @@ test('catalog admits the 15 shipped General keys and excludes SongSet expansion 
     'family_request',
     'youth_request',
     'family_name',
+    'youth_name',
     'family_photo',
     'youth_photo',
   ]) {
@@ -98,7 +136,27 @@ test('catalog admits the 15 shipped General keys and excludes SongSet expansion 
     ),
     ['sermon_poster', 'family_photo', 'youth_photo']
   );
-  assert.equal(keys.length, 15);
+  assert.equal(keys.length, 17);
+});
+
+test('mirrored TypeScript and Go catalogs define identical keys and types', () => {
+  const goSource = fs.readFileSync(
+    path.join(root, 'internal', 'plan', 'validate_artifact.go'),
+    'utf8'
+  );
+  const match = /catalogKeys\s*=\s*map\[string\]string\{([^}]+)\}/.exec(goSource);
+  assert.ok(match, 'catalogKeys map found in validate_artifact.go');
+  const goMap = {};
+  for (const line of match[1].split('\n')) {
+    const entryMatch = /"([^"]+)"\s*:\s*"([^"]+)"/.exec(line);
+    if (entryMatch) {
+      goMap[entryMatch[1]] = entryMatch[2];
+    }
+  }
+  const tsMap = Object.fromEntries(
+    PLACEHOLDER_CATALOG.map((entry) => [entry.key, entry.type])
+  );
+  assert.deepEqual(tsMap, goMap);
 });
 
 test('weekly resolver fills every catalog key it can', () => {
@@ -106,6 +164,7 @@ test('weekly resolver fills every catalog key it can', () => {
     serviceDate: '2026-07-11',
     scriptureReference: 'John 4:23',
     scriptureText: 'true worshipers',
+    scriptureBibleVersion: 'NKJV',
     themeReference: 'Psalm 23:1',
     themeText: 'The Lord is my shepherd',
     specialSong: 'Ada Chen',
@@ -115,12 +174,15 @@ test('weekly resolver fills every catalog key it can', () => {
     closingPrayer: 'Sam Rivera',
     familyRequest: 'Pray for the Harts',
     youthRequest: 'Youth camp',
+    familyName: 'The Hart Family',
+    youthName: 'Alex Hart',
     familyPhoto: 'https://example.com/family.png',
     youthPhoto: 'https://example.com/youth.png',
   });
   assert.equal(values.service_date, '2026-07-11');
   assert.equal(values.scripture_reference, 'John 4:23');
   assert.equal(values.scripture_text, 'true worshipers');
+  assert.equal(values.scripture_bible_version, 'NKJV');
   assert.equal(values.theme_reference, 'Psalm 23:1');
   assert.equal(values.theme_text, 'The Lord is my shepherd');
   assert.equal(values.special_song, 'Ada Chen');
@@ -130,6 +192,8 @@ test('weekly resolver fills every catalog key it can', () => {
   assert.equal(values.closing_prayer_person, 'Sam Rivera');
   assert.equal(values.family_request, 'Pray for the Harts');
   assert.equal(values.youth_request, 'Youth camp');
+  assert.equal(values.family_name, 'The Hart Family');
+  assert.equal(values.youth_name, 'Alex Hart');
   assert.equal(values.family_photo, 'https://example.com/family.png');
   assert.equal(values.youth_photo, 'https://example.com/youth.png');
 });
@@ -143,4 +207,5 @@ test('weekly resolver leaves scripture_* and theme_* independent — no fallback
   assert.equal(values.theme_text, 'The Lord is my shepherd');
   assert.equal(values.scripture_reference, undefined);
   assert.equal(values.scripture_text, undefined);
+  assert.equal(values.scripture_bible_version, undefined);
 });

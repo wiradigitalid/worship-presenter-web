@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+test-results/
+playwright-report/
 
 # leftover Next.js cache (must not return as a runtime)
 /.next/

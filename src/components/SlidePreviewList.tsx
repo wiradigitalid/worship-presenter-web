@@ -8,9 +8,12 @@
  */
 import {
   previewBadgeTone,
+  resolvePreviewBadge,
+  resolvePreviewTitle,
   type PreviewBadgeTone,
   type PreviewEntry,
 } from '@/lib/artifacts/preview-model';
+import { useT } from '@/lib/i18n/operator';
 
 /** Legacy slide payload the API still returns; used for the visible content. */
 export type SlidePreviewItem = {
@@ -65,11 +68,19 @@ function legacyToneClass(kind: string | undefined): string {
  * children keep their own linear slide numbers.
  */
 type PreviewRow =
-  | { kind: 'slide'; key: string; entry?: PreviewEntry; slide?: SlidePreviewItem; index: number }
+  | {
+      kind: 'slide';
+      key: string;
+      entry?: PreviewEntry;
+      slide?: SlidePreviewItem;
+      index: number;
+      groupOrdinal?: number;
+    }
   | {
       kind: 'group';
       key: string;
       label: string;
+      groupOrdinal?: number;
       children: Array<{
         key: string;
         entry: PreviewEntry;
@@ -92,6 +103,9 @@ function buildRows(
   }
 
   const rows: PreviewRow[] = [];
+  let songSetCount = 0;
+  let annSetCount = 0;
+
   for (const entry of entries) {
     const slide = slides[entry.index];
     const child = {
@@ -102,7 +116,15 @@ function buildRows(
     };
 
     if (!entry.groupId) {
-      rows.push({ kind: 'slide', ...child });
+      let groupOrdinal: number | undefined;
+      if (entry.baseType === 'song-set-entry' || entry.baseType === 'song-set') {
+        songSetCount += 1;
+        groupOrdinal = songSetCount;
+      } else if (entry.baseType === 'ann-set-marker' || entry.baseType === 'announcement') {
+        annSetCount += 1;
+        groupOrdinal = annSetCount;
+      }
+      rows.push({ kind: 'slide', ...child, groupOrdinal });
       continue;
     }
 
@@ -111,10 +133,12 @@ function buildRows(
       last.children.push(child);
       continue;
     }
+    songSetCount += 1;
     rows.push({
       kind: 'group',
       key: entry.groupId,
       label: entry.groupLabel || 'Song Set',
+      groupOrdinal: songSetCount,
       children: [child],
     });
   }
@@ -125,15 +149,24 @@ function SlideRow({
   entry,
   slide,
   index,
+  groupOrdinal,
 }: {
   entry?: PreviewEntry;
   slide?: SlidePreviewItem;
   index: number;
+  groupOrdinal?: number;
 }) {
+  const { t } = useT();
   const toneClass = entry
     ? TONE_CLASS[previewBadgeTone(entry)]
     : legacyToneClass(slide?.kind);
-  const label = entry ? entry.label : slide?.kind;
+  const badge = resolvePreviewBadge(slide, entry, { groupOrdinal }, t);
+
+  const title = resolvePreviewTitle(
+    slide,
+    entry,
+    t('form.preview.untitledSlide')
+  );
 
   return (
     <div className="p-3 flex items-start gap-3 hover:bg-muted/30 transition-all">
@@ -142,10 +175,12 @@ function SlideRow({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className={`${BADGE_CLASS} ${toneClass}`}>{label}</span>
-          <span className="font-bold text-xs truncate text-foreground">
-            {slide?.title || 'Untitled Slide'}
-          </span>
+          <span className={`${BADGE_CLASS} ${toneClass}`}>{badge}</span>
+          {title ? (
+            <span className="font-bold text-xs truncate text-foreground">
+              {title}
+            </span>
+          ) : null}
         </div>
         {slide?.subtitle && (
           <p className="text-[10px] text-muted-foreground/80 mt-1 truncate">
@@ -187,6 +222,7 @@ export function SlidePreviewList({
             entry={row.entry}
             slide={row.slide}
             index={row.index}
+            groupOrdinal={row.groupOrdinal}
           />
         ) : (
           <div key={row.key} className="bg-muted/20">

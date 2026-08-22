@@ -15,3 +15,11 @@ func TestFormatTimestampSecondGrainUnchanged(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestFormatTimestamp_PreservesZeroMilliseconds(t *testing.T) {
+	input := "2026-08-21 15:44:13.000"
+	got := formatTimestamp(input)
+	if got != "2026-08-21 15:44:13.000" {
+		t.Fatalf("got %q, want %q", got, "2026-08-21 15:44:13.000")
+	}
+}

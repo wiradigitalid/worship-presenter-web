@@ -26,6 +26,8 @@ func (p Rundown) ToPlan() plan.ParsedRundown {
 		FamilyYouth:         p.FamilyYouth,
 		FamilyPrayerRequest: p.FamilyPrayerRequest,
 		YouthPrayerRequest:  p.YouthPrayerRequest,
+		FamilyName:          p.FamilyName,
+		YouthName:           p.YouthName,
 	}
 	if p.Sermon != nil {
 		out.Sermon = &plan.ParsedSermon{Speaker: p.Sermon.Speaker, Title: p.Sermon.Title}

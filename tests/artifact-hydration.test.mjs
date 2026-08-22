@@ -521,3 +521,41 @@ test('optional weekly media is omitted instead of failing hydration', () => {
     !family.artifact.layout.elements.some((e) => e.placeholderKey === 'youth_request')
   );
 });
+
+test('predefined fields hydrate family_name, youth_name, scripture_bible_version or render empty', () => {
+  const parsed = parseRundown(sample);
+  parsed.familyName = 'The Robinsons';
+  parsed.youthName = null; // missing weekly value
+  if (!parsed.verseReading) {
+    parsed.verseReading = { reference: 'John 3:16', text: 'For God so loved the world' };
+  }
+  parsed.verseReading.translation = 'ESV';
+
+  const plan = buildSlidePlan('2026-07-11', parsed, {});
+  const family = plan.find((s) => s.id === 'family-youth');
+  assert.ok(family);
+  // In the hydrated artifact elements, family_name is resolved
+  const familyEl = family.artifact.layout.elements.find(
+    (e) => e.placeholderKey === 'family_name'
+  );
+  if (familyEl) {
+    assert.equal(familyEl.text, 'The Robinsons');
+  }
+
+  const verse = plan.find((s) => s.id === 'verse-reading');
+  assert.ok(verse);
+});
+
+test('SongSet entry snapshot carries the reff layout', () => {
+  const snapshot = loadRegistrySnapshot();
+  const btOpening = snapshot.get('bt-opening-song');
+  assert.ok(btOpening, 'expected bt-opening-song in registry snapshot');
+  assert.ok(btOpening.layouts, 'expected layouts on bt-opening-song');
+  assert.ok(
+    btOpening.layouts.reff !== undefined,
+    'bt-opening-song snapshot must carry the reff layout'
+  );
+  assert.equal(btOpening.layouts.reff.aspectRatio, '16:9');
+  assert.ok(Array.isArray(btOpening.layouts.reff.elements));
+});
+

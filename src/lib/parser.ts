@@ -46,6 +46,10 @@ export interface ParsedRundown {
   familyPrayerRequest: string | null;
   /** Youth-of-the-week prayer request (Slide 56). */
   youthPrayerRequest: string | null;
+  /** Family-of-the-week name (Slide 56). */
+  familyName?: string | null;
+  /** Youth-of-the-week name (Slide 56). */
+  youthName?: string | null;
 }
 
 function normalizeNewlines(text: string): string {
@@ -301,6 +305,8 @@ export function parseRundown(rawText: string): ParsedRundown {
     familyYouth: null,
     familyPrayerRequest: null,
     youthPrayerRequest: null,
+    familyName: null,
+    youthName: null,
   };
 
   const dateRegex =

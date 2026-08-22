@@ -1,22 +1,23 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { useT } from '@/lib/i18n/operator';
 
 export default function SyncArtifactButton({
   serviceId,
   updatedAt,
+  onSuccess,
 }: {
   serviceId: number;
   updatedAt: string;
+  onSuccess?: (updatedAt: string) => Promise<void> | void;
 }) {
+  const { t } = useT();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSync = async () => {
-    if (
-      !window.confirm(
-        'Replace this Service’s frozen deck structure with the live Artifact Registry? Entered hymn numbers, names, and verses stay. Announcement flyers stay this Service’s list.'
-      )
-    ) {
+    if (!window.confirm(t('sync.confirm'))) {
       return;
     }
     setBusy(true);
@@ -29,13 +30,25 @@ export default function SyncArtifactButton({
       });
       const payload = (await res.json().catch(() => null)) as {
         error?: string;
+        updated_at?: string;
       } | null;
       if (!res.ok) {
-        setError(payload?.error || `Sync failed (${res.status})`);
+        const errorMsg =
+          res.status === 409
+            ? t('sync.conflict')
+            : payload?.error || `${t('sync.failed')} (${res.status})`;
+        setError(errorMsg);
+        toast.error(errorMsg);
         return;
       }
+      toast.success(t('sync.success'));
+      if (onSuccess) {
+        await onSuccess(payload?.updated_at || '');
+      }
     } catch {
-      setError('Sync failed');
+      const errorMsg = t('sync.failed');
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setBusy(false);
     }
@@ -44,7 +57,7 @@ export default function SyncArtifactButton({
   return (
     <div className="flex flex-col items-stretch sm:items-end gap-1">
       <Button variant="outline" onClick={handleSync} disabled={busy}>
-        {busy ? 'Syncing…' : 'Sync Artifact'}
+        {busy ? t('sync.syncing') : t('sync.label')}
       </Button>
       {error ? (
         <p className="text-xs text-destructive max-w-xs text-right">{error}</p>

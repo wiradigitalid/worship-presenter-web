@@ -89,6 +89,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/hymns", s.getHymns)
 	mux.HandleFunc("GET /api/scripture", s.getScripture)
 	mux.HandleFunc("GET /api/bible-translations", s.getBibleTranslations)
+	mux.HandleFunc("POST /api/present/{id}/remote/pair", s.postRemotePair)
+	mux.HandleFunc("POST /api/present/{id}/remote/claim", s.postRemoteClaim)
+	mux.HandleFunc("GET /api/present/{id}/remote/stream", s.getRemoteStream)
+	mux.HandleFunc("POST /api/present/{id}/remote/intent", s.postRemoteIntent)
+	mux.HandleFunc("DELETE /api/present/{id}/remote/pair", s.deleteRemotePair)
 	mux.HandleFunc("POST /api/webhook", s.postWebhook)
 	mux.HandleFunc("/", s.fallback)
 	return s.gate(mux)
@@ -225,7 +230,7 @@ func (s *Server) fallback(w http.ResponseWriter, r *http.Request) {
 		filepath.Join(s.Root, "spa", rel),
 	}
 	if rel == "" || rel == "login" || strings.HasPrefix(rel, "services") ||
-		rel == "announcements" || strings.HasPrefix(rel, "admin") || strings.HasSuffix(rel, "/") {
+		strings.HasPrefix(rel, "admin") || strings.HasSuffix(rel, "/") {
 		candidates = append([]string{
 			filepath.Join(s.Root, "spa", "dist", indexName),
 			filepath.Join(s.Root, "spa", indexName),

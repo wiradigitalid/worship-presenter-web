@@ -1,3 +1,6 @@
+// Hand-mirrored port: internal/plan/song_set_snapshot.go <-> src/lib/artifacts/registry-snapshot.ts
+// A change to one is incomplete until the other matches. (DEC-004 S4/AD-33)
+
 package plan
 
 import (

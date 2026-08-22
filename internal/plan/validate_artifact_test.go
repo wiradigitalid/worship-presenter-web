@@ -91,6 +91,39 @@ func TestValidateArtifactTemplateCatalogKey(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "placeholder key is not in the catalog: inventedWeekly") {
 		t.Fatalf("catalog: %v", err)
 	}
+
+	validPayload := map[string]any{
+		"schemaVersion": 1,
+		"id":            "custom-s1-keys",
+		"label":         "S1 Keys",
+		"baseType":      "general",
+		"placeholders": []any{
+			map[string]any{"key": "youth_name", "type": "text", "required": false},
+			map[string]any{"key": "scripture_bible_version", "type": "text", "required": false},
+		},
+		"layouts": map[string]any{
+			"default": map[string]any{
+				"aspectRatio":     "16:9",
+				"backgroundColor": "#000000",
+				"elements": []any{
+					map[string]any{
+						"id":     "t1",
+						"type":   "text",
+						"x":      10.0,
+						"y":      10.0,
+						"w":      100.0,
+						"h":      50.0,
+						"zIndex": 1,
+						"content": "Youth: {youth_name}, Ver: {scripture_bible_version}",
+					},
+				},
+			},
+		},
+	}
+	_, err = ValidateArtifactTemplate(mustJSON(validPayload), root)
+	if err != nil {
+		t.Fatalf("validPayload with S1 keys must pass validation: %v", err)
+	}
 }
 
 func TestAuthoredGeneralAppearsInPlan(t *testing.T) {

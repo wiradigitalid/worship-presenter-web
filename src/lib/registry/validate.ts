@@ -439,7 +439,7 @@ export function validateArtifactTemplate(raw: unknown): ArtifactTemplate {
   }
 
   const layoutsRaw = assertPlainObject(obj.layouts ?? {}, 'layouts');
-  const layoutKeys = new Set(['default', 'title', 'lyric']);
+  const layoutKeys = new Set(['default', 'title', 'lyric', 'verse', 'reff']);
   for (const key of Object.keys(layoutsRaw)) {
     if (!layoutKeys.has(key)) {
       throw new RegistryValidationError(`Unknown layouts field: ${key}`);
@@ -455,6 +455,12 @@ export function validateArtifactTemplate(raw: unknown): ArtifactTemplate {
   }
   if (layoutsRaw.lyric !== undefined) {
     layouts.lyric = parseLayout(layoutsRaw.lyric, 'layouts.lyric');
+  }
+  if (layoutsRaw.verse !== undefined) {
+    layouts.verse = parseLayout(layoutsRaw.verse, 'layouts.verse');
+  }
+  if (layoutsRaw.reff !== undefined) {
+    layouts.reff = parseLayout(layoutsRaw.reff, 'layouts.reff');
   }
 
   const template: ArtifactTemplate = {

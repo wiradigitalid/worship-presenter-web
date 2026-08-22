@@ -3,7 +3,7 @@
  */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn, execFileSync } from 'child_process';
+import { spawn } from 'child_process';
 import { createHash } from 'crypto';
 import fs from 'fs';
 import http from 'http';
@@ -11,6 +11,7 @@ import net from 'net';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import { stopProcess } from './helpers/go-api.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -73,6 +74,7 @@ before(async () => {
   const port = await reservePort();
   child = spawn('go', ['run', './cmd/api'], {
     cwd: root,
+    detached: process.platform !== 'win32',
     env: {
       ...process.env,
       PORT: String(port),
@@ -100,23 +102,8 @@ before(async () => {
   );
 });
 
-function stop(proc) {
-  if (!proc || proc.pid == null) return;
-  if (process.platform === 'win32') {
-    try {
-      execFileSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'], {
-        stdio: 'ignore',
-      });
-    } catch {
-      /* already gone */
-    }
-    return;
-  }
-  proc.kill('SIGTERM');
-}
-
 after(() => {
-  stop(child);
+  stopProcess(child);
   try {
     fs.rmSync(tmp, { recursive: true, force: true });
   } catch {
@@ -144,4 +131,49 @@ test('a prefix lookalike of an exempt path stays gated', async () => {
 test('GET pptx is gated', async () => {
   const res = await fetchRaw(`${base}/api/services/1/pptx`);
   assert.equal(res.status, 401);
+});
+
+// What this proves, and what it does not: a 401 here can come from the gate OR
+// from the handler's own sessionFrom check, and both are present by design.
+// The proof that these paths are inside the AD-5 boundary is
+// `internal/gate/gate_test.go`, which fails when a path is exempted; this test
+// still passes in that state because the handler catches it. Verified by
+// injecting `/api/present` into exemptPrefixes on 2026-08-22.
+test('every remote control path is gated (401 without a session)', async () => {
+  const paths = [
+    { path: '/api/present/1/remote/pair', method: 'POST' },
+    { path: '/api/present/1/remote/claim', method: 'POST' },
+    { path: '/api/present/1/remote/stream', method: 'GET' },
+    { path: '/api/present/1/remote/intent', method: 'POST' },
+    { path: '/api/present/1/remote/pair', method: 'DELETE' },
+  ];
+  for (const { path: p, method } of paths) {
+    const u = new URL(`${base}${p}`);
+    const res = await new Promise((resolve, reject) => {
+      const req = http.request(
+        {
+          hostname: u.hostname,
+          port: u.port,
+          path: u.pathname,
+          method,
+          headers: { Accept: 'application/json' },
+        },
+        (r) => {
+          const chunks = [];
+          r.on('data', (c) => chunks.push(c));
+          r.on('end', () =>
+            resolve({
+              status: r.statusCode,
+              headers: r.headers,
+              body: Buffer.concat(chunks).toString('utf8'),
+            })
+          );
+        }
+      );
+      req.on('error', reject);
+      req.end();
+    });
+    assert.equal(res.status, 401, `${method} ${p} must be 401 without session`);
+    assert.match(res.body, /Unauthorized/);
+  }
 });

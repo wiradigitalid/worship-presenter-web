@@ -39,6 +39,7 @@
 | Weekly song inputs on the Hub form match the configured song-set list | `FR-32` | `—` | `catalog` | not set yet | — | must | `CAP-3` | as-built |
 | Operator changes the live Verse/Reff background during the service | `FR-33` | `—` | `catalog` | not set yet | — | must | `CAP-3` | as-built |
 | Operator edits a song's lyrics for this Service only, with an explicit action to save them back to the Song B… | `FR-34` | `—` | `catalog` | not set yet | — | must | `CAP-3` | as-built |
+| Operator controls the presenting laptop from a second signed-in device | `FR-35` | `—` | `catalog` | not set yet | — | must | `CAP-3` | as-built |
 | Assemble a Deck from the fixed frame plus the weekly payload | `FR-4` | `—` | `catalog` | not set yet | — | must | `CAP-1` | as-built |
 | Render a song block into readable lyric slides | `FR-5` | `—` | `catalog` | not set yet | — | must | `CAP-1` | as-built |
 | Render non-song variable content onto its slide kinds | `FR-6` | `—` | `catalog` | not set yet | — | must | `CAP-1` | as-built |

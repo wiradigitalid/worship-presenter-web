@@ -1,0 +1,125 @@
+- id: "5-1"
+  title: The remote relay and the pairing, in Go
+  description: >-
+    LC-17 and LC-18 on `api`: pair, claim, stream, intent, delete, with the
+    pairing held in process memory and keyed to the presenting role. Against
+    SPEC CAP-6; contract in .how/presenter/02-contracts/03-remote-control.md.
+  spec_checkpoint: false
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Read `.how/presenter/02-contracts/03-remote-control.md` before writing a
+    line. It answers all five lanes and it decides three things you must not
+    re-decide: the transport is SSE for server-to-client and ordinary POST for
+    client-to-server; the pairing lives in process memory with no table, so no
+    startup DDL and no `data_version` bump; and the pairing is keyed to the
+    **presenting role**, never to a stream connection.
+
+    AD-5 is the trap that matters most here, and it is not a style rule: the Go
+    path matcher **is** the authorization boundary, so anything it does not
+    match is served with no session check at all. Every one of the five paths
+    joins the matcher in `internal/gate` and ships its assertion in
+    `tests/go-http-gate.test.mjs` in this same change set. A path added without
+    its matcher entry is an unauthenticated endpoint, not a missing test.
+
+    Two authorization facts that read as counter-intuitive and are correct.
+    Being a signed-in Operator is necessary and **not sufficient** — the server
+    cannot tell two devices of one account apart, so possession of the displayed
+    code is what authorises a claim. And a claim from someone who is not
+    presenting is normal, not suspicious: the remote is by definition not the
+    presenting client. Do not add a "caller must be presenting" check; an
+    earlier draft of the contract had one and it was incoherent.
+
+    Reject rather than absorb: a second claim on a live pairing is 409, never a
+    takeover (OQ-54). A second `pair` while a code is still outstanding replaces
+    the old code and invalidates it — two live codes for one screen is two keys
+    to one door. An unknown intent `type` is 400, never a silent drop, because a
+    dropped intent looks to the Operator like a dead remote.
+
+    OQ-53: the code lifetime and the stream freshness window are **one exported
+    pair**, read by both ends from one place. Two units each picking an honest
+    number independently is exactly how a healthy remote gets reported dead —
+    AD-29 already paid for that lesson with the projector heartbeat. Pick the
+    numbers, export them once, and say in a comment why you picked them.
+
+    Do not touch `src/lib/present-channel.ts`. No new message variant is minted
+    in this wave; the six intents already exist there and the relay carries them.
+
+- id: "5-2"
+  title: The presenting client holds the stream and applies remote intents
+  description: >-
+    The presenting laptop claims the presenting role, holds its SSE stream, and
+    applies an arriving intent exactly as it applies a local key press. Against
+    SPEC CAP-6; branch in .what/presenter/05-scenarios/SCN-6-remote-drops-mid-service.md.
+  spec_checkpoint: false
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Read `SCN-6-remote-drops-mid-service.md` first. It is short and it is the
+    difference between this feature being safe and being a liability.
+
+    The one property that outranks everything else you will write: **the room
+    screen is never a casualty.** A remote intent enters where the Operator's own
+    hand enters — upstream of the single controller — so `BroadcastChannel` and
+    the projector path need **no change at all**. If you find yourself editing
+    the projector side, stop: the design says you should not have to, and if you
+    do, report it rather than making it fit.
+
+    Three additions will occur to you and all three are forbidden by SCN-6,
+    which records them by name: a queue that replays intents after a reconnect,
+    a shared liveness indicator that folds the remote into the projector's
+    verdict, and an intent buffer that flushes on reconnect. Each looks like
+    reliability. A slide advanced three minutes ago is not an instruction any
+    more, and AD-29 owns the liveness predicate — a dead remote and a dead
+    projector are different facts.
+
+    Intents are **intended values, not deltas** — `blank: true`, an absolute
+    index. That is what makes a bad phone network survivable with no queue: a
+    duplicate is harmless and a loss is corrected by the next one. Do not
+    convert them to increments for tidiness.
+
+    `planIdentity` already travels on every shared-state message and a receiver
+    whose own identity differs refuses the index (AD-10). Apply the same
+    discipline to an arriving intent: the phone may be looking at a deck this
+    laptop no longer has.
+
+    The presenting role is **claimed, not inferred**. Two laptops can both open
+    the present route for one Service; a second client claiming the role takes it
+    and this one is told it lost the role, rather than both believing they hold
+    it. AD-29 already paid for the neighbouring version of this — a slideshow tab
+    answering as the projector reported a live second screen while the hall was
+    dark.
+
+- id: "5-3"
+  title: The remote screen on the phone
+  description: >-
+    The presenter view on a second device, usable one-handed, sending intents
+    through the relay. Against SPEC CAP-6; FR-35's proof of done is the
+    acceptance shape.
+  spec_checkpoint: false
+  done_checkpoint: false
+  invoke_dev_with: >-
+    `wdi-ux` was skipped on this project by owner choice, so there is no design
+    artifact and you are not free to invent a new interaction language. The
+    owner's brief is one sentence — the presenter view, the same, controllable
+    remotely. Reuse the existing presenter control layout from
+    `src/operator/present/` and make it comfortable for a thumb on a small
+    screen: the controls a person reaches for while walking are advance, blank,
+    and the verse box.
+
+    shadcn primitives only, from `src/components/ui/` —
+    `tests/operator-shadcn-guard.test.mjs` enforces it.
+
+    Every new string is translated in `keys.ts`, `catalogue-en.ts` and
+    `catalogue-id.ts` together, and **this project's `t` takes exactly one
+    argument**. `tests/translator-guard.test.mjs` fails on a second one across
+    `src/` and `spa/src/`, because a params object is silently dropped — that
+    defect shipped a literal `VERSE {N}` to an Operator's screen once already.
+    A placeholder is substituted at the call site with `.replace()`.
+
+    Never `return null` while loading: that is the page-flash defect the owner
+    reported. And no `router.refresh()` or `navigate(0)` —
+    `tests/no-router-refresh-guard.test.mjs` enforces it because `navigate(0)`
+    remounts the route and blanks the page.
+
+    The remote shows its **own** connection state and refuses input while dark.
+    It must not display anything about the projector's liveness: that is AD-29's
+    predicate and this screen is not one of its inputs.

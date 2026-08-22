@@ -13,6 +13,7 @@ func formatTimestamp(raw string) string {
 	if raw == "" {
 		return raw
 	}
+	hasDot := strings.Contains(raw, ".")
 	layouts := []string{
 		time.RFC3339Nano,
 		time.RFC3339,
@@ -23,7 +24,7 @@ func formatTimestamp(raw string) string {
 	}
 	for _, layout := range layouts {
 		if t, err := time.Parse(layout, raw); err == nil {
-			return formatUnixStamp(t.UTC())
+			return formatUnixStamp(t.UTC(), hasDot)
 		}
 	}
 	s := strings.ReplaceAll(raw, "T", " ")
@@ -31,9 +32,9 @@ func formatTimestamp(raw string) string {
 	return s
 }
 
-func formatUnixStamp(t time.Time) string {
+func formatUnixStamp(t time.Time, preserveFraction bool) string {
 	t = t.UTC()
-	if t.Nanosecond() == 0 {
+	if t.Nanosecond() == 0 && !preserveFraction {
 		return t.Format(sqliteSecond)
 	}
 	ms := t.Nanosecond() / 1e6

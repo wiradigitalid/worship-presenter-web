@@ -14,6 +14,7 @@ updated: 2026-08-20
 |---|---|---|---|
 | 2026-08-18 | This initiative was born from the `weekly-sabbath` split. Area: logged-in Hub, Friday review, Run-Sheet, slideshow/presenter, on-demand verse, accounts, two language axes. FR-8…11, FR-13, FR-15…19, FR-22…25, FR-28. | A reader looking for “Friday review” or “projector screen” does not open the generate PRD. | as-built |
 | 2026-08-20 | The Hub form's weekly song fields now track whatever song-set list Admin has configured in the Registry, not a fixed four (FR-32). FR-23's promise is confirmed and sharpened: a song-set entry may pick its own Song Book, or fall back to the Admin-set global default, and more than one book may be in use in the same Service. Two new promises: the Operator may change the live Verse/Reff background during the service itself (FR-33), and the Operator may edit a song's lyrics for one Service only, with a separate explicit action to save the correction back to the Song Book (FR-34). | Owner ratified DEC-004: song-set count, song-book choice, live background, and lyric correction all became things the Operator or Admin does at the weekly/live layer, not fixed at the code layer. | as-built · later |
+| 2026-08-22 | One new promise: the Operator may control the presenting laptop from a second signed-in device — a phone — and see the same presenter view there (FR-35). The remote is additive: connecting is a deliberate step rather than a consequence of being signed in, and the laptop keeps driving the room screen when the phone is absent, asleep, or off the network. | Owner asked for the projection to be remotable from a phone, and chose the shape when offered two: the phone is a remote **for the laptop**, not a second thing the projector follows. The rejected alternative — a phone that drives the projector with the laptop off — would have made the room screen depend on connectivity, which the product's own offline guarantee is built to avoid. | later |
 
 ## 0. Document Purpose
 
@@ -120,6 +121,16 @@ Events while *sending* a Rundown. The congregation.
 #### FR-33: Operator changes the live Verse/Reff background
 
 **Proof of done:** During the Service, the Operator picks a different background for the projected Verse/Reff slides from the background library; the change is visible immediately and does not alter the Service payload or require regenerating the Deck.
+
+#### FR-35: Operator controls the presenting laptop from a second device
+
+**Proof of done:** The laptop is presenting and the room screen is live. The Operator signs in on a
+phone, connects it to that presenting laptop by a deliberate step — being signed in is not by itself
+enough — and sees the same presenter view. Standing away from the laptop, they advance a slide, blank
+and unblank the room screen, change the live Verse/Reff background, and put a verse on the projector;
+each one lands on the room screen. Another Operator signed in elsewhere, who has not connected to this
+laptop, cannot drive it. The phone is then closed, put to sleep, or taken off the network, and the
+laptop keeps driving the service exactly as it did before the phone joined.
 
 ### 4.5 Accounts
 

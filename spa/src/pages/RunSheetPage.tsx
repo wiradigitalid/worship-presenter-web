@@ -13,7 +13,6 @@ export default function RunSheetPage() {
   const { session } = useSession();
   const { t } = useT();
   const [svc, setSvc] = useState<any>(null);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,11 +27,8 @@ export default function RunSheetPage() {
         return;
       }
       const data = await res.json();
-      const anns = await fetch('/api/announcements', { credentials: 'same-origin' });
-      const annData = anns.ok ? await anns.json() : { items: [] };
       if (cancelled) return;
       setSvc(data);
-      setAnnouncements(annData.items || []);
       setLoading(false);
     })();
     return () => {
@@ -54,9 +50,18 @@ export default function RunSheetPage() {
 
   const isAdmin = session.role === 'admin';
   const images = svc.images_payload && typeof svc.images_payload === 'object' ? svc.images_payload : {};
-  const serviceAnns = announcements.filter(
-    (a: { service_id: number | null }) => a.service_id == null || a.service_id === svc.id
-  );
+
+  const reloadService = async () => {
+    try {
+      const res = await fetch(`/api/services/${id}`, { credentials: 'same-origin' });
+      if (res.ok) {
+        const data = await res.json();
+        setSvc(data);
+      }
+    } catch {
+      // non-blocking
+    }
+  };
 
   const actionClass = cn(buttonVariants({ variant: 'outline' }), 'h-auto px-3 py-2');
 
@@ -86,8 +91,15 @@ export default function RunSheetPage() {
           <Link href={`/services/${svc.id}/present`} className={actionClass}>
             {t('edit.actions.present')}
           </Link>
+          <Link href={`/services/${svc.id}/remote`} className={actionClass}>
+            {t('edit.actions.remote')}
+          </Link>
           {isAdmin ? (
-            <SyncArtifactButton serviceId={svc.id} updatedAt={svc.updated_at} />
+            <SyncArtifactButton
+              serviceId={svc.id}
+              updatedAt={svc.updated_at}
+              onSuccess={reloadService}
+            />
           ) : null}
           <a
             href={`/api/services/${svc.id}/pptx`}
@@ -108,7 +120,6 @@ export default function RunSheetPage() {
         initialSermonGraphicUrl={images.sermonGraphicUrl || ''}
         initialFamilyPhotoUrl={images.familyPhotoUrl || ''}
         initialYouthPhotoUrl={images.youthPhotoUrl || ''}
-        initialAnnouncements={serviceAnns}
         initialUpdatedAt={svc.updated_at}
       />
     </>
