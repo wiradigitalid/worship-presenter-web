@@ -228,6 +228,16 @@ waves:
     size: M
     depends_on: []
     spec_folder: _bmad-output/specs/spec-w5-presenter-remote/
+    spec_reviewed:
+      date: '2026-08-22'
+      sha: 'cdf161b84d58035e4e60fdd877e459ea2a7f3e1f'
+      lenses: [structure, prose, edge-case-hunter]
+    # Reviewed 2026-08-22. Two findings against the kernel, both resolved before the stamp:
+    # the success clause tested control but not mirroring, though FR-35 promises the Operator
+    # SEES the presenter view; and the three named tests were presented as if all proved
+    # behaviour, when this project has no component testing and remote-screen.test.mjs can
+    # only be a source guard. The phone screen's acceptance is now named as a human smoke
+    # test rather than left implied.
     # Isolation: this wave runs in the orca worktree on branch `kodesh87/auto1`, NOT on main --
     # unlike W1 and W2, whose main-branch override is what disarmed wdi-build Step 5 (no pushed
     # head means no CI to watch; see RTR-W2 and OQ-51). PR #44 already tracks this branch and is
