@@ -7,8 +7,8 @@ updated: 2026-08-22
 realizes: [UC-1, UC-2, UC-3, UC-4, UC-5, UC-6, UC-7, UC-8, UC-9, UC-10, UC-16, UC-17, UC-18, UC-19, UC-22, UC-23, UC-26, UC-28]
 binds: [AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-7, AD-8, AD-9, AD-12, AD-16, AD-23, AD-24, AD-25, AD-26, AD-28, AD-30, AD-31, AD-34, AD-35, AD-36]
 reviewed:
-  date: '2026-08-20'
-  sha: 'e4499dcdaf22b8032e46bd564ce9b9eb54d99dde'
+  date: '2026-08-22'
+  sha: 'af3b6f3f641f14560778d8badccff85e12e1be7e'
   lenses: [structure, prose, edge-case-hunter]
 ---
 

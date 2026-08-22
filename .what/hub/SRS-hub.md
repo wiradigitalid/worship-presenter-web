@@ -6,8 +6,8 @@ created: 2026-08-18
 updated: 2026-08-22
 satisfies: [FR-1, FR-2, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-14, FR-17, FR-18, FR-23, FR-24, FR-25, FR-27, FR-28, FR-32, FR-34]
 reviewed:
-  date: '2026-08-20'
-  sha: 'ea54cdb3f80610648510ed95120b3c1b1afcbd30'
+  date: '2026-08-22'
+  sha: 'af3b6f3f641f14560778d8badccff85e12e1be7e'
   lenses: [structure, prose, edge-case-hunter]
 ---
 

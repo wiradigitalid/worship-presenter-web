@@ -24,16 +24,15 @@ work_progress:
   stories_done: 1
   stories_total: 1
   work_progress: 100%
-gate_readiness: 96%
-validators_red:
-- V13
+gate_readiness: 100%
+validators_red: []
 validators_skipped:
   V14: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
     but its presence in generated/report is not checked
   V19: 'advisory — wave S/M closed without an RTR-: W1, W3, W4'
 open_questions:
   blocking: 0
-  assumptions: 39
+  assumptions: 42
   external: 1
   answered: 7
   blocking_budget: 9

@@ -6,8 +6,8 @@ created: 2026-08-18
 updated: 2026-08-20
 satisfies: [FR-15, FR-16, FR-19, FR-22, FR-33]
 reviewed:
-  date: '2026-08-19'
-  sha: '02f8d3a124a8c4d4e266ec005f8fc0495879914e'
+  date: '2026-08-22'
+  sha: 'af3b6f3f641f14560778d8badccff85e12e1be7e'
   lenses: [structure, prose, edge-case-hunter]
 ---
 
