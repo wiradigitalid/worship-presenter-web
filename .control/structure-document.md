@@ -1,8 +1,8 @@
 ---
 type: structure
 scope: document
-verified: 2026-08-19
-commit: 7030c26
+verified: 2026-08-22
+commit: 052dcb6
 ---
 
 # Document Structure
@@ -12,7 +12,10 @@ Written and refreshed only by `wdi-init` intent `structure`, never by hand. Rule
 
 ## Verified
 
-2026-08-19, commit `7030c26` plus unpublished working tree (DEC-003), honouring `.gitignore`.
+2026-08-22, derived from the tracked tree at `052dcb6`, honouring `.gitignore`. Drift closed in this
+pass: `.control/decisions/` and `.control/meetings/` existed on disk and were absent from the map, and
+the registry block listed five of its eight files — `waves.yaml` among the missing, which is the file
+every wave record lives in.
 
 ## Top level
 
@@ -50,17 +53,26 @@ _bmad-output/                 # BMad workspace — deferred-work register
 .control/
 ├── registry/
 │   ├── index.yaml            # ★ product.name, mode, gates_passed
-│   ├── components.yaml       # ★ PC · containers api/spa/pptx-worker · LC
-│   ├── requirements.yaml
+│   ├── components.yaml       # ★ PC · containers api/spa/pptx-worker · LC · owns
+│   ├── requirements.yaml     # FR/NFR, with status: retired where withdrawn
 │   ├── usecases.yaml
-│   └── decisions.yaml        # DEC-001 applied
-├── questions/
-├── memlog/
-├── generated/                # validate.py --generate
+│   ├── waves.yaml            # ★ wave records, stories, spec_reviewed traces
+│   ├── decisions.yaml        # DEC index
+│   ├── defects.yaml
+│   └── risks.yaml
+├── decisions/                # DEC-<n>-<slug>.md, one file per decision
+├── questions/                # assumptions.md · blocking.md
+├── memlog/                   # one per PC, plus spine.md
+├── meetings/
+├── generated/                # validate.py --generate; never hand-written
 ├── structure-document.md
 ├── structure-codebase.md
-└── product-glossary.md
+├── product-glossary.md
+├── project-non-technical-log.md
+└── wdi-method.yaml
 ```
+
+`reports/` does not exist yet — it is born by the first archived retrospective (`RTR-<wave>.md`).
 
 ### `.what/`
 

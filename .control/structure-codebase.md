@@ -1,8 +1,8 @@
 ---
 type: structure
 scope: codebase
-verified: 2026-08-20
-commit: f48a1f2
+verified: 2026-08-22
+commit: 052dcb6
 ---
 
 # Codebase Structure
@@ -13,7 +13,8 @@ Versions: `.constitution/project/codebase-stack-guide.md`.
 
 ## Verified
 
-2026-08-20, post DEC-003 cutover (Go API + Vite SPA live; Docker packaging retired).
+2026-08-22, derived from the tracked tree at `052dcb6`. Post DEC-003 cutover (Go API + Vite SPA live;
+Docker packaging retired) and post DEC-004/DEC-005 (`data_version` 11).
 
 ## Top level
 
@@ -52,13 +53,18 @@ Go always-on process + SQLite. `built: true`. `cmd/api/` + `internal/`.
 ```text
 cmd/api/                      # ★ main
 internal/
-├── httpapi/                  # JSON handlers + gate
-├── auth/
-├── db/
-└── plan/                     # ★ LC-16 planner
+├── gate/                     # ★ the one request gate — AD-5's authorization boundary
+├── httpapi/                  # ★ JSON handlers + route table (server.go)
+├── auth/                     # sessions, password hashing, lockout
+├── db/                       # ★ startup DDL + numbered migrations (AD-9, AD-21)
+├── plan/                     # ★ LC-16 planner + artifact validation
+├── parse/                    # Rundown parsing
+├── pptx/                     # worker invocation with a deadline; not the drawing
+└── scripture/                # verse lookup
 ```
 
-**Flow:** Go gate → JSON handlers → SQLite `DB_PATH`. Plan stays in `api`; PPTX is not this container.
+**Flow:** Go gate → JSON handlers → SQLite `DB_PATH`. Plan stays in `api`; PPTX drawing is not this
+container — `internal/pptx/` only execs the worker and bounds it with a timeout.
 
 ### spa
 
@@ -66,13 +72,19 @@ React SPA. `built: true`. `spa/` (Vite). Shared UI imported from `src/`.
 
 ```text
 spa/src/
-├── pages/                    # route shells
-└── App.tsx
-src/components/               # shared UI
-src/operator/                 # hub forms + presenter chrome
+├── pages/                    # route shells — ★ App.tsx is the route table
+├── projected/                # projected shell's own routes
+├── lib/                      # SPA-only helpers (session, routing)
+└── App.tsx                   # ★
+src/components/               # shared UI (shadcn primitives under ui/)
+src/operator/                 # ★ hub forms (CreateForm, EditForm) + presenter chrome
+src/projected/                # room-facing clients — closed to operator chrome (AD-24)
+src/lib/                      # shared modules: registry, artifacts, i18n, db, lyrics
 ```
 
-**Flow:** browser → JSON `api` + session cookie. MUST NOT open SQLite (AD-30).
+**Flow:** browser → JSON `api` + session cookie. MUST NOT open SQLite (AD-30). The operator shell and
+the projected shell are separate roots on purpose: AD-24 keeps room-facing surfaces closed to operator
+chrome, and `src/projected/` is where that boundary is enforced.
 
 ### pptx-worker
 
@@ -97,7 +109,13 @@ tests/
 tests/public-repo-guard.test.mjs   # ★ public-repo absence-guard
 tests/no-nextjs-runtime.test.mjs   # ★ Next.js absence-guard
 tests/no-docker-packaging.test.mjs # ★ Docker packaging absence-guard
+tests/translator-guard.test.mjs    # ★ t() takes one argument, across src/ and spa/src/
+tests/no-router-refresh-guard.test.mjs # ★ no route remount on an operator surface
+tests/helpers/go-api.mjs           # ★ starts and reaps the Go API for every http suite
 ```
+
+Every suite is named explicitly in `package.json` `scripts.test`; the list does not glob, so a file
+that is not registered never runs.
 
 ## Generated
 
@@ -111,6 +129,10 @@ tests/no-docker-packaging.test.mjs # ★ Docker packaging absence-guard
 
 - Deploy is binary + systemd on VPS (dev) or LiveServer (prod target), not Docker Compose.
 - `package.json` is the Node version authority; `go.mod` is the Go version authority.
+- `.work/` is committed scratch, not a code area: `src/` MUST NOT import it and code searches exclude it.
+- Four base folders were absent from this map until 2026-08-22 — `internal/gate`, `internal/pptx`,
+  `src/projected`, `spa/src/projected` — and `internal/parse` and `internal/scripture` with them. The
+  gate's absence mattered most: AD-5 names it the authorization boundary.
 
 ---
 
