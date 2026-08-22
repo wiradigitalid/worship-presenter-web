@@ -30,7 +30,7 @@ work_progress:
   stories_total: 1
   work_progress: 100%
 - wave: W5
-  status: open
+  status: closed
   stories_done: 3
   stories_total: 3
   work_progress: 100%

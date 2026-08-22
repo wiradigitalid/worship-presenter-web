@@ -221,7 +221,7 @@ waves:
             touches: [services]
 
   - id: W5
-    status: open
+    status: closed
     release: presenter-remote
     prd: [operator-turn]
     fr: [FR-35]
@@ -243,8 +243,16 @@ waves:
     # head means no CI to watch; see RTR-W2 and OQ-51). PR #44 already tracks this branch and is
     # unmerged, so W5's commits ride it rather than opening a stacked branch. Step 5 therefore has
     # a real head and a real PR to attend to.
-    # Retrospective: V19 makes it advisory at size M. It will be run anyway -- W2's lesson was that
-    # the wave nobody closed is the one that cost the most.
+    # Phase 4 ran 2026-08-22, the same day the wave opened, and the wave is closed. In order:
+    # registry catch-up green (LC-17/LC-18 registered at G4; touches resolve to the new
+    # remote-control area); inventories refreshed from code, 6 plan-versus-code gaps to 0, with
+    # BOTH owner columns wrong on the first derive and both fixed in the reader rather than the
+    # tables; structure maps unchanged -- no base folder born, no key file moved; distillation
+    # landed the one durable fact, that this project has no component testing so a UI test is a
+    # source scan, into .constitution/project/codebase-conventions-guide.md; retrospective run
+    # although V19 makes it advisory at M, archived as .control/reports/RTR-W5.md; RTM green, all
+    # three stories done. Verdict: accepted-with-open-items -- the open item is FR-35's own proof
+    # of done, a human holding a phone, which no test in this repository can supply.
     # G4 for presenter closed 2026-08-22 (mode deep, risk_accepted medium), reviewed and stamped.
     # Design: .how/presenter/02-contracts/03-remote-control.md -- SSE plus POST, pairing in process
     # memory with no table, intents as intended values so no queue and no replay.
