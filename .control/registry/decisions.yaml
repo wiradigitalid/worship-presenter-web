@@ -163,3 +163,12 @@ decisions:
       - .how/registry/SDD-registry.md
       - .what/_product-brief/addendum.md
       - .what/hub/SRS-hub.md
+  - id: DEC-006
+    status: applied
+    title: A server realtime channel is admitted, for the remote-to-laptop direction only
+    file: .control/decisions/DEC-006-remote-presenter-control.md
+    touches:
+      - .how/_platform/ARCHITECTURE-SPINE.md
+      - .control/registry/usecases.yaml
+      - .control/registry/requirements.yaml
+      - .what/presenter/SRS-presenter.md
