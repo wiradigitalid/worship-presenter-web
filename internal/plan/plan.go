@@ -18,8 +18,9 @@ type request struct {
 }
 
 type groupChild struct {
-	role string
-	req  request
+	role      string
+	roleLabel string
+	req       request
 }
 
 type node struct {
@@ -114,7 +115,8 @@ func songGroup(hymn HymnItem, idPrefix, templateID string) []node {
 				}
 			}
 			children = append(children, groupChild{
-				role: "lyric",
+				role:      "lyric",
+				roleLabel: lyric.Label,
 				req: request{
 					id:         fmt.Sprintf("%s-lyric-%d", idPrefix, i+1),
 					templateID: templateID,
@@ -609,6 +611,7 @@ func BuildSlidePlan(serviceDate string, parsed ParsedRundown, media Media, snap 
 				for _, ch := range n.children {
 					gg := *g
 					gg.Role = ch.role
+					gg.RoleLabel = ch.roleLabel
 					item, err := hydrateOne(snap, ch.req, &gg, c)
 					if err != nil {
 						return nil, err

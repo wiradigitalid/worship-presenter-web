@@ -295,3 +295,58 @@ func TestSongSetLayoutTrioEndpoints(t *testing.T) {
 		t.Error("reset did not restore the shipped verse payload")
 	}
 }
+
+func TestPreviewResponseCarriesRoleLabel(t *testing.T) {
+	ts, _, _ := newSongSetTestServer(t)
+	cookie := songSetLogin(t, ts)
+
+	rawRundown := `SABBATH, AUGUST 22, 2026
+DIVINE SERVICE
+Opening Song: SDAH #159
+Closing Song: SDAH #200`
+
+	res := songSetRequest(t, ts, "POST", "/api/services/preview", fmt.Sprintf(`{"raw_payload":%q}`, rawRundown), cookie)
+	if res.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("preview status = %d, body = %s", res.StatusCode, b)
+	}
+	body := songSetJSON(t, res)
+	entries, ok := body["previewEntries"].([]any)
+	if !ok || len(entries) == 0 {
+		t.Fatalf("previewEntries missing or empty: %v", body["previewEntries"])
+	}
+
+	var songSet1Labels []string
+	var songSet2Labels []string
+	for _, raw := range entries {
+		entry, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		groupID, _ := entry["groupId"].(string)
+		role, _ := entry["role"].(string)
+		rl, _ := entry["roleLabel"].(string)
+
+		if role == "title" && rl != "" {
+			t.Errorf("title child should not have roleLabel: %v", entry)
+		}
+
+		if groupID == "ds-opening" && role == "lyric" {
+			songSet1Labels = append(songSet1Labels, rl)
+		} else if groupID == "ds-closing" && role == "lyric" {
+			songSet2Labels = append(songSet2Labels, rl)
+		}
+	}
+
+	// SDAH #159: 3 stanzas with chorus -> 1/3, Chorus, 2/3, Chorus, 3/3, Chorus
+	want1 := []string{"1/3", "Chorus", "2/3", "Chorus", "3/3", "Chorus"}
+	if fmt.Sprint(songSet1Labels) != fmt.Sprint(want1) {
+		t.Errorf("ds-opening lyric roleLabels = %v, want %v", songSet1Labels, want1)
+	}
+
+	// SDAH #200: 4 stanzas with chorus -> 1/4, Chorus, 2/4, Chorus, 3/4, Chorus, 4/4, Chorus
+	want2 := []string{"1/4", "Chorus", "2/4", "Chorus", "3/4", "Chorus", "4/4", "Chorus"}
+	if fmt.Sprint(songSet2Labels) != fmt.Sprint(want2) {
+		t.Errorf("ds-closing lyric roleLabels = %v, want %v", songSet2Labels, want2)
+	}
+}

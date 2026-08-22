@@ -19,7 +19,7 @@ delete process.env.IMAGE_URL_ALLOWLIST;
 const srcUrl = (...parts) =>
   pathToFileURL(path.join(root, 'src', ...parts)).href;
 
-const { buildPreviewEntries, previewBadgeTone, previewLabel, resolvePreviewTitle, resolvePreviewBadge } = await import(
+const { buildPreviewEntries, previewBadgeTone, previewLabel, resolvePreviewTitle, resolvePreviewBadge, resolveSongSetGroupBadge } = await import(
   srcUrl('lib', 'artifacts', 'preview-model.ts')
 );
 const { parseRundown } = await import(srcUrl('lib', 'parser.ts'));
@@ -233,6 +233,7 @@ test('entries expose no unresolved placeholders and no registry internals', () =
     'groupId',
     'groupLabel',
     'role',
+    'roleLabel',
   ]);
 
   for (const entry of entries) {
@@ -301,6 +302,9 @@ test('preview row badge resolution produces type, song-set-N, ann-set-N, and lyr
   assert.equal(resolvePreviewBadge(undefined, songSetEntry1, { groupOrdinal: 1 }, enT), 'song-set-1');
   const songSetEntry2 = { baseType: 'song-set-entry', templateId: 'bt-closing-song', label: 'Closing Song' };
   assert.equal(resolvePreviewBadge(undefined, songSetEntry2, { groupOrdinal: 2 }, enT), 'song-set-2');
+  assert.equal(resolveSongSetGroupBadge(1), 'song-set-1');
+  assert.equal(resolveSongSetGroupBadge(2), 'song-set-2');
+  assert.equal(resolveSongSetGroupBadge(undefined), 'song-set');
 
   // 3. Standalone ann-set row badge with ordinal (e.g. ann-set-1, ann-set-2)
   const annSetEntry1 = { baseType: 'ann-set-marker', templateId: 'ann-set-1', label: 'Announcements 1' };
@@ -330,6 +334,20 @@ test('preview row badge resolution produces type, song-set-N, ann-set-N, and lyr
   const slideVerse1 = { kind: 'song-lyric', title: '1/3', body: 'Verse 1 text part 1' };
   assert.equal(resolvePreviewBadge(slideVerse1, childVerse1Entry, undefined, enT), 'verse 1');
   assert.equal(resolvePreviewBadge(slideVerse1, childVerse1Entry, undefined, idT), 'bait 1');
+
+  // roleLabel takes precedence over slide.title or works without slide
+  const childWithRoleLabel1 = { ...childVerse1Entry, roleLabel: '1/3' };
+  assert.equal(resolvePreviewBadge(undefined, childWithRoleLabel1, undefined, enT), 'verse 1');
+  assert.equal(resolvePreviewBadge(undefined, childWithRoleLabel1, undefined, idT), 'bait 1');
+  const childWithRoleLabelReff = { ...childVerse1Entry, roleLabel: 'Reff' };
+  assert.equal(resolvePreviewBadge(undefined, childWithRoleLabelReff, undefined, enT), 'reff');
+  assert.equal(resolvePreviewBadge(undefined, childWithRoleLabelReff, undefined, idT), 'reff');
+  const childWithRoleLabelChorus = { ...childVerse1Entry, roleLabel: 'Chorus' };
+  assert.equal(resolvePreviewBadge(undefined, childWithRoleLabelChorus, undefined, enT), 'chorus');
+  assert.equal(resolvePreviewBadge(undefined, childWithRoleLabelChorus, undefined, idT), 'chorus');
+  const childWithRoleLabelAbsent = { ...childVerse1Entry, roleLabel: undefined };
+  assert.equal(resolvePreviewBadge(undefined, childWithRoleLabelAbsent, undefined, enT), 'lyric');
+  assert.equal(resolvePreviewBadge(undefined, childWithRoleLabelAbsent, undefined, idT), 'lirik');
 
   // 6. Song-set child continuation verse (same label "1/3" across multiple slides -> repeats "verse 1" / "bait 1")
   const slideVerse1Cont = { kind: 'song-lyric', title: '1/3', body: 'Verse 1 text part 2' };
@@ -460,6 +478,20 @@ test('AC-03 guard: SlidePreviewList and preview rendering components contain no 
       `Hardcoded user-facing literal "${match?.[0]}" found in ${rel} (AC-03 violation)`
     );
   }
+});
+
+test('SlidePreviewList carries no hardcoded "Song Set" badge literal', () => {
+  const previewPath = path.join(root, 'src', 'components', 'SlidePreviewList.tsx');
+  const source = fs.readFileSync(previewPath, 'utf8');
+  const cleanSource = source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '');
+
+  const match = /Song Set/.exec(cleanSource);
+  assert.ok(
+    !match,
+    `Hardcoded badge literal "Song Set" found in SlidePreviewList.tsx`
+  );
 });
 
 test('ArtifactSlide permits background override for verse, reff, and lyric layout keys', () => {

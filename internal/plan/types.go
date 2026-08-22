@@ -62,9 +62,10 @@ type ResolvedLayout struct {
 }
 
 type GroupRef struct {
-	ID    string `json:"id"`
-	Label string `json:"label"`
-	Role  string `json:"role"`
+	ID        string `json:"id"`
+	Label     string `json:"label"`
+	Role      string `json:"role"`
+	RoleLabel string `json:"roleLabel,omitempty"`
 }
 
 type ArtifactInstance struct {

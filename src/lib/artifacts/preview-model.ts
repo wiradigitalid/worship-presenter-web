@@ -33,6 +33,7 @@ export type PreviewEntry = {
   groupId?: string;
   groupLabel?: string;
   role?: 'title' | 'lyric';
+  roleLabel?: string;
 };
 
 export type PreviewBadgeTone =
@@ -93,6 +94,18 @@ export function previewLabel(instance: ArtifactInstance): string {
   return humanize(instance.templateId);
 }
 
+function ordinalBadge(prefix: 'song-set' | 'ann-set', ordinal?: number): string {
+  return ordinal !== undefined ? `${prefix}-${ordinal}` : prefix;
+}
+
+/**
+ * Resolves the badge string for a SongSet group header given its ordinal.
+ * No translator is needed because group-ordinal badges are closed English identifiers ('song-set-N').
+ */
+export function resolveSongSetGroupBadge(groupOrdinal?: number): string {
+  return ordinalBadge('song-set', groupOrdinal);
+}
+
 /**
  * Resolves the badge string for a preview row following DEC-004:
  * - song-set child with role 'title': localized role 'title'
@@ -111,6 +124,7 @@ export function resolvePreviewBadge(
         baseType?: ArtifactBaseType;
         role?: 'title' | 'lyric';
         groupId?: string;
+        roleLabel?: string;
       }
     | undefined,
   options:
@@ -126,7 +140,7 @@ export function resolvePreviewBadge(
       return t('form.preview.role.title');
     }
     if (entry.role === 'lyric' || slide?.kind === 'song-lyric') {
-      const lyricLabel = slide?.title?.trim() || '';
+      const lyricLabel = entry.roleLabel?.trim() || slide?.title?.trim() || '';
       const lower = lyricLabel.toLowerCase();
       if (lower === 'reff' || lower.startsWith('reff')) {
         return t('form.preview.role.reff');
@@ -151,13 +165,11 @@ export function resolvePreviewBadge(
   const chip = baseType ? kindChipLabel(baseType) : (slide?.kind?.trim() || 'general');
 
   if (chip === 'song-set') {
-    const ordinal = options?.groupOrdinal;
-    return ordinal !== undefined ? `song-set-${ordinal}` : 'song-set';
+    return ordinalBadge('song-set', options?.groupOrdinal);
   }
 
   if (chip === 'marker' || baseType === 'ann-set-marker' || chip === 'announcement') {
-    const ordinal = options?.groupOrdinal;
-    return ordinal !== undefined ? `ann-set-${ordinal}` : 'ann-set';
+    return ordinalBadge('ann-set', options?.groupOrdinal);
   }
 
   return 'general';
@@ -257,6 +269,9 @@ function toEntry(instance: ArtifactInstance, index: number): PreviewEntry {
     entry.groupId = instance.group.id;
     entry.groupLabel = instance.group.label;
     entry.role = instance.group.role;
+    if (instance.group.roleLabel) {
+      entry.roleLabel = instance.group.roleLabel;
+    }
   }
   return entry;
 }

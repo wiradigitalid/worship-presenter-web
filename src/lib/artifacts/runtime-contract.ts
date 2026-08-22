@@ -79,6 +79,7 @@ export type ArtifactGroupRef = {
   id: string;
   label: string;
   role: 'title' | 'lyric';
+  roleLabel?: string;
 };
 
 export type ArtifactInstance = {
