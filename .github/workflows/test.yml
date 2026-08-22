@@ -36,4 +36,9 @@ jobs:
     # silently defaulted every backfilled song-book locale. This step closes it.
     - run: npm run typecheck
 
+    # The browser acceptance suites need a Chromium binary; `npm ci` does not
+    # fetch it. Without this the three suites fail at launch and, until the
+    # harness was fixed, leaked a `go run` each and hung the runner.
+    - run: npx playwright install --with-deps chromium
+
     - run: npm test

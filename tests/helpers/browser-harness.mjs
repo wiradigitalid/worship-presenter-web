@@ -124,16 +124,42 @@ export async function startBrowserEnvironment({
     throw new Error(`Go API did not become ready at ${baseUrl}\nOutput:\n${output.join('')}`);
   }
 
-  // Ensure SPA dist exists so Go serves index.html and assets
+  // Everything past this point can throw with `proc` already running, and a
+  // surviving `go run` holds the stdio pipe open so node never exits. This repo
+  // paid 2h04m of CI for that once (see RTR-W2); the two readiness failures above
+  // clean up and this path did not, which is the path that actually fired when
+  // CI had no Chromium binary.
+  const abandon = (err) => {
+    stopProcess(proc);
+    try {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    } catch {}
+    throw err;
+  };
+
   const distIndex = path.join(repoRoot, 'spa', 'dist', 'index.html');
   if (!fs.existsSync(distIndex)) {
-    throw new Error(`SPA dist not found at ${distIndex}. Run 'npm run spa:build' before running browser acceptance tests.`);
+    abandon(
+      new Error(
+        `SPA dist not found at ${distIndex}. Run 'npm run spa:build' before running browser acceptance tests.`
+      )
+    );
   }
 
-  const browser = await chromium.launch({
-    headless,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+  let browser;
+  try {
+    browser = await chromium.launch({
+      headless,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+  } catch (err) {
+    abandon(
+      new Error(
+        `Chromium failed to launch. If the binary is missing, run 'npx playwright install chromium'.
+Cause: ${err.message}`
+      )
+    );
+  }
 
   return {
     proc,
