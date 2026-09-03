@@ -48,14 +48,14 @@ read in the places where it is right.
 An `AD-N` with no **Prevents** is a preference. Preferences belong in
 `.constitution/project/codebase-conventions-guide.md`, where nothing has to justify itself.
 
-## The spine stops being touched every story
+## The spine stops being touched every ticket
 
 This is the change that ends the tax that was being paid before the information existed.
 
 - **The spine holds invariants and nothing else.** It changes only when an `AD-N` is born or reversed, and
   both are decision events. For a mid-sized product: once at the start, around 6–10 `AD-N`, then almost
   never.
-- **A story MUST NOT touch the spine.** A story that contradicts an `AD-N` **stops** and opens a `DEC-` —
+- **A ticket MUST NOT touch the spine.** A ticket that contradicts an `AD-N` **stops** and opens a `DEC-` —
   the one case where recording a decision is still mandatory.
 - **Editing an `AD-N` MUST NOT quietly reverse it.** A reversal is a decision, and it goes through
   `wdi-decision` first.
@@ -90,7 +90,7 @@ the C4 set describes and the spine forbids. A C4 file MUST NOT be used to justif
 belongs in an `AD-N`.
 
 The C4 set is **living**. It is amended when a container is added or changed — it MUST NOT be regenerated from
-scratch, which would drop the annotations three waves of amendment put there.
+scratch, which would drop the annotations three specs of amendment put there.
 
 ## What counts as a container, and what does not
 
@@ -118,7 +118,7 @@ A container is inside the boundary whether or not we wrote it. `built:` records 
 | A heading in `structure-codebase.md` | **Required** | **Never** — no code of ours lives there |
 | Listed in a PC's `containers:` | Yes | **Never** — see the matrix below |
 
-V25 checks all four. This is what makes the class settled rather than re-argued: a database and a web
+`container-built` checks all four. This is what makes the class settled rather than re-argued: a database and a web
 server are containers, they carry NFRs, and they still produce no design artifact of ours.
 
 **What IS ours about a `built: false` container MUST have a home outside the C4 set** — its configuration
@@ -139,7 +139,7 @@ depends on it for lives in `cross-cutting.md` or an integration contract.
 A PC and a container cross, so neither list implies the other — and the crossing is what a builder needs
 first: *which container does this promise live in, and is it more than one?*
 
-- The **SSOT is each PC's `containers:`** in `components.yaml`; C4 L2 renders it, and V25 fails when the
+- The **SSOT is each PC's `containers:`** in `components.yaml`; C4 L2 renders it, and `container-built` fails when the
   two disagree.
 - Complete at **G3** for every PC. It is blueprint content, so `mode` does not touch it.
 - A PC MUST list every `built: true` container it lives in. Listing only the main one is the error the
@@ -152,8 +152,8 @@ first: *which container does this promise live in, and is it more than one?*
 **L2 MUST be complete** — every container, plus the matrix. **L3 exists once per `built: true` container
 holding more than one PC**; a one-PC container needs none because the matrix already places it.
 
-**Not one of the three waits for a wave.** Which container a PC lives in cannot be discovered by a wave,
-because a wave picks its stories from that answer — a wave forced to invent it answers a G3 question with
+**Not one of the three waits for a spec.** Which container a PC lives in cannot be discovered by a spec,
+because a spec picks its tickets from that answer — a spec forced to invent it answers a G3 question with
 a fraction of G3's information.
 
 ## Cross-cutting
@@ -167,7 +167,7 @@ another. One fact, one home.
 **The platform MAY own things, and owning one costs a row here.** `_platform` is a legitimate owner in every
 position that asks which component owns something — a domain entity through `platform_owns`, an inventory row,
 an `LC`. Whatever it owns MUST be described under `## Platform-owned` in this file: what it is, its kind, why
-no component's promise explains it, who touches it, and the shape every toucher obeys. V21 checks that second
+no component's promise explains it, who touches it, and the shape every toucher obeys. `entity-one-writer` checks that second
 half, because a platform that owns something without documenting it has taken ownership without taking
 responsibility.
 
@@ -181,9 +181,9 @@ at every mode.
 
 ## Binding order
 
-Spine first, then the SDD, then `bmad-spec`. An `SDD-<pc>.md` written before the spine will be rewritten,
+Spine first, then the SDD, then the spec's contract. An `SDD-<pc>.md` written before the spine will be rewritten,
 because the constraints it was supposed to inherit did not exist yet. A `SPEC.md` written before the SDD has
-nothing to project. `bmad-spec` MUST keep `AD` ids stable so downstream artifacts can cite them.
+nothing to project. `AD` ids MUST stay stable so downstream artifacts can cite them.
 
 ## Inheritance downward
 

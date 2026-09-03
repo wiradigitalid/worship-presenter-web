@@ -9,9 +9,28 @@ description: Use when UX is produced or landed — dispatching bmad-ux for a PRD
 came back, and — because `bmad-ux` is **class B** — lands its output into the two layers it splits
 across. No other skill MAY land these files.
 
-Two acts, and a pass MAY do either or both: **run** the UX, and **land** it. They are separated because
-they become possible at different moments. A run belongs to G2, where the PRD is fresh. Landing needs a
-Product Component to land into, and that list is not born until the tail of G2.
+**A run needs a PRD and nothing else.** It MUST NOT wait for Product Components, and a skill that made
+it wait would deadlock the whole flow: G2 reads `EXPERIENCE.md` — `ux-guide.md` § Passing G2 — and
+`wdi-init` intent `component` requires **G2 passed**. UX before components is not a preference; it is the
+only order that closes.
+
+    PRD  →  UX runs  →  **G2**  →  components born  →  G3
+
+Two acts: **run** the UX, and **land** it. A run is complete the moment the three documents are written.
+Landing is split by what each half's path actually needs, and only one half waits:
+
+| Lands | Needs | So it lands |
+|---|---|---|
+| `design-system.md` → `.how/_platform/` | nothing but the run being final — it crosses components by definition | **immediately**, at G2 |
+| `EXPERIENCE.md` → `.what/<pc>/04-usecases/` | the `<pc>` in its path to exist | when components are born |
+| `DESIGN.md` → `.how/<pc>/01-ux/` + screen `LC` rows | the same `<pc>`. **Not a container** — see below | when components are born |
+
+**The wait is a path, not a rule**, and it is the only one left: those two paths literally contain
+`<pc>`, so there is nowhere to write them until a `<pc>` exists. Nothing else defers.
+
+**And the wait is not the owner's to remember.** `wdi-init` intent `component` lands whatever is waiting
+in `_bmad-output/ux/` in the same act as birthing the components — one pass, no tracked to-do. Report
+what is waiting and name that act; do not ask the owner to come back.
 
 You MUST NOT write or edit `DESIGN.md` or `EXPERIENCE.md` yourself. If a check fails, name what is
 missing and re-dispatch — a hand-patched UX document makes the memlog lie about how it got that way.
@@ -81,7 +100,7 @@ Check what came back against the guide. Report every failure; fix none of them b
 | 9 | `bmad-review` structure + prose ran at finalize | `doc_standards` did not fire |
 
 Check 8 is the one that MUST be fixed immediately rather than reported. A `.memlog.md` inside `.what/`
-or `.how/` is corpus pollution, and V16 rejects it.
+or `.how/` is corpus pollution, and `memlog-home` rejects it.
 
 ## Step 5 — Land, at two speeds
 
@@ -92,17 +111,22 @@ here is **when each one becomes possible**.
 |---|---|---|
 | Tokens and base components | `.how/_platform/design-system.md` | The run is final — it crosses components by definition |
 | `EXPERIENCE.md` | `.what/<pc>/04-usecases/` | The `<pc>` is registered in `components.yaml` |
-| `DESIGN.md` | `.how/<pc>/01-ux/` | The `<pc>` is registered **and** its container exists |
-| Each screen | an `LC` of type `ui-screen` in `components.yaml` | Same as `DESIGN.md` — an `LC` MUST name its container. Registration is checked at wave close, V12 |
+| `DESIGN.md` | `.how/<pc>/01-ux/` | The `<pc>` is registered. **The path has no container in it, so none is needed** |
+| Each screen | an `LC` of type `ui-screen` in `components.yaml` | The `<pc>` is registered. `container:` is left **empty** and filled at G3 |
 
-- A half that is not yet landable MUST stay in `_bmad-output/ux/` and be reported as deferred. At G2
-  that is the normal outcome, not a failure: the slicing is born at the tail of G2 and containers at G3.
+- **Nothing is deferred any more.** A run lands whole, in the pass that produced it. `DESIGN.md`
+  landing was coupled to the container because its screen `LC` rows need one — but the *file's* path,
+  `.how/<pc>/01-ux/`, has no container in it, and the two were never the same requirement.
+- **A screen `LC` is registered now with `container:` empty**, and MUST NOT be given a guessed one. `container-built`
+  is silent on an empty container until the `LC`'s own Product Component lists containers; from that
+  moment it is owed. `wdi-blueprint` intent `platform` fills every one of them in the same act as
+  registering the containers, so the debt closes at G3 without anyone tracking it.
 - You MUST NOT create a Product Component or a container to make a landing possible. A PC comes from
   `wdi-init` intent `component` and a container from `wdi-blueprint` intent `platform`.
 - One run MAY land across several Product Components. Split by which `<pc>` the content serves; a
   screen whose `<pc>` is ambiguous MUST be raised through `wdi-question`, not assigned by guess.
 - Registering the screens is part of landing `DESIGN.md`, in the same act. A screen in `01-ux/`
-  without its `components.yaml` entry has been half-landed, and V12 catches it at a worse moment.
+  without its `components.yaml` entry has been half-landed, and `lc-registered` catches it at a worse moment.
 - `.how/_platform/` otherwise belongs to `wdi-blueprint`. `design-system.md` is the one file in it you
   own, and it has its own template; you MUST NOT touch any other.
 - The run folder MUST NOT be deleted after landing. Intent *update* reads it again.
@@ -133,7 +157,7 @@ Everything in a UX pass — the run and the landing — logs to `.control/memlog
 - You MUST NOT open G2 on UX that has not been through check 9. Gate time is for deciding.
 - You MUST NOT raise `status:` as part of landing. Status is a stage; the `reviewed:` block is an
   event, and `wdi-review` writes it.
-- You MUST NOT land anything into a wave that is already closed. The wave is reopened through
+- You MUST NOT land anything into a spec that is already closed. The spec is reopened through
   `wdi-build`, or the gap is filed through `wdi-question`.
 - When the UX concludes the PRD promised something that cannot be made usable, say so and stop. Route
   to `wdi-product`; do not quietly narrow the promise in `EXPERIENCE.md`.

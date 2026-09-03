@@ -53,31 +53,31 @@ Screens (`inventory-screen` 1–6) are not yet `LC` `ui-screen`: that is a `wdi-
 
 ## Inherited Constraints · [guarded]
 
-Quotes are the spine **Rule** sentences. Full text in `.how/_platform/ARCHITECTURE-SPINE.md`. ADs that do not bind Hub (AD-10, AD-11, AD-13–AD-15, AD-17–AD-22, AD-27, AD-29) are not listed.
+Full text in `.how/_platform/ARCHITECTURE-SPINE.md`. ADs that do not bind Hub (AD-10, AD-11, AD-13–AD-15, AD-17–AD-22, AD-27, AD-29) are not listed.
 
-| AD | Quoted rule | How it lands here |
-| --- | --- | --- |
-| AD-1 | Operators use a zero-install **Web Hub** for review/run-sheet. **Phase 1** presents on Sabbath from a downloadable offline **PPTX**. | PPTX download is the guarantee; the slideshow is a complementary link. |
-| AD-2 | The picoclaw skill integration logic, the Go API, the React SPA, and the Node PPTX worker reside in a single repository and deploy as a cohesive unit. | One repo; Hub lives in `api` + `spa` + `pptx-worker`. |
-| AD-4 | Production is one always-on Go API process on host storage (systemd on VPS / LiveServer behind a tunnel) | Durable `DB_PATH` on the Go process. |
-| AD-5 | The Go API has one request gate, and its path matcher **is** the authorization boundary — anything it does not match is served with no session check at all | `/api/webhook` is `WEBHOOK_SECRET` only. Session expiry at save/delete is this gate's 401 before the handler (OQ-23). As-built until cutover: `internal/gate`. |
-| AD-3 | The API must expose a standard JSON interface for service generation that is agnostic to the input mechanism (Telegram/picoclaw). | Hub form writes Service now; LC-8 writes the same Service later (CAP-11). |
-| AD-6 | every service mutation carries the client's `updated_at` as a precondition; a stale value is rejected with HTTP 409 and the client re-reads before retrying. | PUT Service (UC-5). POST sync-artifact (UC-16). GET pptx / POST preview are not mutations (OQ-20). Half of the agent paths are not yet closed (deferred-work). |
-| AD-7 | `buildSlidePlan` is the single source of slide order and content for every surface. | Preview and PPTX do not re-order from Service fields. |
-| AD-12 | `buildSlidePlan` outputs a fully hydrated AST (Fat Payload) with exact rendering coordinates, fonts, colors, and resolved text content. | Preview and PPTX consume the fat plan; they do not look up Registry. |
-| AD-8 | image references resolve only through the shared helpers in `src/lib` — allowlisted remote http(s) and hub-local `/api/uploads/<32-hex>.(jpg|jpeg|png|gif|webp)` for announcements, and registry `/assets/...` refs for Artifact templates. | LC-4 and announcements. |
-| AD-9 | schema changes go through the Go API's startup DDL when it opens SQLite. | No Prisma. `services.registry_snapshot_at` is Hub; the freeze table is Registry. |
-| AD-16 | Creating a worship service **clones** the ordered live registry … into a **service-bound snapshot** | Create clones in the same transaction. Sync is `POST /api/services/[id]/sync-artifact`, Admin-only. Preview stays live. |
-| AD-23 | transition style is **one app-wide value** in `settings` (`slide_transition`), and each style is described **exactly once**, in `src/lib/transitions.ts`, carrying both its PowerPoint element and its browser animation parameters. | LC-6 writes; PPTX reads. |
-| AD-24 | **application state reaches one of three homes and *who must agree on it* picks which.** | `ui_locale` in settings, not a chrome cookie. |
-| AD-25 | A **shipped reference corpus** — a committed data file the product carries so that a fresh clone resolves a verse and a hymn offline — is **developer-owned data with exactly one writer**, and the committed file is authoritative. | Superseded here: the song-book half is carved out by **AD-36** (DEC-005) — `hymns` and the `song_books` registry row are administrator-owned after bootstrap, not a corpus projection. AD-25 binds nothing Hub owns; it continues to govern only the bible family, which Hub does not own. |
-| AD-26 | Every installed corpus is a **registered entity** — one row in `bible_translations` or `song_books`, carrying its code, display name, **locale**, licence and provenance. | Hymn picker / default book. |
-| AD-28 | there is **one matcher implementation and the scope is an argument to it, never a fork**. | Rundown: every installed translation. |
-| AD-30 | The Go API is the only always-on server: it owns SQLite, assembles the slide plan, and serves JSON (and, in production, the SPA files). | Hub APIs + LC-16 on `api`; UI on `spa`; LC-13 on `pptx-worker`. |
-| AD-31 | "A Song Set entry's `variable_name` and title **are** Admin-authored (FR-29): Admin adds, renames, and removes entries directly in the Registry, and a Service with more than four songs is a normal shape the Registry accepts, not a limit worked around." | Hub reads the live entry list (same-process, `artifact_templates` `base_type = 'song-set-entry'`), never authors it; the Service form's Song Set group repeats once per entry, not four fixed fields (FR-32, `05-model/form-fields.md`). |
-| AD-34 | "A live background choice ... travels over AD-10's channel ... It does not survive past that session — the next generate, and any Sync, resolves the background through AD-33's normal order ... exactly as if the live override had never happened." | Hub's `song_set_inputs.background_id` is the **weekly** choice only; Hub never reads or writes a live in-service background override — that stays on the presenter/projector channel entirely outside this component. |
-| AD-35 | "Creating a Service **clones** the whole spliced structure — the main spine plus every Announcement Set it references — into the service-bound snapshot, and only Sync Artifact replaces it thereafter." | LC-12's create/Sync clone widens from "spine only" to "spine + every spliced Announcement Set"; `announcement_items`'s old live-membership shape (superseded AD-16 clause) is gone from Hub's model. |
-| AD-36 | *(Rule, quoted)* "A song book's rows in `hymns`, **and its own row in `song_books`, are bootstrapped once, from the committed corpus file, and are administrator-owned data from that moment on** … **A corpus-level correction to an already-installed book — content or its registry metadata — reaches a live database only as an explicit, numbered data migration** under the single `data_version` counter (AD-18, AD-21) — **never as a boot-time reconcile** and never a second counter." | `upsertHymns` becomes insert-only-for-absent-rows, gated by a per-book-code marker; that migration is the precondition for LC-2's save-to-book route (UC-28) to ship — see `06-flows/lyric-save-to-book.md`. **The marker gates corpus-seeding only** (whether the shipped file's hymns get bulk-inserted for that `book_code`) — it never gates an administrator's own per-row write, so authoring hymns one at a time into an admin-created book (`02-contracts/05-song-books.md`) and the save-to-book override (UC-28) both work regardless of whether the marker is set. |
+| AD | How it lands here |
+| --- | --- |
+| AD-1 | PPTX download is the guarantee; the slideshow is a complementary link. |
+| AD-2 | One repo; Hub lives in `api` + `spa` + `pptx-worker`. |
+| AD-4 | Durable `DB_PATH` on the Go process. |
+| AD-5 | `/api/webhook` is `WEBHOOK_SECRET` only. Session expiry at save/delete is this gate's 401 before the handler (OQ-23). As-built until cutover: `internal/gate`. |
+| AD-3 | Hub form writes Service now; LC-8 writes the same Service later (CAP-11). |
+| AD-6 | PUT Service (UC-5). POST sync-artifact (UC-16). GET pptx / POST preview are not mutations (OQ-20). Half of the agent paths are not yet closed (deferred-work). |
+| AD-7 | Preview and PPTX do not re-order from Service fields. |
+| AD-12 | Preview and PPTX consume the fat plan; they do not look up Registry. |
+| AD-8 | LC-4 and announcements. |
+| AD-9 | No Prisma. `services.registry_snapshot_at` is Hub; the freeze table is Registry. |
+| AD-16 | Create clones in the same transaction. Sync is `POST /api/services/[id]/sync-artifact`, Admin-only. Preview stays live. |
+| AD-23 | LC-6 writes; PPTX reads. |
+| AD-24 | `ui_locale` in settings, not a chrome cookie. |
+| AD-25 | Superseded here: the song-book half is carved out by **AD-36** (DEC-005) — `hymns` and the `song_books` registry row are administrator-owned after bootstrap, not a corpus projection. AD-25 binds nothing Hub owns; it continues to govern only the bible family, which Hub does not own. |
+| AD-26 | Hymn picker / default book. |
+| AD-28 | Rundown: every installed translation. |
+| AD-30 | Hub APIs + LC-16 on `api`; UI on `spa`; LC-13 on `pptx-worker`. |
+| AD-31 | Hub reads the live entry list (same-process, `artifact_templates` `base_type = 'song-set-entry'`), never authors it; the Service form's Song Set group repeats once per entry, not four fixed fields (FR-32, `05-model/form-fields.md`). |
+| AD-34 | Hub's `song_set_inputs.background_id` is the **weekly** choice only; Hub never reads or writes a live in-service background override — that stays on the presenter/projector channel entirely outside this component. |
+| AD-35 | LC-12's create/Sync clone widens from "spine only" to "spine + every spliced Announcement Set"; `announcement_items`'s old live-membership shape (superseded AD-16 clause) is gone from Hub's model. |
+| AD-36 | `upsertHymns` becomes insert-only-for-absent-rows, gated by a per-book-code marker; that migration is the precondition for LC-2's save-to-book route (UC-28) to ship — see `06-flows/lyric-save-to-book.md`. **The marker gates corpus-seeding only** (whether the shipped file's hymns get bulk-inserted for that `book_code`) — it never gates an administrator's own per-row write, so authoring hymns one at a time into an admin-created book (`02-contracts/05-song-books.md`) and the save-to-book override (UC-28) both work regardless of whether the marker is set. |
 
 ## Failure Behaviour · [guarded]
 

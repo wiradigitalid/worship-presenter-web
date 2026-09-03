@@ -15,7 +15,7 @@ of where things are, a reader that can see this product's code.
 | `component` | Propose the slicing from the brief plus every PRD · birth what is accepted: registry row plus `SRS`/`SDD` skeletons · propose `mode`, `risk_accepted`, `risk_note`, `owns` | **G2 passed** | each time a component is born |
 | `mode` | Change `mode` — global in `index.yaml`, or one component in `components.yaml`. Guided | — | any time |
 | `risk` | Set or review one component's `risk_accepted`, with disclosure of what it touches | the component exists | any time, usually before G4 |
-| `structure` | Re-derive `.control/structure-codebase.md` and `structure-document.md` from the tree on disk | — | when folders change, and at wave close |
+| `structure` | Re-derive `.control/structure-codebase.md` and `structure-document.md` from the tree on disk | — | when folders change, and at spec close |
 | `readers` | Write `.constitution/project/inventory-readers.py` for **this** repo's stack, then prove it by running the engine | code exists | once, and again when the code's shape moves |
 
 ## Two boundaries
@@ -67,8 +67,9 @@ to its component, however platform-shaped the table looks.
 ## Intents `mode` and `risk` — disclose, then propose
 
 `mode` controls **document depth** and nothing else. `risk_accepted` controls **review intensity** and
-nothing else. Their definitions live in `delivery-flow-guide.md`. What this skill owns is the
-conversation around changing them.
+nothing else. Their definitions live in `delivery-flow-guide.md`, and what the two chosen together cost is
+laid out cell by cell in `.constitution/method/why/mode-risk-map.md` — show it when the owner asks what a
+combination buys. What this skill owns is the conversation around changing them.
 
 **You do not judge. You disclose, then propose.** Read the `FR` that fall to the component, then name
 what it touches:
@@ -81,15 +82,28 @@ what it touches:
 
 Only after that do you propose `mode` and `risk_accepted`.
 
+**Land whatever UX is waiting, in this same act.** A UX run at G2 leaves `EXPERIENCE.md` and `DESIGN.md`
+in `_bmad-output/ux/` because their paths contain `<pc>` and there was no `<pc>` yet. Birthing the
+components is the moment that ends. Landing goes through `wdi-ux` — it owns those two paths and no other
+skill MAY write them — but it is dispatched from here rather than left for the owner to remember. It is
+the only deferral left in the flow, and this is where it closes.
+
+**Containers MAY be registered here when they are genuinely already known** — an app, an API, a database
+the product plainly has. Then a screen `LC` gets its container the moment it is born and there is no debt
+at all. They MUST NOT be guessed to achieve that: `wdi-blueprint` intent `platform` owns the real answer
+at G3, and a container invented here is data C4 then has to unpick. Where you are unsure, leave them and
+let G3 fill both the containers and the empty `LC` rows in one act.
+
 Raising or lowering `mode` is **free and needs no justification** — it is a preference, and a preference
 does not have to be defended. Setting `mode: catalog` on a sensitive component requires nothing, as long
 as its review stays hard; that combination is the one the split exists to make sayable.
 
 Two things are not free:
 
-- **`risk_accepted: high` on a component that touches any of the five** requires a `DEC-` of
-  `type: risk-acceptance`, and `risk_accepted_by:` pointing at it. V23 checks this. On a component that
-  touches none of them, `high` is free.
+- **`risk_accepted: high` on a component that touches any of the five** requires a named acceptance in
+  `risk_accepted_by` — **a person and a date is enough**, written here in `components.yaml` beside the
+  risk itself rather than as a separate file. A `DEC-` id is still accepted and still has to resolve.
+  `high-risk-named` checks this. On a component that touches none of them, `high` is free.
 - **An outside party who will demand the artifacts as a deliverable** — a regulator, an auditor, a
   client through a contract — puts the touched component at `mode: deep` and `risk_accepted: low`,
   whatever the global setting says. That floor MUST NOT be traded against a preference: the risk there

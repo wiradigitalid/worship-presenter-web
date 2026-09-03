@@ -31,28 +31,7 @@ Without Hub, the multimedia turn falls back to one person assembling files. This
 
 ## UC Catalogue · [G3]
 
-FR-3 left `satisfies:` on 2026-08-22: it is retired, and a component cannot satisfy a withdrawn promise. UC-21 stays in the table, struck through, because the table is also the record that the promise once existed.
-
-| id | Use case | Actor | Satisfies | critical |
-| --- | --- | --- | --- | --- |
-| UC-1 | Events send a Rundown on Telegram and its Service appears | Events | FR-1, FR-2 | yes |
-| UC-2 | I paste a Rundown in Hub and a new Service is saved | Operator | FR-27, FR-2 | yes |
-| UC-3 | I open the dated Service list | Operator | FR-8 | no |
-| UC-4 | I follow the worship order from the Run-Sheet | Operator | FR-17 | no |
-| UC-5 | I edit Service fields in Hub | Operator | FR-11 | yes |
-| UC-6 | I regenerate this Service's Deck | Operator | FR-13 | no |
-| UC-7 | I delete this Service and its assets | Operator | FR-10 | yes |
-| UC-8 | I preview this Service's slides in the browser | Operator | FR-9 | no |
-| UC-9 | I manage Operator and Admin accounts | Admin | FR-18 | no |
-| UC-10 | I read Hub in my language | Operator | FR-25 | no |
-| UC-17 | Events correct one song via Telegram | Events | FR-12 | yes |
-| UC-18 | I download the PPTX for Sabbath | Operator | FR-14 | no |
-| UC-19 | I choose one transition for the whole Deck | Admin | FR-7 | no |
-| UC-21 | I manage the announcement list that persists across weeks — **RETIRED, superseded by Registry UC-14/UC-15** | Operator | FR-3 | no |
-| UC-22 | I browse the Song Book and translations by language | Admin | FR-23, FR-24 | no |
-| UC-23 | My edit is rejected because someone else already saved | Operator | FR-28 | no |
-| UC-26 | I enter this week's song numbers, books, and backgrounds for however many songs are configured | Operator | FR-32 | no |
-| UC-28 | I correct a song's lyrics for this Service, and optionally save the fix back to the Song Book | Operator | FR-34 | yes |
+UC Catalogue — see `.control/registry/usecases.yaml`, rows where `component: hub`.
 
 UC-1 and UC-17 realise CAP-11 (Telegram, last phase). This phase's create path is UC-2.
 

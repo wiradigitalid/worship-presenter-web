@@ -3,10 +3,9 @@ type: sdd
 component: '{pc}'
 status: draft            # draft · reviewed · locked · superseded
 created: '{YYYY-MM-DD}'
-updated: '{YYYY-MM-DD}'
 realizes: []             # UC ids this design realizes, from usecases.yaml
 binds: []                # AD ids from the spine that bind here
-reviewed:                # V13. Filled only after wdi-review has actually run
+reviewed:                # `review-trace`. Filled only after wdi-review has actually run
   date: ''               # '{YYYY-MM-DD}'
   sha: ''                # commit it was reviewed at; without the SHA, staleness cannot be measured
   lenses: []             # the set risk_accepted names — NOT a fixed list
@@ -19,7 +18,7 @@ reviewed:                # V13. Filled only after wdi-review has actually run
 
 <!-- NOT an HLD, and NOT a one-shot LLD. What the system consists of belongs to C4 L1-L2; architecture
      constraints belong to ARCHITECTURE-SPINE.md; deployment topology belongs to the devops repository.
-     This document is LIVING: one per Product Component, amended every wave. -->
+     This document is LIVING: one per Product Component, amended every spec. -->
 
 <!-- EVERY SECTION MARKS THE MINIMUM `mode` THAT DEMANDS IT. Below that minimum it MUST NOT be written
      to fill a slot; above it, it is required. Read the component's mode from its row in
@@ -29,13 +28,21 @@ reviewed:                # V13. Filled only after wdi-review has actually run
      That is a FINISHED state, not an unfinished one: G4 is skipped at catalog, and the code is written
      from the use case catalogue, the three inventories, and C4.
 
+     `reviewed.lenses` carries what ACTUALLY ran at that sha. The risk-mandated set applies to a first
+     review and a gate-opening review; a re-review runs the lighter set over the delta only.
+
      `reviewed.lenses` MUST match what risk_accepted names, NOT what `mode` says. One component MAY sit
      at catalog and still be reviewed the hardest. -->
 
 ## Decision Summary · [outline]
 
 <!-- <=1 page, business language. What this component is built as, and the one or two choices that cost
-     the most to reverse. This is what the Product Owner reads at G4. -->
+     the most to reverse. This is what the Product Owner reads at G4.
+
+     NO DERIVED FACT. `mode`, `risk_accepted`, which `DEC-` bind this file — "none yet" included —
+     how many UC or FR there are, and which slots exist are all held elsewhere and MUST NOT be
+     stated here. `corpus-guide.md` § A derived fact has exactly one home says where each lives, and
+     that the remedy for one already written is DELETION, not correction. -->
 
 ## Structure · [outline]
 
@@ -43,7 +50,7 @@ reviewed:                # V13. Filled only after wdi-review has actually run
      rule, not decoration.
 
      Every LC named here MUST be registered in .control/registry/components.yaml, and the registration
-     is checked WHEN THE WAVE CLOSES — V12 — not before a story is ready-for-dev. The old timing
+     is checked WHEN THE SPEC CLOSES — `lc-registered` — not before a ticket is picked up. The old timing
      demanded the answer at the moment the information was thinnest. -->
 
 | LC | type | Responsibility |
@@ -51,15 +58,18 @@ reviewed:                # V13. Filled only after wdi-review has actually run
 
 ## Inherited Constraints · [guarded]
 
-<!-- Every AD-N from ARCHITECTURE-SPINE.md that reaches this component, QUOTED VERBATIM under its
-     ORIGINAL id. A paraphrase drifts, and the drift is invisible because both texts read reasonably.
+<!-- The AD-N ids from ARCHITECTURE-SPINE.md that reach this component, and how each lands HERE.
+     IDS ONLY — never the rule's text. `AD-` is a living rule edited in place, so a copy of its text
+     goes stale the moment the spine changes and nothing sees it. The rendered SDD
+     (`.how-rendered/<pc>/SDD-<pc>.md`) shows every invariant with its current text, pulled from the
+     spine, and marks which ones bind this component.
 
      A local choice contradicting one is a conflict to surface through wdi-decision, never an override
      made here. Below `guarded` this section is absent and the AD-N still binds — an invariant does not
      stop holding because a document is thin. -->
 
-| AD | Quoted rule | How it lands here |
-| --- | --- | --- |
+| AD | How it lands here |
+| --- | --- |
 
 ## Failure Behaviour · [guarded]
 
@@ -139,8 +149,13 @@ reviewed:                # V13. Filled only after wdi-review has actually run
                        a third party. Lane order is fixed once for the project in
                        ../../../project/codebase-conventions-guide.md; the No-op lane rule is REPEALED
 
-     supplements/ is REPEALED along with the ANX- concept it existed for. -->
+     supplements/ is REPEALED along with the ANX- concept it existed for.
+
+     THIS SECTION EXPLAINS THE CLASSIFICATION, NOT THE CONTENTS. It MUST NOT say which slots exist,
+     which are empty, or which are "not written yet" — that is `.control/structure-document.md`,
+     derived from the tree on disk. -->
 
 ## Open Items
 
-<!-- Unresolved design questions, each pointing at its row in .control/questions/. -->
+<!-- A POINTER, not a copy: ids only. Whether an OQ- is still open is held by .control/questions/,
+     and restating its status here creates a second answer on a slower clock. -->

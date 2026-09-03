@@ -3,18 +3,20 @@ name: '{name}'
 type: architecture-spine
 purpose: build-substrate    # build-substrate (default) · discussion · report · deck
 altitude: feature           # initiative (keeps features) · feature (keeps epics) · epic (keeps stories)
+                            # bmad-architecture's OWN vocabulary — not this method's `spec`/`ticket`, and not ours to rename
 paradigm: '{named design pattern, e.g. hexagonal, layered, pipes-and-filters, actor}'
 scope: '{what this spine governs}'
 status: draft               # draft · final
 created: '{date}'
-updated: '{date}'
 binds: []                   # capability / unit IDs governed (from the driving spec; at epic altitude, also the inherited parent AD ids)
 sources: []
 companions: []
-reviewed:                # V13. Filled only after wdi-review has actually run
+reviewed:                # `review-trace`. Filled only after wdi-review has actually run
   date: ''               # '{YYYY-MM-DD}'
   sha: ''                # commit it was reviewed at; without the SHA, staleness cannot be measured
-  lenses: []             # structure · prose · edge-case-hunter · adversarial · verification-gap
+  lenses: []             # what ACTUALLY ran at this sha: structure · prose · edge-case-hunter ·
+                         # adversarial · verification-gap. Heavy lenses belong to a first or
+                         # gate-opening review; a re-review runs the lighter set over the delta
 ---
 
 # Architecture Spine — {name}
@@ -95,6 +97,6 @@ reviewed:                # V13. Filled only after wdi-review has actually run
 - **`AD-N` versus `DEC-NNN`.** An `AD-N` here is a living rule, edited in place. A `DEC-NNN` in
   `.control/decisions/` is one decision event, never edited and replaced by a `superseded` pointer.
   The two MUST NOT be interchanged.
-- **Ordering.** The spine is authored before `bmad-spec` runs, and `bmad-spec` adopts it as a
+- **Ordering.** The spine is authored before the contract is cut, and the contract adopts it as a
   companion — never the reverse.
 - **Memlog.** Written to `.control/memlog/spine.md` via `--path`.

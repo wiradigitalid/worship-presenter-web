@@ -18,10 +18,10 @@ about BMad itself.
 
 | Source | What it answers |
 |---|---|
-| `.control/generated/status` | Which wave is open, which stories sit at which status, which validators are red |
+| `.control/generated/status` | Which spec is open, how many of its tickets are done, which validators are red |
 | `.control/registry/index.yaml` | The global `mode`, and the gate map |
 | `.control/registry/components.yaml` | Per-component `mode`, `risk_accepted`, and `g4_passed` |
-| `.control/registry/waves.yaml` | Wave → release, size, `depends_on` |
+| `.control/registry/specs.yaml` | Spec → release, size, `depends_on`, and its ticket index |
 | `.constitution/method/document/delivery-flow-guide.md` | The five gates and their checklists |
 | `.constitution/method/why/README.md` | The whole shape, when the caller has never seen the method |
 
@@ -48,21 +48,23 @@ mis-route in this flow, because every other gate is the same for every component
 
 | State | Next |
 |---|---|
+| `wdi-method update` just ran and its summary printed an `upgrade` line | `wdi-upgrade` — **before anything else**. Content is still in the old shape, and every skill below reads the new one |
 | No registry, or no global `mode` set | `wdi-init` intent `setup` — nothing has started |
 | No `.what/_product-brief/brief.md` | `wdi-problem` — G1 has not started |
 | A brief exists, and no PRD covers the area in play | `wdi-product` intent `prd` |
 | A PRD covers it but the promise has moved | `wdi-product` intent `update` — never a second PRD for the same area |
 | Only the **wording** of an `FR` is wrong | Nobody. Whichever skill is at work fixes it directly; putting it behind a gate is how three earlier corrections were dropped |
-| A PRD exists and the interface is a large part of what it promises | `wdi-ux` — optional, and it lands nothing until a `<pc>` exists |
+| A PRD exists and the interface is a large part of what it promises | `wdi-ux` — optional, and it runs **before G2**, which reads its `EXPERIENCE.md`. It needs no Product Component: `design-system.md` lands at once, and the two `<pc>`-scoped halves land when `wdi-init` intent `component` runs |
 | A PRD exists, no `product_components` yet | `wdi-init` intent `component` — the slicing is born here, at the tail of G2 |
 | Components exist, `mode` or `risk_accepted` unset | `wdi-init` intents `mode` and `risk` — both are the owner's, and G4 cannot be read without them |
 | Components exist, no UC catalogue or no spine | `wdi-blueprint` — intent `catalog` first, then `platform` |
-| The blueprint is complete and G3 has not been held | The gate. Read `.control/generated/blueprint.md`, not seven files |
+| The blueprint is complete and G3 has not been held | The gate. Read `.how-rendered/blueprint.md`, not seven files |
 | G3 passed, a component at `outline`/`guarded`/`deep` has no depth | `wdi-component` |
 | G3 passed, the component is at `mode: catalog` | `wdi-build` — G4 is skipped by design |
-| Depth done and G4 passed for every component the work touches | `wdi-build` — it opens the wave, runs `bmad-spec`, ships each story, closes the wave |
-| A small fix touching no `FR`, `UC`, `AD-N`, or domain model | Fast Path: `bmad-build` directly. It stops and becomes a wave `S` the moment an `FR` is touched |
+| Depth done and G4 passed for every component the work touches | `wdi-build` — it opens the spec, has the owner run `to-spec` and `to-tickets`, ships each ticket, closes the spec |
+| A small fix touching no `FR`, `UC`, `AD-N`, or domain model | Fast Path: the owner runs `/implement` directly. It stops and becomes a spec `S` the moment an `FR` is touched |
 | A planning assumption turned out void | `wdi-decision` intent `open` — it proposes, and changes nothing |
+| The owner has to decide something and wants the reading done first | `wdi-explain-to-me` — it briefs, and changes nothing; the decision then goes to `wdi-decision` or `wdi-question` |
 | An accepted `DEC-` has not reached its documents | `wdi-decision` intent `apply` |
 | A bug, a failing test, unexpected behaviour | `wdi-systematic-debugging`, before any fix is proposed |
 | Numbers are wanted before the work is committed | `wdi-report` intent `estimate` |
@@ -92,7 +94,7 @@ it claims, or when one of its eight required sections is missing outright.
 - When the caller has never seen this method, point at `.constitution/method/why/README.md` rather than
   paraphrasing it here.
 
-## When there is no wave open
+## When there is no spec open
 
 Say so plainly, then route by the table above. An artifact a later gate produces MUST NOT be reported as
 missing — that is not a gap, it is the plan.

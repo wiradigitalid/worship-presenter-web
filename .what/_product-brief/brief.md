@@ -7,15 +7,22 @@ updated: 2026-08-19
 
 # Product Brief: Worship Presenter Web
 
+> **This is the working brief.** It points at the registry instead of repeating it, so `Goals` is one
+> line and there is no Assumptions or Prerequisites section here.
+>
+> **To read or hand over one complete, self-contained document, run `/wdi-report render brief`.**
+> It writes `.what-rendered/_product-brief/brief.md` with the goals, the open assumptions, and the open
+> prerequisites filled in from their own homes. That file is regenerated, never hand-edited.
+
 Client: **Church Name**. Structured identity: `.control/registry/index.yaml`.
 
-## Executive Summary
+## Why
 
 Every Sabbath, an Operator presents a worship Deck of ~68 slides. Today one person assembles it by hand: copy last week's file, swap songs, names, posters, announcements. Roughly one hour a week — ~52 hours a year — from a volunteer who could otherwise be used for something else. Only that person can do the work. Last-minute changes almost never make it in. Off-the-shelf worship software that was tried failed because it had to be installed on the Operator's laptop, and then only one person understood it.
 
 This product turns the weekly Deck into a **generated artifact**. The Operator (multimedia team) logs into a Hub, enters this week's Rundown, and the application assembles the presentation from a fixed frame plus that week's content. Friday review stays in that Hub. An **offline PPTX** means Sabbath does not depend on venue internet.
 
-Telegram intake via picoclaw is the intended later channel — cheaper and more familiar for Events — and is **out of this phase**. Web first, because it is cheaper to land and easier to stabilize on the system we already run.
+Telegram intake via picoclaw is the intended later channel — cheaper and more familiar for Events — and is **out of this phase**. Web first, because it is cheaper to land and easier to stabilize on the system we already run. If this sticks, Events send the Rundown on Telegram, picoclaw interprets, and the Operator only reviews. Other churches have other flows; per-congregation configuration is vision, not Scope In.
 
 The promise is narrow and honest: assembly hours disappear, the Operator turn widens to anyone on the multimedia team, and the tool is **used every week** — not a trial that gets abandoned.
 
@@ -70,9 +77,7 @@ Telegram-where-Events-already-talk is the later channel, not a current different
 
 ## Goals
 
-- **BG-1** — The Sabbath Deck is generated from a Rundown, not assembled by hand, every week.
-- **BG-2** — Anyone on the multimedia rotation can review and present a Service, without Deck-assembly skill.
-- **BG-3** — Sabbath does not depend on venue internet: the PPTX is already on the laptop before worship.
+Goals — see `.control/registry/goals.yaml` → `goals:`.
 
 ## Success Criteria
 
@@ -110,18 +115,3 @@ Supporting: hand assembly of ~1 hour becomes Friday review ≤ 10 minutes; the O
 - The Sabbath presentation **must not** depend on venue internet — the offline PPTX is the guarantee, not an optional fallback.
 - This repo is **public**: congregation data, photos, prayers, payments, and source Decks **do not** enter git.
 - Lyrics **only** from the shipped Song Book; not free upload or web search.
-
-## Assumptions
-
-- [ASSUMED] The Operator has this week's Rundown content in time to enter it in Hub. Wrong: no Service that week. (OQ-17)
-- [ASSUMED] One church, one worship flow, for this product's scope. Wrong: Scope In is not enough; that is a second product or a new PRD. (OQ-2)
-- [ASSUMED] The venue has a laptop that can play PPTX (PowerPoint or equivalent). Wrong: the offline guarantee is not fulfilled. (OQ-3)
-
-## Prerequisites
-
-- The Song Book corpus (and the shipped scripture translations) is in the repo — already met.
-- `AUTH_SECRET` / `WEBHOOK_SECRET` secrets and a durable path for the database on the host — not yet met; waiting on the production host (OQ-4 in `.control/questions/external.md`). A go-live requirement, not G1. `WEBHOOK_SECRET` is for the later Telegram path.
-
-## Vision
-
-If this sticks, Events send the Rundown on Telegram, picoclaw interprets, and the Operator only reviews. Other churches have other flows; per-congregation configuration is vision, not Scope In.

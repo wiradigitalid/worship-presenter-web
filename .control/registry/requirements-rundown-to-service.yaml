@@ -1,0 +1,55 @@
+# requirements-rundown-to-service.yaml — SSOT for CAP · FR · NFR · UJ of the `rundown-to-service` PRD.
+#
+# Keys are English; prose values follow the product's chosen `doc_language`.
+# ONE FILE, ONE WRITER, ONE GATE — `wdi-product`'s, written at G2 for this initiative.
+# `BG` lives in `.control/registry/goals.yaml`, not here.
+#
+# IDS ARE ALLOCATED ONCE AND THE SEQUENCE IS GLOBAL TO THE PRODUCT — see `goals.yaml` for why.
+
+capabilities:
+  - id: CAP-1
+    title: Intake a Rundown into a weekly payload from the Hub form
+    goal: BG-1
+    target_release: as-built
+    priority: must
+  - id: CAP-11
+    title: Intake a Rundown from Telegram via picoclaw
+    goal: BG-1
+    target_release: later
+    priority: must
+
+functional:
+  - id: FR-1
+    capability: CAP-11
+    title: "Ingest a Rundown from Telegram into a structured weekly payload"
+    proof: "After sending a Rundown for one date, the Hub shows one Service with the same roles, times, the configured hymn numbers, and speaker as the text; sending the same date again updates, rather than duplicating."
+  - id: FR-2
+    capability: CAP-1
+    title: "Validate and resolve hymns by Song Book number, at the API"
+    proof: "A known number produces a title the Operator can match on the form; an unknown number does not cancel the Service — the song block is marked incomplete."
+  - id: FR-3
+    capability: CAP-1
+    title: "Manage the announcement list that persists across weeks"
+    status: retired
+    superseded_by: FR-21
+    statement: "This promise is withdrawn. Hub no longer owns any announcement-list membership or ordering — composing announcement content is now exclusively an Admin action in the Artifact Registry, as N independent Announcement Sets (`offline-deck` FR-21). The reason recurring items mattered — not re-uploading the same flyer every week — is carried forward there: FR-21 promises a copied image shares one file by reference, so an Announcement Set built once keeps presenting without a fresh upload. Nothing in this PRD's `## 4.1 Hub form` area edits announcement composition any more; Hub's remaining job on a Service is limited to the weekly fields it always owned (hymn numbers, Family/Youth values, and the like), never the announcement list itself."
+  - id: FR-12
+    capability: CAP-11
+    title: "Send a correction via Telegram to an existing Service"
+    proof: "“Change the opening song to number X” updates the nearest Sabbath Service (or the named date), not a new Service."
+  - id: FR-27
+    capability: CAP-1
+    title: "Create a new Service from the Hub form"
+    proof: "After the Operator pastes a valid Rundown for one date, the Hub shows one Service with the same roles, times, the configured hymn numbers, and speaker as the text; an existing date is not duplicated without override."
+
+nonfunctional:
+  - id: NFR-5
+    goal: BG-1
+    title: Rundown parsing fails visibly, not silently; every unmapped input reaches the Operator.
+    enforced_by: [tests/parser.test.mjs]
+
+journeys:
+  - id: UJ-1
+    title: Events send a Rundown on Telegram; the Service is ready to review without them opening Hub.
+  - id: UJ-5
+    title: Operator logs into Hub and creates this week's Service from a Rundown.

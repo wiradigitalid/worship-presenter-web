@@ -1,0 +1,108 @@
+# requirements-offline-deck.yaml — SSOT for CAP · FR · NFR · UJ of the `offline-deck` PRD.
+#
+# Keys are English; prose values follow the product's chosen `doc_language`.
+# ONE FILE, ONE WRITER, ONE GATE — `wdi-product`'s, written at G2 for this initiative.
+# `BG` lives in `.control/registry/goals.yaml`, not here.
+#
+# IDS ARE ALLOCATED ONCE AND THE SEQUENCE IS GLOBAL TO THE PRODUCT — see `goals.yaml` for why.
+#
+# FR-26 carries `capability: CAP-5` here, not the CAP-3 the pre-upgrade registry gave it — the
+# owner ruled 2026-09-03 to keep FR-26 where its prose already lived (this PRD's Offline PPTX
+# feature) rather than move the prose to `requirements-operator-turn.yaml`.
+
+capabilities:
+  - id: CAP-2
+    title: Assemble a Deck from the fixed frame plus the weekly payload
+    goal: BG-1
+    target_release: as-built
+    priority: must
+    depends_on: [CAP-1]
+  - id: CAP-5
+    title: Download a PPTX that presents without a network
+    goal: BG-3
+    target_release: as-built
+    priority: must
+    depends_on: [CAP-2]
+  - id: CAP-9
+    title: Artifact Registry — Deck layout and order
+    goal: BG-1
+    target_release: as-built
+    priority: must
+    depends_on: [CAP-2]
+
+functional:
+  - id: FR-4
+    capability: CAP-2
+    title: "Assemble a Deck from the fixed frame plus the weekly payload"
+    proof: "This worship's three macro sections are present; conditional slides disappear when the payload is empty; metadata = this Service's date."
+  - id: FR-5
+    capability: CAP-2
+    title: "Render a song block into readable lyric slides"
+    proof: "From the pew, verse and chorus are readable; not cramped. NFR-3. Verse lines join into continuous prose (terminal punctuation → space; otherwise \"; \"). Sections are emitted in the order the lyric text writes them, a refrain with its own body is used verbatim and a bodyless one inherits the nearest preceding refrain, and a blank line inside a section is a hard slide break — DEC-004 Supplement S7 (L1–L6). Character-count splitting is retired: the lyric text alone decides where a slide ends."
+  - id: FR-6
+    capability: CAP-2
+    title: "Render non-song variable content onto its slide kinds"
+    proof: "That week's names, verses, photos, flyers land on the right slides, in the order the Registry's Announcement Sets and Song Set entries define."
+  - id: FR-7
+    capability: CAP-2
+    title: "Apply one elegant transition chosen by Admin"
+    proof: "All text/graphic slides one transition; flyers with no transition."
+  - id: FR-14
+    capability: CAP-5
+    title: "Download a PPTX that presents fully offline"
+    proof: "Opened with no internet, the Service is complete; the presentation app's native presenter view works. NFR-1, NFR-7."
+  - id: FR-26
+    capability: CAP-5
+    title: "Auto-delete only PPTX files that have expired under the retention policy"
+    no_uc: "automatic retention, not a user action"
+    proof: "A Service older than the retention window (default 2 months) loses its PPTX; the row and payload remain; regenerate is still possible."
+  - id: FR-20
+    capability: CAP-9
+    title: "Admin changes a slide's layout through the Artifact Registry"
+    proof: "Change one kind's layout — including the shared Title/Verse/Reff trio that every Song Set entry uses, however many entries Admin has defined — and the next generate (new Service / after Sync) shows the new layout in PPTX and slideshow."
+  - id: FR-21
+    capability: CAP-9
+    title: "Admin changes slide order and membership in the Artifact Registry"
+    proof: "A deleted entry is no longer live after restart; an already-created Service does not change until Sync Artifact; Sync replaces structure, Operator fields stay. Admin may add, remove, and reorder Song Set rows and Announcement Set markers on the spine like any other row — neither has a fixed count. An Announcement Set marker splices in that set's own ordered sequence of authored slides; composing, reordering, and deleting within a set happens only in the Registry, never on the Service form. A slide's image, copied between the Main spine and any Announcement Set, shares the same file by reference — deleting the slide never deletes an image another slide still uses."
+  - id: FR-29
+    capability: CAP-9
+    title: "Admin configures the song-set list in the Artifact Registry, not a fixed four"
+    proof: "Admin adds, renames, or removes a song-set entry (its own name and title) directly in the Artifact Registry; a Service rundown with more than four songs is a normal shape the Registry accepts, not a limit the Admin has to work around."
+  - id: FR-30
+    capability: CAP-9
+    title: "An unrecognised predefined-field token never blocks Deck generation"
+    proof: "A slide authored with a {key} token the catalog does not recognise still generates; the token prints as empty text rather than failing the Deck. The Registry editor flags the unknown key when the slide is saved, so the typo is visible before it reaches a Service."
+  - id: FR-31
+    capability: CAP-9
+    title: "Admin maintains an image-only background library and a global default background for Verse/Reff"
+    proof: "Admin adds and removes images (no colours, no gradients) in a background library and names one of them the global default. A Verse or Reff slide with no background chosen for that week falls back to the global default, and with neither set renders on a blank canvas."
+
+nonfunctional:
+  - id: NFR-1
+    goal: BG-3
+    title: A downloaded PPTX presents the full Service without a network.
+    enforced_by: [tests/pptx-content.test.mjs]
+  - id: NFR-2
+    goal: BG-2
+    title: Assemble and export one Service PPTX of ~68 slides within the song-swap window of ≤ 5 minutes.
+    enforced_by: [tests/pptx-ceiling.test.mjs]
+  - id: NFR-3
+    goal: BG-1
+    title: Lyric slides are never cramped; the Congregation can read from the pews.
+    enforced_by: [tests/lyrics.test.mjs]
+  - id: NFR-4
+    goal: BG-1
+    title: Deck generation runs without interactive PowerPoint; fonts and backgrounds render headless.
+    enforced_by: [tests/pptx-content.test.mjs]
+  - id: NFR-7
+    goal: BG-3
+    title: The font set is guaranteed and installed on the presentation machine; line wrapping can be computed.
+    enforced_by: [tests/pptx-content.test.mjs]
+  - id: NFR-8
+    goal: BG-1
+    title: A mis-structured Registry produces a broken Deck; every placeholder binds to exactly one element, and the initial Registry produces every slide the Blueprint names.
+    enforced_by: [tests/registry-seed-conformance.test.mjs, tests/artifact-hydration.test.mjs]
+  - id: NFR-9
+    goal: BG-1
+    title: Structure Admin writes survives restart and redeploy; deletions stay deleted.
+    enforced_by: [tests/registry-reseed.test.mjs]

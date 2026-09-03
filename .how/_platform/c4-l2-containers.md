@@ -53,11 +53,7 @@ C4Container
 
 ## Product Components per container
 
-| Container | Product Components living in it |
-| --- | --- |
-| api | hub, presenter, registry |
-| spa | hub, presenter, registry |
-| pptx-worker | hub |
+Product Components per container — see `.control/registry/components.yaml`, each PC's `containers:`.
 
 ## What is deliberately not shown
 

@@ -1,45 +1,27 @@
-promise_progress: 39%
+promise_progress: 0%
 rtm_rows:
-  green: 17
-  counted: 44
+  green: 0
+  counted: 36
   excluded_no_uc: 1
-work_progress:
-- wave: W1
-  status: closed
-  stories_done: 2
-  stories_total: 2
-  work_progress: 100%
-- wave: W2
-  status: closed
-  stories_done: 3
-  stories_total: 3
-  work_progress: 100%
-- wave: W3
-  status: closed
-  stories_done: 3
-  stories_total: 3
-  work_progress: 100%
-- wave: W4
-  status: closed
-  stories_done: 1
-  stories_total: 1
-  work_progress: 100%
-- wave: W5
-  status: closed
-  stories_done: 3
-  stories_total: 3
-  work_progress: 100%
-gate_readiness: 100%
-validators_red: []
+work_progress: []
+gate_readiness: 96%
+validators_red:
+- memlog-home
 validators_skipped:
-  V14: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
+  plan-dates: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
     but its presence in generated/report is not checked
-  V19: 'advisory — wave S/M closed without an RTR-: W1, W3, W4'
+  uc-scheduled: no spec yet, so no ticket yet — every unscheduled UC is the correct state. Full catalogue
+    coverage is checked at G5
 open_questions:
   blocking: 0
-  assumptions: 47
+  assumptions: 50
   external: 1
-  answered: 7
+  answered: 8
+  open_by_whose:
+    owner: 0
+    run: 0
+    frozen: 0
+    unstated: 50
   blocking_budget: 9
   blocking_over_budget: false
   assumptions_budget_per_gate: 15

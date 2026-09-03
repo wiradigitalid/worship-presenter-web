@@ -3,7 +3,9 @@ type: lc
 id: LC-{NNN}                 # allocated from .control/registry/components.yaml
 name: '{name}'
 lc_type: service             # ui-screen · ui-composite · ui-element · gateway · service · job · store
-container: '{container}'     # the runnable/deployable unit it lives in
+container: '{container}'     # the runnable/deployable unit it lives in. EMPTY is legal only for a
+                            # screen born at G2 before containers exist; G3 fills it. `container-built` demands it as
+                            # soon as this LC's Product Component lists containers
 component: '{pc}'            # the Product Component it belongs to
 owner: '{team or person}'
 area: '{area}'
@@ -24,7 +26,7 @@ created: '{YYYY-MM-DD}'
        service · job            → .how/<pc>/04-components/
        store                    → .how/<pc>/05-model/
 
-     An LC MUST be registered by the time its wave CLOSES — V12 checks that
+     An LC MUST be registered by the time its spec CLOSES — `lc-registered` checks that
      every `touches` entry resolves. -->
 
 ## Responsibility

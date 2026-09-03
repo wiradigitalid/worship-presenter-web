@@ -30,14 +30,7 @@ Changing the worship order must not wait for a deploy, and must not overwrite a 
 
 ## UC Catalogue · [G3]
 
-| id | Use case | Actor | Satisfies | critical |
-| --- | --- | --- | --- | --- |
-| UC-14 | I change a slide's layout | Admin | FR-20 | no |
-| UC-15 | I change slide order and a delete stays deleted | Admin | FR-21 | yes |
-| UC-16 | I Sync Artifact to a Service already reviewed | Admin | FR-21 | no |
-| UC-20 | I see a Deck that matches this week's payload | Operator | FR-4, FR-5, FR-6 | no |
-| UC-24 | I add, rename, or remove a song-set entry | Admin | FR-29 | no |
-| UC-25 | I maintain the background library and set the global default | Admin | FR-31 | no |
+UC Catalogue — see `.control/registry/usecases.yaml`, rows where `component: registry`.
 
 ## Constraints · [G3]
 

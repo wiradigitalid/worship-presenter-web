@@ -12,22 +12,55 @@ file somewhere this method cannot use.
 
 The per-skill read/write map lives in `bmad-skill-register.md` and MUST NOT be duplicated here.
 
-## Stories mode only
+## Neither of BMad's two routes
 
-BMad offers two routes. We run one.
+BMad offers a sprint route and a stories route. This method ran the stories route, and **now runs
+neither.** The engine layer below G5 is `to-spec`, `to-tickets`, `implement`, `tdd`, and `code-review`;
+`wdi-build` owns the transition and states which BMad engines are retired.
 
-| | Sprint route | **Stories route — ours** |
+What survived the change is the **reason** the sprint route was dropped, because it is the same reason
+`ticket-status-one-home` still exists. That route keeps status in one hand-edited file: two builders running in parallel
+contend for it, and status becomes something a builder declares about itself. Status is read from the
+ticket instead, and it MUST NOT be copied into `specs.yaml`.
+
+| Route | Status home | Why not |
 |---|---|---|
-| Planning artifact | `epics.md` | `.what/<pc>/SRS-<pc>.md` + `SPEC.md` + `stories.yaml` |
-| Status home | `sprint-status.yaml` | Story-file frontmatter |
-| Produced by | `bmad-create-epics-and-stories` · `bmad-sprint-planning` | `bmad-spec` |
+| Sprint | `sprint-status.yaml` | One hand-edited file, contended, self-declared |
+| Stories | story-file frontmatter | Its author, `bmad-spec`, is retired |
+| **Ours** | **the ticket itself** | — |
 
 `bmad-create-epics-and-stories` and `bmad-sprint-planning` are **NOT USED**. Neither MUST be invoked,
 and neither MUST be named as a gate condition.
 
-The sprint route was dropped because it keeps status in a hand-edited file. Two workers running in
-parallel then contend for one file, and status becomes something a worker declares about itself.
-Reading status from story-file frontmatter removes both problems — V18 checks it.
+## When an engine earns being invoked at all
+
+BMad is a **dependency of this package**: the installer checks for it, `--skip-bmad-check` exists to say so
+out loud, and five artifacts here have no other author. Any *further* engine is a different question, and it
+has one test:
+
+> **Does it produce something this corpus keeps?**
+
+Yes → it MAY be wrapped, and the wrapper rule applies: invoked through the WDI skill that owns the artifact,
+which checks position, verifies against the guide, and lands the result in this method's template. A
+non-BMad engine is named in **that skill**, never in `bmad-skill-register.md` — that register is BMad's
+inventory, and putting somebody else's skill in it makes the register a lie.
+
+No → **absorb the discipline and invoke nothing.** Prose we could have written is not an engine.
+
+An engine whose output this corpus keeps is invoked even when it is a **plugin rather than part of this
+package's install** — `mattpocock-skills:domain-modeling` is the case, and `wdi-blueprint` invokes it. Two
+rules make that safe in a repo that does not have it:
+
+- **A missing plugin is a state, not a defect.** Report it once, name the standard the work is still held
+  to, and do the work. You MUST NOT block a gate on it, and you MUST NOT report its absence as a finding.
+- **The wrapper carries the standard, never the plugin.** What the engine is invoked *for* MUST be written
+  in the wrapping skill as behaviours to verify — so the same bar is met either way, and a run that
+  produced none of them is reported as a transcription rather than landed.
+
+An engine's **own** artifacts and tests are a separate matter, and the wrapping skill MUST name every one
+this corpus already has a home for. `wdi-blueprint` names four for `domain-modeling`, one of which —
+`docs/adr/` — is a folder **Article 3 forbids outright**. That is why an engine's write location is pointed
+somewhere safe **before** it runs rather than corrected after.
 
 ## Skill classes
 
@@ -35,7 +68,7 @@ The criterion is **lifetime**, not importance:
 
 | Class | Criterion | Output home |
 |---|---|---|
-| **A** | A living document, still correct after the wave | Straight into `.what/` or `.how/` |
+| **A** | A living document, still correct after the spec has passed | Straight into `.what/` or `.how/` |
 | **B** | Living, but its granularity is not configurable | Neutral `_bmad-output/` → the owner in `corpus-guide.md` lands it |
 | **C** | Ends when its work does | `_bmad-output/`, committed, not curated |
 | **D** | No artifact at all | — |
@@ -88,7 +121,7 @@ BMad skills call `--workspace` by default; the class-A home is reached by instal
 instruction as a `persistent_fact`.
 
 - A class-A or class-B skill MUST use `--path`. `--workspace` MUST NOT be used — it would leave a
-  `.memlog.md` inside `.what/` or `.how/`, which V16 rejects.
+  `.memlog.md` inside `.what/` or `.how/`, which `memlog-home` rejects.
 - Class-C memlogs stay beside their output in `_bmad-output/`.
 - Every memlog MUST carry `artifact:` in its frontmatter, pointing at a file that exists.
 
@@ -121,13 +154,13 @@ to whoever runs the repo and MUST NOT be copied between projects.
 `bmad-deep-recon`, and it runs two lenses: `structure` and `prose`.
 
 Everything else MUST be reviewed by invoking `wdi-review` explicitly — the spine, every SRS, every
-SDD, and every `SPEC.md`. Three lenses never fire on their own anywhere: `adversarial`,
+SDD, and every spec's contract. Three lenses never fire on their own anywhere: `adversarial`,
 `edge-case-hunter`, and `verification-gap`.
 
-**Code review does not use `bmad-review`.** `bmad-code-review` reads its lenses from a bundled copy
-under `review-prompts/`, and each layer ends with an instruction not to invoke any skill. An override
-placed on `bmad-review` is therefore **invisible** to code review. Getting the current lenses onto a
-diff requires calling `bmad-review` by hand.
+**Code review is not `bmad-review`, and it is not BMad's at all any more.** The panel over a diff is
+`code-review`, dispatched by `wdi-build`; it reviews along two axes, Standards and Spec, and both MUST
+run. An override placed on `bmad-review` reaches documents only. Getting a document lens onto a diff
+still requires calling `wdi-review` by hand, and that is a deliberate act, not a default.
 
 ## Renamed and retired
 
@@ -136,6 +169,7 @@ diff requires calling `bmad-review` by hand.
 | `bmad-create-prd` · `bmad-edit-prd` · `bmad-validate-prd` | Shims over `bmad-prd` — use the intent, not the shim |
 | `bmad-create-architecture` | `bmad-architecture` |
 | `bmad-create-epics-and-stories` · `bmad-sprint-planning` | **Not used** — sprint route |
+| `bmad-spec` · `bmad-build` · `bmad-build-auto` · `bmad-code-review` · `bmad-retrospective` | **Retired** — the engine layer below G5 is no longer BMad's. Their `_bmad/custom/*.toml` overrides are withdrawn, and `update` removes any still installed |
 
 Roughly a third of the installed skills are deprecated aliases. `bmad-skill-register.md` is the
 authority on which is which, and it MUST be consulted rather than guessed from a name that looks
