@@ -171,3 +171,18 @@ decisions:
       - .how/_platform/ARCHITECTURE-SPINE.md
       - .control/registry/usecases.yaml
       - .what/presenter/SRS-presenter.md
+  - id: DEC-007
+    type: mandate
+    status: accepted
+    accepted_by: "kodesh87 (2026-09-07)"
+    title: Autopilot mandate for G5 release execution
+    file: .control/decisions/DEC-007-autopilot-mandate.md
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: claude-byok
+      loop: 10m
+      expires: '2026-09-14'
+    touches: []
+
