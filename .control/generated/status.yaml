@@ -29,9 +29,8 @@ work_progress:
   tickets_done: 3
   tickets_total: 3
   work_progress: 100%
-gate_readiness: 96%
-validators_red:
-- memlog-home
+gate_readiness: 100%
+validators_red: []
 validators_skipped:
   plan-dates: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
     but its presence in generated/report is not checked
