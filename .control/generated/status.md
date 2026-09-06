@@ -15,6 +15,11 @@ validators_red:
 validators_skipped:
   plan-dates: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
     but its presence in generated/report is not checked
+  review-trace: 'advisory — trace stale, re-run before the next gate or spec close: .how/hub/SDD-hub.md
+    (changed at 56db449, reviewed at af3b6f3), .how/presenter/SDD-presenter.md (changed at 56db449, reviewed
+    at 411a59d), .how/registry/SDD-registry.md (changed at 56db449, reviewed at 42c967c), .what/hub/SRS-hub.md
+    (changed at 56db449, reviewed at af3b6f3), .what/presenter/SRS-presenter.md (changed at 56db449, reviewed
+    at 411a59d), .what/registry/SRS-registry.md (changed at 56db449, reviewed at 42c967c)'
   uc-scheduled: no spec yet, so no ticket yet — every unscheduled UC is the correct state. Full catalogue
     coverage is checked at G5
 open_questions:

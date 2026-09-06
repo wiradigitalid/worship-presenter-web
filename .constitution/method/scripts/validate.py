@@ -55,9 +55,11 @@ CHECK_ORDER = (
     "entity-one-writer",
     "spec-after-g4",
     "high-risk-named",
+    "mandate-accept",
     "cites-resolve",
     "container-built",
     "custom-room-declared",
+    "corpus-in-git",
     "id-allocated-once",
 )
 
@@ -969,7 +971,8 @@ def high_risk_named(c: Corpus, r: Result) -> None:  # was V23
     to resolve: a repo pointing at a decision is making a checkable claim, and a pointer to a decision
     that does not exist is worse than no pointer.
     """
-    known = {str(x.get("id")) for x in c.decs}
+    by_id = {str(x.get("id")): x for x in c.decs}
+    known = set(by_id)
     for pc in c.pcs:
         pid = str(pc.get("id"))
         if str(pc.get("risk_accepted") or "").strip() != "high":
@@ -985,6 +988,104 @@ def high_risk_named(c: Corpus, r: Result) -> None:  # was V23
                    f"`risk_accepted_by` names nobody — a person and a date is enough")
         elif ref.startswith("DEC-") and ref not in known:
             r.fail("high-risk-named", pid, f"`risk_accepted_by: {ref}` does not exist in decisions.yaml")
+        elif str(by_id.get(ref, {}).get("type") or "") == "mandate":
+            # A mandate delegates the decisions the owner would have taken. Accepting a HIGH risk on a
+            # component that touches money or personal data is not one of them: the whole point of this
+            # check is that a PERSON is named, and pointing at the delegation names nobody. Left legal, an
+            # unattended run could raise the risk itself and switch off the code panel wdi-build requires.
+            r.fail("high-risk-named", pid, f"`risk_accepted_by: {ref}` is a `type: mandate` — a run MUST NOT "
+                                           f"accept a sensitive risk for the owner; name a person and a date")
+
+
+def _dec_date(c: Corpus, dec: dict) -> dt.date | None:
+    """The day a decision was taken: `date` on its row, else `date`/`created` in its file's frontmatter."""
+    def as_date(v: object) -> dt.date | None:
+        if isinstance(v, dt.datetime):
+            return v.date()
+        if isinstance(v, dt.date):
+            return v
+        try:
+            return dt.date.fromisoformat(str(v).strip()) if v else None
+        except ValueError:
+            return None
+    got = as_date(dec.get("date"))
+    if got:
+        return got
+    did = str(dec.get("id") or "")
+    for path in sorted(c.root.glob(f".control/decisions/{did}-*.md")):
+        fm = frontmatter(path) or {}
+        got = as_date(fm.get("date")) or as_date(fm.get("created"))
+        if got:
+            return got
+    return None
+
+
+def mandate_accept(c: Corpus, r: Result) -> None:
+    """A decision accepted BY DELEGATION points at a real mandate that had not lapsed when it was taken.
+
+    `wdi-autopilot` lets the agent accept decisions the owner would have accepted, and that is legal
+    only because the owner accepted the MANDATE in person. So three things hold: a mandate is never
+    itself accepted by another decision — the chain of authority has a person at its root; an accepted
+    mandate names the day it ends, or it is standing permission; and a decision whose `accepted_by` is
+    a `DEC-` names one that is `type: mandate`, accepted, and unexpired on the decision's own date.
+
+    It says nothing about WHAT was decided — that is the ledger's job and the owner's review.
+    """
+    by_id = {str(d.get("id")): d for d in c.decs}
+    for dec in c.decs:
+        did = str(dec.get("id"))
+        ref = str(dec.get("accepted_by") or "").strip()
+        status = str(dec.get("status") or "")
+        if str(dec.get("type") or "") == "mandate":
+            if ref.startswith("DEC-"):
+                r.fail("mandate-accept", did,
+                       f"is a mandate accepted by delegation (`accepted_by: {ref}`) — the mandate is the one "
+                       f"decision the owner accepts in person")
+            if status in ("accepted", "applied"):
+                if not ref:
+                    r.fail("mandate-accept", did, "is an accepted mandate and `accepted_by` names nobody — "
+                                                  "a person and a date is enough")
+                params = dec.get("mandate") if isinstance(dec.get("mandate"), dict) else {}
+                raw = str(params.get("expires") or "").strip()
+                if not raw:
+                    r.fail("mandate-accept", did, "has no `mandate.expires` — a mandate with no end is standing "
+                                                  "permission, and the loop it drives expires anyway")
+                ledger = c.root / ".control/memlog" / f"autopilot-{did}.md"
+                if not ledger.exists():
+                    # Every claim the mandate rests on — every decision recorded, nothing decided that was
+                    # parked — is checkable only against this file. Absent, the run holds the owner's
+                    # authority with no account of what it did with it.
+                    r.fail("mandate-accept", did, f"has no ledger at `.control/memlog/autopilot-{did}.md` — "
+                                                  f"the record is what the delegation was granted against")
+                if raw and _dec_date(c, {"date": params.get("expires")}) is None:
+                    # An unparseable expiry is WORSE than a missing one: it passes a presence check and then
+                    # silently disables the lapse comparison for every decision taken under this mandate.
+                    r.fail("mandate-accept", did, f"`mandate.expires: {raw}` is not a date — write `YYYY-MM-DD`. "
+                                                  f"An expiry nothing can read stops nothing")
+            continue
+        if not ref.startswith("DEC-"):
+            continue
+        target = by_id.get(ref)
+        if target is None:
+            r.fail("mandate-accept", did, f"`accepted_by: {ref}` does not exist in decisions.yaml")
+            continue
+        if str(target.get("type") or "") != "mandate":
+            r.fail("mandate-accept", did, f"`accepted_by: {ref}` is not a `type: mandate` decision — only a mandate "
+                                          f"delegates acceptance")
+            continue
+        if str(target.get("status") or "") not in ("accepted", "applied"):
+            r.fail("mandate-accept", did, f"`accepted_by: {ref}` is `{target.get('status')}`, not accepted — "
+                                          f"nothing was delegated yet")
+            continue
+        params = target.get("mandate") if isinstance(target.get("mandate"), dict) else {}
+        expires = _dec_date(c, {"date": params.get("expires")})
+        when = _dec_date(c, dec)
+        if when is None:
+            r.fail("mandate-accept", did, f"is accepted under `{ref}` but no date says when — `date:` in its "
+                                          f"frontmatter is what the expiry is checked against")
+        elif expires and when > expires:
+            r.fail("mandate-accept", did, f"was taken on {when.isoformat()}, after `{ref}` expired on "
+                                          f"{expires.isoformat()} — the delegation had lapsed")
 
 
 def defect_root_cause(c: Corpus, r: Result) -> None:  # was V20
@@ -1323,6 +1424,71 @@ def custom_room_declared(c: Corpus, r: Result) -> None:  # was V27
                                "name which rule is rebutted, or drop `decision:`")
 
 
+# The directories the method KEEPS. Article 3 names every one of them, and says of the last two in
+# so many words that they are committed. A `.gitignore` that excludes one WHOLESALE is not a
+# preference: the folder stays on the author's disk and leaves every clone, so a cite into it
+# resolves locally and fails in CI, and the material is one disk failure from gone.
+#
+# The two rendered trees are DELIBERATELY absent from this list. They are regenerated by this
+# script, so a product that declines to commit derived output is making a choice the method allows.
+COMMITTED_DIRS = (".constitution", ".control", ".what", ".how", "_bmad-output", ".work")
+
+# Probed inside each directory above, and named so that no honest pattern would ever mean to match
+# it. The distinction this draws is the entire point of the check: `.work/upstream/` or
+# `.work/**/tree-*.txt` excludes a named artifact and leaves the folder in git — those MUST stay
+# green. `.work/` excludes the folder.
+PROBE = "wdi-probe.md"
+
+
+def _ignore_rule(root: Path, rel: str) -> tuple[bool, str]:
+    """`(git could answer, the rule that ignores rel)`. The rule is `""` when nothing ignores it.
+
+    `git check-ignore` rather than reading `.gitignore` here, because the answer depends on things a
+    hand-written parser gets wrong: nested `.gitignore` files, negation with `!`, and
+    `core.excludesFile` — a global exclude hides the folder in every repo on the machine at once,
+    which is the case most worth reporting and the one a parser of THIS repo cannot see.
+
+    `--no-index` so the answer describes the RULES and not the accident of what is already tracked:
+    a folder can be both ignored and half-committed, and the ignore is still the finding.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(root), "check-ignore", "-v", "--no-index", rel],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return (False, "")
+    if out.returncode == 0:  # ignored — stdout is `<source>:<line>:<pattern>` then a tab then the path
+        lines = out.stdout.strip().splitlines()
+        return (True, lines[0].split("\t")[0].strip() if lines else "a .gitignore rule")
+    if out.returncode == 1:  # not ignored
+        return (True, "")
+    return (False, "")  # 128: not a repo, or git is not installed
+
+
+def corpus_in_git(c: Corpus, r: Result) -> None:
+    """A directory the method keeps MUST NOT be excluded from git.
+
+    Written after a repo was bootstrapped with a hand-written `.gitignore` that filed `.work/` under
+    `# Scratch & temporary` and `_bmad-output/` under `# transient output`. Nothing in the method
+    told it to, and nothing forbade it: Article 3's `committed` sat in a table cell and lost to the
+    ordinary habit that scratch is not committed. Ten files never entered git, one of them the
+    working paper a reverse-engineering task was built on.
+
+    Existence is NOT the gate. A fresh clone lacks the folder BECAUSE it is ignored, so skipping
+    absent directories would silence this check exactly where CI runs it. What is checked is the rule.
+    """
+    for name in COMMITTED_DIRS:
+        answered, rule = _ignore_rule(c.root, f"{name}/{PROBE}")
+        if not answered:
+            r.skip("corpus-in-git", "git could not answer — not a repo, or git is not installed")
+            return
+        if rule:
+            r.fail("corpus-in-git", f"{name}/",
+                   f"is excluded from git by `{rule}` — the method commits this folder, "
+                   f"so no clone has what is in it")
+
+
 def id_allocated_once(c: Corpus, r: Result) -> None:  # was V28
     """One id, one row — across every file the requirement registry is split into.
 
@@ -1357,7 +1523,7 @@ def run_checks(c: Corpus, asof: dt.date) -> Result:
     # no two copies left to compare.
     # V19 is REPEALED. It checked one line item — an `RTR-` file in .control/reports/ — and the
     # retrospective it archived was the only thing spec size `L` ever decided. Both went together.
-    for fn in (goal_has_fr, fr_has_uc, uc_scheduled, ticket_has_test, nfr_has_enforcer, refs_resolve, no_cycles, applied_dec_touches, locked_gate_passed, parallel_tickets_blocked, lc_registered, review_trace, chain_links, memlog_home, spec_names_release_prd, ticket_status_one_home, defect_root_cause, entity_one_writer, spec_after_g4, high_risk_named, cites_resolve, container_built, custom_room_declared, id_allocated_once):
+    for fn in (goal_has_fr, fr_has_uc, uc_scheduled, ticket_has_test, nfr_has_enforcer, refs_resolve, no_cycles, applied_dec_touches, locked_gate_passed, parallel_tickets_blocked, lc_registered, review_trace, chain_links, memlog_home, spec_names_release_prd, ticket_status_one_home, defect_root_cause, entity_one_writer, spec_after_g4, high_risk_named, mandate_accept, cites_resolve, container_built, custom_room_declared, corpus_in_git, id_allocated_once):
         fn(c, r)
     plan_dates(c, r, asof)
     return r
