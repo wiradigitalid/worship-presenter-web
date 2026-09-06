@@ -1,9 +1,11 @@
 ---
 type: mandate
 id: DEC-007
-status: accepted
+status: applied
 accepted_by: 'kodesh87 (2026-09-07)'
-touches: []
+touches:
+  - .control/memlog/autopilot-DEC-007.md
+  - .control/registry/specs.yaml
 supersedes: null
 superseded_by: null
 created: '2026-09-07'

@@ -1,6 +1,6 @@
-promise_progress: 39%
+promise_progress: 100%
 rtm_rows:
-  green: 17
+  green: 44
   counted: 44
   excluded_no_uc: 1
 work_progress:
@@ -8,6 +8,11 @@ work_progress:
   status: closed
   tickets_done: 2
   tickets_total: 2
+  work_progress: 100%
+- spec: W10
+  status: closed
+  tickets_done: 4
+  tickets_total: 4
   work_progress: 100%
 - spec: W2
   status: closed
@@ -28,6 +33,26 @@ work_progress:
   status: closed
   tickets_done: 3
   tickets_total: 3
+  work_progress: 100%
+- spec: W6
+  status: closed
+  tickets_done: 2
+  tickets_total: 2
+  work_progress: 100%
+- spec: W7
+  status: closed
+  tickets_done: 4
+  tickets_total: 4
+  work_progress: 100%
+- spec: W8
+  status: closed
+  tickets_done: 8
+  tickets_total: 8
+  work_progress: 100%
+- spec: W9
+  status: closed
+  tickets_done: 5
+  tickets_total: 5
   work_progress: 100%
 gate_readiness: 100%
 validators_red: []

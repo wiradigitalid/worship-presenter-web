@@ -173,7 +173,7 @@ decisions:
       - .what/presenter/SRS-presenter.md
   - id: DEC-007
     type: mandate
-    status: accepted
+    status: applied
     accepted_by: "kodesh87 (2026-09-07)"
     title: Autopilot mandate for G5 release execution
     file: .control/decisions/DEC-007-autopilot-mandate.md
@@ -184,5 +184,7 @@ decisions:
       smoke_test: claude-byok
       loop: 10m
       expires: '2026-09-14'
-    touches: []
+    touches:
+      - .control/memlog/autopilot-DEC-007.md
+      - .control/registry/specs.yaml
 

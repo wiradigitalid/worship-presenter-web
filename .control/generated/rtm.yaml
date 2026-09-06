@@ -4,66 +4,76 @@ rtm:
   FR: FR-1
   DEC: []
   UC: UC-1
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W10-01
+  spec: W10
+  release: intake-lyrics
+  test:
+  - tests/hub-go-http.test.mjs
+  - tests/parser.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-10
   DEC: []
   UC: UC-7
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-05
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/services-api.test.mjs
+  - tests/services-go-http.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-11
   DEC: []
   UC: UC-5
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-03
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/services-lib.test.mjs
+  - tests/worship-form-fields.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-11
   FR: FR-12
   DEC: []
   UC: UC-17
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W10-03
+  spec: W10
+  release: intake-lyrics
+  test:
+  - tests/hub-go-http.test.mjs
+  - tests/parser.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-13
   DEC: []
   UC: UC-6
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-04
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/pptx-go-http.test.mjs
+  - tests/slide-plan.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-5
   FR: FR-14
@@ -111,92 +121,106 @@ rtm:
   FR: FR-15
   DEC: []
   UC: UC-11
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W7-01
+  spec: W7
+  release: presenter-live
+  test:
+  - tests/present-channel.test.mjs
+  - tests/presenter-model.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-6
   FR: FR-16
   DEC: []
   UC: UC-12
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W7-02
+  spec: W7
+  release: presenter-live
+  test:
+  - tests/acceptance-fr16-fr19-fr28.test.mjs
+  - tests/projected-shell.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-7
   FR: FR-17
   DEC: []
   UC: UC-4
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-02
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/acceptance-fr09-slide-preview.test.mjs
+  - tests/services-go-http.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-8
   FR: FR-18
   DEC: []
   UC: UC-9
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W9-01
+  spec: W9
+  release: hub-admin-mgmt
+  test:
+  - tests/auth-go-http.test.mjs
+  - tests/auth-http.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-6
   FR: FR-19
   DEC: []
   UC: UC-13
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W7-03
+  spec: W7
+  release: presenter-live
+  test:
+  - tests/acceptance-fr16-fr19-fr28.test.mjs
+  - tests/scripture.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-2
   DEC: []
   UC: UC-1
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W10-01
+  spec: W10
+  release: intake-lyrics
+  test:
+  - tests/hub-go-http.test.mjs
+  - tests/parser.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-2
   DEC: []
   UC: UC-2
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W10-02
+  spec: W10
+  release: intake-lyrics
+  test:
+  - tests/services-create.test.mjs
+  - tests/services-lib.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -265,53 +289,61 @@ rtm:
   FR: FR-22
   DEC: []
   UC: UC-13
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W7-03
+  spec: W7
+  release: presenter-live
+  test:
+  - tests/acceptance-fr16-fr19-fr28.test.mjs
+  - tests/scripture.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-10
   FR: FR-23
   DEC: []
   UC: UC-22
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W9-05
+  spec: W9
+  release: hub-admin-mgmt
+  test:
+  - tests/song-books-seed.test.mjs
+  - tests/hymns-api.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-10
   FR: FR-24
   DEC: []
   UC: UC-22
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W9-05
+  spec: W9
+  release: hub-admin-mgmt
+  test:
+  - tests/song-books-seed.test.mjs
+  - tests/hymns-api.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-10
   FR: FR-25
   DEC: []
   UC: UC-10
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W9-02
+  spec: W9
+  release: hub-admin-mgmt
+  test:
+  - tests/operator-i18n-guard.test.mjs
+  - tests/i18n.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-5
   FR: FR-26
@@ -330,53 +362,61 @@ rtm:
   FR: FR-27
   DEC: []
   UC: UC-2
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W10-02
+  spec: W10
+  release: intake-lyrics
+  test:
+  - tests/services-create.test.mjs
+  - tests/services-lib.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-28
   DEC: []
   UC: UC-23
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-07
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/acceptance-fr16-fr19-fr28.test.mjs
+  - tests/services-lib.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-29
   DEC: []
   UC: UC-24
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W6-01
+  spec: W6
+  release: registry-extensions
+  test:
+  - tests/registry.test.mjs
+  - tests/registry-go-http.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-3
   DEC: []
   UC: UC-21
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W9-04
+  spec: W9
+  release: hub-admin-mgmt
+  test:
+  - tests/announcement-sets.test.mjs
+  - tests/announcements-url.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -400,53 +440,59 @@ rtm:
   FR: FR-31
   DEC: []
   UC: UC-25
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W6-02
+  spec: W6
+  release: registry-extensions
+  test:
+  - tests/background-library.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-32
   DEC: []
   UC: UC-26
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-08
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/worship-form-fields.test.mjs
+  - tests/worship-form-ui.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-6
   FR: FR-33
   DEC: []
   UC: UC-27
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W7-04
+  spec: W7
+  release: presenter-live
+  test:
+  - tests/background-library.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-34
   DEC: []
   UC: UC-28
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W10-04
+  spec: W10
+  release: intake-lyrics
+  test:
+  - tests/lyric-editor-ui.test.mjs
+  - tests/save-to-book-go-http.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-6
   FR: FR-35
@@ -588,37 +634,43 @@ rtm:
   FR: FR-7
   DEC: []
   UC: UC-19
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W9-03
+  spec: W9
+  release: hub-admin-mgmt
+  test:
+  - tests/transitions.test.mjs
+  - tests/hub-go-http.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-8
   DEC: []
   UC: UC-3
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-01
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/services-go-http.test.mjs
+  - tests/services-api.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-9
   DEC: []
   UC: UC-8
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-06
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/acceptance-fr09-slide-preview.test.mjs
+  - tests/slide-plan.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''

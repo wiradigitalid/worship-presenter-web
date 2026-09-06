@@ -5,6 +5,16 @@ dag:
     - W1-1-1
   - parallel:
     - W1-1-2
+- spec: W10
+  order:
+  - parallel:
+    - W10-01
+  - parallel:
+    - W10-02
+  - parallel:
+    - W10-03
+  - parallel:
+    - W10-04
 - spec: W2
   order:
   - parallel:
@@ -33,3 +43,49 @@ dag:
     - W5-5-2
   - parallel:
     - W5-5-3
+- spec: W6
+  order:
+  - parallel:
+    - W6-01
+  - parallel:
+    - W6-02
+- spec: W7
+  order:
+  - parallel:
+    - W7-01
+  - parallel:
+    - W7-02
+  - parallel:
+    - W7-03
+  - parallel:
+    - W7-04
+- spec: W8
+  order:
+  - parallel:
+    - W8-01
+  - parallel:
+    - W8-02
+  - parallel:
+    - W8-03
+  - parallel:
+    - W8-04
+  - parallel:
+    - W8-05
+  - parallel:
+    - W8-06
+  - parallel:
+    - W8-07
+  - parallel:
+    - W8-08
+- spec: W9
+  order:
+  - parallel:
+    - W9-01
+  - parallel:
+    - W9-02
+  - parallel:
+    - W9-03
+  - parallel:
+    - W9-04
+  - parallel:
+    - W9-05
