@@ -74,14 +74,43 @@ rtm:
   FR: FR-14
   DEC: []
   UC: UC-18
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W2-2-1
+  spec: W2
+  release: go-spa-cutover
+  test:
+  - tests/go-http-gate.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
+- BG: BG-3
+  CAP: CAP-5
+  FR: FR-14
+  DEC: []
+  UC: UC-18
+  ticket: W2-2-2
+  spec: W2
+  release: go-spa-cutover
+  test:
+  - tests/pptx-worker.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-3
+  CAP: CAP-5
+  FR: FR-14
+  DEC: []
+  UC: UC-18
+  ticket: W2-2-3
+  spec: W2
+  release: go-spa-cutover
+  test:
+  - tests/pptx-go-http.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-6
   FR: FR-15
@@ -178,40 +207,64 @@ rtm:
   FR: FR-20
   DEC: []
   UC: UC-14
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W3-1
+  spec: W3
+  release: dec004-completion
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  - tests/artifacts-api.test.mjs
+  - tests/registry.test.mjs
+  - tests/copy-paste-share-by-reference.test.mjs
+  - tests/canvas-dirty-guard.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-21
   DEC: []
   UC: UC-15
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-1-1
+  spec: W1
+  release: registry-order
+  test:
+  - tests/registry-reorder-delete-http.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-21
   DEC: []
   UC: UC-16
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-1-2
+  spec: W1
+  release: registry-order
+  test:
+  - tests/registry-sync-artifact.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-21
+  DEC: []
+  UC: UC-16
+  ticket: W3-3
+  spec: W3
+  release: dec004-completion
+  test:
+  - tests/sync-artifact-button.test.mjs
+  - tests/registry-sync-artifact.test.mjs
+  - tests/no-router-refresh-guard.test.mjs
+  - tests/i18n.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-10
   FR: FR-22
@@ -334,14 +387,19 @@ rtm:
   FR: FR-30
   DEC: []
   UC: UC-14
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W3-1
+  spec: W3
+  release: dec004-completion
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  - tests/artifacts-api.test.mjs
+  - tests/registry.test.mjs
+  - tests/copy-paste-share-by-reference.test.mjs
+  - tests/canvas-dirty-guard.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-31
@@ -399,53 +457,137 @@ rtm:
   FR: FR-35
   DEC: []
   UC: UC-29
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W5-5-1
+  spec: W5
+  release: presenter-remote
+  test:
+  - tests/remote-control-go-http.test.mjs
+  - tests/go-http-gate.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
+- BG: BG-2
+  CAP: CAP-6
+  FR: FR-35
+  DEC: []
+  UC: UC-29
+  ticket: W5-5-2
+  spec: W5
+  release: presenter-remote
+  test:
+  - tests/remote-presenting-client.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-2
+  CAP: CAP-6
+  FR: FR-35
+  DEC: []
+  UC: UC-29
+  ticket: W5-5-3
+  spec: W5
+  release: presenter-remote
+  test:
+  - tests/remote-screen.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-2
   FR: FR-4
   DEC: []
   UC: UC-20
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W3-2
+  spec: W3
+  release: dec004-completion
+  test:
+  - tests/artifact-preview.test.mjs
+  - tests/i18n.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-2
+  FR: FR-4
+  DEC: []
+  UC: UC-20
+  ticket: W4-1
+  spec: W4
+  release: dec004-completion
+  test:
+  - tests/worship-form-fields.test.mjs
+  - tests/services-create.test.mjs
+  - tests/i18n.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-2
   FR: FR-5
   DEC: []
   UC: UC-20
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W3-2
+  spec: W3
+  release: dec004-completion
+  test:
+  - tests/artifact-preview.test.mjs
+  - tests/i18n.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-2
+  FR: FR-5
+  DEC: []
+  UC: UC-20
+  ticket: W4-1
+  spec: W4
+  release: dec004-completion
+  test:
+  - tests/worship-form-fields.test.mjs
+  - tests/services-create.test.mjs
+  - tests/i18n.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-2
   FR: FR-6
   DEC: []
   UC: UC-20
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W3-2
+  spec: W3
+  release: dec004-completion
+  test:
+  - tests/artifact-preview.test.mjs
+  - tests/i18n.test.mjs
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-2
+  FR: FR-6
+  DEC: []
+  UC: UC-20
+  ticket: W4-1
+  spec: W4
+  release: dec004-completion
+  test:
+  - tests/worship-form-fields.test.mjs
+  - tests/services-create.test.mjs
+  - tests/i18n.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-2
   FR: FR-7

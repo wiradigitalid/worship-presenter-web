@@ -1,9 +1,34 @@
-promise_progress: 0%
+promise_progress: 39%
 rtm_rows:
-  green: 0
-  counted: 36
+  green: 17
+  counted: 44
   excluded_no_uc: 1
-work_progress: []
+work_progress:
+- spec: W1
+  status: closed
+  tickets_done: 2
+  tickets_total: 2
+  work_progress: 100%
+- spec: W2
+  status: closed
+  tickets_done: 3
+  tickets_total: 3
+  work_progress: 100%
+- spec: W3
+  status: closed
+  tickets_done: 3
+  tickets_total: 3
+  work_progress: 100%
+- spec: W4
+  status: closed
+  tickets_done: 1
+  tickets_total: 1
+  work_progress: 100%
+- spec: W5
+  status: closed
+  tickets_done: 3
+  tickets_total: 3
+  work_progress: 100%
 gate_readiness: 96%
 validators_red:
 - memlog-home
@@ -15,8 +40,6 @@ validators_skipped:
     at 411a59d), .how/registry/SDD-registry.md (changed at 56db449, reviewed at 42c967c), .what/hub/SRS-hub.md
     (changed at 56db449, reviewed at af3b6f3), .what/presenter/SRS-presenter.md (changed at 56db449, reviewed
     at 411a59d), .what/registry/SRS-registry.md (changed at 56db449, reviewed at 42c967c)'
-  uc-scheduled: no spec yet, so no ticket yet — every unscheduled UC is the correct state. Full catalogue
-    coverage is checked at G5
 open_questions:
   blocking: 0
   assumptions: 50
