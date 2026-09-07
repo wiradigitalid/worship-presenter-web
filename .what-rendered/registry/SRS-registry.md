@@ -248,11 +248,11 @@ Admin is signed in.
 
 | From step | Condition | What happens |
 | --- | --- | --- |
-| 2 | General entry (including any slide inside an Announcement Set) | Free canvas within AD-15 (as-built editor) |
-| 2 | Song Set entry — Title layout | Free canvas with its own background, shared by every Song Set entry (DEC-004) |
-| 2 | Song Set entry — Verse/Reff layout | Free canvas authored on a **blank** canvas; background is supplied at hydrate/live time, not authored here (DEC-004, FR-20, FR-33) |
-| 2 | ann-set marker | The marker itself is not a canvas; Admin edits the General slides *inside* that Announcement Set the same way as any other General (DEC-004; BR-11 retired, superseded by BR-12) |
-| 2 | Predefined field on any General canvas | Typed as a `{key}` token inside a text element's content, not a whole-element `placeholderKey` binding (DEC-004, AD-32) |
+| 2 | General entry (including any slide inside an Announcement Set) | Free canvas within AD-15 and AD-38 (inline text editing via double-click, context menu z-index/duplicate/delete on right-click, drag-to-create bounding box, native image rendering, and change background) |
+| 2 | Song Set entry — Title layout | Free canvas with its own background, shared by every Song Set entry (DEC-004, DEC-008) |
+| 2 | Song Set entry — Verse/Reff layout | Free canvas with 2/3 screen height guideline formula for automated lyric block placement; background is chosen via Change Background or supplied at hydrate/live time (DEC-004, DEC-008, FR-20, FR-33) |
+| 2 | ann-set slide | Admin edits the General slides inside that Announcement Set using the identical canvas editor experience as Main Spine |
+| 2 | Predefined field on any General canvas | Typed as a `{key}` token inside a text element's content or inserted via the Add Elements toolbar, not a whole-element `placeholderKey` binding (DEC-004, AD-32) |
 
 #### Failure Flows
 
@@ -294,8 +294,9 @@ Admin is signed in.
 | --- | --- | --- |
 | 1 | Reset one still-live entry that still has a seed | That entry's layout returns to seed; other entries unchanged. Reset does not undelete (OQ-15, OQ-24). Song Set Title/Verse/Reff layouts are shared free canvases now, so there is no separate AD-22 override record beside them any more — Reset behaves on them exactly as it does on a General |
 | 1 | Delete a Song Set entry | Delete is allowed; Hub's stored weekly values for that entry's `variable_name` stay stored and are inert (DEC-004 supersedes AD-19's fixed four-slot reading; the identity rule — server-owned, never a positional ordinal — still binds) |
-| 1 | Add, remove, or reorder a Song Set entry or an ann-set marker on the main spine | Allowed like any other row; neither has a fixed count (FR-29, FR-21) |
-| 1 | Reorder, add, or delete a General slide **inside** an Announcement Set | Allowed; happens only in the Registry, never on the Service form (BR-12) |
+| 1 | Add, remove, or reorder a Song Set entry or an Announcement Set on the main spine | Allowed via New Slide dropdown selector; neither has a fixed count, and both support multiple insertions across the main spine (DEC-008, FR-21, FR-29) |
+| 1 | Reorder, add, or delete a General slide **inside** an Announcement Set | Allowed; happens only in the Registry via the Announcement Sets 3-tier view, never on the Service form (BR-12, DEC-008) |
+| 1 | Clone a slide | For General slides: clones the full slide layout and content, appending a fresh numbered copy label e.g. `(Copy 1)`. For Song Set / Announcement Set: duplicates the placement reference on the main spine (DEC-008) |
 | 1 | Delete every remaining live entry | Allowed; a new Service's Deck has no slides from Registry (AD-17: N rows, including zero) |
 | 1 | Copy a slide's image between Main and any Announcement Set | The binary is shared by reference, not duplicated; deleting the slide never deletes the image (BR-12) |
 
@@ -420,20 +421,20 @@ Admin is signed in.
 
 #### Main Flow
 
-1. Admin adds a new Song Set entry, giving it a name (`variable_name`) and a title.
-2. The system places it on the main spine as an ordinary reorderable row (FR-21).
+1. Admin clicks "New Song Set" in the 2-column Song Sets view; the system automatically creates a new entry with default name and selects it.
+2. Admin places the song set onto the main spine using the "New Slide" dropdown selector as many times as needed (multiple insertion supported).
 3. The system generates that entry's weekly inputs on the Hub form (song number, Song Book choice, background — FR-32) under its own name, without a deploy.
-4. Admin saves.
+4. Admin edits the shared Title, Verse, or Reff layout directly in the side-by-side canvas workspace.
+5. Admin saves.
 
 #### Alternate Flows
 
 | From step | Condition | What happens |
 | --- | --- | --- |
-| 1 | Admin renames an existing entry's title | Title changes; `variable_name` (its cross-boundary identity) does not, so weekly values already entered under that name stay attached (AD-19's identity rule survives in the new shape, AD-31) |
-| 1 | Admin removes an entry | Delete is allowed like any other row (UC-15); Hub's stored weekly values for that `variable_name` stay stored and inert — they are not deleted with the entry. The `variable_name` itself is freed |
-| 1 | Admin adds a fifth (or Nth) entry | Allowed; more than four songs in one rundown is a normal shape, not an exception (FR-29) |
-| 1 | Admin names a new entry with a `variable_name` a deleted entry used to hold | Allowed (owner ruling, 2026-08-20) — a freed name MAY be reused by a later entry, no reservation and no tombstone. The new entry is a brand-new spine row; any of Hub's stale weekly values still stored under that name are not claimed by it |
-| 2 | Admin authors that entry's Title/Verse/Reff appearance | There is nothing per-entry to author here — every Song Set entry shares the one Title/Verse/Reff trio (UC-14, AD-33); adding an entry never opens a new canvas |
+| 1 | Admin renames an existing entry's title | Title changes via the card rename pattern (`[Rename][Reset]` ⇄ `[Cancel][Save]`); `variable_name` stays attached |
+| 1 | Admin removes an entry | Delete is allowed via the hover action button; Hub's stored weekly values for that `variable_name` stay stored and inert |
+| 2 | Admin inserts the same Song Set multiple times in Main Spine | Allowed; each placement references the same slot, expanding the same weekly song at different positions in the presentation (DEC-008) |
+| 4 | Admin authors that entry's Title/Verse/Reff appearance | Every Song Set entry shares the one Title/Verse/Reff trio (UC-14, AD-33); Verse/Reff follows the 2/3 screen height formula for automated lyric layout |
 
 #### Failure Flows
 

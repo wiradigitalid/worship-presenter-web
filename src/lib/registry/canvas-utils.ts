@@ -104,7 +104,8 @@ export function isFabricTextObject(
     typeof obj === 'object' &&
     obj !== null &&
     'type' in obj &&
-    (obj as { type: unknown }).type === 'text'
+    ((obj as { type: unknown }).type === 'text' ||
+      (obj as { type: unknown }).type === 'textbox')
   );
 }
 

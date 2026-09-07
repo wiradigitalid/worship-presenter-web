@@ -1,11 +1,17 @@
 import { toast } from 'sonner';
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   ArrowDown,
   ArrowUp,
   Bold,
   BringToFront,
   Copy,
+  Image as ImageIcon,
   Italic,
+  Palette,
+  Plus,
   SendToBack,
   Trash2,
 } from 'lucide-react';
@@ -122,7 +128,7 @@ function elementToFabricObject(
 
   if (element.type === 'text') {
     const style = element.style;
-    return new fabric.FabricText(element.content ?? '', {
+    return new fabric.Textbox(element.content ?? '', {
       ...common,
       fill: style?.fontColor ?? DEFAULT_FONT_COLOR,
       fontSize: normalizeFontSize(style?.fontSize),
@@ -134,6 +140,8 @@ function elementToFabricObject(
       ...(style?.fontWeight !== undefined ? { fontWeight: style.fontWeight } : {}),
       ...(style?.fontStyle !== undefined ? { fontStyle: style.fontStyle } : {}),
       textAlign: style?.textAlign ?? DEFAULT_TEXT_ALIGN,
+      splitByGrapheme: true,
+      editable: editable,
     });
   }
 
@@ -146,6 +154,25 @@ function elementToFabricObject(
   }
 
   if (element.type === 'image' && element.imageRef) {
+    if (typeof Image !== 'undefined') {
+      const imgEl = new Image();
+      imgEl.crossOrigin = 'anonymous';
+      imgEl.src = element.imageRef;
+      const fabricImg = new fabric.FabricImage(imgEl, {
+        ...common,
+        scaleX: width / (imgEl.naturalWidth || width || 1),
+        scaleY: height / (imgEl.naturalHeight || height || 1),
+        data: { elementId: element.id, imageRef: element.imageRef },
+      });
+      imgEl.onload = () => {
+        fabricImg.set({
+          scaleX: width / (imgEl.naturalWidth || 1),
+          scaleY: height / (imgEl.naturalHeight || 1),
+        });
+        fabricImg.canvas?.requestRenderAll();
+      };
+      return fabricImg;
+    }
     return new fabric.Rect({
       ...common,
       fill: '#333333',
@@ -167,6 +194,9 @@ function elementToFabricObject(
 import {
   ArtifactEditorAdapter,
   CopiedSlide,
+  fetchAvailableAnnouncementSets,
+  fetchAvailableSongSets,
+  fetchBackgroundLibrary,
   mainSpineAdapter,
   uploadImageFile,
 } from '@/lib/registry/canvas-adapters';
@@ -191,6 +221,7 @@ export interface ArtifactEditorProps {
   hideList?: boolean;
   allowImages?: boolean;
   bannerNote?: React.ReactNode;
+  prefixListSlot?: React.ReactNode;
 }
 
 export default function ArtifactEditor({
@@ -201,6 +232,7 @@ export default function ArtifactEditor({
   hideList = false,
   allowImages = true,
   bannerNote = null,
+  prefixListSlot = null,
 }: ArtifactEditorProps = {}) {
   const { t } = useT();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -229,6 +261,17 @@ export default function ArtifactEditor({
     new Map()
   );
   const insertCounterRef = useRef(0);
+  const bgFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [showBgDialog, setShowBgDialog] = useState(false);
+  const [bgLibrary, setBgLibrary] = useState<Array<{ id: number; url: string }>>([]);
+  const [availableSongSets, setAvailableSongSets] = useState<Array<{ variableName: string; title: string }>>([]);
+  const [availableAnnSets, setAvailableAnnSets] = useState<Array<{ id: number; label: string }>>([]);
+  const [newSlideType, setNewSlideType] = useState('general');
+  const [drawingTool, setDrawingTool] = useState<'text' | 'rect' | null>(null);
+  const drawingToolRef = useRef<'text' | 'rect' | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const fitCanvasToShell = useCallback(() => {
     const shell = canvasShellRef.current;
@@ -320,7 +363,21 @@ export default function ArtifactEditor({
       setStatus('error');
       setMessage(err instanceof Error ? err.message : t('admin.artifacts.loadFailed'));
     });
-  }, [loadList]);
+    void fetchAvailableSongSets().then(setAvailableSongSets);
+    void fetchAvailableAnnouncementSets().then(setAvailableAnnSets);
+    void fetchBackgroundLibrary().then(setBgLibrary);
+    const handleWindowClick = () => setContextMenu(null);
+    window.addEventListener('click', handleWindowClick);
+    return () => window.removeEventListener('click', handleWindowClick);
+  }, [loadList, t]);
+
+  useEffect(() => {
+    drawingToolRef.current = drawingTool;
+    const canvas = fabricCanvasRef.current;
+    if (canvas) {
+      canvas.defaultCursor = drawingTool ? 'crosshair' : 'default';
+    }
+  }, [drawingTool]);
 
   useEffect(() => {
     if (initialSelectedId && selectedId !== initialSelectedId) {
@@ -411,6 +468,36 @@ export default function ArtifactEditor({
       canvas.on('selection:created', onSelectionChange);
       canvas.on('selection:updated', onSelectionChange);
       canvas.on('selection:cleared', onSelectionChange);
+
+      let dragStart: { x: number; y: number } | null = null;
+      const onMouseDown = (opt: any) => {
+        if (!drawingToolRef.current) return;
+        const pointer = canvas.getScenePoint(opt.e);
+        dragStart = { x: pointer.x, y: pointer.y };
+      };
+      const onMouseUp = (opt: any) => {
+        const tool = drawingToolRef.current;
+        if (!tool || !dragStart) return;
+        const pointer = canvas.getScenePoint(opt.e);
+        const start = dragStart;
+        dragStart = null;
+        const dx = Math.abs(pointer.x - start.x);
+        const dy = Math.abs(pointer.y - start.y);
+        let x = Math.min(start.x, pointer.x);
+        let y = Math.min(start.y, pointer.y);
+        let w = dx;
+        let h = dy;
+        if (dx < 10 && dy < 10) {
+          const def = tool === 'text' ? NEW_TEXT_SIZE_PX : NEW_SHAPE_SIZE_PX;
+          w = def.w;
+          h = def.h;
+        }
+        void insertDrawnElement(tool === 'rect' ? 'shape' : 'text', x, y, w, h);
+        setDrawingTool(null);
+      };
+      canvas.on('mouse:down', onMouseDown);
+      canvas.on('mouse:up', onMouseUp);
+
       // Registered here and not one line earlier: the paint loop above calls
       // `canvas.add()` for every seed element, and `canvas.add()` fires
       // `object:added`. Attached any sooner, a fresh mount would mark itself
@@ -422,6 +509,8 @@ export default function ArtifactEditor({
         canvas.off('selection:created', onSelectionChange);
         canvas.off('selection:updated', onSelectionChange);
         canvas.off('selection:cleared', onSelectionChange);
+        canvas.off('mouse:down', onMouseDown);
+        canvas.off('mouse:up', onMouseUp);
         for (const event of CANVAS_MUTATION_EVENTS) {
           canvas.off(event, markDirty);
         }
@@ -456,6 +545,108 @@ export default function ArtifactEditor({
       fabricCanvasRef.current = null;
     };
   }, [template, syncSelection, markDirty, fitCanvasToShell]);
+
+  const insertDrawnElement = useCallback(
+    async (kind: 'text' | 'shape', xPx: number, yPx: number, wPx: number, hPx: number) => {
+      const canvas = fabricCanvasRef.current;
+      const layout = template ? getEditableLayout(template) : null;
+      if (!canvas || !layout) return;
+
+      const usedIds = new Set<string>([
+        ...layout.elements.map((e) => e.id),
+        ...addedElementsRef.current.keys(),
+        ...canvas
+          .getObjects()
+          .map(getElementId)
+          .filter((id): id is string => typeof id === 'string'),
+      ]);
+      insertCounterRef.current += 1;
+      const id = nextElementId(usedIds, insertCounterRef.current);
+      const maxZ = [
+        ...layout.elements,
+        ...addedElementsRef.current.values(),
+      ].reduce((acc, e) => Math.max(acc, e.zIndex), -1);
+
+      const element: CanvasElement = {
+        id,
+        type: kind,
+        required: false,
+        x: pxToPct(xPx, CANVAS_WIDTH),
+        y: pxToPct(yPx, CANVAS_HEIGHT),
+        w: pxToPct(wPx, CANVAS_WIDTH),
+        h: pxToPct(hPx, CANVAS_HEIGHT),
+        zIndex: maxZ + 1,
+        ...(kind === 'text'
+          ? {
+              content: NEW_TEXT_CONTENT,
+              style: {
+                fontFamily: DEFAULT_FONT_FAMILY,
+                fontSize,
+                fontColor,
+                fontWeight: 'normal',
+                textAlign: 'left' as const,
+              },
+            }
+          : { style: { fillColor: NEW_SHAPE_FILL, opacity: 1 } }),
+      };
+
+      const fabric = await import('fabric');
+      if (fabricCanvasRef.current !== canvas) return;
+
+      addedElementsRef.current.set(id, element);
+      const obj = elementToFabricObject(fabric, element, true);
+      canvas.add(obj);
+      canvas.setActiveObject(obj);
+      canvas.requestRenderAll();
+      syncSelection(canvas);
+      markDirty();
+      setStatus('idle');
+      setMessage(null);
+    },
+    [template, fontColor, fontSize, syncSelection, markDirty]
+  );
+
+  const handleChangeBackgroundUrl = useCallback(
+    async (url: string | null) => {
+      const canvas = fabricCanvasRef.current;
+      const layout = template ? getEditableLayout(template) : null;
+      if (!canvas || !layout) return;
+
+      const fabric = await import('fabric');
+      if (url) {
+        const bg = await fabric.FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
+        bg.set({
+          left: 0,
+          top: 0,
+          scaleX: CANVAS_WIDTH / (bg.width || CANVAS_WIDTH),
+          scaleY: CANVAS_HEIGHT / (bg.height || CANVAS_HEIGHT),
+          selectable: false,
+          evented: false,
+        });
+        canvas.backgroundImage = bg;
+      } else {
+        canvas.backgroundImage = undefined;
+      }
+      canvas.requestRenderAll();
+      layout.backgroundImage = url || undefined;
+      markDirty();
+      setShowBgDialog(false);
+    },
+    [template, markDirty]
+  );
+
+  const handleUploadBackgroundFile = useCallback(
+    async (file: File) => {
+      try {
+        const { url } = await uploadImageFile(file);
+        await handleChangeBackgroundUrl(url);
+        toast.success(t('admin.artifacts.saved'));
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to upload background');
+      }
+    },
+    [handleChangeBackgroundUrl, t]
+  );
 
   const insertElement = useCallback(
     async (kind: 'text' | 'shape') => {
@@ -991,9 +1182,103 @@ export default function ArtifactEditor({
     }
   };
 
+  const handleSetTextAlign = useCallback(
+    (align: 'left' | 'center' | 'right') => {
+      const canvas = fabricCanvasRef.current;
+      if (!canvas) return;
+      const texts = canvas.getActiveObjects().filter(isFabricTextObject);
+      if (texts.length === 0) return;
+      for (const obj of texts) {
+        obj.set({ textAlign: align });
+      }
+      canvas.requestRenderAll();
+      markDirty();
+    },
+    [markDirty]
+  );
+
+  const handleSetShapeFill = useCallback(
+    (color: string) => {
+      const canvas = fabricCanvasRef.current;
+      if (!canvas) return;
+      for (const obj of canvas.getActiveObjects()) {
+        if ((obj as any).type === 'rect' && !(obj as any).data?.imageRef) {
+          obj.set({ fill: color });
+        }
+      }
+      canvas.requestRenderAll();
+      markDirty();
+    },
+    [markDirty]
+  );
+
+  const handleCloneTemplate = async (item: ArtifactTemplateSummary) => {
+    try {
+      const data = await adapter.getOne(item.id);
+      const { updatedAt, id, ...body } = data;
+
+      const baseLabel = item.label.replace(/\s*\(Copy(?:\s+\d+)?\)$/, '');
+      let copyNum = 1;
+      const regex = new RegExp(`^${baseLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\(Copy(?:\\s+(\\d+))?\\)$`);
+      for (const t of templates) {
+        const match = t.label.match(regex);
+        if (match) {
+          const n = match[1] ? parseInt(match[1], 10) : 1;
+          if (n >= copyNum) copyNum = n + 1;
+        }
+      }
+      const newLabel = `${baseLabel} (Copy ${copyNum})`;
+
+      const created = await adapter.create(newLabel, {
+        baseType: item.baseType,
+        variableName: (item as any).variableName,
+        annSetId: (item as any).annSetId,
+      });
+
+      if (item.baseType === 'general' && body.layouts) {
+        await adapter.save(created.id, {
+          ...body,
+          id: created.id,
+          label: newLabel,
+          baseType: 'general',
+          updatedAt: created.updatedAt,
+        });
+      }
+
+      await loadList();
+      setSelectedId(created.id);
+      toast(t('admin.artifacts.created').replace('{label}', newLabel));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to clone slide');
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+    const next = [...templates];
+    const [moved] = next.splice(draggedIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    setDraggedIndex(null);
+    setTemplates(next);
+    await handleReorderTemplates(next);
+  };
+
   const handleCreate = async () => {
-    const label = newLabel.trim();
-    if (!label) return;
     const proceed = mayDiscard(
       isDirty && isEditable,
       DISCARD_ON_SWITCH_CONFIRMATION,
@@ -1004,7 +1289,23 @@ export default function ArtifactEditor({
     setStatus('creating');
     setMessage(null);
     try {
-      const data = await adapter.create(label);
+      let opts: { baseType?: string; variableName?: string; annSetId?: number } = {};
+      let label = newLabel.trim();
+      if (newSlideType === 'general') {
+        label = label || 'New Slide';
+        opts = { baseType: 'general' };
+      } else if (newSlideType.startsWith('song:')) {
+        const vn = newSlideType.slice(5);
+        const songEntry = availableSongSets.find((s) => s.variableName === vn);
+        label = label || songEntry?.title || vn;
+        opts = { baseType: 'song-set-entry', variableName: vn };
+      } else if (newSlideType.startsWith('ann:')) {
+        const sid = parseInt(newSlideType.slice(4), 10);
+        const annEntry = availableAnnSets.find((a) => a.id === sid);
+        label = label || annEntry?.label || `Announcement Set ${sid}`;
+        opts = { baseType: 'ann-set-marker', annSetId: sid };
+      }
+      const data = await adapter.create(label, opts);
       setNewLabel('');
       await loadList();
       setSelectedId(data.id);
@@ -1248,13 +1549,7 @@ export default function ArtifactEditor({
     }
   };
 
-  const handleMoveTemplate = async (item: ArtifactTemplateSummary, direction: -1 | 1) => {
-    const index = templates.findIndex((candidate) => candidate.id === item.id);
-    const target = index + direction;
-    if (index < 0 || target < 0 || target >= templates.length) return;
-
-    const desired = [...templates];
-    [desired[index], desired[target]] = [desired[target], desired[index]];
+  const handleReorderTemplates = async (desired: ArtifactTemplateSummary[]) => {
     setStatus('reordering');
     setMessage(null);
     try {
@@ -1284,6 +1579,16 @@ export default function ArtifactEditor({
       setStatus('error');
       setMessage(err instanceof Error ? err.message : t('admin.artifacts.reorderFailed'));
     }
+  };
+
+  const handleMoveTemplate = async (item: ArtifactTemplateSummary, direction: -1 | 1) => {
+    const index = templates.findIndex((candidate) => candidate.id === item.id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= templates.length) return;
+
+    const desired = [...templates];
+    [desired[index], desired[target]] = [desired[target], desired[index]];
+    await handleReorderTemplates(desired);
   };
 
   const isEditable = template ? isCanvasAuthorable(template.baseType) : false;
@@ -1375,164 +1680,203 @@ export default function ArtifactEditor({
     );
 
   return (
-    <div className={hideList ? 'block' : 'grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]'}>
+    <div className={hideList ? 'block' : 'grid gap-6 lg:grid-cols-[330px_minmax(0,1fr)]'}>
       {!hideList ? (
-        <aside className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card/60 p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Templates</h2>
-        <form
-          className="mb-3 flex gap-1"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void handleCreate();
-          }}
-        >
-          <Input
-            type="text"
-            value={newLabel}
-            onChange={(event) => setNewLabel(event.target.value)}
-            maxLength={80}
-            placeholder={t('admin.artifacts.addPlaceholder')}
-            aria-label={t('admin.artifacts.addLabel')}
-            disabled={busy}
-            className="min-w-0 flex-1"
-          />
-          <Button
-            type="submit"
-            variant="outline"
-            disabled={busy || !newLabel.trim()}
-          >
-            {status === 'creating' ? t('admin.artifacts.adding') : t('admin.artifacts.add')}
-          </Button>
-          {activeCopiedSlidePayload ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void handlePasteSlide()}
-              disabled={busy}
-              title={t('admin.artifacts.pasteSlide')}
-            >
-              {t('admin.artifacts.pasteSlide')}
-            </Button>
-          ) : null}
-        </form>
-        <ul className="max-h-[70vh] space-y-1 overflow-x-hidden overflow-y-auto">
-          {templates.map((item) => {
-            const isSelected = selectedId === item.id;
-            return (
-              <li key={item.id} className="border-b border-border/60 last:border-b-0">
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    // Re-clicking the row that is already open is not a switch,
-                    // and must not prompt. A different row re-enters mountCanvas,
-                    // which throws the added-element map away and disposes the
-                    // canvas — every unsaved edit goes with it.
-                    if (item.id === selectedId) return;
-                    const proceed = mayDiscard(
-                      isDirty && isEditable,
-                      DISCARD_ON_SWITCH_CONFIRMATION,
-                      (message) => window.confirm(message)
-                    );
-                    if (!proceed) return;
-                    setSelectedId(item.id);
+        <aside className="space-y-4">
+          {prefixListSlot}
+
+          {/* POIN 1 & 2: REGION "NEW SLIDE" */}
+          <div className="rounded-xl border border-border bg-card p-3.5 space-y-2.5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">New Slide</span>
+              <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
+                {adapter === mainSpineAdapter ? 'Spine Placement' : 'Add Slide'}
+              </span>
+            </div>
+            {adapter === mainSpineAdapter ? (
+              <div className="flex gap-1.5 pt-0.5">
+                <Select
+                  value={newSlideType}
+                  onValueChange={(val) => {
+                    if (val) setNewSlideType(val);
                   }}
-                  onKeyDown={(event) => {
-                    if (event.key !== 'Enter' && event.key !== ' ') return;
-                    event.preventDefault();
-                    if (item.id === selectedId) return;
-                    const proceed = mayDiscard(
-                      isDirty && isEditable,
-                      DISCARD_ON_SWITCH_CONFIRMATION,
-                      (message) => window.confirm(message)
-                    );
-                    if (!proceed) return;
-                    setSelectedId(item.id);
-                  }}
-                  className={`cursor-pointer rounded-lg px-2 py-2 transition-colors ${
-                    isSelected
-                      ? 'bg-primary/10 ring-1 ring-primary/40'
-                      : 'hover:bg-muted/60'
-                  }`}
+                  disabled={busy}
                 >
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1">
-                    <span className="truncate font-medium leading-tight">
-                      {item.label}
-                    </span>
-                    <div className="grid shrink-0 grid-cols-2 gap-0.5">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label={`${t('admin.artifacts.moveUp')} ${item.label}`}
-                        title={t('admin.artifacts.moveUp')}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleMoveTemplate(item, -1);
-                        }}
-                        disabled={busy || templates[0]?.id === item.id}
-                      >
-                        <ArrowUp />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label={`${t('admin.artifacts.moveDown')} ${item.label}`}
-                        title={t('admin.artifacts.moveDown')}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleMoveTemplate(item, 1);
-                        }}
-                        disabled={busy || templates.at(-1)?.id === item.id}
-                      >
-                        <ArrowDown />
-                      </Button>
+                  <SelectTrigger className="flex-1 min-w-0 text-xs h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="general">📄 General Slide (Canvas)</SelectItem>
+                    {availableSongSets.length > 0 ? (
+                      availableSongSets.map((s) => (
+                        <SelectItem key={s.variableName} value={`song:${s.variableName}`}>
+                          🎵 {s.title}
+                        </SelectItem>
+                      ))
+                    ) : null}
+                    {availableAnnSets.length > 0 ? (
+                      availableAnnSets.map((a) => (
+                        <SelectItem key={a.id} value={`ann:${a.id}`}>
+                          📢 {a.label}
+                        </SelectItem>
+                      ))
+                    ) : null}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  onClick={() => void handleCreate()}
+                  disabled={busy}
+                  className="bg-primary hover:bg-blue-600 text-white px-3.5 py-2 rounded-lg text-xs font-semibold shrink-0 h-8"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Add
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-1.5 pt-0.5">
+                <Input
+                  type="text"
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  placeholder={t('admin.artifacts.addPlaceholder')}
+                  disabled={busy}
+                  className="flex-1 text-xs h-8"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void handleCreate()}
+                  disabled={busy || !newLabel.trim()}
+                  className="bg-primary hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Add
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* LIST TEMPLATES (POIN 3: HOVER ACTIONS & DND REORDER) */}
+          <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-foreground">Deck Sequence</span>
+              <span className="text-[11px] text-muted-foreground font-mono">{templates.length} slides</span>
+            </div>
+            <ul className="space-y-1.5 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+              {templates.map((item, index) => {
+                const isSelected = selectedId === item.id;
+                return (
+                  <li
+                    key={item.id}
+                    draggable={!busy}
+                    onDragStart={(e) => handleDragStart(e, index)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => void handleDrop(e, index)}
+                    className="group relative"
+                  >
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        if (item.id === selectedId) return;
+                        const proceed = mayDiscard(
+                          isDirty && isEditable,
+                          DISCARD_ON_SWITCH_CONFIRMATION,
+                          (message) => window.confirm(message)
+                        );
+                        if (!proceed) return;
+                        setSelectedId(item.id);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter' && event.key !== ' ') return;
+                        event.preventDefault();
+                        if (item.id === selectedId) return;
+                        const proceed = mayDiscard(
+                          isDirty && isEditable,
+                          DISCARD_ON_SWITCH_CONFIRMATION,
+                          (message) => window.confirm(message)
+                        );
+                        if (!proceed) return;
+                        setSelectedId(item.id);
+                      }}
+                      className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all ${
+                        isSelected
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border'
+                      }`}
+                    >
+                      <div className="min-w-0 pr-2">
+                        <p className="text-xs font-medium truncate text-foreground">{item.label}</p>
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          [{kindChipLabel(item.baseType)}]
+                        </span>
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 shrink-0">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          title={t('admin.artifacts.moveUp')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleMoveTemplate(item, -1);
+                          }}
+                          disabled={busy || index === 0}
+                          className="h-7 w-7 p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          title={t('admin.artifacts.moveDown')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleMoveTemplate(item, 1);
+                          }}
+                          disabled={busy || index === templates.length - 1}
+                          className="h-7 w-7 p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          title="Clone / Duplicate"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleCloneTemplate(item);
+                          }}
+                          disabled={busy}
+                          className="h-7 w-7 p-1 text-muted-foreground hover:text-foreground"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          title={t('admin.artifacts.delete')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleDeleteTemplate(item);
+                          }}
+                          disabled={busy}
+                          className="h-7 w-7 p-1 text-destructive hover:text-destructive hover:bg-destructive/20"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-1.5 text-xs opacity-80">
-                      <span>[{kindChipLabel(item.baseType)}]</span>
-                      {!item.editable ? (
-                        <span>{t('admin.artifacts.readOnly')}</span>
-                      ) : null}
-                    </div>
-                    <div className="grid shrink-0 grid-cols-2 gap-0.5">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label={`${t('admin.artifacts.copySlide')} ${item.label}`}
-                        title={t('admin.artifacts.copySlide')}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleCopySlide(item);
-                        }}
-                        disabled={busy}
-                      >
-                        <Copy />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label={`${t('admin.artifacts.delete')} ${item.label}`}
-                        title={t('admin.artifacts.delete')}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleDeleteTemplate(item);
-                        }}
-                        disabled={busy}
-                        className="border-destructive text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </aside>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </aside>
       ) : null}
 
       <section className="min-w-0 space-y-4">
@@ -1555,25 +1899,29 @@ export default function ArtifactEditor({
           </>
         ) : (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <Label className="sr-only" htmlFor="artifact-label">
-                  {t('admin.artifacts.label')}
-                </Label>
-                <Input
-                  id="artifact-label"
-                  type="text"
-                  value={draftLabel}
-                  onChange={(event) => setDraftLabel(event.target.value)}
-                  maxLength={80}
-                  disabled={busy}
-                  className="text-lg font-semibold"
-                />
-                <p className="mt-1 text-sm text-muted-foreground">
-                  <span>[{kindChipLabel(template.baseType)}]</span>
-                </p>
+            {/* POIN 4: SLIDE HEADER REGION (CARD RESMI DENGAN SIKLUS RENAME/RESET KONSISTEN) */}
+            <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-3">
+                {isRenaming ? (
+                  <Input
+                    id="artifact-label"
+                    type="text"
+                    value={draftLabel}
+                    onChange={(event) => setDraftLabel(event.target.value)}
+                    maxLength={80}
+                    disabled={busy}
+                    className="text-base font-semibold max-w-sm"
+                    autoFocus
+                  />
+                ) : (
+                  <span className="text-base font-bold text-foreground">{draftLabel || template.label}</span>
+                )}
+                <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                  [{kindChipLabel(template.baseType)}]
+                </span>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+
+              <div className="flex items-center gap-2">
                 {isDirty && isEditable ? (
                   <span
                     role="status"
@@ -1582,16 +1930,54 @@ export default function ArtifactEditor({
                     {UNSAVED_INDICATOR_LABEL}
                   </span>
                 ) : null}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => void handleRename()}
-                  disabled={!labelDirty || busy}
-                >
-                  {status === 'renaming'
-                    ? t('admin.artifacts.renaming')
-                    : t('admin.artifacts.rename')}
-                </Button>
+
+                {isRenaming ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsRenaming(false);
+                        setDraftLabel(template.label);
+                      }}
+                      disabled={busy}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={async () => {
+                        await handleRename();
+                        setIsRenaming(false);
+                      }}
+                      disabled={!labelDirty || busy}
+                    >
+                      Save
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsRenaming(true)}
+                      disabled={busy}
+                    >
+                      {t('admin.artifacts.rename')}
+                    </Button>
+                    {isResettable ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleReset}
+                        disabled={busy}
+                      >
+                        {t('admin.artifacts.reset')}
+                      </Button>
+                    ) : null}
+                  </>
+                )}
+
                 <Button
                   type="button"
                   onClick={handleSave}
@@ -1599,16 +1985,6 @@ export default function ArtifactEditor({
                 >
                   {t('admin.artifacts.save')}
                 </Button>
-                {isResettable ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleReset}
-                    disabled={busy}
-                  >
-                    {t('admin.artifacts.reset')}
-                  </Button>
-                ) : null}
               </div>
             </div>
 
@@ -1635,264 +2011,375 @@ export default function ArtifactEditor({
                     )}
               </div>
             ) : (
-              <>
-                <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/40 p-4">
-                  <span className="mr-1 text-sm font-medium">{t('admin.artifacts.elements')}</span>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={busy}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        void insertImage(file);
-                      }
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      void insertElement('text');
-                    }}
-                    disabled={busy}
-                  >
-                    {t('admin.artifacts.addText')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      void insertElement('shape');
-                    }}
-                    disabled={busy}
-                  >
-                    {t('admin.artifacts.addRect')}
-                  </Button>
-                  {allowImages ? (
+              <div className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm">
+                {/* TOOLBAR ROW 1: ADD NEW ELEMENTS & CHANGE BACKGROUND */}
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-muted/40 border border-border/80 text-xs">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-muted-foreground font-semibold px-1">Add:</span>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={busy}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          void insertImage(file);
+                        }
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant={drawingTool === 'text' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setDrawingTool((cur) => (cur === 'text' ? null : 'text'))}
+                      disabled={busy}
+                      className="text-xs font-medium"
+                    >
+                      <span className="font-bold mr-1">T</span> Text (Drag)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={drawingTool === 'rect' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setDrawingTool((cur) => (cur === 'rect' ? null : 'rect'))}
+                      disabled={busy}
+                      className="text-xs font-medium"
+                    >
+                      <span className="mr-1">▭</span> Rectangle (Drag)
+                    </Button>
+                    {allowImages ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={busy}
+                        className="text-xs font-medium"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5 mr-1" />
+                        Image
+                      </Button>
+                    ) : null}
+
+                    <div className="h-4 w-px bg-border mx-1" />
+
+                    <Select
+                      value={insertPlaceholderKey}
+                      onValueChange={(val) => {
+                        if (val) setInsertPlaceholderKey(val);
+                      }}
+                      disabled={busy}
+                    >
+                      <SelectTrigger
+                        size="sm"
+                        className="w-[170px] text-xs h-8"
+                        aria-label={t('admin.artifacts.insertPlaceholder')}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PLACEHOLDER_CATALOG.filter(
+                          (entry) => allowImages || entry.type !== 'image'
+                        ).map((entry) => (
+                          <SelectItem key={entry.key} value={entry.key}>
+                            {t(placeholderLabelKey(entry.key))}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        fileInputRef.current?.click();
+                        void insertPlaceholder(insertPlaceholderKey);
                       }}
                       disabled={busy}
+                      className="text-xs"
                     >
-                      {t('admin.artifacts.addImage')}
+                      + Placeholder
                     </Button>
-                  ) : null}
-                  <Select
-                    value={insertPlaceholderKey}
-                    onValueChange={(val) => {
-                      if (val) setInsertPlaceholderKey(val);
-                    }}
-                    disabled={busy}
-                  >
-                    <SelectTrigger
-                      size="sm"
-                      className="w-[180px]"
-                      aria-label={t('admin.artifacts.insertPlaceholder')}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PLACEHOLDER_CATALOG.filter(
-                        (entry) => allowImages || entry.type !== 'image'
-                      ).map((entry) => (
-                        <SelectItem key={entry.key} value={entry.key}>
-                          {t(placeholderLabelKey(entry.key))}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      void insertPlaceholder(insertPlaceholderKey);
-                    }}
-                    disabled={busy}
-                  >
-                    {t('admin.artifacts.insertPlaceholder')}
-                  </Button>
-                  <div className="mx-1 h-4 w-px bg-border/60" />
-                  <span className="mr-1 text-xs text-muted-foreground">{t('admin.artifacts.layerOrder')}</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleReorderLayer('forward')}
-                    disabled={busy || selectedElementIds.length === 0}
-                    title={t('admin.artifacts.bringForward')}
-                  >
-                    <ArrowUp />
-                    <span className="sr-only sm:not-sr-only sm:inline">{t('admin.artifacts.bringForward')}</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleReorderLayer('backward')}
-                    disabled={busy || selectedElementIds.length === 0}
-                    title={t('admin.artifacts.sendBackward')}
-                  >
-                    <ArrowDown />
-                    <span className="sr-only sm:not-sr-only sm:inline">{t('admin.artifacts.sendBackward')}</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleReorderLayer('front')}
-                    disabled={busy || selectedElementIds.length === 0}
-                    title={t('admin.artifacts.bringToFront')}
-                  >
-                    <BringToFront />
-                    <span className="sr-only sm:not-sr-only sm:inline">{t('admin.artifacts.bringToFront')}</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleReorderLayer('back')}
-                    disabled={busy || selectedElementIds.length === 0}
-                    title={t('admin.artifacts.sendToBack')}
-                  >
-                    <SendToBack />
-                    <span className="sr-only sm:not-sr-only sm:inline">{t('admin.artifacts.sendToBack')}</span>
-                  </Button>
-                  <div className="mx-1 h-4 w-px bg-border/60" />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDeleteSelected}
-                    disabled={busy || !canDeleteSelection}
-                    title={
-                      selectedElementIds.length === 0
-                        ? t('admin.artifacts.deleteHintNone')
-                        : canDeleteSelection
-                          ? t('admin.artifacts.deleteHintOk')
-                          : t('admin.artifacts.deleteHintShipped')
-                    }
-                    className="border-destructive/60 text-destructive hover:bg-destructive/10"
-                  >
-                    {t('admin.artifacts.deleteSelected')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      void handleDuplicateSelected();
-                    }}
-                    disabled={busy || selectedElementIds.length === 0}
-                    title={t('admin.artifacts.duplicateSelected')}
-                  >
-                    {t('admin.artifacts.duplicateSelected')}
-                  </Button>
-                  <span className="text-xs text-muted-foreground">
-                    {t('admin.artifacts.deleteOnlyAuthored')}
-                  </span>
-                </div>
-                <div className="space-y-4 rounded-2xl border border-border bg-card/40 p-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="artifact-text-content" className="text-sm font-medium">
-                      {t('admin.artifacts.text')}
-                    </Label>
-                    <Textarea
-                      id="artifact-text-content"
-                      value={textContent}
-                      disabled={selectedTextCount !== 1}
-                      rows={5}
-                      onChange={(e) => handleTextContentChange(e.target.value)}
-                      placeholder={
-                        selectedTextCount === 1
-                          ? t('admin.artifacts.textPlaceholder')
-                          : t('admin.artifacts.textPlaceholderIdle')
-                      }
-                      title={
-                        selectedTextCount === 1
-                          ? t('admin.artifacts.textTitle')
-                          : t('admin.artifacts.textTitleIdle')
-                      }
-                      className="min-h-[7.5rem] w-full resize-y font-mono text-sm leading-relaxed"
-                    />
                   </div>
-                  <div className="flex flex-wrap items-end gap-3 border-t border-border/60 pt-3">
-                  <Label className="flex items-center gap-2 text-sm">
-                    {t('admin.artifacts.fontColor')}
+
+                  {/* CHANGE BACKGROUND BUTTON (POIN 10) */}
+                  <div>
                     <input
-                      type="color"
-                      value={fontColor}
-                      onChange={(e) => setFontColor(e.target.value)}
-                      className="align-middle"
+                      ref={bgFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) void handleUploadBackgroundFile(f);
+                        if (bgFileInputRef.current) bgFileInputRef.current.value = '';
+                      }}
                     />
-                  </Label>
-                  <Label className="flex items-center gap-2 text-sm">
-                    {t('admin.artifacts.fontSize')}
-                    <Input
-                      type="number"
-                      min={MIN_FONT_SIZE}
-                      max={MAX_FONT_SIZE}
-                      value={fontSizeInput}
-                      onChange={(e) => handleFontSizeInput(e.target.value)}
-                      onBlur={() => setFontSizeInput(String(fontSize))}
-                      className="w-20"
-                    />
-                  </Label>
-                  <Button
-                    type="button"
-                    variant={fontWeight === 'bold' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={handleToggleBold}
-                    disabled={selectedTextCount === 0 || busy}
-                    title={t('admin.artifacts.bold')}
-                  >
-                    <Bold />
-                    <span className="sr-only sm:not-sr-only sm:inline">{t('admin.artifacts.bold')}</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={fontStyle === 'italic' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={handleToggleItalic}
-                    disabled={selectedTextCount === 0 || busy}
-                    title={t('admin.artifacts.italic')}
-                  >
-                    <Italic />
-                    <span className="sr-only sm:not-sr-only sm:inline">{t('admin.artifacts.italic')}</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={applyTextStyle}
-                  >
-                    {t('admin.artifacts.applyStyle')}
-                  </Button>
-                  <span className="text-xs text-muted-foreground sm:ml-auto">
-                    {t('admin.artifacts.styleHint')}
-                  </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowBgDialog(true)}
+                      className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/30 text-xs font-semibold flex items-center gap-1.5"
+                    >
+                      <Palette className="w-3.5 h-3.5" />
+                      Change Background
+                    </Button>
                   </div>
                 </div>
+
+                {/* TOOLBAR ROW 2: ELEMENT PROPERTIES (POIN 8) */}
+                {selectedElementIds.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-background border border-border text-xs">
+                    {selectedTextCount > 0 ? (
+                      <>
+                        <span className="text-[11px] font-mono text-muted-foreground uppercase">Properties (Text):</span>
+                        <input
+                          type="color"
+                          value={fontColor}
+                          onChange={(e) => setFontColor(e.target.value)}
+                          className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded"
+                          title="Font Color"
+                        />
+                        <Input
+                          type="number"
+                          min={MIN_FONT_SIZE}
+                          max={MAX_FONT_SIZE}
+                          value={fontSizeInput}
+                          onChange={(e) => handleFontSizeInput(e.target.value)}
+                          onBlur={() => setFontSizeInput(String(fontSize))}
+                          className="w-16 h-7 text-xs text-center"
+                          title="Font Size"
+                        />
+                        <Button
+                          type="button"
+                          variant={fontWeight === 'bold' ? 'default' : 'outline'}
+                          size="icon-sm"
+                          onClick={handleToggleBold}
+                          disabled={busy}
+                          title={t('admin.artifacts.bold')}
+                        >
+                          <Bold className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={fontStyle === 'italic' ? 'default' : 'outline'}
+                          size="icon-sm"
+                          onClick={handleToggleItalic}
+                          disabled={busy}
+                          title={t('admin.artifacts.italic')}
+                        >
+                          <Italic className="w-3.5 h-3.5" />
+                        </Button>
+                        <div className="h-4 w-px bg-border mx-1" />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          onClick={() => handleSetTextAlign('left')}
+                          title="Align Left"
+                        >
+                          <AlignLeft className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          onClick={() => handleSetTextAlign('center')}
+                          title="Align Center"
+                        >
+                          <AlignCenter className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          onClick={() => handleSetTextAlign('right')}
+                          title="Align Right"
+                        >
+                          <AlignRight className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={applyTextStyle}
+                          className="text-xs h-7 ml-auto"
+                        >
+                          {t('admin.artifacts.applyStyle')}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[11px] font-mono text-muted-foreground uppercase">Properties (Shape):</span>
+                        <Label className="flex items-center gap-1 text-xs">
+                          Color:
+                          <input
+                            type="color"
+                            defaultValue="#5C2E16"
+                            onChange={(e) => handleSetShapeFill(e.target.value)}
+                            className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded ml-1"
+                          />
+                        </Label>
+                      </>
+                    )}
+                  </div>
+                ) : null}
+
+                {/* CANVAS WORKSPACE & CONTEXT MENU (POIN 5 & 6) */}
                 <div
                   ref={canvasShellRef}
-                  className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-2xl border border-border bg-black/90"
+                  className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-black/90"
                 >
                   <canvas ref={canvasRef} />
+
+                  {/* Context Menu (Right Click) */}
+                  {contextMenu ? (
+                    <div
+                      style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
+                      className="absolute z-50 min-w-[160px] rounded-lg border border-border bg-popover/95 p-1 text-xs text-popover-foreground shadow-xl backdrop-blur-sm space-y-0.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground text-left cursor-pointer select-none"
+                        onClick={() => {
+                          handleReorderLayer('front');
+                          setContextMenu(null);
+                        }}
+                      >
+                        <span>{t('admin.artifacts.bringToFront')}</span>
+                        <span className="text-[10px] text-muted-foreground">Top</span>
+                      </div>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground text-left cursor-pointer select-none"
+                        onClick={() => {
+                          handleReorderLayer('forward');
+                          setContextMenu(null);
+                        }}
+                      >
+                        <span>{t('admin.artifacts.bringForward')}</span>
+                        <span className="text-[10px] text-muted-foreground">+1</span>
+                      </div>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground text-left cursor-pointer select-none"
+                        onClick={() => {
+                          handleReorderLayer('backward');
+                          setContextMenu(null);
+                        }}
+                      >
+                        <span>{t('admin.artifacts.sendBackward')}</span>
+                        <span className="text-[10px] text-muted-foreground">-1</span>
+                      </div>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground text-left cursor-pointer select-none"
+                        onClick={() => {
+                          handleReorderLayer('back');
+                          setContextMenu(null);
+                        }}
+                      >
+                        <span>{t('admin.artifacts.sendToBack')}</span>
+                        <span className="text-[10px] text-muted-foreground">Bottom</span>
+                      </div>
+                      <div className="h-px bg-border my-1" />
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground text-left cursor-pointer select-none"
+                        onClick={() => {
+                          void handleDuplicateSelected();
+                          setContextMenu(null);
+                        }}
+                      >
+                        <span>{t('admin.artifacts.duplicateSelected')}</span>
+                      </div>
+                      <div
+                        role="button"
+                        tabIndex={canDeleteSelection ? 0 : -1}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded text-left select-none ${
+                          canDeleteSelection
+                            ? 'hover:bg-destructive/10 text-destructive cursor-pointer'
+                            : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        onClick={() => {
+                          if (canDeleteSelection) {
+                            handleDeleteSelected();
+                            setContextMenu(null);
+                          }
+                        }}
+                      >
+                        <span>{t('admin.artifacts.deleteSelected')}</span>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-              </>
+              </div>
             )}
           </>
         )}
+
+        {/* Change Background Modal Dialog */}
+        {showBgDialog ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-foreground">Change Canvas Background</h3>
+                <Button variant="outline" size="sm" onClick={() => setShowBgDialog(false)}>
+                  ✕
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => bgFileInputRef.current?.click()}
+                    className="flex-1"
+                  >
+                    Upload Image File
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void handleChangeBackgroundUrl(null)}
+                    className="text-destructive hover:bg-destructive/10"
+                  >
+                    Remove Background
+                  </Button>
+                </div>
+
+                {bgLibrary.length > 0 ? (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Choose from Background Library:</Label>
+                    <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                      {bgLibrary.map((bg) => (
+                        <div
+                          key={bg.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => void handleChangeBackgroundUrl(bg.url)}
+                          className="aspect-video rounded-lg overflow-hidden border border-border hover:border-primary cursor-pointer transition-all"
+                        >
+                          <img src={bg.url} alt="Background" className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   );

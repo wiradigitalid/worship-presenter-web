@@ -28,11 +28,11 @@ Admin is signed in.
 
 | From step | Condition | What happens |
 | --- | --- | --- |
-| 2 | General entry (including any slide inside an Announcement Set) | Free canvas within AD-15 (as-built editor) |
-| 2 | Song Set entry — Title layout | Free canvas with its own background, shared by every Song Set entry (DEC-004) |
-| 2 | Song Set entry — Verse/Reff layout | Free canvas authored on a **blank** canvas; background is supplied at hydrate/live time, not authored here (DEC-004, FR-20, FR-33) |
-| 2 | ann-set marker | The marker itself is not a canvas; Admin edits the General slides *inside* that Announcement Set the same way as any other General (DEC-004; BR-11 retired, superseded by BR-12) |
-| 2 | Predefined field on any General canvas | Typed as a `{key}` token inside a text element's content, not a whole-element `placeholderKey` binding (DEC-004, AD-32) |
+| 2 | General entry (including any slide inside an Announcement Set) | Free canvas within AD-15 and AD-38 (inline text editing via double-click, context menu z-index/duplicate/delete on right-click, drag-to-create bounding box, native image rendering, and change background) |
+| 2 | Song Set entry — Title layout | Free canvas with its own background, shared by every Song Set entry (DEC-004, DEC-008) |
+| 2 | Song Set entry — Verse/Reff layout | Free canvas with 2/3 screen height guideline formula for automated lyric block placement; background is chosen via Change Background or supplied at hydrate/live time (DEC-004, DEC-008, FR-20, FR-33) |
+| 2 | ann-set slide | Admin edits the General slides inside that Announcement Set using the identical canvas editor experience as Main Spine |
+| 2 | Predefined field on any General canvas | Typed as a `{key}` token inside a text element's content or inserted via the Add Elements toolbar, not a whole-element `placeholderKey` binding (DEC-004, AD-32) |
 
 ## Failure Flows
 

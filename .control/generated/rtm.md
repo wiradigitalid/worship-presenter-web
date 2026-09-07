@@ -231,6 +231,51 @@ rtm:
   FR: FR-20
   DEC: []
   UC: UC-14
+  ticket: W11-02
+  spec: W11
+  release: artifacts-overhaul
+  test:
+  - tests/canvas-dirty-guard.test.mjs
+  - tests/artifact-preview.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: W11-03
+  spec: W11
+  release: artifacts-overhaul
+  test:
+  - tests/artifact-preview.test.mjs
+  - tests/canvas-dirty-guard.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: W11-06
+  spec: W11
+  release: artifacts-overhaul
+  test:
+  - tests/announcement-sets.test.mjs
+  - tests/registry.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
   ticket: W3-1
   spec: W3
   release: dec004-completion
@@ -254,6 +299,36 @@ rtm:
   release: registry-order
   test:
   - tests/registry-reorder-delete-http.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-21
+  DEC: []
+  UC: UC-15
+  ticket: W11-01
+  spec: W11
+  release: artifacts-overhaul
+  test:
+  - tests/registry.test.mjs
+  - tests/registry-go-http.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-21
+  DEC: []
+  UC: UC-15
+  ticket: W11-04
+  spec: W11
+  release: artifacts-overhaul
+  test:
+  - tests/registry.test.mjs
+  - tests/sync-artifact-button.test.mjs
   status: done
   exempt: false
   green: true
@@ -397,6 +472,21 @@ rtm:
   FR: FR-29
   DEC: []
   UC: UC-24
+  ticket: W11-05
+  spec: W11
+  release: artifacts-overhaul
+  test:
+  - tests/song-books-seed.test.mjs
+  - tests/registry.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-29
+  DEC: []
+  UC: UC-24
   ticket: W6-01
   spec: W6
   release: registry-extensions
@@ -418,6 +508,51 @@ rtm:
   test:
   - tests/announcement-sets.test.mjs
   - tests/announcements-url.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: W11-02
+  spec: W11
+  release: artifacts-overhaul
+  test:
+  - tests/canvas-dirty-guard.test.mjs
+  - tests/artifact-preview.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: W11-03
+  spec: W11
+  release: artifacts-overhaul
+  test:
+  - tests/artifact-preview.test.mjs
+  - tests/canvas-dirty-guard.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: W11-06
+  spec: W11
+  release: artifacts-overhaul
+  test:
+  - tests/announcement-sets.test.mjs
+  - tests/registry.test.mjs
   status: done
   exempt: false
   green: true

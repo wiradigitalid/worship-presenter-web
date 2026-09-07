@@ -533,3 +533,66 @@ waves:
           - tests/lyric-editor-ui.test.mjs
           - tests/save-to-book-go-http.test.mjs
 
+  - id: W11
+    status: closed
+    release: artifacts-overhaul
+    prd: [offline-deck]
+    fr: [FR-20, FR-21, FR-29, FR-30, FR-31]
+    size: M
+    depends_on: [W10]
+    spec_folder: _bmad-output/specs/spec-w11-artifacts-overhaul/
+    spec_reviewed:
+      date: '2026-09-07'
+      sha: '909ab2a'
+      lenses: [structure, prose, edge-case-hunter]
+    tickets:
+      - id: "W11-01"
+        component: registry
+        satisfies: [UC-15]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/registry.test.mjs
+          - tests/registry-go-http.test.mjs
+      - id: "W11-02"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: [W11-01]
+        touches: [artifacts]
+        tests:
+          - tests/canvas-dirty-guard.test.mjs
+          - tests/artifact-preview.test.mjs
+      - id: "W11-03"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: [W11-02]
+        touches: [artifacts]
+        tests:
+          - tests/artifact-preview.test.mjs
+          - tests/canvas-dirty-guard.test.mjs
+      - id: "W11-04"
+        component: registry
+        satisfies: [UC-15]
+        blocked_by: [W11-03]
+        touches: [artifacts]
+        tests:
+          - tests/registry.test.mjs
+          - tests/sync-artifact-button.test.mjs
+      - id: "W11-05"
+        component: registry
+        satisfies: [UC-24]
+        blocked_by: [W11-04]
+        touches: [artifacts]
+        tests:
+          - tests/song-books-seed.test.mjs
+          - tests/registry.test.mjs
+      - id: "W11-06"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: [W11-05]
+        touches: [artifacts]
+        tests:
+          - tests/announcement-sets.test.mjs
+          - tests/registry.test.mjs
+
+

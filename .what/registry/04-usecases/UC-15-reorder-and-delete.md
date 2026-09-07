@@ -28,8 +28,9 @@ Admin is signed in.
 | --- | --- | --- |
 | 1 | Reset one still-live entry that still has a seed | That entry's layout returns to seed; other entries unchanged. Reset does not undelete (OQ-15, OQ-24). Song Set Title/Verse/Reff layouts are shared free canvases now, so there is no separate AD-22 override record beside them any more — Reset behaves on them exactly as it does on a General |
 | 1 | Delete a Song Set entry | Delete is allowed; Hub's stored weekly values for that entry's `variable_name` stay stored and are inert (DEC-004 supersedes AD-19's fixed four-slot reading; the identity rule — server-owned, never a positional ordinal — still binds) |
-| 1 | Add, remove, or reorder a Song Set entry or an ann-set marker on the main spine | Allowed like any other row; neither has a fixed count (FR-29, FR-21) |
-| 1 | Reorder, add, or delete a General slide **inside** an Announcement Set | Allowed; happens only in the Registry, never on the Service form (BR-12) |
+| 1 | Add, remove, or reorder a Song Set entry or an Announcement Set on the main spine | Allowed via New Slide dropdown selector; neither has a fixed count, and both support multiple insertions across the main spine (DEC-008, FR-21, FR-29) |
+| 1 | Reorder, add, or delete a General slide **inside** an Announcement Set | Allowed; happens only in the Registry via the Announcement Sets 3-tier view, never on the Service form (BR-12, DEC-008) |
+| 1 | Clone a slide | For General slides: clones the full slide layout and content, appending a fresh numbered copy label e.g. `(Copy 1)`. For Song Set / Announcement Set: duplicates the placement reference on the main spine (DEC-008) |
 | 1 | Delete every remaining live entry | Allowed; a new Service's Deck has no slides from Registry (AD-17: N rows, including zero) |
 | 1 | Copy a slide's image between Main and any Announcement Set | The binary is shared by reference, not duplicated; deleting the slide never deletes the image (BR-12) |
 

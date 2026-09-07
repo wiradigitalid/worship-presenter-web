@@ -11,7 +11,10 @@ export interface CopiedSlide {
 export interface ArtifactEditorAdapter {
   list: () => Promise<ArtifactTemplateSummary[]>;
   getOne: (id: string) => Promise<StoredArtifactTemplate>;
-  create: (label: string) => Promise<{ id: string; label: string; updatedAt: string }>;
+  create: (
+    label: string,
+    opts?: { baseType?: string; variableName?: string; annSetId?: number; id?: string }
+  ) => Promise<{ id: string; label: string; updatedAt: string }>;
   save: (
     id: string,
     payload: Record<string, unknown>
@@ -72,11 +75,14 @@ export const mainSpineAdapter: ArtifactEditorAdapter = {
     if (!res.ok) throw new Error(data.error || 'Failed to load template');
     return data as StoredArtifactTemplate;
   },
-  create: async (label: string) => {
+  create: async (
+    label: string,
+    opts?: { baseType?: string; variableName?: string; annSetId?: number; id?: string }
+  ) => {
     const res = await fetch('/api/admin/artifacts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ label }),
+      body: JSON.stringify({ label, ...opts }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to add template');
@@ -529,5 +535,38 @@ export async function uploadImageFile(file: File): Promise<{ url: string }> {
     throw new Error(data.error || 'Failed to upload image');
   }
   return { url: data.url };
+}
+
+export async function fetchBackgroundLibrary(): Promise<Array<{ id: number; url: string }>> {
+  try {
+    const res = await fetch('/api/admin/background-library', { credentials: 'same-origin' });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { images?: Array<{ id: number; url: string }> };
+    return data.images ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchAvailableSongSets(): Promise<Array<{ variableName: string; title: string }>> {
+  try {
+    const res = await fetch('/api/admin/song-set-entries', { credentials: 'same-origin' });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { entries?: Array<{ variableName: string; title: string }> };
+    return data.entries ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchAvailableAnnouncementSets(): Promise<Array<{ id: number; label: string }>> {
+  try {
+    const res = await fetch('/api/admin/announcement-sets', { credentials: 'same-origin' });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { sets?: Array<{ id: number; label: string }> };
+    return data.sets ?? [];
+  } catch {
+    return [];
+  }
 }
 

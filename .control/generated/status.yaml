@@ -1,7 +1,7 @@
 promise_progress: 100%
 rtm_rows:
-  green: 44
-  counted: 44
+  green: 53
+  counted: 53
   excluded_no_uc: 1
 work_progress:
 - spec: W1
@@ -13,6 +13,11 @@ work_progress:
   status: closed
   tickets_done: 4
   tickets_total: 4
+  work_progress: 100%
+- spec: W11
+  status: closed
+  tickets_done: 6
+  tickets_total: 6
   work_progress: 100%
 - spec: W2
   status: closed
@@ -59,11 +64,12 @@ validators_red: []
 validators_skipped:
   plan-dates: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
     but its presence in generated/report is not checked
-  review-trace: 'advisory — trace stale, re-run before the next gate or spec close: .how/hub/SDD-hub.md
-    (changed at 56db449, reviewed at af3b6f3), .how/presenter/SDD-presenter.md (changed at 56db449, reviewed
-    at 411a59d), .how/registry/SDD-registry.md (changed at 56db449, reviewed at 42c967c), .what/hub/SRS-hub.md
-    (changed at 56db449, reviewed at af3b6f3), .what/presenter/SRS-presenter.md (changed at 56db449, reviewed
-    at 411a59d), .what/registry/SRS-registry.md (changed at 56db449, reviewed at 42c967c)'
+  review-trace: 'advisory — trace stale, re-run before the next gate or spec close: .how/_platform/ARCHITECTURE-SPINE.md
+    (changed at e48efde, reviewed at bfb680a), .how/hub/SDD-hub.md (changed at 56db449, reviewed at af3b6f3),
+    .how/presenter/SDD-presenter.md (changed at 56db449, reviewed at 411a59d), .how/registry/SDD-registry.md
+    (changed at e48efde, reviewed at 42c967c), .what/hub/SRS-hub.md (changed at 56db449, reviewed at af3b6f3),
+    .what/presenter/SRS-presenter.md (changed at 56db449, reviewed at 411a59d), .what/registry/SRS-registry.md
+    (changed at 56db449, reviewed at 42c967c)'
 open_questions:
   blocking: 0
   assumptions: 50

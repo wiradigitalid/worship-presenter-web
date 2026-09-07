@@ -307,6 +307,15 @@ build against until the story that lands it ships.
 - **Not yet closed:** the whole of it. Nothing is built; FR-35 is promised and unbuilt, and the transport is G4's to choose (`.what/_prd/operator-turn/addendum.md` § *FR-35* carries the SSE-plus-POST reasoning as a candidate, not a decision).
 - **Cost:** `DEC-006` § *Cost, accepted*. Not restated here — a second copy drifts.
 
+### AD-38 — Unified Artifact Canvas Authoring and Direct Spine Composition *(DEC-008)* [ADOPTED]
+- **Binds:** the Artifact Registry (`src/components/admin/ArtifactEditor.tsx`), canvas engine (`fabric.Textbox`, context menu, drag tools), Main Spine, Song Sets, and Announcement Sets.
+- **Prevents:** (1) Structural deck sequencing fragmented across multiple disparate screens with arbitrary `spine_position` numerical inputs; (2) Inability to place dynamic items (such as a song or an announcement block) in multiple positions across a single presentation; (3) Slow and frustrating slide authoring caused by external textareas, hidden layer controls, placeholder image rendering, and missing background selectors.
+- **Rule:** 
+  1. **Direct Main Spine Composition:** The main spine is the single authoritative deck sequencer. Slides (General, dynamic Song Set entries, and dynamic Announcement Sets) are added via the "New Slide" dropdown selector and reordered directly in place. Multiple insertions of the same Song Set or Announcement Set are explicitly supported; each placement generates a distinct spine node (`artifact_templates` row) referencing the underlying slot or set. Fixed single-number `spine_position` fields are retired.
+  2. **Direct Inline Canvas Authoring:** Text elements on Fabric canvas are authored via `fabric.Textbox` with double-click inline editing; external textareas in side panels are retired. Image elements render their actual visual content via `FabricImage`.
+  3. **Contextual Interactions:** Layer reordering (bring to front/forward, send to back/backward), duplicate, and delete are triggered via canvas right-click context menu. List actions on templates (up, down, clone, delete) are hidden by default and revealed on hover. Slide renaming is encapsulated in its own card with a consistent `[Rename][Reset]` ⇄ `[Cancel][Save]` button state machine.
+  4. **Dedicated 2-Column Workspaces:** Both Song Sets and Announcement Sets adopt the split 2-column layout mirroring Main Spine, providing instant preview, auto-naming for new entries, and a 2/3 height guideline formula for automated lyric layout. Canvas supports direct background selection ("Change Background").
+
 ## Consistency Conventions
 
 | Concern | Convention |

@@ -512,6 +512,8 @@ func nodesFor(id string, c ctx, snap Snapshot) []node {
 						prefix = "ds-opening"
 					} else if tmpl.ID == "ds-closing-song" {
 						prefix = "ds-closing"
+					} else {
+						prefix = tmpl.ID
 					}
 					return songGroup(hymn, prefix, tmpl.ID)
 				}
