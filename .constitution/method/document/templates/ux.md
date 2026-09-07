@@ -3,7 +3,6 @@ type: ux
 component: '{pc}'
 document: design             # design (.how/<pc>/01-ux/) · experience (.what/<pc>/04-usecases/)
 created: '{YYYY-MM-DD}'
-updated: '{YYYY-MM-DD}'
 ---
 
 # {DESIGN | EXPERIENCE} — {Product Component}
@@ -35,7 +34,7 @@ updated: '{YYYY-MM-DD}'
 ### Screens
 
 <!-- One row per screen. Each MUST be registered as an LC of type ui-screen in components.yaml —
-     wdi-ux does this in the same act as landing the screen, and V12 checks it at wave close. -->
+     wdi-ux does this in the same act as landing the screen, and `lc-registered` checks it at spec close. -->
 
 | Screen | LC | Purpose |
 | --- | --- | --- |

@@ -14,7 +14,7 @@ them means documents change before anyone approved the change.
 | Intent | Does | Who |
 |---|---|---|
 | `open` | Writes a `DEC-` at `status: draft`. Also the entry point for a void planning assumption, which is where `bmad-correct-course` is dispatched | anyone |
-| `accept` | Raises `draft` → `accepted` | **the Product Owner only** |
+| `accept` | Raises `draft` → `accepted` | **the Product Owner** — or `wdi-autopilot` under an active mandate, with `accepted_by` naming the mandate |
 | `apply` | Dispatches the owner of every document the decision reaches, checks what came back, fills `touches`, raises `applied` | anyone |
 
 Applying is what **freezes** a decision, not accepting. `decision-guide.md` owns the full ladder and this skill
@@ -52,6 +52,10 @@ Component whose `risk_accepted` is `low`; elsewhere an empty one MUST be dropped
 Frontmatter carries `touches: []` — empty until applied — and `type:` when it is useful. There is no `layer:`
 and no `component:`; both were classifications demanded before anything was known.
 
+One `type` has a fixed shape: **`mandate`**, the decision `wdi-autopilot` opens at its preflight. Its
+parameters — `from_gate` · `scope` · `parked` · `smoke_test` · `loop` · `expires` — live **only** on its row
+in `decisions.yaml`, under `mandate:`; the file carries Decision, Why, and Cost and points at the row.
+
 A `DEC-` MUST NOT hold an open question. Those go to `wdi-question`.
 
 ### A void planning assumption
@@ -74,7 +78,7 @@ Then dispatch `bmad-correct-course`. Do not restate the rules to it — they arr
 `_bmad/custom/bmad-correct-course.toml`, including the ban on direct edits. Name the corpus files in scope
 explicitly; it globs its own defaults, which this project does not use.
 
-**Its impact analysis is incomplete by construction** — it knows a PRD, epics, and stories, and it cannot see
+**Its impact analysis is incomplete by construction** — it knows a PRD and BMad's own planning shapes, and it cannot see
 `.what/<pc>/`, `.how/`, `.control/`, or `.constitution/`. Every one of these MUST be checked here:
 
 | Layer | What to look for |
@@ -83,23 +87,29 @@ explicitly; it globs its own defaults, which this project does not use.
 | `.what/<pc>/` | Use cases realising those `FR`, business rules, state lifecycles that lose a state |
 | `.how/_platform/` | An `AD-N` the correction breaks, a container the C4 set no longer describes, an inventory row with nothing behind it |
 | `.how/<pc>/` | Contracts, flows, and Failure Behaviour written against the old promise |
-| `SPEC.md` | What the wave projected — a SPEC MUST NOT be edited to match; it is re-derived |
-| `waves.yaml` | The wave's size, and whether the correction changes it |
-| Story files | Which stories are `in-progress`, and which are not yet started |
+| the contract | What the spec projected — it MUST NOT be edited to match; it is re-cut |
+| `specs.yaml` | The spec's size, and whether the correction changes it |
+| Ticket files | Which tickets are in progress, and which have not been picked up |
 
 The result is a `DEC-` of **`type: course-correction`**. The `SCP-` code is retired — a course correction is a
 decision, and no second code names the same thing.
 
-A correction cancelling more than **30%** of a wave's stories MUST NOT be handled as a patch. Say so, and let
-the wave be re-cut through `wdi-build`.
+A correction cancelling more than **30%** of a spec's tickets MUST NOT be handled as a patch. Say so, and let
+the spec be re-cut through `wdi-build`.
 
-A story already `in-progress` MUST NOT have its contract changed. Report it; stopping it and returning it to
-`ready-for-dev` is the coordinator's act.
+A ticket already in progress MUST NOT have what it asks for changed underneath it. Report it; stopping it and
+returning it to `ready-for-agent` is the coordinator's act.
 
 ## Intent `accept`
 
 Only the Product Owner MAY raise a `DEC-` to `accepted`. **An agent MUST NOT accept its own.** When work is
 blocked waiting on one, the block is reported, never resolved by self-approval.
+
+**One delegation, and it is checkable.** Under a `DEC-` of `type: mandate` at `status: accepted` whose
+`expires` has not passed, `wdi-autopilot` MAY accept a decision on the owner's behalf, writing
+`accepted_by: DEC-<mandate>` on the row and `date:` in the file. `mandate-accept` holds the chain: the target is a
+real mandate, accepted, unexpired on that date — and the mandate itself is **never** accepted by delegation.
+That is the one decision whose `accepted_by` is a person and a date, the way `risk_accepted_by` is.
 
 An `accepted` `DEC-` that is still unapplied MAY be corrected in place, with the correction recorded in the
 memlog. Nothing has been built on it, so there is no divergent record to preserve.
@@ -127,7 +137,7 @@ list assembled while editing is a list that grows to fit what was already done.
 | `.how/<pc>/` minus `01-ux/` | `wdi-component` intent `design` |
 | `EXPERIENCE.md` · `.how/<pc>/01-ux/` · `design-system.md` | `wdi-ux` |
 | `components.yaml` — a PC born or changed · `mode` · `risk_accepted` · the two structure maps | `wdi-init`, by intent |
-| `waves.yaml`, or anything inside an open wave | `wdi-build` |
+| `specs.yaml`, or anything inside an open spec | `wdi-build` |
 | `.control/questions/` | `wdi-question` |
 | `.control/project-non-technical-log.md` · `.control/meetings/` | `wdi-log` |
 
@@ -155,7 +165,7 @@ reopen a gate yourself, and you MUST NOT treat a green application as a gate tha
 - Fill `touches:` with the files that were **actually** changed, in the `DEC-` and in `decisions.yaml`. Raise
   `status: applied`. **From that point the file MUST NOT be edited** — not the Decision, not the Cost, not a
   typo in the Why. Documents cite it now.
-- V8 checks that an `applied` decision names a non-empty `touches`.
+- `applied-dec-touches` checks that an `applied` decision names a non-empty `touches`.
 - Regenerate `.control/generated/decisions.md` with `validate.py --generate`. That table is how a decision is
   found now; searching the memlog for decisions is retired, and the memlog is a run log again.
 - Report what changed, and what the decision implied but was **not** changed.
@@ -169,7 +179,11 @@ reopen a gate yourself, and you MUST NOT treat a green application as a gate tha
   decisions that disagree is work for intent `open`, not something to resolve by preferring the newer one.
 - If the decision is unapplicable as written — the document it names no longer exists, or the change was already
   made differently — you MUST report that instead of improvising.
-- You MUST NOT apply into a wave that is already closed.
+- **Apply the whole chain in one pass.** `touches:` names what the decision reaches and the ownership
+  table names who lands each part. Edit all of them, then report once. Checking one file, reporting,
+  waiting, then checking the next is where the time goes — `corpus-guide.md` § One decided change is one
+  edit pass owns the rule.
+- You MUST NOT apply into a spec that is already closed.
 - `AD-N` is a different thing: a living rule with Binds · Prevents · Rule, edited in place. You MUST NOT convert
   one into the other.
 - A decision that emerged from a failed third fix attempt MUST say so in Why. That is the signal

@@ -280,3 +280,256 @@ waves:
             tests:
               - tests/remote-screen.test.mjs
             touches: [remote-control]
+
+  - id: W6
+    status: closed
+    release: registry-extensions
+    prd: [offline-deck]
+    fr: [FR-29, FR-31]
+    size: S
+    depends_on: [W5]
+    spec_folder: _bmad-output/specs/spec-w6-registry-extensions/
+    spec_reviewed:
+      date: '2026-09-07'
+      sha: '71941a67a07c992d9f4a0815ee6c15b136894c7b'
+      lenses: [edge-case-hunter]
+    tickets:
+      - id: "W6-01"
+        component: registry
+        satisfies: [UC-24]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/registry.test.mjs
+          - tests/registry-go-http.test.mjs
+      - id: "W6-02"
+        component: registry
+        satisfies: [UC-25]
+        blocked_by: [W6-01]
+        touches: [artifacts]
+        tests:
+          - tests/background-library.test.mjs
+
+  - id: W7
+    status: closed
+    release: presenter-live
+    prd: [operator-turn]
+    fr: [FR-15, FR-16, FR-19, FR-22, FR-33]
+    size: S
+    depends_on: [W6]
+    spec_folder: _bmad-output/specs/spec-w7-presenter-live/
+    spec_reviewed:
+      date: '2026-09-07'
+      sha: '71941a67a07c992d9f4a0815ee6c15b136894c7b'
+      lenses: [edge-case-hunter]
+    tickets:
+      - id: "W7-01"
+        component: presenter
+        satisfies: [UC-11]
+        blocked_by: []
+        touches: [present-channel]
+        tests:
+          - tests/present-channel.test.mjs
+          - tests/presenter-model.test.mjs
+      - id: "W7-02"
+        component: presenter
+        satisfies: [UC-12]
+        blocked_by: [W7-01]
+        touches: [present-channel]
+        tests:
+          - tests/acceptance-fr16-fr19-fr28.test.mjs
+          - tests/projected-shell.test.mjs
+      - id: "W7-03"
+        component: presenter
+        satisfies: [UC-13]
+        blocked_by: [W7-02]
+        touches: [scripture]
+        tests:
+          - tests/acceptance-fr16-fr19-fr28.test.mjs
+          - tests/scripture.test.mjs
+      - id: "W7-04"
+        component: presenter
+        satisfies: [UC-27]
+        blocked_by: [W7-03]
+        touches: [present-channel]
+        tests:
+          - tests/background-library.test.mjs
+
+  - id: W8
+    status: closed
+    release: hub-service-ops
+    prd: [operator-turn]
+    fr: [FR-8, FR-17, FR-11, FR-13, FR-10, FR-9, FR-28, FR-32]
+    size: S
+    depends_on: [W7]
+    spec_folder: _bmad-output/specs/spec-w8-hub-service-ops/
+    spec_reviewed:
+      date: '2026-09-07'
+      sha: '71941a67a07c992d9f4a0815ee6c15b136894c7b'
+      lenses: [edge-case-hunter]
+    tickets:
+      - id: "W8-01"
+        component: hub
+        satisfies: [UC-3]
+        blocked_by: []
+        touches: [services]
+        tests:
+          - tests/services-go-http.test.mjs
+          - tests/services-api.test.mjs
+      - id: "W8-02"
+        component: hub
+        satisfies: [UC-4]
+        blocked_by: [W8-01]
+        touches: [services, slide-plan]
+        tests:
+          - tests/acceptance-fr09-slide-preview.test.mjs
+          - tests/services-go-http.test.mjs
+      - id: "W8-03"
+        component: hub
+        satisfies: [UC-5]
+        blocked_by: [W8-02]
+        touches: [services]
+        tests:
+          - tests/services-lib.test.mjs
+          - tests/worship-form-fields.test.mjs
+      - id: "W8-04"
+        component: hub
+        satisfies: [UC-6]
+        blocked_by: [W8-03]
+        touches: [pptx, slide-plan]
+        tests:
+          - tests/pptx-go-http.test.mjs
+          - tests/slide-plan.test.mjs
+      - id: "W8-05"
+        component: hub
+        satisfies: [UC-7]
+        blocked_by: [W8-04]
+        touches: [services, uploads]
+        tests:
+          - tests/services-api.test.mjs
+          - tests/services-go-http.test.mjs
+      - id: "W8-06"
+        component: hub
+        satisfies: [UC-8]
+        blocked_by: [W8-05]
+        touches: [slide-plan]
+        tests:
+          - tests/acceptance-fr09-slide-preview.test.mjs
+          - tests/slide-plan.test.mjs
+      - id: "W8-07"
+        component: hub
+        satisfies: [UC-23]
+        blocked_by: [W8-06]
+        touches: [services]
+        tests:
+          - tests/acceptance-fr16-fr19-fr28.test.mjs
+          - tests/services-lib.test.mjs
+      - id: "W8-08"
+        component: hub
+        satisfies: [UC-26]
+        blocked_by: [W8-07]
+        touches: [services]
+        tests:
+          - tests/worship-form-fields.test.mjs
+          - tests/worship-form-ui.test.mjs
+
+  - id: W9
+    status: closed
+    release: hub-admin-mgmt
+    prd: [operator-turn]
+    fr: [FR-18, FR-25, FR-7, FR-3, FR-23, FR-24]
+    size: S
+    depends_on: [W8]
+    spec_folder: _bmad-output/specs/spec-w9-hub-admin-mgmt/
+    spec_reviewed:
+      date: '2026-09-07'
+      sha: '71941a67a07c992d9f4a0815ee6c15b136894c7b'
+      lenses: [edge-case-hunter]
+    tickets:
+      - id: "W9-01"
+        component: hub
+        satisfies: [UC-9]
+        blocked_by: []
+        touches: [accounts, auth]
+        tests:
+          - tests/auth-go-http.test.mjs
+          - tests/auth-http.test.mjs
+      - id: "W9-02"
+        component: hub
+        satisfies: [UC-10]
+        blocked_by: [W9-01]
+        touches: [settings]
+        tests:
+          - tests/operator-i18n-guard.test.mjs
+          - tests/i18n.test.mjs
+      - id: "W9-03"
+        component: hub
+        satisfies: [UC-19]
+        blocked_by: [W9-02]
+        touches: [settings]
+        tests:
+          - tests/transitions.test.mjs
+          - tests/hub-go-http.test.mjs
+      - id: "W9-04"
+        component: hub
+        satisfies: [UC-21]
+        blocked_by: [W9-03]
+        touches: [announcements]
+        tests:
+          - tests/announcement-sets.test.mjs
+          - tests/announcements-url.test.mjs
+      - id: "W9-05"
+        component: hub
+        satisfies: [UC-22]
+        blocked_by: [W9-04]
+        touches: [hymns]
+        tests:
+          - tests/song-books-seed.test.mjs
+          - tests/hymns-api.test.mjs
+
+  - id: W10
+    status: closed
+    release: intake-lyrics
+    prd: [rundown-to-service]
+    fr: [FR-1, FR-2, FR-27, FR-12, FR-34]
+    size: S
+    depends_on: [W9]
+    spec_folder: _bmad-output/specs/spec-w10-intake-lyrics/
+    spec_reviewed:
+      date: '2026-09-07'
+      sha: '71941a67a07c992d9f4a0815ee6c15b136894c7b'
+      lenses: [edge-case-hunter]
+    tickets:
+      - id: "W10-01"
+        component: hub
+        satisfies: [UC-1]
+        blocked_by: []
+        touches: [webhook, hymns, services]
+        tests:
+          - tests/hub-go-http.test.mjs
+          - tests/parser.test.mjs
+      - id: "W10-02"
+        component: hub
+        satisfies: [UC-2]
+        blocked_by: [W10-01]
+        touches: [services, hymns]
+        tests:
+          - tests/services-create.test.mjs
+          - tests/services-lib.test.mjs
+      - id: "W10-03"
+        component: hub
+        satisfies: [UC-17]
+        blocked_by: [W10-02]
+        touches: [webhook, services]
+        tests:
+          - tests/hub-go-http.test.mjs
+          - tests/parser.test.mjs
+      - id: "W10-04"
+        component: hub
+        satisfies: [UC-28]
+        blocked_by: [W10-03]
+        touches: [hymns, services]
+        tests:
+          - tests/lyric-editor-ui.test.mjs
+          - tests/save-to-book-go-http.test.mjs
+

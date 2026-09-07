@@ -18,7 +18,7 @@ shape with `mode`, and the only one that runs more than once for a reason other 
 This table said `outline` → `behaviour` only until 2026-08-18. It contradicted **Step 4 of this same
 skill**, which starts `Decision Summary` and `Structure` "from `outline`", and it contradicted
 `delivery-flow-guide.md`, which owns the mapping and lists both for `outline`. Read literally, it would
-have left every `outline` component with an SDD that is a template skeleton forever — and V13 would have
+have left every `outline` component with an SDD that is a template skeleton forever — and `review-trace` would have
 been right to keep flagging it.
 
 Read the component's `mode` from its row in `components.yaml`, falling back to `mode:` in `index.yaml`. Read
@@ -67,7 +67,7 @@ None of these are yours to create.
 | Its `mode` is not `catalog` | Stop. G4 is skipped, and the work goes straight to `wdi-build` |
 | G3 has passed | Route to `wdi-blueprint`. Depth written against a moving portrait is rewritten |
 | The spine exists and its `AD-N` are readable | Route to `wdi-blueprint`. You MUST NOT write the spine |
-| For `design`: the container this component runs in is registered | Route to `wdi-blueprint`. An `LC` MUST name its container |
+| For `design`: the container this component runs in is registered | Route to `wdi-blueprint`. G3 has passed by now, so the answer exists — an `LC` written here MUST carry it. Only a screen `LC` born at G2 is allowed an empty one, and G3 fills it |
 
 ## Step 3 — Intent `behaviour`
 
@@ -112,7 +112,7 @@ Write in this order, stopping at whatever the `mode` does not reach:
    a reason where one does not apply. The data model carries a dictionary beside its diagram.
 
 From `guarded` up, every Boundary object MUST become an `LC` in `components.yaml`; at `deep`, Control objects
-too. Registration is checked **when the wave closes** — V12 — not before a story is `ready-for-dev`. You MUST
+too. Registration is checked **when the spec closes** — `lc-registered` — not before a ticket is picked up. You MUST
 NOT register a `container`, and you MUST NOT register `ui-screen` or `ui-composite`.
 
 ## Step 5 — Evidence, and the as-built case
@@ -154,13 +154,15 @@ You MUST NOT open G4 on depth that has not been through it.
 
 ## Rules
 
-- A decision taken while writing MUST go to `wdi-decision`, never into the document as a parenthetical. There
-  is no memlog here to catch it.
+- A decision taken while writing is **written into the document as its own content**, stated as what now
+  holds. Never as a parenthetical aside — there is no memlog here to catch one. It goes to `wdi-decision`
+  only when no design document has a home for it, or it touches an `AD-N`; `decision-guide.md` § A
+  decision's first home owns that split.
 - You MUST NOT write into `.what/_prd/`, `.what/business-rules.md`, `.how/_platform/`, or `.how/<pc>/01-ux/`.
 - You MUST NOT raise `status:`. Status is a stage; the `reviewed:` block is an event.
 - You MUST NOT lower or raise the component's `mode` to fit what you want to write. That is `wdi-init`, and it
   is the owner's call.
-- `bmad-spec` runs **after** this, never before, and it MUST NOT introduce anything these documents do not say.
+- The spec's contract is cut **after** this, never before, and it MUST NOT introduce anything these documents do not say.
 - Memlog: `.control/memlog/<pc>.md`, through `memlog.py --path`. `--workspace` MUST NOT be used.
 - Questions arrive as **one** ranked batch at the gate, not as they surface.
 

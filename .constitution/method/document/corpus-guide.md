@@ -23,12 +23,37 @@ be copied into this file.
 | `.what/` | What is promised | Living, amended | BMad class A + us |
 | `.how/` | How it is built | Living, amended | BMad class A + us |
 | `_bmad-output/` | Work in progress | Ends when the work does | BMad class B and C |
+| `.what-rendered/` · `.how-rendered/` | The same promise and shape, **assembled for a human to read** | Regenerated on every `render`; never edited | `validate.py --generate`, and nobody else |
 
 `.control/` is the value of `{project_knowledge}` in BMad's configuration. There is no `docs/`.
 
+### Two audiences, two trees
+
+`.what/` and `.how/` are the **working** trees: prose that cannot be a row, pointers to the registry for
+everything that can. They are what an agent reads and what a skill writes. They are deliberately thin
+for a human — `Goals` is one line, an `FR` is an id — because completeness is not their job.
+
+`.what-rendered/` and `.how-rendered/` are the **reader's** trees. Every file in them sits at the mirror
+path of the working document it projects — `.what-rendered/<pc>/SRS-<pc>.md` is
+`.what/<pc>/SRS-<pc>.md` with every pointer opened: the goal statements, the UC rows, the
+`AD-N` text, the open questions, all pulled in from their own homes. That is what a gate reads, and
+what a client receives.
+
+Three rules keep the two trees honest:
+
+- **A skill MUST NOT read a `-rendered` file as input.** It is output. The working document and the
+  registry are the source, and a skill that read the projection would be reading its own echo — a
+  `kit-integrity` test fails when any `SKILL.md` lists one in its `Inputs`.
+- **Nobody edits a `-rendered` file.** A defect seen there is a defect in the working document or the
+  registry, and that is where it is fixed. The next `render` overwrites the page.
+- **Every gate reads one rendered page, and that page MUST answer the gate's seven questions.** G1
+  reads `.what-rendered/_product-brief/brief.md`; G2 `.what-rendered/_prd/<slug>/prd.md`; G3
+  `.how-rendered/blueprint.md`; G4 `.how-rendered/<pc>/SDD-<pc>.md`. A question that cannot be
+  answered from the page is a gap in the page, not a reason to open a working file.
+
 ## The placement test
 
-One question decides everything: **is this file still correct after its wave has passed?**
+One question decides everything: **is this file still correct after its spec has passed?**
 
 Yes → the corpus. No → `_bmad-output/`.
 
@@ -60,9 +85,8 @@ part of producing it — never a follow-up someone else performs.
 | `DESIGN.md` | `.how/<pc>/01-ux/` | `wdi-ux` |
 | tokens and base components | `.how/_platform/design-system.md` | `wdi-ux` |
 | each screen in `DESIGN.md` | an `LC` of type `ui-screen` in `components.yaml` | `wdi-ux` |
-| `RETROSPECTIVE.md` | `RTR-<wave>.md` in `.control/reports/` | `wdi-build`, at wave close |
-| `test-summary.md` | test names → `waves.yaml` | `wdi-build` |
-| `stack.md` · `conventions.md` · `brownfield.md` | merged into `.constitution/project/codebase-*-guide.md` | `wdi-build`, at wave close |
+| The names of the tests a ticket went green on | the ticket's `tests` in `specs.yaml` | `wdi-build` |
+| What the spec settled about the stack, the conventions, or the brownfield reality | merged into `.constitution/project/codebase-*-guide.md` | `wdi-build`, at spec close |
 | A sprint change proposal | a `DEC-` of `type: course-correction` | `wdi-decision` |
 | The registry rows and skeletons a new PC needs | `components.yaml` · `.what/<pc>/` · `.how/<pc>/` | `wdi-init` intent `component` |
 | `platform_owns` — an entity no component's promise explains | `components.yaml`, plus its description in `cross-cutting.md` | `wdi-blueprint` |
@@ -73,13 +97,13 @@ part of producing it — never a follow-up someone else performs.
 
 - A skill MUST NOT write into a layer it does not own.
 - Registry conversion is part of landing, not a follow-up. A screen that lands in `01-ux/` without its
-  `components.yaml` entry has been half-landed, and V12 catches it **at wave close** — which is the
+  `components.yaml` entry has been half-landed, and `lc-registered` catches it **at spec close** — which is the
   right moment to be caught, and a bad moment to be surprised.
 - Content MUST NOT be edited while it is being landed. If it has to change to fit its new home, that is a
   separate act — say so and stop. Splitting one output across the homes its row names is not editing.
 - The C4 set's target files already exist and are **living**. Their owner MUST amend, MUST NOT overwrite; when
   the incoming set contradicts an annotation already there, it MUST stop and report the finding.
-- Nothing MAY be landed into a wave that is already closed. The wave is reopened through `wdi-build`, or the
+- Nothing MAY be landed into a spec that is already closed. The spec is reopened through `wdi-build`, or the
   gap is recorded as an open question.
 - An output with **no row** in this table MUST NOT be given a guessed home. It stays in `_bmad-output/`, and
   `wdi-reconcile` reports it — an output with no home is a gap in the method, and MUST surface as one.
@@ -168,7 +192,7 @@ would have to be withdrawn for the entity to stop being needed. Two examples of 
 
 **One guard, and it is what stops this becoming a drawer:** everything `_platform` owns — in any position —
 MUST be described under `## Platform-owned` in `cross-cutting.md`, with its kind and the shape every toucher
-obeys. A platform that owns something documents it. V21 checks it, and skips only while that section has not
+obeys. A platform that owns something documents it. `entity-one-writer` checks it, and skips only while that section has not
 been born at G3.
 
 That guard is the whole reason `_platform` can be a general answer rather than an escape hatch: reaching for
@@ -187,6 +211,117 @@ judgements — so both are declared in that inventory's own frontmatter (`platfo
 survive every re-derivation. Putting either outside the file means the next derivation silently deletes the
 owner's decision.
 
+## A derived fact has exactly one home
+
+`why/rationale.md` has always carried this as principle 5 — *what can be derived is not written by hand.*
+It was never written as a rule anywhere, and that file binds nothing by its own terms. So it bound nothing,
+and only one field was ever actually protected: ticket status, by `ticket-status-one-home`.
+
+**A document MUST NOT state a fact that a registry, a generated file, or git already holds.** It cites the
+id and lets the reader follow it. The list is short and it is closed:
+
+| Never stated in prose | Where it lives |
+|---|---|
+| `mode` · `risk_accepted` · `g4_passed` | `components.yaml` |
+| Which `DEC-` bind this document — **including "none yet"** | `.control/generated/decisions.md` |
+| A count of `UC`, `FR`, `CAP`, or containers | the registry that holds them |
+| Which slots or files exist, and which are still empty | `.control/structure-document.md`, derived |
+| Whether an `OQ-` is open or answered | `.control/questions/` |
+| When the document last changed | git |
+
+**The remedy is DELETION, never correction.** This is the part that costs a corpus real time to learn: a
+restated fact that is corrected becomes a *second* stale fact, on a slower clock than the first. One SRS in a
+real repo carried three claims about its own `mode` on one page — the value, a correction block below it
+fixing an older value, and the slot list — and not one of the three was right. Correcting any of them would
+have added a fourth. Deleting all three ends it.
+
+A negative claim is the worst case and the easiest to miss, because it looks like diligence: *"No applied
+`DEC-` binds this component yet"* is true the day it is written and silently false forever after.
+
+**What is NOT a derived fact**, and MUST still be written where it belongs: a judgement the pattern cannot
+recompute (the paragraph above owns that), an `AD-N` citation — the spine's `binds:` is authored, not
+derived — and the *reason* something is the way it is, which no registry holds.
+
+## A pass writes one artifact
+
+When a skill is writing or updating an artifact, **that artifact is the pass.** Hunting the rest of the
+corpus for things that disagree with it is not part of writing it, and MUST NOT be folded in: it is
+`wdi-reconcile`'s job, it runs at a gate, and `wdi-review` § Stale is not a finding decides what is even
+worth reporting when it does.
+
+Where a contradiction surfaces anyway — and it will, because writing a document is how you notice — there
+are exactly two outcomes:
+
+| The other document is | Do |
+|---|---|
+| **Load-bearing wrong** — a reader would make the wrong repair | Say it in **one line** in the output, naming the file and the edit it needs |
+| Anything else | Nothing. Not a line, not an `OQ-`, not a `DEC-` |
+
+It MUST NOT become an open question, and it MUST NOT become a decision. A contradiction between two
+documents is an **edit** waiting for whoever owns the file — never a thing to be adjudicated.
+
+**This binds hardest at G1 and G2.** A brief is being formed; a PRD is being written. There is barely a
+corpus to be consistent with yet, and a pass that spends its budget looking for one is spending it on
+nothing.
+
+## One decided change is one edit pass
+
+Once the owner has decided, the chain is **applied**, not surveyed. The agent already knows what the
+change reaches — `touches:` names it, the ownership table in this file names who lands each part, and the
+RTM names the rows that move. It edits all of them in **one pass** and reports once.
+
+What MUST NOT happen: checking one document, reporting, waiting, checking the next; re-deriving the same
+relations in a later pass; or asking the owner to confirm the same decision at each file it touches. The
+documents are split for reading, not to be walked one at a time — and walking them is where the time and
+the tokens actually go.
+
+## The corpus is written in the present tense
+
+A design document states **what is true now**: the latest state of the design, and what still has to be
+reached. It does not state how it got there. This governs `.what/<pc>/`, `.how/`, and
+`.constitution/project/`.
+
+### Two kinds of history, and only one is worth writing
+
+Most history is not useful. What is useful is the current state — and the rare piece of history that
+**stops the same mistake happening twice**. One question separates them:
+
+> **Would someone about to make a change be saved by this line?**
+
+| Kind | Example | Where it goes |
+|---|---|---|
+| **Business or technical** — the mistake could recur | *"Files are removed before the record, and that left a document pointing at a deleted image"* | A `DEC-`, `why/`, or `answered.md`. Rarely, and only when it earns it |
+| **Document history** — a document said something else last week | *"This section was rewritten"* · *"withdrawn because a later pass found it wrong"* · *"this used to read X"* | **Nowhere.** git holds it, and git holds it better |
+
+The second kind is what fills a corpus and buys nothing. It arrives as a correction block, a
+`## Provenance` note, a document's own change log, a note about a conflict that has already been
+**resolved**, or a *"considered and rejected"* aside about the method itself. All of it MUST NOT be
+written in the three layers above.
+
+**And no step demands the first kind either.** History is never a checklist item, never a gate condition,
+and never a blocking finding. It is written when someone judges it worth writing, and skipping it is
+**not** a gap — nothing in this method MAY report a missing history line as a defect. That is the whole
+difference between a record and a ritual.
+
+**A mid-flight change lands as if it had been there from the start.** An idea arriving during G5 is
+written in the present tense — not appended, not annotated, not marked as late. The commit is that
+record, and it is a better one than a paragraph.
+
+**What this rule does NOT cut:**
+
+- **The PRD's Revision History.** Its reader is outside the room, and `prd-guide.md` already demands the
+  business form of it: *state what the promise now is, not which section was edited.*
+- **`.control/questions/answered.md`.** This is the clearest case of history that pays: it is what stops
+  the same question being asked again in three months.
+- **`ratified_by:`** on a room guide — evidence the rule is real, not a record that it changed.
+- **`why/`** and `.control/decisions/`, whose job is exactly the first kind.
+- **`superseded`** pointing at its replacement. A reader following an old id needs the pointer.
+
+Real cost of getting this wrong, from one repo: a codebase conventions guide — the file a developer opens
+to learn how to write code here — spent a quarter of its length explaining when it had been filled, why it
+was not a `DEC-`, and which alternative had been rejected. Not one line of that would save the next reader
+from anything.
+
 ## Two axes inside `.what/`
 
 | | `_prd/<initiative>/` | `<pc>/` |
@@ -198,7 +333,7 @@ owner's decision.
 Both are living. What separates them is **promise versus behaviour**, not lifetime. One functional area MAY
 span several components, and one component MAY serve several PRDs, so neither can absorb the other.
 
-**Time is not a folder axis.** Release lives in `CAP.target_release` and in `waves.yaml`.
+**Time is not a folder axis.** Release lives in `CAP.target_release` and in `specs.yaml`.
 
 ## Slot numbering means two different things
 
@@ -225,11 +360,11 @@ cites them. `supplements/` beside either kernel is repealed with the `ANX-` conc
 
 | Code | Is |
 |---|---|
-| `BG-` `CAP-` `FR-` `NFR-` `UJ-` `UC-` | The traceability chain, allocated from `requirements.yaml` and `usecases.yaml` |
+| `BG-` `CAP-` `FR-` `NFR-` `UJ-` `UC-` | The traceability chain. `BG` from `goals.yaml`; `CAP`/`FR`/`NFR`/`UJ` from that initiative's `requirements-<slug>.yaml`; `UC` from `usecases.yaml` |
 | `AD-` | An invariant in the architecture spine — a living rule, edited in place |
 | `DEC-` | A decision — an event, frozen when `applied`, only superseded |
 | `LC-` | A Logical Component |
-| `OQ-` `RTR-` | An open question · an archived retrospective |
+| `OQ-` | An open question. `RTR-` was the archived retrospective and is **retired** — a frozen `RTR-` file stays where it is |
 | `BUG-` `HOT-` | A defect · a hotfix |
 | `NT-` | A non-technical fact |
 
@@ -278,7 +413,7 @@ it there, then `promote`. Using this room to bypass the package is how a method 
 with nobody deciding it, and **an empty room is a valid state**: filling it so that it gets used is the
 very failure this rule prevents.
 
-Frontmatter is required and **V27** checks it: `scope: project` · a one-line `purpose:`. A file MAY
+Frontmatter is required and **`custom-room-declared`** checks it: `scope: project` · a one-line `purpose:`. A file MAY
 narrow or add with nothing further; to **contradict** a generic rule it MUST name that rule in
 `overrides:` and carry `decision:` naming the `DEC-` that decided it. A method that can be contradicted
 without a decision stops being trustworthy in the next repo.

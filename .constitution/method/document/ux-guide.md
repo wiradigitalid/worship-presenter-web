@@ -34,9 +34,19 @@ promise.
   other skill MAY land these files.
 - Nothing is placed until the run is finalised. Half-placed UX output is worse than unplaced output,
   because it looks distributed.
-- A run MAY finish before there is a `<pc>` to place it into — the slicing is born at the **tail of
-  G2**, and a UX run belongs to G2 itself. The output then waits in `_bmad-output/ux/`, and `wdi-ux` lands it once
-  the component exists. Waiting is the correct state; a home MUST NOT be invented to end it.
+- **A run MUST NOT wait for a `<pc>`, and MUST NOT be blocked on one.** The order is PRD → UX → **G2**
+  → components, and it is forced: G2 reads `EXPERIENCE.md` (below), while `wdi-init` intent `component`
+  requires G2 passed. Making a run wait for components closes that into a cycle nothing can open.
+- **`design-system.md` lands at G2**, immediately. It crosses components by definition and its path has
+  no `<pc>` in it.
+- **`EXPERIENCE.md` and `DESIGN.md` wait, and only because their paths contain `<pc>`.** That is the one
+  remaining deferral in the flow, and it is not the owner's to remember: `wdi-init` intent `component`
+  lands them in the same act as birthing the components.
+- **A container is not required to land UX.** `.how/<pc>/01-ux/` has no container in its path; only a
+  screen's `LC` row needs one, and that row is registered with `container:` empty and filled at G3 by
+  `wdi-blueprint` intent `platform`, in the same act that registers the containers. `container-built` stays silent on
+  an empty container until the `LC`'s Product Component lists one — the answer is demanded when it
+  exists, not when it is thinnest.
 
 `doc_standards` on `bmad-ux` runs `bmad-review` over both documents **at finalize** — that is, before
 `wdi-ux` lands them. Reviewing afterwards would mean reviewing two files that no longer sit together.
@@ -47,7 +57,7 @@ Placement is not finished when the files have moved.
 
 - **Every screen in `DESIGN.md` MUST be registered as an `LC` of type `ui-screen`** in
   `.control/registry/components.yaml`, with its `container`. A screen that exists in the design and not
-  in the registry is a change nothing will trace, and V12 catches it **at wave close**.
+  in the registry is a change nothing will trace, and `lc-registered` catches it **at spec close**.
 - A composite that is reused across screens is an `LC` of type `ui-composite`, not a screen.
 - Tokens and base components — colour, type scale, spacing, buttons, inputs — MUST go to
   `.how/_platform/design-system.md`, not into any one component's `01-ux/`. They cross Product
@@ -57,9 +67,15 @@ Registry conversion is part of placement, not a follow-up.
 
 ## Vocabulary
 
-Every user-facing noun in either document MUST already exist in `.control/product-glossary.md`, used
-verbatim. A new domain noun introduced by a UX run MUST be added through `wdi-blueprint` intent
-`catalog` in the same pass, which owns the glossary.
+Every user-facing noun in either document MUST use `.control/product-glossary.md` verbatim **where an
+entry exists**. A new domain noun introduced by a UX run MUST be routed to `wdi-question` and listed in
+the run's report.
+
+**It MUST NOT be added to the glossary in the same pass, because it cannot be.** The glossary belongs to
+`wdi-blueprint` intent `catalog`, which needs Product Components, which need G2 passed — and this run is
+what G2 reads. The rule used to say "added in the same pass" and was unsatisfiable at the only moment it
+applied; a UX run failing that check was reporting the method, not the product. `wdi-blueprint` writes
+the entries at G3 and closes those questions there.
 
 This is where vocabulary drift usually enters the corpus: UX writes the words the user actually sees,
 and those words are the ones that stick. When the SRS says `Anggota` and the screen says `Pengguna`,

@@ -30,13 +30,7 @@ The Operator needs a control screen separate from what the Congregation sees. Th
 
 ## UC Catalogue · [G3]
 
-| id | Use case | Actor | Satisfies | critical |
-| --- | --- | --- | --- | --- |
-| UC-11 | I present a fullscreen slideshow | Operator | FR-15 | no |
-| UC-12 | I run the two-screen presenter | Operator | FR-16 | no |
-| UC-13 | I display an on-demand verse on the projector | Operator | FR-19, FR-22 | no |
-| UC-27 | I switch the live Verse/Reff background during the service | Operator | FR-33 | no |
-| UC-29 | I control the presenting laptop from my phone while standing away from it | Operator | FR-35 | no |
+UC Catalogue — see `.control/registry/usecases.yaml`, rows where `component: presenter`.
 
 ## Constraints · [G3]
 

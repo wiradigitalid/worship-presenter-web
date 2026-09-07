@@ -1,0 +1,141 @@
+# requirements-operator-turn.yaml — SSOT for CAP · FR · NFR · UJ of the `operator-turn` PRD.
+#
+# Keys are English; prose values follow the product's chosen `doc_language`.
+# ONE FILE, ONE WRITER, ONE GATE — `wdi-product`'s, written at G2 for this initiative.
+# `BG` lives in `.control/registry/goals.yaml`, not here.
+#
+# IDS ARE ALLOCATED ONCE AND THE SEQUENCE IS GLOBAL TO THE PRODUCT — see `goals.yaml` for why.
+
+capabilities:
+  - id: CAP-3
+    title: Hub Service list, preview, delete, PPTX retention
+    goal: BG-2
+    target_release: as-built
+    priority: must
+  - id: CAP-4
+    title: Edit Service fields and regenerate in place
+    goal: BG-2
+    target_release: as-built
+    priority: must
+    depends_on: [CAP-3]
+  - id: CAP-6
+    title: Present in the browser — slideshow, presenter, on-demand verse
+    goal: BG-2
+    target_release: as-built
+    priority: must
+    depends_on: [CAP-3]
+  - id: CAP-7
+    title: Run-Sheet of the full worship order
+    goal: BG-2
+    target_release: as-built
+    priority: must
+    depends_on: [CAP-3]
+  - id: CAP-8
+    title: Per-person accounts and two Roles
+    goal: BG-2
+    target_release: as-built
+    priority: must
+  - id: CAP-10
+    title: Several Bible translations, several Song Books, two language axes
+    goal: BG-2
+    target_release: as-built
+    priority: must
+
+functional:
+  - id: FR-8
+    capability: CAP-3
+    title: "List Services by date"
+    proof: "Every Service is a dated entry; opening it shows data, Run-Sheet, and actions matching Role."
+  - id: FR-9
+    capability: CAP-3
+    title: "Preview a Service per slide in the browser"
+    proof: "Order matches the latest Deck; an incomplete song block is marked."
+  - id: FR-10
+    capability: CAP-3
+    title: "Manually delete a Service and its assets, including local files in UPLOADS_DIR"
+    proof: "The Service disappears from the list; that week's local files disappear from UPLOADS_DIR; the Artifact Registry's Announcement Sets, and any image they still reference, remain untouched."
+  - id: FR-11
+    capability: CAP-4
+    title: "Edit Service fields through the Hub form"
+    proof: "Change a song number, save, the next generate uses the new number (FR-2)."
+  - id: FR-13
+    capability: CAP-4
+    title: "Regenerate this Service's Deck in place"
+    proof: "Swap one song, generate, download — ≤ 5 minutes."
+  - id: FR-15
+    capability: CAP-6
+    title: "Present a Service as a fullscreen slideshow in the browser"
+    proof: "Slides, order, and transition match the PPTX; advance is linear. [ASSUMED: OQ-5 — slideshow is best-effort offline.]"
+  - id: FR-16
+    capability: CAP-6
+    title: "Two-screen presenter view in the browser"
+    proof: "Advancing on the Operator advances the projector; blank blacks the projector without losing position."
+  - id: FR-17
+    capability: CAP-7
+    title: "Display the full worship order as a Run-Sheet"
+    proof: "The Operator follows the entire order (including roles not on slides) without opening chat."
+  - id: FR-18
+    capability: CAP-8
+    title: "Per-person authentication with Admin and Operator Roles"
+    proof: "Without signing in there is no Service; Admin manages accounts; Operator review/edit/generate/download/delete/present. NFR-6."
+  - id: FR-19
+    capability: CAP-6
+    title: "Search and display an on-demand verse in Presenter"
+    proof: "The reference appears on the projector in the chosen translation; closing returns to the Deck slide; the payload does not change."
+  - id: FR-22
+    capability: CAP-10
+    title: "Read verses from the selected translation, default KJV"
+    proof: "Lookup = chosen translation; an absent corpus is reported as absent."
+  - id: FR-23
+    capability: CAP-10
+    title: "Resolve hymns from the selected Song Book, default SDAH"
+    proof: "The same number in two books does not collide; the read-back names the book. A song-set entry may pick its own book for that week, or fall through to the global default Admin has set; two entries in the same Service may resolve from different books."
+  - id: FR-24
+    capability: CAP-10
+    title: "Browse installed corpora by language; the default filters the display, not the data"
+    proof: "The picker opens the default locale and can always reach another corpus without changing settings; the list API returns all."
+  - id: FR-25
+    capability: CAP-10
+    title: "Display the Operator interface in the Operator's language"
+    proof: "Change ui_locale; Hub labels follow; projection slides do not change."
+  - id: FR-28
+    capability: CAP-4
+    title: "First save wins when edits collide"
+    proof: "A second edit from the same state gets a conflict error, not a silent overwrite."
+  - id: FR-32
+    capability: CAP-4
+    title: "Weekly song inputs on the Hub form match the configured song-set list"
+    proof: "For every song-set entry Admin has defined in the Registry, the Hub form shows that entry's own song-number, Song-Book, and background inputs; adding or removing an entry changes what the form shows without a deploy."
+  - id: FR-33
+    capability: CAP-6
+    title: "Operator changes the live Verse/Reff background during the service"
+    proof: "During the Service, the Operator picks a different background for the projected Verse/Reff slides from the background library; the change is visible immediately and does not alter the Service payload or require regenerating the Deck."
+  - id: FR-34
+    capability: CAP-4
+    title: "Operator edits a song's lyrics for this Service only, with an explicit action to save them back to the Song Book"
+    proof: "Editing the lyric text on the Hub form changes this Service's Deck only — the Song Book is untouched. A separate, explicit action beside the editor saves the correction back to the Song Book, so later Services start from the corrected text; typing alone never triggers that save."
+  - id: FR-35
+    capability: CAP-6
+    title: "Operator controls the presenting laptop from a second signed-in device"
+    proof: >-
+      The laptop is presenting and the room screen is live. The Operator signs in on a
+      phone, connects it to that presenting laptop by a deliberate step — being signed in is not by itself
+      enough — and sees the same presenter view. Standing away from the laptop, they advance a slide, blank
+      and unblank the room screen, change the live Verse/Reff background, and put a verse on the projector;
+      each one lands on the room screen. Another Operator signed in elsewhere, who has not connected to this
+      laptop, cannot drive it. The phone is then closed, put to sleep, or taken off the network, and the
+      laptop keeps driving the service exactly as it did before the phone joined.
+
+nonfunctional:
+  - id: NFR-6
+    goal: BG-2
+    title: Service data and actions require authentication and a Role; no public endpoint exposes PII.
+    enforced_by: [tests/auth-http.test.mjs, tests/public-repo-guard.test.mjs]
+
+journeys:
+  - id: UJ-2
+    title: Operator reviews the Service on Friday in ≤ 10 minutes and downloads the PPTX.
+  - id: UJ-3
+    title: A late correction (song swap) arrives and the Deck is regenerated in ≤ 5 minutes.
+  - id: UJ-4
+    title: Operator presents Sabbath from the offline PPTX, with presenter view as a complement.

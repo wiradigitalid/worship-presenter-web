@@ -3,9 +3,8 @@ type: srs
 component: '{pc}'
 status: draft            # draft · reviewed · locked · superseded
 created: '{YYYY-MM-DD}'
-updated: '{YYYY-MM-DD}'
-satisfies: []            # FR / NFR ids this component carries, from requirements.yaml
-reviewed:                # V13. Filled only after wdi-review has actually run
+satisfies: []            # FR / NFR ids this component carries, from requirements-<slug>.yaml
+reviewed:                # `review-trace`. Filled only after wdi-review has actually run
   date: ''               # '{YYYY-MM-DD}'
   sha: ''                # commit it was reviewed at; without the SHA, staleness cannot be measured
   lenses: []             # the set risk_accepted names — NOT a fixed list
@@ -18,7 +17,7 @@ reviewed:                # V13. Filled only after wdi-review has actually run
      left in English per the controlled vocabulary. -->
 
 <!-- NOT a one-shot document. Despite the IEEE name, this SRS is LIVING: one per Product Component,
-     amended every wave, never signed off and frozen. -->
+     amended every spec, never signed off and frozen. -->
 
 <!-- TWO SKILLS WRITE IT, AT TWO GATES, and every section below says which:
        [G3]  wdi-blueprint intent `catalog`. Exists at EVERY mode, including catalog
@@ -28,12 +27,21 @@ reviewed:                # V13. Filled only after wdi-review has actually run
      what is absent there is 04-usecases/UC-<n>-<slug>.md — the step-by-step flows.
 
      `reviewed.lenses` MUST match what this component's risk_accepted names in components.yaml —
-     edge-case-hunter at low and medium, structure + prose at high. It is NOT read off `mode`. -->
+     edge-case-hunter at low and medium, structure + prose at high. It is NOT read off `mode`.
+
+     That set is what a FIRST review and a gate-opening review carry. A later re-review runs
+     structure + prose, covers only the delta since `sha`, and puts edge-case-hunter back when that
+     delta touches money, personal data, an irreversible action, or a third party. wdi-review owns it. -->
 
 ## Decision Summary · [G3]
 
 <!-- <=1 page, business language, no jargon lacking a Glossary entry. What the Product Owner reads.
-     A summary that cannot be read inside the gate's time budget IS the finding. -->
+     A summary that cannot be read inside the gate's time budget IS the finding.
+
+     NO DERIVED FACT. `mode`, `risk_accepted`, which `DEC-` bind this file — "none yet" included —
+     how many UC or FR there are, and which slots exist are all held elsewhere and MUST NOT be
+     stated here. `corpus-guide.md` § A derived fact has exactly one home says where each lives, and
+     that the remedy for one already written is DELETION, not correction. -->
 
 ## Why · [G3]
 
@@ -52,21 +60,17 @@ reviewed:                # V13. Filled only after wdi-review has actually run
 
 ## UC Catalogue · [G3]
 
-<!-- THE use case list, and at mode: catalog it is the whole use-case record. One line each, and the
-     line is the artifact — not a placeholder waiting for a file.
+UC Catalogue — see `.control/registry/usecases.yaml`, rows where `component: {pc}`.
 
-     A title MUST be a sentence a user would say, never a system term. G3 asks this as a starred
-     question.
+<!-- A POINTER, not a table. The catalogue's one home is `usecases.yaml`; this section used to carry a
+     second copy, and `uc-catalogue-matches` existed only to keep the two agreeing — it once caught 26
+     rows that had drifted. The rendered SRS (`.what-rendered/<pc>/SRS-<pc>.md`) and the blueprint
+     both show the table, from the registry.
 
-     `critical` is yes ONLY when the use case touches money, personal data, or an irreversible action.
-     Nothing else. If more than a third of this component's use cases are marked, the definition was
-     misapplied — derive it again rather than negotiating it.
-
-     `critical` decides something only at mode: deep, where every critical UC gets a full flow. -->
-
-| id | Use case | Actor | Satisfies | critical |
-| --- | --- | --- | --- | --- |
-| UC-{n} | {a sentence a user would say} | {from the Actor Register} | {FR-n} | no |
+     What is still decided HERE, when wdi-blueprint lands the rows: a title MUST be a sentence a user
+     would say, never a system term — G3 asks this as a starred question. `critical` is yes ONLY when
+     the use case touches money, personal data, or an irreversible action; more than a third marked
+     means the definition was misapplied. -->
 
 ## Constraints · [G3]
 
@@ -108,12 +112,21 @@ reviewed:                # V13. Filled only after wdi-review has actually run
 
 <!-- The gate questions as they apply to THIS component, answered yes / no / change. The full list
      lives in delivery-flow-guide.md and MUST NOT be copied here. At mode: catalog only the starred
-     questions are asked. -->
+     questions are asked.
+
+     An answer MUST NOT carry a COUNT of registry rows — "all four use cases are covered" is a claim
+     about usecases.yaml that a fifth UC falsifies without touching this file. Answer the question. -->
 
 ## Design Reference · [G3]
 
-<!-- One line pointing at the paired SDD, plus any AD-N or applied DEC- that binds this component.
-     Nothing else — solution shape MUST NOT appear in this document: no framework, no table, no
+<!-- One line pointing at the paired SDD, plus any AD-N that binds this component — the spine's
+     `binds:` is authored, not derived, so an AD-N citation belongs here.
+
+     APPLIED `DEC-` DO NOT. They are derived from `touches:` and live in .control/generated/decisions.md;
+     point at it. A line saying "no applied DEC- binds this component yet" is the worst version — true
+     the day it is written, silently false forever after, and it looks like diligence.
+
+     Nothing else: solution shape MUST NOT appear in this document — no framework, no table, no
      endpoint, no class, no queue, no file path. -->
 
 ---
@@ -141,9 +154,17 @@ reviewed:                # V13. Filled only after wdi-review has actually run
      05-scenarios/   SCN-<nn>-<slug>.md, long branches hanging off one UC. From mode: deep only
 
      01-requirements/ and supplements/ are REPEALED. The first was permanently empty — FR live in the
-     PRD and this document cites them by id. The second existed for the ANX- concept, which is gone. -->
+     PRD and this document cites them by id. The second existed for the ANX- concept, which is gone.
+
+     THIS SECTION EXPLAINS THE SHAPE, NOT THE CONTENTS. It MUST NOT say which slots exist, which are
+     empty, or which are "not written yet". That is `.control/structure-document.md`, derived from the
+     tree on disk. One real SDD claimed four of its five slots unwritten while one of them held 223
+     lines. -->
 
 ## Open Items
 
-<!-- Anything still unresolved, each pointing at its row in .control/questions/. An assumption left
-     here with no id is the failure wdi-question exists to prevent. -->
+<!-- A POINTER, not a copy. Ids only, and the id is enough: whether an OQ- is still open is held by
+     .control/questions/, so restating its status here creates a second answer on a slower clock.
+
+     An assumption left here with no id is the failure wdi-question exists to prevent. An id listed
+     here that has been answered for weeks is the failure this rule exists to prevent. -->

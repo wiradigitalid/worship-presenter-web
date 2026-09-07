@@ -55,25 +55,24 @@ LC-18 are on `api` because a relay between two browsers cannot live in either br
 
 ## Inherited Constraints · [guarded]
 
-| AD | Quoted rule | How it lands here |
-| --- | --- | --- |
-| AD-1 | In-browser Web Slideshow / Presenter Mode are **shipped** (FR-15 / FR-16) but are **not** the hard offline Sabbath guarantee; PPTX download remains primary for venue reliability. | Slideshow is best-effort (OQ-5). |
-| AD-5 | The Go API has one request gate, and its path matcher **is** the authorization boundary — anything it does not match is served with no session check at all | Scripture GET and the three screens are inside the matcher; no session → 401 / login, Deck unchanged. As-built until cutover: `internal/gate`. |
-| AD-7 | `buildSlidePlan` is the single source of slide order and content for every surface. | Slideshow and projector do not order themselves. |
-| AD-10 | presenter↔projector sync goes through the single `@/lib/present-channel` `BroadcastChannel` module; no surface opens its own channel name or message shape. | LC-10, unchanged for the projector leg. Plan identity **has** shipped — every shared-state variant carries `planIdentity` (`src/lib/present-channel.ts`) — so this row's old claim that it was unbuilt is corrected here. **Superseded in part by AD-37 (DEC-006):** the *no server realtime channel* clause, for the remote-to-laptop leg only. The remote never opens this channel. |
-| AD-12 | `buildSlidePlan` outputs a fully hydrated AST (Fat Payload) with exact rendering coordinates, fonts, colors, and resolved text content. | Dumb renderer. |
-| AD-23 | transition style is **one app-wide value** in `settings` (`slide_transition`), and each style is described **exactly once**, in `src/lib/transitions.ts` | Live-session override may travel on the channel; PPTX does not follow. |
-| AD-24 | The room-facing surface is closed to operator chrome, in any form, under any setting: the projector, the web slideshow and the PPTX never read it. | Projected SPA shell. |
-| AD-25 | A **shipped reference corpus** … is **developer-owned data with exactly one writer**, and the committed file is authoritative. | Verse tables. |
-| AD-26 | **The corpus code is globally unique across locales, and it is the cross-boundary key** | Verse lookup. |
-| AD-27 | A book has **one canonical identity, stable across every translation, carrying no display text at all.** | [PARTIAL] — the AD names book-name debt. |
-| AD-28 | On an **operator surface** the scope is the **chosen translation alone** | Verse overlay. |
-| AD-29 | a projector→presenter message may report **the sender's own condition and nothing else, ever** | Liveness. |
-| AD-30 | The Operator UI and projector are a React SPA that MUST NOT open SQLite. | Screens and LC-10/LC-14 on `spa`; LC-9 on `api`. |
-| AD-33 | Every Song Set entry, however many exist, shares one authored trio: **Title** is a free canvas with its own background, the same authority as `general`. **Verse** and **Reff** are free canvases too, but authored on a **blank** canvas — no background is chosen at authoring time; background resolves at hydrate/live time through AD-34's order. | Presenter renders whatever background AD-33's resolution order (plus this component's own live override, AD-34) hands it for the current Verse/Reff slide; it authors nothing (Registry's lane). |
-| AD-34 | FR-33 lets the Operator change the background of the projected Verse/Reff slide during a live service … it travels over AD-10's channel carrying the same plan-identity discipline, is visible immediately on the projector, and touches neither the Service payload nor the Registry nor any table. It does not survive past that session … Ownership follows Supplement S11: Admin owns the Background Library and its global default; the Operator owns the moment. | LC-10 carries the override; LC-14 holds it in window memory only, for the length of one presenter session (UC-27). |
-
-| AD-37 | *(Rule, quoted)* A remote control device sends **intents to the presenting client**, and the presenting client remains the **only** sender the projector follows. The remote never joins AD-10's presenter channel, mints no new message variant … and holds no authority the presenter must adopt. **The laptop-to-projector path MUST keep working with the remote closed, asleep, or off the network** … Reaching a presenting client is a **deliberate act, not a consequence of authentication**: a signed-in Operator elsewhere MUST NOT be able to drive a screen they did not connect to … Liveness of the remote is **not** liveness of the projector — AD-29 owns that predicate … and a remote's silence MUST NOT move it in either direction. | LC-17 accepts an intent only from a remote holding a live pairing (LC-18), and forwards it to the presenting client, which applies it exactly as if the Operator had pressed the key there. LC-14's liveness evaluator gains **no** input from the relay: a dead remote and a dead projector are different facts and AD-29 owns the second one. The relay is absent from the projector path entirely, which is how the third sentence is satisfied by construction rather than by care. |
+| AD | How it lands here |
+| --- | --- |
+| AD-1 | Slideshow is best-effort (OQ-5). |
+| AD-5 | Scripture GET and the three screens are inside the matcher; no session → 401 / login, Deck unchanged. As-built until cutover: `internal/gate`. |
+| AD-7 | Slideshow and projector do not order themselves. |
+| AD-10 | LC-10, unchanged for the projector leg. Plan identity **has** shipped — every shared-state variant carries `planIdentity` (`src/lib/present-channel.ts`) — so this row's old claim that it was unbuilt is corrected here. **Superseded in part by AD-37 (DEC-006):** the *no server realtime channel* clause, for the remote-to-laptop leg only. The remote never opens this channel. |
+| AD-12 | Dumb renderer. |
+| AD-23 | Live-session override may travel on the channel; PPTX does not follow. |
+| AD-24 | Projected SPA shell. |
+| AD-25 | Verse tables. |
+| AD-26 | Verse lookup. |
+| AD-27 | [PARTIAL] — the AD names book-name debt. |
+| AD-28 | Verse overlay. |
+| AD-29 | Liveness. |
+| AD-30 | Screens and LC-10/LC-14 on `spa`; LC-9 on `api`. |
+| AD-33 | Presenter renders whatever background AD-33's resolution order (plus this component's own live override, AD-34) hands it for the current Verse/Reff slide; it authors nothing (Registry's lane). |
+| AD-34 | LC-10 carries the override; LC-14 holds it in window memory only, for the length of one presenter session (UC-27). |
+| AD-37 | LC-17 accepts an intent only from a remote holding a live pairing (LC-18), and forwards it to the presenting client, which applies it exactly as if the Operator had pressed the key there. LC-14's liveness evaluator gains **no** input from the relay: a dead remote and a dead projector are different facts and AD-29 owns the second one. The relay is absent from the projector path entirely, which is how the third sentence is satisfied by construction rather than by care. |
 
 ## Failure Behaviour · [guarded]
 

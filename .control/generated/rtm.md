@@ -9,73 +9,83 @@ rtm:
   FR: FR-1
   DEC: []
   UC: UC-1
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W10-01
+  spec: W10
+  release: intake-lyrics
+  test:
+  - tests/hub-go-http.test.mjs
+  - tests/parser.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-10
   DEC: []
   UC: UC-7
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-05
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/services-api.test.mjs
+  - tests/services-go-http.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-11
   DEC: []
   UC: UC-5
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-03
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/services-lib.test.mjs
+  - tests/worship-form-fields.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-11
   FR: FR-12
   DEC: []
   UC: UC-17
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W10-03
+  spec: W10
+  release: intake-lyrics
+  test:
+  - tests/hub-go-http.test.mjs
+  - tests/parser.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-13
   DEC: []
   UC: UC-6
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-04
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/pptx-go-http.test.mjs
+  - tests/slide-plan.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-5
   FR: FR-14
   DEC: []
   UC: UC-18
-  story: 2-1
-  wave: W2
+  ticket: W2-2-1
+  spec: W2
   release: go-spa-cutover
   test:
   - tests/go-http-gate.test.mjs
@@ -88,8 +98,8 @@ rtm:
   FR: FR-14
   DEC: []
   UC: UC-18
-  story: 2-2
-  wave: W2
+  ticket: W2-2-2
+  spec: W2
   release: go-spa-cutover
   test:
   - tests/pptx-worker.test.mjs
@@ -102,8 +112,8 @@ rtm:
   FR: FR-14
   DEC: []
   UC: UC-18
-  story: 2-3
-  wave: W2
+  ticket: W2-2-3
+  spec: W2
   release: go-spa-cutover
   test:
   - tests/pptx-go-http.test.mjs
@@ -116,99 +126,113 @@ rtm:
   FR: FR-15
   DEC: []
   UC: UC-11
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W7-01
+  spec: W7
+  release: presenter-live
+  test:
+  - tests/present-channel.test.mjs
+  - tests/presenter-model.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-6
   FR: FR-16
   DEC: []
   UC: UC-12
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W7-02
+  spec: W7
+  release: presenter-live
+  test:
+  - tests/acceptance-fr16-fr19-fr28.test.mjs
+  - tests/projected-shell.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-7
   FR: FR-17
   DEC: []
   UC: UC-4
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-02
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/acceptance-fr09-slide-preview.test.mjs
+  - tests/services-go-http.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-8
   FR: FR-18
   DEC: []
   UC: UC-9
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W9-01
+  spec: W9
+  release: hub-admin-mgmt
+  test:
+  - tests/auth-go-http.test.mjs
+  - tests/auth-http.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-6
   FR: FR-19
   DEC: []
   UC: UC-13
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W7-03
+  spec: W7
+  release: presenter-live
+  test:
+  - tests/acceptance-fr16-fr19-fr28.test.mjs
+  - tests/scripture.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-2
   DEC: []
   UC: UC-1
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W10-01
+  spec: W10
+  release: intake-lyrics
+  test:
+  - tests/hub-go-http.test.mjs
+  - tests/parser.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-2
   DEC: []
   UC: UC-2
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W10-02
+  spec: W10
+  release: intake-lyrics
+  test:
+  - tests/services-create.test.mjs
+  - tests/services-lib.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
   DEC: []
   UC: UC-14
-  story: '1'
-  wave: W3
+  ticket: W3-1
+  spec: W3
   release: dec004-completion
   test:
   - tests/artifact-editor-controls.test.mjs
@@ -225,8 +249,8 @@ rtm:
   FR: FR-21
   DEC: []
   UC: UC-15
-  story: 1-1
-  wave: W1
+  ticket: W1-1-1
+  spec: W1
   release: registry-order
   test:
   - tests/registry-reorder-delete-http.test.mjs
@@ -239,8 +263,8 @@ rtm:
   FR: FR-21
   DEC: []
   UC: UC-16
-  story: 1-2
-  wave: W1
+  ticket: W1-1-2
+  spec: W1
   release: registry-order
   test:
   - tests/registry-sync-artifact.test.mjs
@@ -253,8 +277,8 @@ rtm:
   FR: FR-21
   DEC: []
   UC: UC-16
-  story: '3'
-  wave: W3
+  ticket: W3-3
+  spec: W3
   release: dec004-completion
   test:
   - tests/sync-artifact-button.test.mjs
@@ -270,60 +294,68 @@ rtm:
   FR: FR-22
   DEC: []
   UC: UC-13
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W7-03
+  spec: W7
+  release: presenter-live
+  test:
+  - tests/acceptance-fr16-fr19-fr28.test.mjs
+  - tests/scripture.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-10
   FR: FR-23
   DEC: []
   UC: UC-22
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W9-05
+  spec: W9
+  release: hub-admin-mgmt
+  test:
+  - tests/song-books-seed.test.mjs
+  - tests/hymns-api.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-10
   FR: FR-24
   DEC: []
   UC: UC-22
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W9-05
+  spec: W9
+  release: hub-admin-mgmt
+  test:
+  - tests/song-books-seed.test.mjs
+  - tests/hymns-api.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-10
   FR: FR-25
   DEC: []
   UC: UC-10
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W9-02
+  spec: W9
+  release: hub-admin-mgmt
+  test:
+  - tests/operator-i18n-guard.test.mjs
+  - tests/i18n.test.mjs
+  status: done
   exempt: false
-  broken_at: story
-- BG: BG-2
-  CAP: CAP-3
+  green: true
+  broken_at: ''
+- BG: BG-3
+  CAP: CAP-5
   FR: FR-26
   DEC: []
   UC: ''
-  story: ''
-  wave: ''
+  ticket: ''
+  spec: ''
   release: ''
   test: []
   status: ''
@@ -335,60 +367,68 @@ rtm:
   FR: FR-27
   DEC: []
   UC: UC-2
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W10-02
+  spec: W10
+  release: intake-lyrics
+  test:
+  - tests/services-create.test.mjs
+  - tests/services-lib.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-28
   DEC: []
   UC: UC-23
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-07
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/acceptance-fr16-fr19-fr28.test.mjs
+  - tests/services-lib.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-29
   DEC: []
   UC: UC-24
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W6-01
+  spec: W6
+  release: registry-extensions
+  test:
+  - tests/registry.test.mjs
+  - tests/registry-go-http.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-3
   DEC: []
   UC: UC-21
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W9-04
+  spec: W9
+  release: hub-admin-mgmt
+  test:
+  - tests/announcement-sets.test.mjs
+  - tests/announcements-url.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
   DEC: []
   UC: UC-14
-  story: '1'
-  wave: W3
+  ticket: W3-1
+  spec: W3
   release: dec004-completion
   test:
   - tests/artifact-editor-controls.test.mjs
@@ -405,60 +445,66 @@ rtm:
   FR: FR-31
   DEC: []
   UC: UC-25
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W6-02
+  spec: W6
+  release: registry-extensions
+  test:
+  - tests/background-library.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-32
   DEC: []
   UC: UC-26
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-08
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/worship-form-fields.test.mjs
+  - tests/worship-form-ui.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-6
   FR: FR-33
   DEC: []
   UC: UC-27
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W7-04
+  spec: W7
+  release: presenter-live
+  test:
+  - tests/background-library.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-34
   DEC: []
   UC: UC-28
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W10-04
+  spec: W10
+  release: intake-lyrics
+  test:
+  - tests/lyric-editor-ui.test.mjs
+  - tests/save-to-book-go-http.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-6
   FR: FR-35
   DEC: []
   UC: UC-29
-  story: 5-1
-  wave: W5
+  ticket: W5-5-1
+  spec: W5
   release: presenter-remote
   test:
   - tests/remote-control-go-http.test.mjs
@@ -472,8 +518,8 @@ rtm:
   FR: FR-35
   DEC: []
   UC: UC-29
-  story: 5-2
-  wave: W5
+  ticket: W5-5-2
+  spec: W5
   release: presenter-remote
   test:
   - tests/remote-presenting-client.test.mjs
@@ -486,8 +532,8 @@ rtm:
   FR: FR-35
   DEC: []
   UC: UC-29
-  story: 5-3
-  wave: W5
+  ticket: W5-5-3
+  spec: W5
   release: presenter-remote
   test:
   - tests/remote-screen.test.mjs
@@ -500,12 +546,11 @@ rtm:
   FR: FR-4
   DEC: []
   UC: UC-20
-  story: '1'
-  wave: W4
+  ticket: W3-2
+  spec: W3
   release: dec004-completion
   test:
-  - tests/worship-form-fields.test.mjs
-  - tests/services-create.test.mjs
+  - tests/artifact-preview.test.mjs
   - tests/i18n.test.mjs
   status: done
   exempt: false
@@ -516,23 +561,8 @@ rtm:
   FR: FR-4
   DEC: []
   UC: UC-20
-  story: '2'
-  wave: W3
-  release: dec004-completion
-  test:
-  - tests/artifact-preview.test.mjs
-  - tests/i18n.test.mjs
-  status: done
-  exempt: false
-  green: true
-  broken_at: ''
-- BG: BG-1
-  CAP: CAP-2
-  FR: FR-5
-  DEC: []
-  UC: UC-20
-  story: '1'
-  wave: W4
+  ticket: W4-1
+  spec: W4
   release: dec004-completion
   test:
   - tests/worship-form-fields.test.mjs
@@ -547,8 +577,8 @@ rtm:
   FR: FR-5
   DEC: []
   UC: UC-20
-  story: '2'
-  wave: W3
+  ticket: W3-2
+  spec: W3
   release: dec004-completion
   test:
   - tests/artifact-preview.test.mjs
@@ -559,11 +589,11 @@ rtm:
   broken_at: ''
 - BG: BG-1
   CAP: CAP-2
-  FR: FR-6
+  FR: FR-5
   DEC: []
   UC: UC-20
-  story: '1'
-  wave: W4
+  ticket: W4-1
+  spec: W4
   release: dec004-completion
   test:
   - tests/worship-form-fields.test.mjs
@@ -578,11 +608,27 @@ rtm:
   FR: FR-6
   DEC: []
   UC: UC-20
-  story: '2'
-  wave: W3
+  ticket: W3-2
+  spec: W3
   release: dec004-completion
   test:
   - tests/artifact-preview.test.mjs
+  - tests/i18n.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-2
+  FR: FR-6
+  DEC: []
+  UC: UC-20
+  ticket: W4-1
+  spec: W4
+  release: dec004-completion
+  test:
+  - tests/worship-form-fields.test.mjs
+  - tests/services-create.test.mjs
   - tests/i18n.test.mjs
   status: done
   exempt: false
@@ -593,38 +639,44 @@ rtm:
   FR: FR-7
   DEC: []
   UC: UC-19
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W9-03
+  spec: W9
+  release: hub-admin-mgmt
+  test:
+  - tests/transitions.test.mjs
+  - tests/hub-go-http.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-8
   DEC: []
   UC: UC-3
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-01
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/services-go-http.test.mjs
+  - tests/services-api.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-9
   DEC: []
   UC: UC-8
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W8-06
+  spec: W8
+  release: hub-service-ops
+  test:
+  - tests/acceptance-fr09-slide-preview.test.mjs
+  - tests/slide-plan.test.mjs
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 ```

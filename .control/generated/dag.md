@@ -4,38 +4,94 @@
 
 ```yaml
 dag:
-- wave: W1
+- spec: W1
   order:
   - parallel:
-    - 1-1
+    - W1-1-1
   - parallel:
-    - 1-2
-- wave: W2
+    - W1-1-2
+- spec: W10
   order:
   - parallel:
-    - 2-1
+    - W10-01
   - parallel:
-    - 2-2
+    - W10-02
   - parallel:
-    - 2-3
-- wave: W3
+    - W10-03
+  - parallel:
+    - W10-04
+- spec: W2
   order:
   - parallel:
-    - '1'
+    - W2-2-1
   - parallel:
-    - '2'
+    - W2-2-2
   - parallel:
-    - '3'
-- wave: W4
+    - W2-2-3
+- spec: W3
   order:
   - parallel:
-    - '1'
-- wave: W5
+    - W3-1
+  - parallel:
+    - W3-2
+  - parallel:
+    - W3-3
+- spec: W4
   order:
   - parallel:
-    - 5-1
+    - W4-1
+- spec: W5
+  order:
   - parallel:
-    - 5-2
+    - W5-5-1
   - parallel:
-    - 5-3
+    - W5-5-2
+  - parallel:
+    - W5-5-3
+- spec: W6
+  order:
+  - parallel:
+    - W6-01
+  - parallel:
+    - W6-02
+- spec: W7
+  order:
+  - parallel:
+    - W7-01
+  - parallel:
+    - W7-02
+  - parallel:
+    - W7-03
+  - parallel:
+    - W7-04
+- spec: W8
+  order:
+  - parallel:
+    - W8-01
+  - parallel:
+    - W8-02
+  - parallel:
+    - W8-03
+  - parallel:
+    - W8-04
+  - parallel:
+    - W8-05
+  - parallel:
+    - W8-06
+  - parallel:
+    - W8-07
+  - parallel:
+    - W8-08
+- spec: W9
+  order:
+  - parallel:
+    - W9-01
+  - parallel:
+    - W9-02
+  - parallel:
+    - W9-03
+  - parallel:
+    - W9-04
+  - parallel:
+    - W9-05
 ```
