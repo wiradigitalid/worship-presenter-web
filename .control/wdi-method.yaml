@@ -1,4 +1,18 @@
 # Written by wdi-method install/update. A trace, not a lockfile.
-wdi_method: 0.6.7
+wdi_method: 0.6.11
 bmad_method: 6.11.0
-installed_at: 2026-09-06
+engines:
+  source: local
+  package: mattpocock/skills
+  lock: skills-lock.json
+  model_invocation: enabled
+  # sha256 of each SKILL.md AFTER the flag was stripped, first 12. Informational:
+  # engines-invocable decides by looking for the flag, not by comparing these.
+  skills:
+    to-spec: a4f330cad50a
+    to-tickets: 148909487edd
+    implement: 01e26295f110
+    tdd: 193b791c489d
+    code-review: 3abbdfe52540
+    domain-modeling: dd4c753a617b
+installed_at: 2026-09-07

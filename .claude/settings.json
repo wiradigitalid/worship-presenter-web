@@ -2,7 +2,9 @@
   "worktree": {
     "baseRef": "fresh",
     "bgIsolation": "worktree",
-    "symlinkDirectories": ["node_modules"]
+    "symlinkDirectories": [
+      "node_modules"
+    ]
   },
   "hooks": {
     "PreToolUse": [
@@ -28,6 +30,23 @@
           }
         ]
       }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Skill(bmad-spec)",
+      "Skill(bmad-build)",
+      "Skill(bmad-build-auto)",
+      "Skill(bmad-code-review)",
+      "Skill(bmad-retrospective)",
+      "Skill(bmad-agent-dev)",
+      "Skill(bmad-create-epics-and-stories)",
+      "Skill(bmad-create-story)",
+      "Skill(bmad-dev-story)",
+      "Skill(bmad-dev-auto)",
+      "Skill(bmad-quick-dev)",
+      "Skill(bmad-sprint-planning)",
+      "Skill(bmad-sprint-status)"
     ]
   }
 }

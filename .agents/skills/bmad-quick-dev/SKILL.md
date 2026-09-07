@@ -1,4 +1,5 @@
 ---
+disable-model-invocation: true
 name: bmad-quick-dev
 description: "Deprecated: forwards to bmad-build. Do not use unless invoked by name."
 ---

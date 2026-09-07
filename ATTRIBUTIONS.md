@@ -64,3 +64,24 @@ are covered by the repository's MIT licence.
 
 Every npm dependency carries its own licence. `npm ls --all` lists them, and
 each package's licence text ships inside `node_modules`.
+
+## Agent skills under `.claude/skills/`
+
+Six skills are copied in from [mattpocock/skills](https://github.com/mattpocock/skills),
+MIT licensed: `to-spec`, `to-tickets`, `implement`, `tdd`, `code-review`, and
+`domain-modeling`. `skills-lock.json` at the repository root records the source
+and a content hash for each. They are the engines WDI Method drives at G5, and
+WDI Method requires them in the repository rather than as a user-level plugin —
+`.control/wdi-method.yaml` carries that trace, and the reason is in the method's
+own `why/README.md`.
+
+**Three of them are modified here, in one line each.** `to-spec`, `to-tickets`
+and `implement` ship with `disable-model-invocation: true`, which stops any
+skill from invoking them; `wdi-method` removes that key from this repository's
+copies so `wdi-build` can drive them, and writes a guard line in its place
+naming which skills may. The bodies are the author's, untouched.
+
+The `bmad-*` skills come from [BMad Method](https://github.com/bmad-code-org/BMAD-METHOD)
+and are installed by its own installer. Thirteen of them are marked
+`disable-model-invocation: true` here because this method retires them at G5;
+that is a one-line frontmatter change and their bodies are untouched too.

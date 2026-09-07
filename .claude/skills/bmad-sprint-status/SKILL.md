@@ -1,4 +1,5 @@
 ---
+disable-model-invocation: true
 name: bmad-sprint-status
 description: 'Deprecated — forwards to bmad-sprint-planning (status view).'
 ---
