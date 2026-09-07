@@ -537,3 +537,36 @@ export async function uploadImageFile(file: File): Promise<{ url: string }> {
   return { url: data.url };
 }
 
+export async function fetchBackgroundLibrary(): Promise<Array<{ id: number; url: string }>> {
+  try {
+    const res = await fetch('/api/admin/background-library', { credentials: 'same-origin' });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { images?: Array<{ id: number; url: string }> };
+    return data.images ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchAvailableSongSets(): Promise<Array<{ variableName: string; title: string }>> {
+  try {
+    const res = await fetch('/api/admin/song-set-entries', { credentials: 'same-origin' });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { entries?: Array<{ variableName: string; title: string }> };
+    return data.entries ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchAvailableAnnouncementSets(): Promise<Array<{ id: number; label: string }>> {
+  try {
+    const res = await fetch('/api/admin/announcement-sets', { credentials: 'same-origin' });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { sets?: Array<{ id: number; label: string }> };
+    return data.sets ?? [];
+  } catch {
+    return [];
+  }
+}
+

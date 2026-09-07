@@ -1,6 +1,6 @@
 # Issue 05 — Song Sets UI 2-Column Overhaul
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Summary
 Satisfies UC-24 (FR-29, AD-38). Redesign the Song Sets management screen into a clean 2-column layout mirroring Main Spine:

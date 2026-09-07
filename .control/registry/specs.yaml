@@ -534,7 +534,7 @@ waves:
           - tests/save-to-book-go-http.test.mjs
 
   - id: W11
-    status: in-progress
+    status: closed
     release: artifacts-overhaul
     prd: [offline-deck]
     fr: [FR-20, FR-21, FR-29, FR-30, FR-31]

@@ -1,6 +1,6 @@
 # Issue 03 — Canvas Context Menu & Drag-to-Create
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Summary
 Satisfies UC-14 (FR-20, AD-38). Clean up sidebar clutter by providing contextual right-click controls on canvas objects and drag-to-create bounding box interaction for Text and Rectangle elements.

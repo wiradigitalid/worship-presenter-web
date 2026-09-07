@@ -20,6 +20,20 @@ dag:
     - W10-03
   - parallel:
     - W10-04
+- spec: W11
+  order:
+  - parallel:
+    - W11-01
+  - parallel:
+    - W11-02
+  - parallel:
+    - W11-03
+  - parallel:
+    - W11-04
+  - parallel:
+    - W11-05
+  - parallel:
+    - W11-06
 - spec: W2
   order:
   - parallel:

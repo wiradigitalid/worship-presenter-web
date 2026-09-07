@@ -1,6 +1,6 @@
 # Issue 02 — Canvas Engine Modernization: Textbox, Image, and Background
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Summary
 Satisfies UC-14 (FR-20, FR-30, AD-38). Modernize the Fabric.js canvas editor in `src/components/admin/ArtifactEditor.tsx`:

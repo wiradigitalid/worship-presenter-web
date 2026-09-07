@@ -1,6 +1,6 @@
 # Issue 06 — Announcement Sets UI 3-Tier Overhaul
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Summary
 Satisfies UC-14, UC-15 (FR-20, FR-21, AD-38). Redesign Announcement Sets screen into a clean 3-tier hierarchy:

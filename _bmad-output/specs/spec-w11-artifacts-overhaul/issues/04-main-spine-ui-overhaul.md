@@ -1,6 +1,6 @@
 # Issue 04 — Main Spine UI Overhaul
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Summary
 Satisfies UC-15 (FR-21, AD-38). Overhaul the Main Spine template list and slide details UI to match the verified prototype:

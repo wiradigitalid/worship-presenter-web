@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useT } from '@/lib/i18n/operator';
 import ArtifactEditor from '@/components/admin/ArtifactEditor';
 import { createSongSetTrioAdapter } from '@/lib/registry/canvas-adapters';
@@ -15,31 +14,19 @@ export interface SongSetEntry {
   updatedAt: string;
 }
 
-const VARIABLE_NAME_REGEX = /^[a-z][a-z0-9_-]{0,79}$/;
-
 type SongSetLayoutRole = 'title' | 'verse' | 'reff';
 
 export function SongSetEntriesPanel() {
   const { t } = useT();
 
   const [entries, setEntries] = useState<SongSetEntry[]>([]);
+  const [selectedVarName, setSelectedVarName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // New entry form state
-  const [newVariableName, setNewVariableName] = useState('');
-  const [newTitle, setNewTitle] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [varNameError, setVarNameError] = useState<string | null>(null);
-  const [titleError, setTitleError] = useState<string | null>(null);
-
-  // Rename modal/inline state
-  const [editingVarName, setEditingVarName] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editTitleError, setEditTitleError] = useState<string | null>(null);
+  // Rename state
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [draftTitle, setDraftTitle] = useState('');
   const [renaming, setRenaming] = useState(false);
-
-  // Delete state
-  const [deletingVarName, setDeletingVarName] = useState<string | null>(null);
 
   // Layout trio active role
   const [selectedRole, setSelectedRole] = useState<SongSetLayoutRole>('title');
@@ -53,7 +40,12 @@ export function SongSetEntriesPanel() {
         throw new Error('Failed to load');
       }
       const data = (await res.json()) as { entries: SongSetEntry[] };
-      setEntries(data.entries ?? []);
+      const list = data.entries ?? [];
+      setEntries(list);
+      if (list.length > 0 && !selectedVarName) {
+        setSelectedVarName(list[0].variableName);
+        setDraftTitle(list[0].title);
+      }
     } catch {
       toast.error(t('admin.songSets.loadFailed'));
     } finally {
@@ -65,37 +57,32 @@ export function SongSetEntriesPanel() {
     void fetchEntries();
   }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedVar = newVariableName.trim();
-    const trimmedTitle = newTitle.trim();
+  const activeEntry = entries.find((e) => e.variableName === selectedVarName) ?? entries[0] ?? null;
 
-    let hasError = false;
-    if (!trimmedVar || !VARIABLE_NAME_REGEX.test(trimmedVar)) {
-      setVarNameError(t('admin.songSets.variableNameInvalid'));
-      hasError = true;
-    } else {
-      setVarNameError(null);
+  useEffect(() => {
+    if (activeEntry) {
+      setDraftTitle(activeEntry.title);
+      setIsRenaming(false);
     }
+  }, [activeEntry?.variableName]);
 
-    if (!trimmedTitle || trimmedTitle.length > 120) {
-      setTitleError(t('admin.songSets.titleInvalid'));
-      hasError = true;
-    } else {
-      setTitleError(null);
+  const handleCreateAuto = async () => {
+    let nextNum = entries.length + 1;
+    let candidateVar = `song_set_${nextNum}`;
+    while (entries.some((e) => e.variableName === candidateVar)) {
+      nextNum++;
+      candidateVar = `song_set_${nextNum}`;
     }
+    const defaultTitle = `Song Set ${nextNum}`;
 
-    if (hasError) return;
-
-    setCreating(true);
     try {
       const res = await fetch('/api/admin/song-set-entries', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          variableName: trimmedVar,
-          title: trimmedTitle,
+          variableName: candidateVar,
+          title: defaultTitle,
         }),
       });
 
@@ -111,51 +98,42 @@ export function SongSetEntriesPanel() {
 
       const created = (await res.json()) as SongSetEntry;
       setEntries((prev) => [...prev, created].sort((a, b) => a.position - b.position));
-      setNewVariableName('');
-      setNewTitle('');
+      setSelectedVarName(created.variableName);
+      setDraftTitle(created.title);
+      setIsRenaming(false);
       toast.success(t('admin.songSets.created').replace('{title}', created.title));
     } catch {
       toast.error(t('admin.songSets.createFailed'));
-    } finally {
-      setCreating(false);
     }
   };
 
-  const startRename = (entry: SongSetEntry) => {
-    setEditingVarName(entry.variableName);
-    setEditTitle(entry.title);
-    setEditTitleError(null);
-  };
-
-  const cancelRename = () => {
-    setEditingVarName(null);
-    setEditTitle('');
-    setEditTitleError(null);
-  };
-
-  const handleSaveRename = async (entry: SongSetEntry) => {
-    const trimmedTitle = editTitle.trim();
+  const handleSaveRename = async () => {
+    if (!activeEntry) return;
+    const trimmedTitle = draftTitle.trim();
     if (!trimmedTitle || trimmedTitle.length > 120) {
-      setEditTitleError(t('admin.songSets.titleInvalid'));
+      toast.error(t('admin.songSets.titleInvalid'));
       return;
     }
 
     setRenaming(true);
     try {
-      const res = await fetch(`/api/admin/song-set-entries/${encodeURIComponent(entry.variableName)}`, {
-        method: 'PATCH',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: trimmedTitle,
-          updatedAt: entry.updatedAt,
-        }),
-      });
+      const res = await fetch(
+        `/api/admin/song-set-entries/${encodeURIComponent(activeEntry.variableName)}`,
+        {
+          method: 'PATCH',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: trimmedTitle,
+            updatedAt: activeEntry.updatedAt,
+          }),
+        }
+      );
 
       if (res.status === 409) {
         toast.error(t('admin.songSets.staleConflict'));
         void fetchEntries();
-        cancelRename();
+        setIsRenaming(false);
         return;
       }
 
@@ -169,7 +147,7 @@ export function SongSetEntriesPanel() {
         prev.map((item) => (item.variableName === updated.variableName ? updated : item))
       );
       toast.success(t('admin.songSets.renamed').replace('{title}', updated.title));
-      cancelRename();
+      setIsRenaming(false);
     } catch {
       toast.error(t('admin.songSets.renameFailed'));
     } finally {
@@ -177,7 +155,8 @@ export function SongSetEntriesPanel() {
     }
   };
 
-  const handleDelete = async (entry: SongSetEntry) => {
+  const handleDelete = async (entry: SongSetEntry, e: React.MouseEvent) => {
+    e.stopPropagation();
     const ok = window.confirm(
       t('admin.songSets.confirmDelete')
         .replace('{title}', entry.title)
@@ -185,16 +164,18 @@ export function SongSetEntriesPanel() {
     );
     if (!ok) return;
 
-    setDeletingVarName(entry.variableName);
     try {
-      const res = await fetch(`/api/admin/song-set-entries/${encodeURIComponent(entry.variableName)}`, {
-        method: 'DELETE',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          updatedAt: entry.updatedAt,
-        }),
-      });
+      const res = await fetch(
+        `/api/admin/song-set-entries/${encodeURIComponent(entry.variableName)}`,
+        {
+          method: 'DELETE',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            updatedAt: entry.updatedAt,
+          }),
+        }
+      );
 
       if (res.status === 409) {
         toast.error(t('admin.songSets.staleConflict'));
@@ -207,229 +188,229 @@ export function SongSetEntriesPanel() {
         return;
       }
 
-      setEntries((prev) => prev.filter((item) => item.variableName !== entry.variableName));
+      setEntries((prev) => {
+        const next = prev.filter((item) => item.variableName !== entry.variableName);
+        if (selectedVarName === entry.variableName) {
+          setSelectedVarName(next[0]?.variableName ?? null);
+        }
+        return next;
+      });
       toast.success(t('admin.songSets.deleted').replace('{title}', entry.title));
     } catch {
       toast.error(t('admin.songSets.deleteFailed'));
-    } finally {
-      setDeletingVarName(null);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('admin.songSets.title')}</CardTitle>
-          <CardDescription>{t('admin.songSets.description')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <h3 className="text-sm font-semibold">{t('admin.songSets.createTitle')}</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="song-set-varname">{t('admin.songSets.variableName')}</Label>
-                <Input
-                  id="song-set-varname"
-                  placeholder="e.g. opening_song_bt"
-                  value={newVariableName}
-                  disabled={creating}
-                  onChange={(e) => {
-                    setNewVariableName(e.target.value);
-                    if (varNameError) setVarNameError(null);
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">{t('admin.songSets.variableNameHint')}</p>
-                {varNameError ? (
-                  <p role="alert" className="text-xs font-medium text-destructive">
-                    {varNameError}
-                  </p>
-                ) : null}
-              </div>
+    <div className="grid grid-cols-1 lg:grid-cols-[330px_minmax(0,1fr)] gap-6">
+      {/* Panel Kiri: Add New Song Set & List */}
+      <aside className="space-y-4">
+        {/* Tombol New Song Set otomatis */}
+        <div className="rounded-xl border border-border bg-card p-3.5 shadow-sm">
+          <Button
+            type="button"
+            onClick={() => void handleCreateAuto()}
+            className="w-full bg-primary hover:bg-blue-600 text-white py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Song Set</span>
+          </Button>
+        </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="song-set-title">{t('admin.songSets.entryTitle')}</Label>
-                <Input
-                  id="song-set-title"
-                  placeholder="e.g. Opening Song"
-                  value={newTitle}
-                  disabled={creating}
-                  onChange={(e) => {
-                    setNewTitle(e.target.value);
-                    if (titleError) setTitleError(null);
-                  }}
-                />
-                {titleError ? (
-                  <p role="alert" className="text-xs font-medium text-destructive">
-                    {titleError}
-                  </p>
-                ) : null}
-              </div>
-            </div>
+        {/* List Song Sets */}
+        <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-foreground">Configured Song Sets</span>
+            <span className="text-[11px] text-muted-foreground font-mono">{entries.length} items</span>
+          </div>
 
-            <Button type="submit" disabled={creating}>
-              {creating ? t('admin.songSets.adding') : t('admin.songSets.add')}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('admin.songSets.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
           {loading ? (
-            <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
+            <div className="flex h-32 items-center justify-center text-xs text-muted-foreground">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
               <span>Loading…</span>
             </div>
           ) : entries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('admin.songSets.empty')}</p>
+            <p className="text-xs text-muted-foreground p-2">{t('admin.songSets.empty')}</p>
           ) : (
-            <div className="divide-y divide-border rounded-xl border border-border">
+            <div className="space-y-1.5 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
               {entries.map((entry) => {
-                const isEditing = editingVarName === entry.variableName;
-                const isDeleting = deletingVarName === entry.variableName;
-
+                const isSelected = activeEntry?.variableName === entry.variableName;
                 return (
                   <div
                     key={entry.variableName}
-                    className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      setSelectedVarName(entry.variableName);
+                      setDraftTitle(entry.title);
+                      setIsRenaming(false);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        setSelectedVarName(entry.variableName);
+                        setDraftTitle(entry.title);
+                        setIsRenaming(false);
+                      }
+                    }}
+                    className={`group flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border'
+                    }`}
                   >
-                    <div className="min-w-0 flex-1">
-                      {isEditing ? (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs text-muted-foreground">
-                              {entry.variableName}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              ({t('admin.songSets.position')}: {entry.position})
-                            </span>
-                          </div>
-                          <div className="flex max-w-md items-center gap-2">
-                            <Input
-                              value={editTitle}
-                              disabled={renaming}
-                              onChange={(e) => {
-                                setEditTitle(e.target.value);
-                                if (editTitleError) setEditTitleError(null);
-                              }}
-                              className="text-sm"
-                            />
-                            <Button
-                              type="button"
-                              size="sm"
-                              disabled={renaming}
-                              onClick={() => void handleSaveRename(entry)}
-                            >
-                              {renaming ? t('admin.songSets.renaming') : t('admin.songSets.save')}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              disabled={renaming}
-                              onClick={cancelRename}
-                            >
-                              {t('admin.songSets.cancel')}
-                            </Button>
-                          </div>
-                          {editTitleError ? (
-                            <p role="alert" className="text-xs font-medium text-destructive">
-                              {editTitleError}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-foreground">{entry.title}</h4>
-                            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-                              {entry.variableName}
-                            </span>
-                          </div>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {t('admin.songSets.position')}: {entry.position}
-                          </p>
-                        </div>
-                      )}
+                    <div className="min-w-0 pr-2">
+                      <p className="text-xs font-semibold truncate text-foreground">{entry.title}</p>
+                      <span className="text-[10px] font-mono text-muted-foreground">[{entry.variableName}]</span>
                     </div>
-
-                    {!isEditing ? (
-                      <div className="flex shrink-0 items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={isDeleting}
-                          onClick={() => startRename(entry)}
-                        >
-                          {t('admin.songSets.rename')}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          disabled={isDeleting}
-                          onClick={() => void handleDelete(entry)}
-                        >
-                          {isDeleting ? t('admin.songSets.deleting') : t('admin.songSets.delete')}
-                        </Button>
-                      </div>
-                    ) : null}
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        title={t('admin.songSets.delete')}
+                        onClick={(e) => void handleDelete(entry, e)}
+                        className="h-7 w-7 p-1 text-destructive hover:bg-destructive/20 hover:text-destructive"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 );
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </aside>
 
-      {/* Shared Layout Trio Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('admin.songSets.layouts.title')}</CardTitle>
-          <CardDescription>{t('admin.songSets.layouts.description')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1 text-xs text-muted-foreground rounded-lg border border-border bg-muted/40 p-3">
-            <p><strong>Shared.</strong> {t('admin.songSets.layouts.sharedNote')}</p>
-            <p><strong>Frozen per service.</strong> {t('admin.songSets.layouts.frozenNote')}</p>
+      {/* Panel Kanan: Rename Card, Trio Switcher & Canvas Workspace */}
+      <section className="space-y-4 min-w-0">
+        {!activeEntry ? (
+          <div className="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-xs text-muted-foreground">
+            No song set selected. Click "New Song Set" to create one.
           </div>
+        ) : (
+          <>
+            {/* Rename Header Card */}
+            <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-3">
+                {isRenaming ? (
+                  <Input
+                    value={draftTitle}
+                    disabled={renaming}
+                    onChange={(e) => setDraftTitle(e.target.value)}
+                    className="text-base font-semibold max-w-sm"
+                    autoFocus
+                  />
+                ) : (
+                  <span className="text-base font-bold text-foreground">{activeEntry.title}</span>
+                )}
+                <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                  [slot: {activeEntry.variableName}]
+                </span>
+              </div>
 
-          <div className="flex gap-2">
-            {(['title', 'verse', 'reff'] as const).map((role) => (
-              <Button
-                key={role}
-                type="button"
-                variant={selectedRole === role ? 'secondary' : 'outline'}
-                size="sm"
-                className="capitalize"
-                onClick={() => setSelectedRole(role)}
-              >
-                {role === 'title' ? 'Title' : role === 'verse' ? 'Verse' : 'Reff'}
-              </Button>
-            ))}
-          </div>
+              <div className="flex items-center gap-2">
+                {isRenaming ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={renaming}
+                      onClick={() => {
+                        setIsRenaming(false);
+                        setDraftTitle(activeEntry.title);
+                      }}
+                    >
+                      {t('admin.songSets.cancel')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={renaming || !draftTitle.trim()}
+                      onClick={() => void handleSaveRename()}
+                    >
+                      {renaming ? t('admin.songSets.renaming') : t('admin.songSets.save')}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsRenaming(true)}
+                  >
+                    {t('admin.songSets.rename')}
+                  </Button>
+                )}
+              </div>
+            </div>
 
-          <ArtifactEditor
-            key={`song-set-trio-${selectedRole}`}
-            adapter={songSetAdapter}
-            initialSelectedId={selectedRole}
-            hideList={true}
-            allowImages={selectedRole === 'title'}
-            bannerNote={
-              selectedRole !== 'title' ? (
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
-                  {t('admin.songSets.layouts.blankCanvasNote')}
-                </div>
-              ) : null
-            }
-          />
-        </CardContent>
-      </Card>
+            {/* Layout Trio Switcher & Canvas Workspace */}
+            <div className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm">
+              {/* Trio Selector */}
+              <div className="flex items-center gap-1.5 p-1 bg-muted rounded-lg border border-border">
+                <Button
+                  type="button"
+                  variant={selectedRole === 'title' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setSelectedRole('title')}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded transition-colors ${
+                    selectedRole === 'title'
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  1. Title Slide
+                </Button>
+                <Button
+                  type="button"
+                  variant={selectedRole === 'verse' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setSelectedRole('verse')}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded transition-colors ${
+                    selectedRole === 'verse'
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  2. Verse Layout (2/3 Formula)
+                </Button>
+                <Button
+                  type="button"
+                  variant={selectedRole === 'reff' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setSelectedRole('reff')}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded transition-colors ${
+                    selectedRole === 'reff'
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  3. Reffrain Layout
+                </Button>
+              </div>
+
+              {/* Artifact Editor for the selected trio layout */}
+              <ArtifactEditor
+                key={`song-set-trio-${selectedRole}`}
+                adapter={songSetAdapter}
+                initialSelectedId={selectedRole}
+                hideList={true}
+                allowImages={selectedRole === 'title'}
+                bannerNote={
+                  selectedRole !== 'title' ? (
+                    <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-2.5 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between">
+                      <span>📐 <strong>Auto Lyric Box: 2/3 Height Standard</strong> — Automated formula for hymn lyrics. Canvas customizes background & shapes.</span>
+                      <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30">2/3 FORMULA</span>
+                    </div>
+                  ) : null
+                }
+              />
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 }
