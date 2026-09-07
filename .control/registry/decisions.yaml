@@ -187,4 +187,21 @@ decisions:
     touches:
       - .control/memlog/autopilot-DEC-007.md
       - .control/registry/specs.yaml
+  - id: DEC-008
+    type: mandate
+    status: accepted
+    accepted_by: "kodesh87 (2026-09-07)"
+    title: Autopilot mandate for Artifacts overhaul (Main Spine, Song Sets, Announcement Sets)
+    file: .control/decisions/DEC-008-autopilot-artifacts-overhaul.md
+    mandate:
+      from_gate: G1
+      scope: all
+      parked: [ad-n]
+      smoke_test: claude-byok
+      loop: 5m
+      expires: '2026-09-14'
+    touches:
+      - .control/memlog/autopilot-DEC-008.md
+      - .control/registry/specs.yaml
+      - .control/registry/decisions.yaml
 

@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BIC Presenter Hub — Artifacts Overhaul UI/UX</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            border: '#27272a', // zinc-800
+            input: '#27272a',
+            ring: '#3b82f6',
+            background: '#09090b', // zinc-950
+            foreground: '#fafafa', // zinc-50
+            primary: {
+              DEFAULT: '#3b82f6', // blue-500
+              foreground: '#ffffff',
+            },
+            secondary: {
+              DEFAULT: '#27272a', // zinc-800
+              foreground: '#fafafa',
+            },
+            destructive: {
+              DEFAULT: '#ef4444',
+              foreground: '#ffffff',
+            },
+            muted: {
+              DEFAULT: '#18181b', // zinc-900
+              foreground: '#a1a1aa', // zinc-400
+            },
+            card: {
+              DEFAULT: '#121215',
+              foreground: '#fafafa',
+            },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #09090b;
+      color: #fafafa;
+    }
+    /* Hover-only actions rule (Poin 3) */
+    .slide-item .hover-actions {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease-in-out;
+    }
+    .slide-item:hover .hover-actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+  <!-- Top Navigation (Identik dengan Header App Asli) -->
+  <header class="border-b border-border bg-[#09090b] px-6 py-3 flex items-center justify-between sticky top-0 z-30">
+    <div class="flex items-center gap-3">
+      <div class="h-8 w-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-bold text-sm border border-primary/30">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+      </div>
+      <div>
+        <h1 class="text-sm font-semibold tracking-tight text-foreground">BIC Presenter Hub</h1>
+        <p class="text-xs text-muted-foreground">Manage presentation slides &amp; deck layout</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <nav class="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border border-border">
+        <button class="px-3 py-1 text-xs font-medium rounded-md text-muted-foreground hover:text-foreground">Dashboard</button>
+        <button class="px-3 py-1 text-xs font-medium rounded-md bg-card text-foreground shadow-sm">Artifacts</button>
+        <button class="px-3 py-1 text-xs font-medium rounded-md text-muted-foreground hover:text-foreground">Settings</button>
+      </nav>
+      <div class="h-6 w-px bg-border mx-2"></div>
+      <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-muted/40 px-2.5 py-1.5 rounded-full border border-border">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span>admin</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Artifact Sub-Navigation Tabs -->
+  <div class="border-b border-border bg-[#0e0e11] px-6 py-2 flex items-center gap-2 sticky top-[57px] z-20">
+    <button id="tabBtnSpine" onclick="setScreen('spine')" class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white text-black transition-colors shadow-sm">
+      Main spine
+    </button>
+    <button id="tabBtnSongSets" onclick="setScreen('songsets')" class="px-3.5 py-1.5 rounded-full text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+      Song Sets
+    </button>
+    <button id="tabBtnAnn" onclick="setScreen('announcements')" class="px-3.5 py-1.5 rounded-full text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+      Announcement Sets
+    </button>
+    <button id="tabBtnBg" onclick="alert('Tab Backgrounds tetap sebagai galeri aset mandiri seperti saat ini.')" class="px-3.5 py-1.5 rounded-full text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+      Backgrounds
+    </button>
+  </div>
+
+  <!-- CONTAINER UTAMA -->
+  <div class="flex-1 max-w-[1750px] w-full mx-auto p-6">
+
+    <!-- ========================================================================= -->
+    <!-- 1. SCREEN: MAIN SPINE -->
+    <!-- ========================================================================= -->
+    <div id="screenSpine" class="grid grid-cols-1 lg:grid-cols-[330px_minmax(0,1fr)] gap-6">
+
+      <!-- PANEL KIRI: TEMPLATES LIST & NEW SLIDE REGION -->
+      <aside class="space-y-4">
+
+        <!-- POIN 1 & 2: REGION "NEW SLIDE" -->
+        <div class="rounded-xl border border-border bg-card p-3.5 space-y-2.5 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground">New Slide</span>
+            <span class="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">Spine Placement</span>
+          </div>
+
+          <!-- Pilihan Jenis Slide Baru (Hanya Dropdown + Tombol Add) -->
+          <div class="flex gap-1.5 pt-0.5">
+            <select id="newSlideTypeSelect" class="flex-1 bg-background border border-border rounded-lg px-2.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary">
+              <option value="general">📄 General Slide (Canvas)</option>
+              <optgroup label="Song Sets (Dynamic)">
+                <option value="song-bt-open">🎵 Bible Talk Opening Song</option>
+                <option value="song-bt-close">🎵 Bible Talk Closing Song</option>
+                <option value="song-ds-open">🎵 Divine Service Opening Song</option>
+                <option value="song-ds-close">🎵 Divine Service Closing Song</option>
+              </optgroup>
+              <optgroup label="Announcement Sets (Dynamic)">
+                <option value="ann-break">📢 Break Time Announcements</option>
+              </optgroup>
+            </select>
+            <button onclick="addSlideToSpine()" class="bg-primary hover:bg-blue-600 text-white px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors shrink-0 shadow-sm flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>Add</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- LIST TEMPLATE (POIN 3: HOVER ACTIONS & DND REORDER) -->
+        <div class="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-foreground">Deck Sequence</span>
+            <span id="spineCountBadge" class="text-[11px] text-muted-foreground font-mono">10 slides</span>
+          </div>
+
+          <div id="spineListContainer" class="space-y-1.5 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+
+            <!-- Item 1 -->
+            <div class="slide-item flex items-center justify-between p-2 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border cursor-pointer transition-all" onclick="selectSlide(this, 'Welcome', 'general')">
+              <div class="min-w-0 pr-2">
+                <p class="text-xs font-medium truncate text-foreground">Welcome</p>
+                <span class="text-[10px] font-mono text-muted-foreground">[general]</span>
+              </div>
+              <div class="hover-actions flex items-center gap-0.5 shrink-0">
+                <button title="Move Up" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↑</button>
+                <button title="Move Down" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↓</button>
+                <button title="Clone / Duplicate" onclick="cloneSlide(event, 'Welcome')" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">❐</button>
+                <button title="Delete" onclick="deleteSlide(event, this)" class="p-1 rounded hover:bg-red-500/20 text-red-400">🗑</button>
+              </div>
+            </div>
+
+            <!-- Item 2 (Active) -->
+            <div class="slide-item active flex items-center justify-between p-2 rounded-lg border border-primary bg-primary/10 cursor-pointer transition-all" onclick="selectSlide(this, 'Bible Talk Sequence', 'general')">
+              <div class="min-w-0 pr-2">
+                <p class="text-xs font-semibold truncate text-foreground">Bible Talk Sequence</p>
+                <span class="text-[10px] font-mono text-primary/80">[general]</span>
+              </div>
+              <div class="hover-actions flex items-center gap-0.5 shrink-0">
+                <button title="Move Up" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↑</button>
+                <button title="Move Down" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↓</button>
+                <button title="Clone / Duplicate" onclick="cloneSlide(event, 'Bible Talk Sequence')" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">❐</button>
+                <button title="Delete" onclick="deleteSlide(event, this)" class="p-1 rounded hover:bg-red-500/20 text-red-400">🗑</button>
+              </div>
+            </div>
+
+            <!-- Item 3 (Song Set Dynamic Placement) -->
+            <div class="slide-item flex items-center justify-between p-2 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border cursor-pointer transition-all" onclick="selectSlide(this, 'Bible Talk Opening Song', 'song-set')">
+              <div class="min-w-0 pr-2">
+                <p class="text-xs font-medium truncate text-foreground">Bible Talk Opening Song</p>
+                <span class="text-[10px] font-mono text-amber-400">[song-set: opening_song_bt]</span>
+              </div>
+              <div class="hover-actions flex items-center gap-0.5 shrink-0">
+                <button title="Move Up" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↑</button>
+                <button title="Move Down" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↓</button>
+                <button title="Clone / Duplicate" onclick="cloneSlide(event, 'Bible Talk Opening Song')" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">❐</button>
+                <button title="Delete" onclick="deleteSlide(event, this)" class="p-1 rounded hover:bg-red-500/20 text-red-400">🗑</button>
+              </div>
+            </div>
+
+            <!-- Item 4 -->
+            <div class="slide-item flex items-center justify-between p-2 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border cursor-pointer transition-all" onclick="selectSlide(this, 'Prayer Partners', 'general')">
+              <div class="min-w-0 pr-2">
+                <p class="text-xs font-medium truncate text-foreground">Prayer Partners</p>
+                <span class="text-[10px] font-mono text-muted-foreground">[general]</span>
+              </div>
+              <div class="hover-actions flex items-center gap-0.5 shrink-0">
+                <button title="Move Up" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↑</button>
+                <button title="Move Down" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↓</button>
+                <button title="Clone / Duplicate" onclick="cloneSlide(event, 'Prayer Partners')" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">❐</button>
+                <button title="Delete" onclick="deleteSlide(event, this)" class="p-1 rounded hover:bg-red-500/20 text-red-400">🗑</button>
+              </div>
+            </div>
+
+            <!-- Item 5 (Announcement Set Dynamic Placement) -->
+            <div class="slide-item flex items-center justify-between p-2 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border cursor-pointer transition-all" onclick="selectSlide(this, 'Break Time Announcements', 'ann-set')">
+              <div class="min-w-0 pr-2">
+                <p class="text-xs font-medium truncate text-foreground">Break Time Announcements</p>
+                <span class="text-[10px] font-mono text-emerald-400">[ann-set: Break Time]</span>
+              </div>
+              <div class="hover-actions flex items-center gap-0.5 shrink-0">
+                <button title="Move Up" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↑</button>
+                <button title="Move Down" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↓</button>
+                <button title="Clone / Duplicate" onclick="cloneSlide(event, 'Break Time Announcements')" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">❐</button>
+                <button title="Delete" onclick="deleteSlide(event, this)" class="p-1 rounded hover:bg-red-500/20 text-red-400">🗑</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- PANEL KANAN: WORKSPACE CANVAS & DETAIL -->
+      <section class="space-y-4">
+
+        <!-- POIN 4: SLIDE HEADER REGION (CARD RESMI DENGAN SIKLUS RENAME/RESET KONSISTEN) -->
+        <div class="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm">
+          <div class="flex items-center gap-3">
+            <span id="slideTitleDisplay" class="text-base font-bold text-foreground">Bible Talk Sequence</span>
+            <input id="slideTitleInput" type="text" value="Bible Talk Sequence" class="hidden bg-background border border-primary rounded-lg px-2.5 py-1 text-sm font-semibold text-foreground outline-none">
+            <span id="slideTypeDisplay" class="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">[general]</span>
+          </div>
+
+          <!-- Tombol Tindakan Konsisten -->
+          <div class="flex items-center gap-2">
+            <button id="btnRename" onclick="setRenameMode(true)" class="border border-border bg-muted/60 hover:bg-muted text-foreground px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+              Rename
+            </button>
+            <button id="btnReset" onclick="resetSlideConfirm()" class="border border-border bg-muted/60 hover:bg-muted text-foreground px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+              Reset
+            </button>
+            <button id="btnCancel" onclick="setRenameMode(false)" class="hidden border border-border bg-muted/60 hover:bg-muted text-foreground px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+              Cancel
+            </button>
+            <button id="btnSave" onclick="saveRenameDone()" class="hidden bg-primary hover:bg-blue-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm">
+              Save
+            </button>
+          </div>
+        </div>
+
+        <!-- CANVAS WORKSPACE CARD -->
+        <div class="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm">
+
+          <!-- TOOLBAR ROW 1: ADD NEW ELEMENTS (POIN 9 & POIN 10) -->
+          <div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-muted/40 border border-border/80 text-xs">
+            <div class="flex items-center gap-1.5">
+              <span class="text-muted-foreground font-semibold px-1">Add:</span>
+              <button onclick="toggleDrawMode('text')" id="btnToolText" class="px-2.5 py-1 rounded bg-muted hover:bg-zinc-700 text-foreground border border-border font-medium flex items-center gap-1.5 transition-colors">
+                <span class="font-bold">T</span> Text (Drag)
+              </button>
+              <button onclick="toggleDrawMode('rect')" id="btnToolRect" class="px-2.5 py-1 rounded bg-muted hover:bg-zinc-700 text-foreground border border-border font-medium flex items-center gap-1.5 transition-colors">
+                <span>▭</span> Rectangle (Drag)
+              </button>
+              <button onclick="uploadImageMock()" class="px-2.5 py-1 rounded bg-muted hover:bg-zinc-700 text-foreground border border-border font-medium flex items-center gap-1.5 transition-colors">
+                <span>🖼</span> Image
+              </button>
+              <div class="h-4 w-px bg-border mx-1"></div>
+              <select class="bg-background border border-border rounded px-2 py-1 text-xs text-foreground">
+                <option>service_date</option>
+                <option>sermon_title</option>
+                <option>sermon_speaker_name</option>
+              </select>
+              <button onclick="alert('Placeholder inserted into canvas')" class="px-2.5 py-1 rounded bg-muted hover:bg-zinc-700 text-foreground border border-border font-medium">
+                + Placeholder
+              </button>
+            </div>
+
+            <!-- POIN 10: CHANGE BACKGROUND -->
+            <div>
+              <button onclick="triggerChangeBg()" class="px-3 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-semibold flex items-center gap-1.5 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Change Background
+              </button>
+            </div>
+          </div>
+
+          <!-- TOOLBAR ROW 2: ELEMENT PROPERTIES (POIN 8: AKTIF KETIKA ELEMEN DIPILIH) -->
+          <div id="elementPropsBar" class="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-background border border-border text-xs">
+            <span class="text-[11px] font-mono text-muted-foreground uppercase">Properties (Text):</span>
+            <select class="bg-muted border border-border rounded px-2 py-1 text-xs text-foreground">
+              <option>Geist Sans</option>
+              <option>Plus Jakarta Sans</option>
+              <option>Georgia</option>
+            </select>
+            <input type="number" value="48" class="w-14 bg-muted border border-border rounded px-2 py-1 text-xs text-foreground text-center">
+            <div class="flex items-center gap-1 bg-muted px-2 py-1 rounded border border-border">
+              <input type="color" value="#ffffff" class="w-4 h-4 bg-transparent border-0 cursor-pointer">
+              <span class="text-[11px] font-mono text-muted-foreground">#FFF</span>
+            </div>
+            <div class="h-4 w-px bg-border mx-1"></div>
+            <div class="flex items-center gap-0.5">
+              <button class="px-2 py-1 rounded bg-primary/20 text-primary font-bold">B</button>
+              <button class="px-2 py-1 rounded hover:bg-muted text-muted-foreground italic">I</button>
+              <button class="px-2 py-1 rounded hover:bg-muted text-muted-foreground underline">U</button>
+            </div>
+            <div class="h-4 w-px bg-border mx-1"></div>
+            <div class="flex items-center gap-0.5">
+              <button class="px-2 py-1 rounded hover:bg-muted text-muted-foreground">⫷</button>
+              <button class="px-2 py-1 rounded bg-primary/20 text-primary">☰</button>
+              <button class="px-2 py-1 rounded hover:bg-muted text-muted-foreground">⫸</button>
+              <button class="px-2 py-1 rounded hover:bg-muted text-muted-foreground">☷</button>
+            </div>
+          </div>
+
+          <!-- CANVAS AREA 16:9 DENGAN NATIVE INLINE EDITING & CONTEXT MENU (POIN 5, 6, 7) -->
+          <div id="canvasBox" oncontextmenu="openContextMenu(event)" class="relative w-full aspect-video rounded-lg overflow-hidden border border-zinc-700 bg-black shadow-inner flex items-center justify-center select-none cursor-default">
+            <!-- Background Image Layer -->
+            <div id="canvasBackground" class="absolute inset-0 bg-cover bg-center transition-all" style="background-image: radial-gradient(circle at center, #1e293b 0%, #020617 100%);"></div>
+
+            <!-- Element 1: Headline (POIN 7: Double Click for Inline Edit) -->
+            <div id="canvasHeadline" ondblclick="editInlineText(this)" class="absolute top-[18%] left-[48%] p-2 rounded cursor-move hover:ring-1 hover:ring-primary/60 ring-2 ring-primary ring-offset-2 ring-offset-black transition-all">
+              <h1 class="text-4xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
+                Bible Talk<br>Sequence
+              </h1>
+            </div>
+
+            <!-- Element 2: Rundown Subtext -->
+            <div id="canvasSubtext" ondblclick="editInlineText(this)" class="absolute top-[44%] left-[48%] p-2 rounded cursor-move hover:ring-1 hover:ring-primary/60 transition-all text-sm font-medium text-zinc-300 leading-relaxed drop-shadow">
+              Prayer Partner<br>Opening Song<br>Opening Prayer<br>Verse Reading<br>Bible Talk<br>Closing Song<br>Closing Prayer
+            </div>
+
+            <!-- POIN 5 & 6: RIGHT CLICK CONTEXT MENU OVERLAY -->
+            <div id="contextMenu" class="hidden absolute z-50 bg-[#18181b] border border-border rounded-lg shadow-2xl p-1 w-48 text-xs text-foreground space-y-0.5">
+              <button onclick="contextAction('Bring to Front')" class="w-full text-left px-2.5 py-1.5 rounded hover:bg-primary hover:text-white flex justify-between">
+                <span>Bring to Front</span> <span class="text-[10px] text-zinc-400">⇧⌘]</span>
+              </button>
+              <button onclick="contextAction('Bring Forward')" class="w-full text-left px-2.5 py-1.5 rounded hover:bg-primary hover:text-white flex justify-between">
+                <span>Bring Forward</span> <span class="text-[10px] text-zinc-400">⌘]</span>
+              </button>
+              <button onclick="contextAction('Send Backward')" class="w-full text-left px-2.5 py-1.5 rounded hover:bg-primary hover:text-white flex justify-between">
+                <span>Send Backward</span> <span class="text-[10px] text-zinc-400">⌘[</span>
+              </button>
+              <button onclick="contextAction('Send to Back')" class="w-full text-left px-2.5 py-1.5 rounded hover:bg-primary hover:text-white flex justify-between">
+                <span>Send to Back</span> <span class="text-[10px] text-zinc-400">⇧⌘[</span>
+              </button>
+              <div class="h-px bg-border my-1"></div>
+              <button onclick="contextAction('Duplicate')" class="w-full text-left px-2.5 py-1.5 rounded hover:bg-primary hover:text-white flex justify-between">
+                <span>Duplicate</span> <span class="text-[10px] text-zinc-400">⌘D</span>
+              </button>
+              <button onclick="contextAction('Delete')" class="w-full text-left px-2.5 py-1.5 rounded hover:bg-red-500 hover:text-white text-red-400 flex justify-between">
+                <span>Delete</span> <span class="text-[10px] text-zinc-400">⌫</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Petunjuk Interaktif Prototype -->
+          <div class="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 flex items-center justify-between">
+            <div>
+              💡 <strong>Coba Interaksi:</strong> (1) Hover kursor di list kiri untuk tombol [↑][↓][❐][🗑]; (2) Dobel-klik teks di canvas untuk inline editing; (3) Klik kanan pada elemen canvas untuk Context Menu.
+            </div>
+            <span class="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded">PROTOTYPE MODE</span>
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 2. SCREEN: SONG SETS (PROMPT 02: 2-KOLOM BERSIH MENIRU MAIN SPINE) -->
+    <!-- ========================================================================= -->
+    <div id="screenSongSets" class="hidden grid grid-cols-1 lg:grid-cols-[330px_minmax(0,1fr)] gap-6">
+
+      <!-- Panel Kiri: Add New Song Set & List -->
+      <aside class="space-y-4">
+        <div class="rounded-xl border border-border bg-card p-3.5 shadow-sm">
+          <button onclick="addNewSongSet()" class="w-full bg-primary hover:bg-blue-600 text-white py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>New Song Set</span>
+          </button>
+        </div>
+
+        <div class="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-foreground">Configured Song Sets</span>
+            <span id="songSetCountBadge" class="text-[11px] text-muted-foreground font-mono">4 items</span>
+          </div>
+
+          <div id="songSetListContainer" class="space-y-1.5 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+            <!-- Item 1 (Active) -->
+            <div class="slide-item active flex items-center justify-between p-2 rounded-lg border border-primary bg-primary/10 cursor-pointer transition-all">
+              <div class="min-w-0 pr-2">
+                <p class="text-xs font-semibold truncate text-foreground">Bible Talk Opening Song</p>
+                <span class="text-[10px] font-mono text-amber-400">[opening_song_bt]</span>
+              </div>
+              <div class="hover-actions flex items-center gap-1 shrink-0">
+                <button title="Delete Song Set" onclick="deleteSlide(event, this)" class="p-1 rounded hover:bg-red-500/20 text-red-400">🗑</button>
+              </div>
+            </div>
+            <!-- Item 2 -->
+            <div class="slide-item flex items-center justify-between p-2 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border cursor-pointer transition-all">
+              <div class="min-w-0 pr-2">
+                <p class="text-xs font-medium truncate text-foreground">Bible Talk Closing Song</p>
+                <span class="text-[10px] font-mono text-muted-foreground">[closing_song_bt]</span>
+              </div>
+              <div class="hover-actions flex items-center gap-1 shrink-0">
+                <button title="Delete Song Set" onclick="deleteSlide(event, this)" class="p-1 rounded hover:bg-red-500/20 text-red-400">🗑</button>
+              </div>
+            </div>
+            <!-- Item 3 -->
+            <div class="slide-item flex items-center justify-between p-2 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border cursor-pointer transition-all">
+              <div class="min-w-0 pr-2">
+                <p class="text-xs font-medium truncate text-foreground">Divine Service Opening Song</p>
+                <span class="text-[10px] font-mono text-muted-foreground">[opening_song_dw]</span>
+              </div>
+              <div class="hover-actions flex items-center gap-1 shrink-0">
+                <button title="Delete Song Set" onclick="deleteSlide(event, this)" class="p-1 rounded hover:bg-red-500/20 text-red-400">🗑</button>
+              </div>
+            </div>
+            <!-- Item 4 -->
+            <div class="slide-item flex items-center justify-between p-2 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border cursor-pointer transition-all">
+              <div class="min-w-0 pr-2">
+                <p class="text-xs font-medium truncate text-foreground">Divine Service Closing Song</p>
+                <span class="text-[10px] font-mono text-muted-foreground">[closing_song_dw]</span>
+              </div>
+              <div class="hover-actions flex items-center gap-1 shrink-0">
+                <button title="Delete Song Set" onclick="deleteSlide(event, this)" class="p-1 rounded hover:bg-red-500/20 text-red-400">🗑</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Panel Kanan: Rename & Shared Layout Trio Editor -->
+      <section class="space-y-4">
+        <!-- Rename Card -->
+        <div class="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm">
+          <div class="flex items-center gap-3">
+            <span class="text-base font-bold text-foreground">Bible Talk Opening Song</span>
+            <span class="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">[slot: opening_song_bt]</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="border border-border bg-muted/60 hover:bg-muted text-foreground px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">Rename</button>
+            <button class="border border-border bg-muted/60 hover:bg-muted text-foreground px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">Reset</button>
+          </div>
+        </div>
+
+        <!-- Canvas Workspace dengan Trio Selector (Title, Verse, Reff) -->
+        <div class="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm">
+          <!-- Trio Selector -->
+          <div class="flex items-center gap-1.5 p-1 bg-muted rounded-lg border border-border">
+            <button onclick="setSongTrio(this, 'title')" class="flex-1 py-1.5 text-xs font-semibold rounded bg-card text-foreground shadow-sm">
+              1. Title Slide
+            </button>
+            <button onclick="setSongTrio(this, 'verse')" class="flex-1 py-1.5 text-xs font-semibold rounded text-muted-foreground hover:text-foreground">
+              2. Verse Layout (2/3 Formula)
+            </button>
+            <button onclick="setSongTrio(this, 'reff')" class="flex-1 py-1.5 text-xs font-semibold rounded text-muted-foreground hover:text-foreground">
+              3. Reffrain Layout
+            </button>
+          </div>
+
+          <!-- Toolbar Add Elements -->
+          <div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-muted/40 border border-border/80 text-xs">
+            <div class="flex items-center gap-1.5">
+              <span class="text-muted-foreground font-semibold px-1">Add:</span>
+              <button class="px-2.5 py-1 rounded bg-muted hover:bg-zinc-700 text-foreground border border-border font-medium">T Text</button>
+              <button class="px-2.5 py-1 rounded bg-muted hover:bg-zinc-700 text-foreground border border-border font-medium">▭ Rectangle</button>
+              <button class="px-2.5 py-1 rounded bg-muted hover:bg-zinc-700 text-foreground border border-border font-medium">🖼 Image</button>
+              <div class="h-4 w-px bg-border mx-1"></div>
+              <select class="bg-background border border-border rounded px-2 py-1 text-xs text-foreground">
+                <option>song_title (Auto)</option>
+                <option>song_number (Auto)</option>
+                <option>verse_content[] (2/3 auto)</option>
+                <option>verse_number (e.g. 1/4)</option>
+              </select>
+              <button class="px-2.5 py-1 rounded bg-muted hover:bg-zinc-700 text-foreground border border-border font-medium">+ Auto Field</button>
+            </div>
+            <div>
+              <button onclick="triggerChangeBg()" class="px-3 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-semibold flex items-center gap-1.5 transition-colors">
+                🎨 Change Background
+              </button>
+            </div>
+          </div>
+
+          <!-- Canvas Preview dengan 2/3 Area Formula Visual -->
+          <div class="relative w-full aspect-video rounded-lg overflow-hidden border border-zinc-700 bg-slate-950 shadow-inner flex flex-col items-center justify-center p-8 select-none">
+            <!-- 2/3 Screen Area Indicator -->
+            <div class="absolute top-[28%] left-[8%] right-[8%] bottom-[8%] border border-dashed border-primary/40 rounded-lg pointer-events-none flex items-start justify-end p-2 bg-primary/5">
+              <span class="text-[10px] font-mono text-primary bg-background/80 px-2 py-0.5 rounded border border-primary/30">Auto Lyric Box: 2/3 Height Standard</span>
+            </div>
+            <div class="text-center z-10 space-y-2">
+              <span class="text-xs font-mono tracking-widest text-zinc-400 uppercase">SDAH 100</span>
+              <h2 class="text-3xl font-bold text-white tracking-tight">Great Is Thy Faithfulness</h2>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 3. SCREEN: ANNOUNCEMENT SETS (PROMPT 03: HIERARKI BERSIH 3-TIER) -->
+    <!-- ========================================================================= -->
+    <div id="screenAnn" class="hidden grid grid-cols-1 lg:grid-cols-[330px_minmax(0,1fr)] gap-6">
+
+      <!-- Panel Kiri: 3-Tier Hierarchy (Button -> Dropdown -> Slides List) -->
+      <aside class="space-y-4">
+        <!-- Tier A: Add New Announcement Set -->
+        <div class="rounded-xl border border-border bg-card p-3.5 shadow-sm">
+          <button onclick="addNewAnnSet()" class="w-full bg-primary hover:bg-blue-600 text-white py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Add New Announcement Set</span>
+          </button>
+        </div>
+
+        <!-- Tier B & C: Dropdown Selector & Slides in Set -->
+        <div class="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm">
+          <div>
+            <label class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">Active Announcement Set</label>
+            <!-- Dropdown List of Sets -->
+            <select class="w-full bg-background border border-border rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground focus:outline-none focus:border-primary">
+              <option>Break Time Announcements (3 slides)</option>
+              <option>Mission Spotlight Set (2 slides)</option>
+            </select>
+          </div>
+
+          <div class="pt-2 border-t border-border/80">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-foreground">Slides in Set</span>
+              <button onclick="addAnnSlide()" class="text-[11px] text-primary hover:underline font-medium">+ Add Slide</button>
+            </div>
+
+            <!-- List of Slides with Hover Actions -->
+            <div id="annSlidesContainer" class="space-y-1.5 max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
+              <div class="slide-item active flex items-center justify-between p-2 rounded-lg border border-primary bg-primary/10 cursor-pointer transition-all">
+                <div class="min-w-0 pr-2">
+                  <p class="text-xs font-semibold truncate text-foreground">#1 Tithes &amp; Offerings</p>
+                  <span class="text-[10px] font-mono text-emerald-400">[announcement-slide]</span>
+                </div>
+                <div class="hover-actions flex items-center gap-0.5 shrink-0">
+                  <button title="Move Up" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↑</button>
+                  <button title="Move Down" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↓</button>
+                  <button title="Clone" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">❐</button>
+                  <button title="Delete" onclick="deleteSlide(event, this)" class="p-1 rounded hover:bg-red-500/20 text-red-400">🗑</button>
+                </div>
+              </div>
+
+              <div class="slide-item flex items-center justify-between p-2 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border cursor-pointer transition-all">
+                <div class="min-w-0 pr-2">
+                  <p class="text-xs font-medium truncate text-foreground">#2 Midweek Prayer</p>
+                  <span class="text-[10px] font-mono text-muted-foreground">[announcement-slide]</span>
+                </div>
+                <div class="hover-actions flex items-center gap-0.5 shrink-0">
+                  <button title="Move Up" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↑</button>
+                  <button title="Move Down" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↓</button>
+                  <button title="Clone" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">❐</button>
+                  <button title="Delete" onclick="deleteSlide(event, this)" class="p-1 rounded hover:bg-red-500/20 text-red-400">🗑</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Panel Kanan: Canvas Editor Identik dengan Main Spine -->
+      <section class="space-y-4">
+        <div class="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm">
+          <div class="flex items-center gap-3">
+            <span class="text-base font-bold text-foreground">#1 Tithes &amp; Offerings</span>
+            <span class="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">[set: Break Time Announcements]</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="border border-border bg-muted/60 hover:bg-muted text-foreground px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">Rename</button>
+            <button class="border border-border bg-muted/60 hover:bg-muted text-foreground px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">Reset</button>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-muted/40 border border-border/80 text-xs">
+            <div class="flex items-center gap-1.5">
+              <span class="text-muted-foreground font-semibold px-1">Add:</span>
+              <button class="px-2.5 py-1 rounded bg-muted hover:bg-zinc-700 text-foreground border border-border font-medium">T Text</button>
+              <button class="px-2.5 py-1 rounded bg-muted hover:bg-zinc-700 text-foreground border border-border font-medium">▭ Rectangle</button>
+              <button class="px-2.5 py-1 rounded bg-muted hover:bg-zinc-700 text-foreground border border-border font-medium">🖼 Image</button>
+              <div class="h-4 w-px bg-border mx-1"></div>
+              <select class="bg-background border border-border rounded px-2 py-1 text-xs text-foreground">
+                <option>announcement_title</option>
+                <option>announcement_date</option>
+              </select>
+              <button class="px-2.5 py-1 rounded bg-muted hover:bg-zinc-700 text-foreground border border-border font-medium">+ Placeholder</button>
+            </div>
+            <div>
+              <button onclick="triggerChangeBg()" class="px-3 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-semibold flex items-center gap-1.5 transition-colors">
+                🎨 Change Background
+              </button>
+            </div>
+          </div>
+
+          <div class="relative w-full aspect-video rounded-lg overflow-hidden border border-zinc-700 bg-indigo-950/80 shadow-inner flex flex-col items-center justify-center p-8 select-none">
+            <h2 class="text-3xl font-extrabold text-white tracking-tight">Tithe &amp; Offerings</h2>
+            <p class="text-sm font-medium text-indigo-300 mt-2">Malachi 3:10 — Bring the whole tithe into the storehouse</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </div>
+
+  <!-- JAVASCRIPT INTERAKTIF PROTOTIPE -->
+  <script>
+    // 1. Switch Layar Antara Main Spine, Song Sets, dan Announcement Sets
+    function setScreen(screen) {
+      document.getElementById('screenSpine').classList.add('hidden');
+      document.getElementById('screenSongSets').classList.add('hidden');
+      document.getElementById('screenAnn').classList.add('hidden');
+
+      const btnSpine = document.getElementById('tabBtnSpine');
+      const btnSong = document.getElementById('tabBtnSongSets');
+      const btnAnn = document.getElementById('tabBtnAnn');
+
+      const activeClass = 'bg-white text-black shadow-sm';
+      const inactiveClass = 'text-muted-foreground hover:text-foreground hover:bg-muted';
+
+      btnSpine.className = `px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${screen === 'spine' ? activeClass : inactiveClass}`;
+      btnSong.className = `px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${screen === 'songsets' ? activeClass : inactiveClass}`;
+      btnAnn.className = `px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${screen === 'announcements' ? activeClass : inactiveClass}`;
+
+      if (screen === 'spine') document.getElementById('screenSpine').classList.remove('hidden');
+      if (screen === 'songsets') document.getElementById('screenSongSets').classList.remove('hidden');
+      if (screen === 'announcements') document.getElementById('screenAnn').classList.remove('hidden');
+    }
+
+    // 2. State Machine Rename (Poin 4)
+    function setRenameMode(isEditing) {
+      const display = document.getElementById('slideTitleDisplay');
+      const input = document.getElementById('slideTitleInput');
+      const btnRename = document.getElementById('btnRename');
+      const btnReset = document.getElementById('btnReset');
+      const btnCancel = document.getElementById('btnCancel');
+      const btnSave = document.getElementById('btnSave');
+
+      if (isEditing) {
+        display.classList.add('hidden');
+        input.classList.remove('hidden');
+        input.value = display.textContent;
+        input.focus();
+        btnRename.classList.add('hidden');
+        btnReset.classList.add('hidden');
+        btnCancel.classList.remove('hidden');
+        btnSave.classList.remove('hidden');
+      } else {
+        display.classList.remove('hidden');
+        input.classList.add('hidden');
+        btnRename.classList.remove('hidden');
+        btnReset.classList.remove('hidden');
+        btnCancel.classList.add('hidden');
+        btnSave.classList.add('hidden');
+      }
+    }
+
+    function saveRenameDone() {
+      const display = document.getElementById('slideTitleDisplay');
+      const input = document.getElementById('slideTitleInput');
+      display.textContent = input.value;
+      setRenameMode(false);
+    }
+
+    function resetSlideConfirm() {
+      if (confirm('Kembalikan slide ini ke layout template pabrik (factory seed)?')) {
+        alert('Slide berhasil di-reset.');
+      }
+    }
+
+    // 3. Selection & Dynamic Insertion (Poin 1 & 2)
+    function selectSlide(el, title, type) {
+      document.querySelectorAll('#spineListContainer .slide-item').forEach(i => {
+        i.classList.remove('active', 'border-primary', 'bg-primary/10');
+        i.classList.add('border-border/60', 'bg-muted/30');
+      });
+      el.classList.add('active', 'border-primary', 'bg-primary/10');
+      el.classList.remove('border-border/60', 'bg-muted/30');
+
+      document.getElementById('slideTitleDisplay').textContent = title;
+      document.getElementById('slideTitleInput').value = title;
+      document.getElementById('slideTypeDisplay').textContent = `[${type}]`;
+    }
+
+    function addSlideToSpine() {
+      const sel = document.getElementById('newSlideTypeSelect');
+      const text = sel.options[sel.selectedIndex].text;
+      const val = sel.value;
+      const isSong = val.startsWith('song');
+      const isAnn = val.startsWith('ann');
+      const badge = isSong ? '[song-set]' : (isAnn ? '[ann-set]' : '[general]');
+      const badgeColor = isSong ? 'text-amber-400' : (isAnn ? 'text-emerald-400' : 'text-muted-foreground');
+
+      createSpineItem(text, badge, badgeColor);
+    }
+
+    function createSpineItem(title, badge, badgeColor) {
+      const container = document.getElementById('spineListContainer');
+      const item = document.createElement('div');
+      item.className = 'slide-item flex items-center justify-between p-2 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border cursor-pointer transition-all';
+      item.onclick = function() { selectSlide(this, title, badge.replace(/[\[\]]/g, '')); };
+      item.innerHTML = `
+        <div class="min-w-0 pr-2">
+          <p class="text-xs font-medium truncate text-foreground">${title}</p>
+          <span class="text-[10px] font-mono ${badgeColor}">${badge}</span>
+        </div>
+        <div class="hover-actions flex items-center gap-0.5 shrink-0">
+          <button title="Move Up" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↑</button>
+          <button title="Move Down" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">↓</button>
+          <button title="Clone / Duplicate" onclick="cloneSlide(event, '${title}')" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white">❐</button>
+          <button title="Delete" onclick="deleteSlide(event, this)" class="p-1 rounded hover:bg-red-500/20 text-red-400">🗑</button>
+        </div>
+      `;
+      container.appendChild(item);
+      item.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cloneSlide(e, originalTitle) {
+      e.stopPropagation();
+      createSpineItem(`${originalTitle} (Copy 1)`, '[general]', 'text-muted-foreground');
+    }
+
+    function deleteSlide(e, btn) {
+      e.stopPropagation();
+      const item = btn.closest('.slide-item');
+      if (confirm('Hapus slide ini dari deck?')) {
+        item.remove();
+      }
+    }
+
+    // 4. Double Click Inline Edit (Poin 7)
+    function editInlineText(el) {
+      const current = el.innerText.trim();
+      const next = prompt('Inline Editing Canvas Text:\nEdit teks langsung pada canvas:', current);
+      if (next !== null && next.trim() !== '') {
+        el.querySelector('h1, h2, p') ? el.firstElementChild.innerHTML = next.replace(/\n/g, '<br>') : el.innerHTML = next.replace(/\n/g, '<br>');
+      }
+    }
+
+    // 5. Right Click Context Menu (Poin 5 & 6)
+    function openContextMenu(e) {
+      e.preventDefault();
+      const menu = document.getElementById('contextMenu');
+      const canvasBox = document.getElementById('canvasBox');
+      const boxRect = canvasBox.getBoundingClientRect();
+      menu.classList.remove('hidden');
+      menu.style.left = `${e.clientX - boxRect.left}px`;
+      menu.style.top = `${e.clientY - boxRect.top}px`;
+    }
+
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('contextMenu');
+      if (menu && !menu.contains(e.target)) {
+        menu.classList.add('hidden');
+      }
+    });
+
+    function contextAction(action) {
+      alert(`[Context Menu] ${action} diterapkan pada elemen aktif.`);
+      document.getElementById('contextMenu').classList.add('hidden');
+    }
+
+    // 6. Change Background (Poin 10)
+    function triggerChangeBg() {
+      const bgGradients = [
+        'radial-gradient(circle at center, #1e293b 0%, #020617 100%)',
+        'radial-gradient(circle at center, #312e81 0%, #0f172a 100%)',
+        'radial-gradient(circle at center, #365314 0%, #022c22 100%)',
+        'radial-gradient(circle at center, #4c1d95 0%, #1e1b4b 100%)',
+      ];
+      const bg = document.getElementById('canvasBackground');
+      const next = bgGradients[Math.floor(Math.random() * bgGradients.length)];
+      bg.style.backgroundImage = next;
+    }
+
+    function toggleDrawMode(mode) {
+      alert(`Mode Drawing [${mode.toUpperCase()}] aktif!\nKlik dan drag kursor di atas canvas untuk membentuk bounding box.`);
+    }
+
+    function uploadImageMock() {
+      alert('Pilih gambar dari disk -> Unggah ke /api/uploads -> Gambar dirender visual asli (fabric.FabricImage) pada canvas.');
+    }
+
+    function addNewSongSet() {
+      alert('Berhasil membuat Song Set baru ("New Song Set") dan langsung terpilih di list.');
+    }
+
+    function addNewAnnSet() {
+      alert('Berhasil membuat Announcement Set baru ("New Announcement Set") dan langsung aktif di dropdown.');
+    }
+
+    function setSongTrio(btn, trioRole) {
+      btn.parentElement.querySelectorAll('button').forEach(b => {
+        b.className = 'flex-1 py-1.5 text-xs font-semibold rounded text-muted-foreground hover:text-foreground';
+      });
+      btn.className = 'flex-1 py-1.5 text-xs font-semibold rounded bg-card text-foreground shadow-sm';
+    }
+  </script>
+</body>
+</html>
