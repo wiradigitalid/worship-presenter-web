@@ -4,7 +4,7 @@
 
 Decisions are no longer looked up through the memlog — the memlog goes back to being just a pass log.
 
-**8 decisions** — accepted: 1 · applied: 7.
+**8 decisions** — applied: 8.
 
 | id | Title | Status | Type | Touches | File |
 | --- | --- | --- | --- | --- | --- |
@@ -15,4 +15,4 @@ Decisions are no longer looked up through the memlog — the memlog goes back to
 | `DEC-005` | Song-book data is administrator-owned after a one-time bootstrap; the corpus file is a seed, not a projection | `applied` | — | `.how/_platform/ARCHITECTURE-SPINE.md`, `.how/hub/02-contracts/02-services.md`, `.how/hub/02-contracts/05-hymns.md`, `.how/hub/05-model/data-model.md`, `.how/hub/06-flows/lyric-save-to-book.md`, `.how/hub/SDD-hub.md`, `.what/hub/02-rules/rules-hub.md`, `.what/hub/03-domain/state-machines.md`, `.what/hub/04-usecases/UC-28-correct-song-lyrics.md`, `.what/hub/05-scenarios/SCN-4-lyric-save-to-book-race.md`, `.control/registry/requirements.yaml`, `.control/registry/usecases.yaml` | `.control/decisions/DEC-005-song-book-authored-after-bootstrap.md` |
 | `DEC-006` | A server realtime channel is admitted, for the remote-to-laptop direction only | `applied` | — | `.how/_platform/ARCHITECTURE-SPINE.md`, `.control/registry/usecases.yaml`, `.what/presenter/SRS-presenter.md` | `.control/decisions/DEC-006-remote-presenter-control.md` |
 | `DEC-007` | Autopilot mandate for G5 release execution | `applied` | mandate | `.control/memlog/autopilot-DEC-007.md`, `.control/registry/specs.yaml` | `.control/decisions/DEC-007-autopilot-mandate.md` |
-| `DEC-008` | Autopilot mandate for Artifacts overhaul (Main Spine, Song Sets, Announcement Sets) | `accepted` | mandate | `.control/memlog/autopilot-DEC-008.md`, `.control/registry/specs.yaml`, `.control/registry/decisions.yaml` | `.control/decisions/DEC-008-autopilot-artifacts-overhaul.md` |
+| `DEC-008` | Autopilot mandate for Artifacts overhaul (Main Spine, Song Sets, Announcement Sets) | `applied` | mandate | `.control/memlog/autopilot-DEC-008.md`, `.control/registry/specs.yaml`, `.control/registry/decisions.yaml` | `.control/decisions/DEC-008-autopilot-artifacts-overhaul.md` |

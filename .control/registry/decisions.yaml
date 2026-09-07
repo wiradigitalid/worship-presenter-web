@@ -189,7 +189,7 @@ decisions:
       - .control/registry/specs.yaml
   - id: DEC-008
     type: mandate
-    status: accepted
+    status: applied
     accepted_by: "kodesh87 (2026-09-07)"
     title: Autopilot mandate for Artifacts overhaul (Main Spine, Song Sets, Announcement Sets)
     file: .control/decisions/DEC-008-autopilot-artifacts-overhaul.md
