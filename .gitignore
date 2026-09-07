@@ -104,6 +104,12 @@ data.db.bak-*
 #
 # `*.patch` is deliberately NOT added here: `!.yarn/patches` above un-ignores
 # that directory, and a blanket `*.patch` would silently re-ignore its contents.
+# Scratch directory images and binary assets (.work is committed scratch, but images must never be tracked outside public/)
+.work/**/images/
+.work/**/*.png
+.work/**/*.jpg
+.work/**/*.jpeg
+
 # Go build output
 *.exe
 /cmd/api/api
