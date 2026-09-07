@@ -368,5 +368,62 @@ describe('registry against Go', { concurrency: 1 }, () => {
     const res = await json(`${base}/api/admin/artifacts`, 'GET', undefined, cookie);
     assert.equal(res.status, 403);
   });
+
+  test('multiple dynamic insertions of song-set and announcement-set markers on spine (W11-01)', async () => {
+    // 1. Create an announcement set
+    const annSet = await json(`${base}/api/admin/announcement-sets`, 'POST', {
+      label: 'Special Announcements W11',
+    });
+    assert.equal(annSet.status, 201, JSON.stringify(annSet.body));
+    const annSetId = annSet.body.id;
+
+    // 2. Insert two announcement-set markers on the spine for the same annSetId
+    const m1 = await json(`${base}/api/admin/artifacts`, 'POST', {
+      baseType: 'ann-set-marker',
+      annSetId,
+    });
+    assert.equal(m1.status, 201, JSON.stringify(m1.body));
+    assert.equal(m1.body.baseType, 'ann-set-marker');
+    assert.equal(m1.body.annSetId, annSetId);
+
+    const m2 = await json(`${base}/api/admin/artifacts`, 'POST', {
+      baseType: 'ann-set-marker',
+      annSetId,
+    });
+    assert.equal(m2.status, 201, JSON.stringify(m2.body));
+    assert.equal(m2.body.baseType, 'ann-set-marker');
+    assert.equal(m2.body.annSetId, annSetId);
+    assert.notEqual(m1.body.id, m2.body.id, 'each spine placement must have a unique id');
+
+    // 3. Insert two song-set placements for opening_song_bt
+    const s1 = await json(`${base}/api/admin/artifacts`, 'POST', {
+      baseType: 'song-set-entry',
+      variableName: 'opening_song_bt',
+    });
+    assert.equal(s1.status, 201, JSON.stringify(s1.body));
+    assert.equal(s1.body.baseType, 'song-set-entry');
+    assert.equal(s1.body.variableName, 'opening_song_bt');
+
+    const s2 = await json(`${base}/api/admin/artifacts`, 'POST', {
+      baseType: 'song-set-entry',
+      variableName: 'opening_song_bt',
+    });
+    assert.equal(s2.status, 201, JSON.stringify(s2.body));
+    assert.equal(s2.body.baseType, 'song-set-entry');
+    assert.equal(s2.body.variableName, 'opening_song_bt');
+    assert.notEqual(s1.body.id, s2.body.id, 'each song-set spine placement must have a unique id');
+
+    // 4. Verify templates list includes both markers and both song-set entries with metadata
+    const templates = await list();
+    const foundM1 = templates.find((t) => t.id === m1.body.id);
+    const foundM2 = templates.find((t) => t.id === m2.body.id);
+    const foundS1 = templates.find((t) => t.id === s1.body.id);
+    const foundS2 = templates.find((t) => t.id === s2.body.id);
+
+    assert.ok(foundM1 && foundM1.annSetId === annSetId);
+    assert.ok(foundM2 && foundM2.annSetId === annSetId);
+    assert.ok(foundS1 && foundS1.variableName === 'opening_song_bt');
+    assert.ok(foundS2 && foundS2.variableName === 'opening_song_bt');
+  });
 });
 

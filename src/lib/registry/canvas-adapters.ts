@@ -11,7 +11,10 @@ export interface CopiedSlide {
 export interface ArtifactEditorAdapter {
   list: () => Promise<ArtifactTemplateSummary[]>;
   getOne: (id: string) => Promise<StoredArtifactTemplate>;
-  create: (label: string) => Promise<{ id: string; label: string; updatedAt: string }>;
+  create: (
+    label: string,
+    opts?: { baseType?: string; variableName?: string; annSetId?: number; id?: string }
+  ) => Promise<{ id: string; label: string; updatedAt: string }>;
   save: (
     id: string,
     payload: Record<string, unknown>
@@ -72,11 +75,14 @@ export const mainSpineAdapter: ArtifactEditorAdapter = {
     if (!res.ok) throw new Error(data.error || 'Failed to load template');
     return data as StoredArtifactTemplate;
   },
-  create: async (label: string) => {
+  create: async (
+    label: string,
+    opts?: { baseType?: string; variableName?: string; annSetId?: number; id?: string }
+  ) => {
     const res = await fetch('/api/admin/artifacts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ label }),
+      body: JSON.stringify({ label, ...opts }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to add template');

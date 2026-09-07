@@ -1,6 +1,6 @@
 # Issue 01 — Backend Spine Multiple Insertion & Decoupled Position
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Summary
 Satisfies UC-15 (FR-21). Decouple song-set entries and announcement-set markers on `artifact_templates` from single-slot constraints, allowing multiple dynamic insertions of the same Song Set or Announcement Set across the Main Spine.

@@ -25,17 +25,19 @@ var kebabTemplateID = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 const maxTemplateLabelRunes = 80
 
 type artifactSummary struct {
-	ID         string `json:"id"`
-	Label      string `json:"label"`
-	BaseType   string `json:"baseType"`
-	UpdatedAt  string `json:"updatedAt"`
-	Editable   bool   `json:"editable"`
-	Resettable bool   `json:"resettable"`
+	ID           string `json:"id"`
+	Label        string `json:"label"`
+	BaseType     string `json:"baseType"`
+	UpdatedAt    string `json:"updatedAt"`
+	Editable     bool   `json:"editable"`
+	Resettable   bool   `json:"resettable"`
+	VariableName string `json:"variableName,omitempty"`
+	AnnSetID     int    `json:"annSetId,omitempty"`
 }
 
 func (s *Server) listArtifacts(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.DB.Query(
-		`SELECT id, label, base_type, updated_at, seed_hash FROM artifact_templates ORDER BY position`,
+		`SELECT id, label, base_type, updated_at, seed_hash, variable_name, ann_set_id FROM artifact_templates ORDER BY position`,
 	)
 	if err != nil {
 		log.Printf("Error listing artifact templates: %v", err)
@@ -46,13 +48,20 @@ func (s *Server) listArtifacts(w http.ResponseWriter, r *http.Request) {
 	list := []artifactSummary{}
 	for rows.Next() {
 		var it artifactSummary
-		var seedHash sql.NullString
-		if err := rows.Scan(&it.ID, &it.Label, &it.BaseType, &it.UpdatedAt, &seedHash); err != nil {
+		var seedHash, varName sql.NullString
+		var annSetID sql.NullInt64
+		if err := rows.Scan(&it.ID, &it.Label, &it.BaseType, &it.UpdatedAt, &seedHash, &varName, &annSetID); err != nil {
 			writeError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
 		it.Editable = it.BaseType == "general"
 		it.Resettable = seedHash.Valid && seedHash.String != ""
+		if varName.Valid && varName.String != "" {
+			it.VariableName = varName.String
+		}
+		if annSetID.Valid {
+			it.AnnSetID = int(annSetID.Int64)
+		}
 		list = append(list, it)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"templates": list})
@@ -157,6 +166,64 @@ func (s *Server) createArtifact(w http.ResponseWriter, r *http.Request) {
 		writeError(w, status, msg)
 		return
 	}
+	baseType := "general"
+	var annSetID any = nil
+	var varName any = nil
+	var payloadStr any = nil
+
+	bt, _ := body["baseType"].(string)
+	if bt == "ann-set-marker" {
+		baseType = "ann-set-marker"
+		rawAnnSetID, hasAnnSetID := body["annSetId"]
+		if !hasAnnSetID || rawAnnSetID == nil {
+			writeError(w, http.StatusBadRequest, "annSetId is required for ann-set-marker")
+			return
+		}
+		setID, ok := asPositiveInt(rawAnnSetID)
+		if !ok {
+			writeError(w, http.StatusBadRequest, "annSetId must be a positive integer")
+			return
+		}
+		var setLabel string
+		if err := s.DB.QueryRow(`SELECT label FROM announcement_sets WHERE id = ?`, setID).Scan(&setLabel); err != nil {
+			if err == sql.ErrNoRows {
+				writeError(w, http.StatusBadRequest, fmt.Sprintf("Announcement set %d not found", setID))
+				return
+			}
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		annSetID = setID
+		if body["label"] == nil || strings.TrimSpace(asString(body["label"])) == "" {
+			body["label"] = setLabel
+		}
+	} else if bt == "song-set-entry" {
+		baseType = "song-set-entry"
+		rawVarName, hasVarName := body["variableName"]
+		if !hasVarName || rawVarName == nil {
+			writeError(w, http.StatusBadRequest, "variableName is required for song-set-entry")
+			return
+		}
+		vn := strings.TrimSpace(asString(rawVarName))
+		if !songSetVariableNameRE.MatchString(vn) {
+			writeError(w, http.StatusBadRequest, "Invalid variableName")
+			return
+		}
+		var songLabel string
+		if err := s.DB.QueryRow(`SELECT label FROM artifact_templates WHERE base_type = 'song-set-entry' AND variable_name = ? LIMIT 1`, vn).Scan(&songLabel); err != nil {
+			if err == sql.ErrNoRows {
+				writeError(w, http.StatusBadRequest, fmt.Sprintf("Song set entry %s not found", vn))
+				return
+			}
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		varName = vn
+		if body["label"] == nil || strings.TrimSpace(asString(body["label"])) == "" {
+			body["label"] = songLabel
+		}
+	}
+
 	label, errMsg := normalizeTemplateLabel(body["label"])
 	if errMsg != "" {
 		writeError(w, http.StatusBadRequest, errMsg)
@@ -187,46 +254,26 @@ func (s *Server) createArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payload, err := authoredGeneralPayload(id, label)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
-		return
+	if baseType == "general" {
+		payload, err := authoredGeneralPayload(id, label)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		payloadStr = string(payload)
 	}
+
 	var pos int
 	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM artifact_templates`).Scan(&pos); err != nil {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
-	baseType := "general"
-	var annSetID any = nil
-	var payloadStr any = string(payload)
-
-	if bt, ok := body["baseType"].(string); ok && bt == "ann-set-marker" {
-		baseType = "ann-set-marker"
-		payloadStr = nil
-		rawAnnSetID, hasAnnSetID := body["annSetId"]
-		if !hasAnnSetID || rawAnnSetID == nil {
-			writeError(w, http.StatusBadRequest, "annSetId is required for ann-set-marker")
-			return
-		}
-		setID, ok := asPositiveInt(rawAnnSetID)
-		if !ok {
-			writeError(w, http.StatusBadRequest, "annSetId must be a positive integer")
-			return
-		}
-		var setCount int
-		if err := s.DB.QueryRow(`SELECT COUNT(*) FROM announcement_sets WHERE id = ?`, setID).Scan(&setCount); err != nil || setCount == 0 {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("Announcement set %d not found", setID))
-			return
-		}
-		annSetID = setID
-	}
 
 	_, err = s.DB.Exec(
-		`INSERT INTO artifact_templates (id, label, base_type, payload, updated_at, seed_hash, position, ann_set_id)
-		 VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
-		id, label, baseType, payloadStr, now, pos, annSetID,
+		`INSERT INTO artifact_templates (id, label, base_type, payload, updated_at, seed_hash, position, ann_set_id, variable_name)
+		 VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
+		id, label, baseType, payloadStr, now, pos, annSetID, varName,
 	)
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "unique") {

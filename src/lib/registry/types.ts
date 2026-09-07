@@ -137,6 +137,8 @@ export type ArtifactTemplateSummary = {
   editable: boolean;
   /** Seeded rows expose Reset. Authored rows (`seed_hash` NULL) do not. */
   resettable: boolean;
+  variableName?: string;
+  annSetId?: number;
 };
 
 export type StoredArtifactTemplate = ArtifactTemplate & {
