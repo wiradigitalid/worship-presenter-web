@@ -1,8 +1,9 @@
 ---
 name: to-spec
 description: "Turn the current conversation into a spec and publish it to the project issue tracker: no interview, just synthesis of what you've already discussed."
-disable-model-invocation: true
 ---
+
+> **Driven by `wdi-build` and `wdi-autopilot`.** `wdi-method` unlocked model invocation for this engine in this repo so those two can drive it unattended. Invoked from anywhere else — a stray session, a subagent that thought this looked relevant — stop and say so: this engine publishes to the tracker and writes code.
 
 This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user; just synthesize what you already know.
 
