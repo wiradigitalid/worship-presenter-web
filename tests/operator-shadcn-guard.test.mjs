@@ -151,3 +151,26 @@ test('SPEC-13-10: Inline status text occupies fixed-height slot above toolbar (B
     'Both template states (!template and template) must enclose inline message inside fixed-height slot'
   );
 });
+
+test('SPEC-13-13: Song Set shared trio clarity and visual indicator (BUG-24)', () => {
+  const panelPath = path.join(ROOT, 'src', 'components', 'admin', 'SongSetEntriesPanel.tsx');
+  const code = readFileSync(panelPath, 'utf8').replace(/\r\n/g, '\n');
+
+  // 1. Prominent persistent badge indicating the trio is shared across all song sets
+  assert.ok(
+    code.includes('Shared across all song sets') && code.includes('Shared Canvas Trio'),
+    'SongSetEntriesPanel must include clear shared-scope indicator for the canvas trio'
+  );
+
+  // 2. Banner notes identify roles as shared across song sets
+  assert.ok(
+    code.includes('(Shared)') && code.includes('SHARED TITLE'),
+    'Banner notes must indicate that layout applies across all song sets'
+  );
+
+  // 3. Left panel clarifies that entries share the canvas trio
+  assert.ok(
+    code.includes('share the canvas trio') || (code.includes('share') && code.includes('trio')),
+    'Configured song sets list must clarify that entries share the canvas trio on the right'
+  );
+});

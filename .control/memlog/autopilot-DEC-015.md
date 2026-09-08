@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-015-autopilot-mandate-artifacts-qa-followup-rou
 
 ## Resume
 
-Iteration: 1 (boundary: completed SPEC-13-12)
+Iteration: 1 (boundary: completed SPEC-13-13)
 Run branch: autopilot/DEC-015 (PR: not open yet)
-Stopped at: SPEC-13-12 completed; ready to commence SPEC-13-13
+Stopped at: SPEC-13-13 completed; all 13 tickets in SPEC-13 completed
 Blocked: —
 Parked: —
-Next: SPEC-13-13: Song set shared trio clarity / visual indicator (BUG-24)
+Next: SPEC-13 release close, smoke testing, and progress report
 
 ## Decisions
 
@@ -28,3 +28,4 @@ Next: SPEC-13-13: Song set shared trio clarity / visual indicator (BUG-24)
 | It 1 (autopilot/DEC-015) | SPEC-13-10 | Fixed-height h-6 min-h-[24px] slot with overflow-hidden and truncate for inline status message | Dynamically inserting uncontained alert text that pushes down canvas panel (BUG-20, DEC-011) | Vertical layout shift on status message display | ArtifactEditor.tsx, operator-shadcn-guard.test.mjs |
 | It 1 (autopilot/DEC-015) | SPEC-13-11 | Pass explicit items record and children fallback to Announcement Set SelectValue for instant text rendering | Leaving SelectValue blank on initial load until rename mode triggered (BUG-21) | Blank selector box on loading announcement sets | AnnouncementSetsPanel.tsx, announcement-sets.test.mjs |
 | It 1 (autopilot/DEC-015) | SPEC-13-12 | Add lineHeight slider & textShadow toggle to toolbar; persist in style and render in slideshow & PPTX | Lacking line-height adjustment and text shadow formatting for text elements (BUG-22) | Text spacing inflexibility and poor contrast against complex backgrounds | ArtifactEditor.tsx, types.ts, runtime-contract.ts, validate.ts, validate_artifact.go, canvas-utils.ts, ArtifactSlide.tsx, pptx-draw.ts, artifact-editor-controls.test.mjs |
+| It 1 (autopilot/DEC-015) | SPEC-13-13 | Clarify shared scope of Canvas Trio with card header, badge, plural note, and banner labels | Misleading user into assuming each song set entry owns its own canvas needing cloning (BUG-24) | Redundant clone requests and confusion over shared template scope | SongSetEntriesPanel.tsx, operator-shadcn-guard.test.mjs |
