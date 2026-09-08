@@ -10,8 +10,10 @@ import {
   Copy,
   Image as ImageIcon,
   Italic,
+  MoveVertical,
   Plus,
   SendToBack,
+  Sparkles,
   Square,
   Trash2,
   Type,
@@ -150,6 +152,8 @@ function elementToFabricObject(
       ...(style?.fontWeight !== undefined ? { fontWeight: style.fontWeight } : {}),
       ...(style?.fontStyle !== undefined ? { fontStyle: style.fontStyle } : {}),
       ...(style?.textDecoration === 'underline' ? { underline: true } : {}),
+      ...(style?.lineHeight !== undefined ? { lineHeight: style.lineHeight } : {}),
+      ...(style?.textShadow ? { shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: 4, offsetX: 2, offsetY: 2 }) } : {}),
       textAlign: style?.textAlign ?? DEFAULT_TEXT_ALIGN,
       splitByGrapheme: true,
       editable: editable,
@@ -294,6 +298,8 @@ export default function ArtifactEditor({
   const [fontWeight, setFontWeight] = useState<'normal' | 'bold'>('normal');
   const [fontStyle, setFontStyle] = useState<'normal' | 'italic'>('normal');
   const [underline, setUnderline] = useState(false);
+  const [lineHeight, setLineHeight] = useState<number>(1.16);
+  const [textShadow, setTextShadow] = useState(false);
   const [shapeFill, setShapeFill] = useState('#5C2E16');
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [selectedTextCount, setSelectedTextCount] = useState(0);
@@ -381,6 +387,12 @@ export default function ArtifactEditor({
       setFontWeight(selectedText.fontWeight === 'bold' ? 'bold' : 'normal');
       setFontStyle(selectedText.fontStyle === 'italic' ? 'italic' : 'normal');
       setUnderline(Boolean((selectedText as any).underline));
+      setLineHeight(
+        typeof (selectedText as any).lineHeight === 'number'
+          ? (selectedText as any).lineHeight
+          : 1.16
+      );
+      setTextShadow(Boolean((selectedText as any).shadow));
     }
     const shapes = active.filter((obj) => (obj as any).type === 'rect' && !(obj as any).data?.imageRef);
     if (shapes.length > 0) {
@@ -1196,19 +1208,29 @@ export default function ArtifactEditor({
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
 
-    let updated = false;
-    for (const obj of canvas.getActiveObjects()) {
-      if (!isFabricTextObject(obj)) continue;
-      obj.set({ fill: fontColor, fontSize, underline } as any);
-      updated = true;
-    }
-    // `obj.set(...)` raises no canvas event, so the mutation listeners never see
-    // this; and pressing Apply with nothing selected changed nothing, so it must
-    // not claim otherwise.
-    if (updated) {
-      canvas.requestRenderAll();
-      markDirty();
-    }
+    void import('fabric').then((fabric) => {
+      const shadowObj = textShadow
+        ? new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: 4, offsetX: 2, offsetY: 2 })
+        : null;
+      let updated = false;
+      for (const obj of canvas.getActiveObjects()) {
+        if (!isFabricTextObject(obj)) continue;
+        obj.set({
+          fill: fontColor,
+          fontSize,
+          fontWeight,
+          fontStyle,
+          underline,
+          lineHeight,
+          shadow: shadowObj,
+        } as any);
+        updated = true;
+      }
+      if (updated) {
+        canvas.requestRenderAll();
+        markDirty();
+      }
+    });
   };
 
   const handleFontColorChange = (color: string) => {
@@ -1268,6 +1290,41 @@ export default function ArtifactEditor({
     canvas.requestRenderAll();
     markDirty();
   }, [underline, markDirty]);
+
+  const handleLineHeightChange = useCallback(
+    (val: number) => {
+      const clamped = Math.max(0.8, Math.min(2.5, Number(val.toFixed(2))));
+      setLineHeight(clamped);
+      const canvas = fabricCanvasRef.current;
+      if (!canvas) return;
+      for (const obj of canvas.getActiveObjects()) {
+        if (isFabricTextObject(obj)) {
+          obj.set({ lineHeight: clamped });
+        }
+      }
+      canvas.requestRenderAll();
+      markDirty();
+    },
+    [markDirty]
+  );
+
+  const handleToggleTextShadow = useCallback(async () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const fabric = await import('fabric');
+    const nextShadow = !textShadow;
+    setTextShadow(nextShadow);
+    const shadowObj = nextShadow
+      ? new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: 4, offsetX: 2, offsetY: 2 })
+      : null;
+    for (const obj of canvas.getActiveObjects()) {
+      if (isFabricTextObject(obj)) {
+        obj.set({ shadow: shadowObj } as any);
+      }
+    }
+    canvas.requestRenderAll();
+    markDirty();
+  }, [textShadow, markDirty]);
 
   /**
    * Writes the words of the selected text box straight through to Fabric, so
@@ -2429,6 +2486,43 @@ export default function ArtifactEditor({
                         title="Align Right"
                       >
                         <AlignRight className="w-3.5 h-3.5" />
+                      </Button>
+                      <div className="h-4 w-px bg-border mx-1" />
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          onClick={() => {
+                            const next = lineHeight >= 1.8 ? 1.0 : Number((lineHeight + 0.2).toFixed(1));
+                            handleLineHeightChange(next);
+                          }}
+                          disabled={busy}
+                          title={`Line Height (${lineHeight.toFixed(1)})`}
+                        >
+                          <MoveVertical className="w-3.5 h-3.5" />
+                        </Button>
+                        <input
+                          type="range"
+                          min={0.8}
+                          max={2.4}
+                          step={0.1}
+                          value={lineHeight}
+                          onChange={(e) => handleLineHeightChange(Number(e.target.value))}
+                          disabled={busy}
+                          className="w-14 h-3 accent-primary cursor-pointer"
+                          title={`Line Height: ${lineHeight.toFixed(1)}`}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant={textShadow ? 'default' : 'outline'}
+                        size="icon-sm"
+                        onClick={handleToggleTextShadow}
+                        disabled={busy}
+                        title="Text Shadow"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
                       </Button>
                       <Button
                         type="button"

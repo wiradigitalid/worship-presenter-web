@@ -68,6 +68,8 @@ const ALLOWED_STYLE_KEYS = new Set([
   'objectFit',
   'fillColor',
   'opacity',
+  'lineHeight',
+  'textShadow',
 ]);
 
 export class RegistryValidationError extends Error {
@@ -210,6 +212,19 @@ function parseStyle(value: unknown, label: string) {
       throw new RegistryValidationError(`${label}.opacity must be 0..1`);
     }
     style.opacity = opacity;
+  }
+  if (obj.lineHeight !== undefined) {
+    const lh = parseFiniteNumber(obj.lineHeight, `${label}.lineHeight`);
+    if (lh <= 0) {
+      throw new RegistryValidationError(`${label}.lineHeight must be positive`);
+    }
+    style.lineHeight = lh;
+  }
+  if (obj.textShadow !== undefined) {
+    if (typeof obj.textShadow !== 'boolean') {
+      throw new RegistryValidationError(`${label}.textShadow must be a boolean`);
+    }
+    style.textShadow = obj.textShadow;
   }
   return style;
 }

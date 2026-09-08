@@ -166,6 +166,8 @@ export function serializeTextStyle(
     fontStyle?: string;
     underline?: unknown;
     textAlign?: string;
+    lineHeight?: unknown;
+    shadow?: unknown;
   }
 ): CanvasElement['style'] | undefined {
   const style: NonNullable<CanvasElement['style']> = { ...source.style };
@@ -203,6 +205,14 @@ export function serializeTextStyle(
     } else if (source.style?.textDecoration === 'underline') {
       delete style.textDecoration;
     }
+  }
+  if (typeof textObj.lineHeight === 'number') {
+    setIfMeaningful('lineHeight', Number(textObj.lineHeight.toFixed(2)), 1.16);
+  }
+  if (textObj.shadow) {
+    style.textShadow = true;
+  } else if (source.style?.textShadow) {
+    delete style.textShadow;
   }
   setIfMeaningful(
     'textAlign',

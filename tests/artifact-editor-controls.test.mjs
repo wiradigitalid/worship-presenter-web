@@ -1328,6 +1328,123 @@ test('SPEC-13-09: Adding a background replaces the existing one instead of stack
   assert.equal(filtered.some((e) => e.id === 'e3'), true, 'Text e3 must be kept');
 });
 
+test('SPEC-13-12: Text line-height and text-shadow controls (BUG-22)', async () => {
+  // 1. Validation test: template with lineHeight and textShadow passes validator
+  const validTemplate = {
+    schemaVersion: 1,
+    id: 'test-spec-13-12',
+    label: 'Test LineHeight Shadow',
+    baseType: 'general',
+    placeholders: [],
+    layouts: {
+      default: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [
+          {
+            id: 'e1',
+            type: 'text',
+            required: false,
+            x: 10,
+            y: 10,
+            w: 80,
+            h: 30,
+            zIndex: 0,
+            content: 'Hello World',
+            style: {
+              fontSize: 32,
+              fontColor: '#FFFFFF',
+              lineHeight: 1.4,
+              textShadow: true,
+            },
+          },
+        ],
+      },
+    },
+  };
+
+  const validated = validateArtifactTemplate(validTemplate);
+  assert.equal(validated.layouts.default.elements[0].style.lineHeight, 1.4);
+  assert.equal(validated.layouts.default.elements[0].style.textShadow, true);
+
+  // Negative validation tests: invalid lineHeight and textShadow
+  assert.throws(() => {
+    validateArtifactTemplate({
+      ...validTemplate,
+      layouts: {
+        default: {
+          ...validTemplate.layouts.default,
+          elements: [{ ...validTemplate.layouts.default.elements[0], style: { fontSize: 32, lineHeight: -1 } }],
+        },
+      },
+    });
+  }, /lineHeight must be positive/);
+
+  assert.throws(() => {
+    validateArtifactTemplate({
+      ...validTemplate,
+      layouts: {
+        default: {
+          ...validTemplate.layouts.default,
+          elements: [{ ...validTemplate.layouts.default.elements[0], style: { fontSize: 32, textShadow: 'invalid' } }],
+        },
+      },
+    });
+  }, /textShadow must be a boolean/);
+
+  // 2. Behavioral test: serializeTextStyle serializes lineHeight and textShadow
+  const sourceElement = {
+    id: 'e1',
+    type: 'text',
+    required: false,
+    x: 0,
+    y: 0,
+    w: 100,
+    h: 100,
+    zIndex: 0,
+  };
+
+  const serializedWithStyles = serializeTextStyle(sourceElement, {
+    fill: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 1.5,
+    shadow: { color: 'rgba(0,0,0,0.8)' },
+  });
+
+  assert.equal(serializedWithStyles?.lineHeight, 1.5, 'lineHeight must be serialized');
+  assert.equal(serializedWithStyles?.textShadow, true, 'textShadow must be serialized when shadow is present');
+
+  // Construction default lineHeight (1.16) is omitted when not on source
+  const serializedDefault = serializeTextStyle(sourceElement, {
+    fill: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 1.16,
+  });
+  assert.equal(serializedDefault?.lineHeight, undefined, 'default 1.16 lineHeight should be omitted on new element');
+
+  // 3. Source scan guards in ArtifactEditor.tsx
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  assert.ok(
+    code.includes('handleLineHeightChange') && code.includes('obj.set({ lineHeight: clamped })'),
+    'handleLineHeightChange must set lineHeight on active canvas objects and call markDirty'
+  );
+  assert.ok(
+    code.includes('handleToggleTextShadow') && code.includes('new fabric.Shadow('),
+    'handleToggleTextShadow must toggle fabric.Shadow on active canvas objects and call markDirty'
+  );
+  assert.ok(
+    code.includes('MoveVertical') && code.includes('Sparkles'),
+    'ArtifactEditor must render MoveVertical line height button and Sparkles text shadow button'
+  );
+  assert.ok(
+    code.includes('applyTextStyle') && code.includes('lineHeight,') && code.includes('shadow: shadowObj'),
+    'applyTextStyle bulk multi-selection update must cover lineHeight and textShadow'
+  );
+});
+
 
 
 

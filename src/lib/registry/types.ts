@@ -73,6 +73,8 @@ export type TextStyle = {
   textDecoration?: 'none' | 'underline' | string;
   textAlign?: 'left' | 'center' | 'right';
   verticalAlign?: 'top' | 'middle' | 'bottom';
+  lineHeight?: number;
+  textShadow?: boolean;
 };
 
 export type ImageStyle = {
