@@ -68,3 +68,27 @@ test('SPEC-13-04: Deck Sequence card flex containment and internal scroll height
   );
 });
 
+test('SPEC-13-05: Song Set tab banner height fixed and overflow-hidden (BUG-14)', () => {
+  const panelPath = path.join(root, 'src', 'components', 'admin', 'SongSetEntriesPanel.tsx');
+  const code = fs.readFileSync(panelPath, 'utf8');
+
+  // Banner must have fixed height and overflow-hidden so text wrapping never shifts canvas
+  assert.ok(
+    code.includes('min-h-[42px] h-[42px] overflow-hidden'),
+    'SongSetEntriesPanel banner must enforce exact height h-[42px] with overflow-hidden'
+  );
+
+  // Banner text must have flex-1 min-w-0 truncate to prevent line wrapping and allow shrinking
+  assert.ok(
+    code.includes('className="flex-1 min-w-0 truncate mr-2"'),
+    'Banner descriptive text must carry flex-1 min-w-0 truncate classes'
+  );
+
+  // Role badge must have shrink-0
+  assert.ok(
+    code.includes('rounded border border-blue-500/30 shrink-0'),
+    'Role badge must carry shrink-0 so it is never compressed'
+  );
+});
+
+

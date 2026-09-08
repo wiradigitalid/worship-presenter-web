@@ -447,21 +447,21 @@ export function SongSetEntriesPanel() {
                 hideList={true}
                 allowImages={selectedRole === 'title'}
                 bannerNote={
-                  <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-2.5 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between min-h-[42px]">
+                  <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-2.5 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between min-h-[42px] h-[42px] overflow-hidden">
                     {selectedRole === 'title' ? (
                       <>
-                        <span>🎨 <strong>Song Title Slide</strong> — Title, hymn number, author, and song metadata. Canvas customizes layout & graphics.</span>
-                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30">TITLE SLIDE</span>
+                        <span className="flex-1 min-w-0 truncate mr-2">🎨 <strong>Song Title Slide</strong> — Title, hymn number, author, and song metadata. Canvas customizes layout & graphics.</span>
+                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30 shrink-0">TITLE SLIDE</span>
                       </>
                     ) : selectedRole === 'verse' ? (
                       <>
-                        <span>📐 <strong>Auto Lyric Box: 2/3 Height Standard</strong> — Automated formula for hymn lyrics. Canvas customizes background & shapes.</span>
-                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30">VERSE LAYOUT</span>
+                        <span className="flex-1 min-w-0 truncate mr-2">📐 <strong>Auto Lyric Box: 2/3 Height Standard</strong> — Automated formula for hymn lyrics. Canvas customizes background & shapes.</span>
+                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30 shrink-0">VERSE LAYOUT</span>
                       </>
                     ) : (
                       <>
-                        <span>📐 <strong>Auto Lyric Box: 2/3 Height Standard</strong> — Automated formula for refrain/chorus. Canvas customizes background & shapes.</span>
-                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30">REFRAIN LAYOUT</span>
+                        <span className="flex-1 min-w-0 truncate mr-2">📐 <strong>Auto Lyric Box: 2/3 Height Standard</strong> — Automated formula for refrain/chorus. Canvas customizes background & shapes.</span>
+                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30 shrink-0">REFRAIN LAYOUT</span>
                       </>
                     )}
                   </div>

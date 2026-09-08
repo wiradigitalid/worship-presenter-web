@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-015-autopilot-mandate-artifacts-qa-followup-rou
 
 ## Resume
 
-Iteration: 1 (boundary: completed SPEC-13-04)
+Iteration: 1 (boundary: completed SPEC-13-05)
 Run branch: autopilot/DEC-015 (PR: not open yet)
-Stopped at: SPEC-13-04 completed; ready to commence SPEC-13-05
+Stopped at: SPEC-13-05 completed; ready to commence SPEC-13-06
 Blocked: —
 Parked: —
-Next: SPEC-13-05: Song Set tab banner height decoupling (BUG-14)
+Next: SPEC-13-06: Song Set code Rename control (BUG-15)
 
 ## Decisions
 
@@ -20,3 +20,4 @@ Next: SPEC-13-05: Song Set tab banner height decoupling (BUG-14)
 | It 1 (autopilot/DEC-015) | SPEC-13-02 | Wire native contextmenu listener on upperCanvasEl directly and unify trigger logic with multi-select preservation | Attaching only to outer shell which Fabric upper canvas intercepts (BUG-2) | Context menu never opening on canvas elements | ArtifactEditor.tsx, canvas-utils.ts, artifact-editor-controls.test.mjs |
 | It 1 (autopilot/DEC-015) | SPEC-13-03 | Recalculate contain/cover aspect fit on object:modified via updateImageElementFit with box-anchored clipBox | Image content remaining small when handles resize (BUG-7) | Distorted or unscaled images on resize | ArtifactEditor.tsx, canvas-utils.ts, artifact-editor-controls.test.mjs |
 | It 1 (autopilot/DEC-015) | SPEC-13-04 | Deck Sequence card flex containment with flex-1 min-h-0 overflow-y-auto on list and shrink-0 on header | Unbounded content growth overflowing into window scrollbar (BUG-11) | Vertical window scrollbar on 1080p screens | ArtifactEditor.tsx, artifact-editor-layout.test.mjs |
+| It 1 (autopilot/DEC-015) | SPEC-13-05 | Fixed height h-[42px] + overflow-hidden on banner with flex-1 min-w-0 truncate on text and shrink-0 on badge | Variable line wrapping shifting canvas on tab switch (BUG-14) | Canvas height jumping when switching song set tabs | SongSetEntriesPanel.tsx, artifact-editor-layout.test.mjs |
