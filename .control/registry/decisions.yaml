@@ -242,4 +242,21 @@ decisions:
     file: .control/decisions/DEC-012-canvas-keyboard-delete-exception.md
     touches:
       - .scratch/SPEC-12-artifacts-qa-followup/issues/02-canvas-interaction-regressions.md
+  - id: DEC-013
+    type: mandate
+    status: accepted
+    accepted_by: "kodesh87 (2026-09-08)"
+    title: Autopilot mandate for Artifacts QA Follow-up (SPEC-12)
+    file: .control/decisions/DEC-013-autopilot-mandate-artifacts-qa-followup.md
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent
+      loop: 10m
+      expires: '2026-09-15'
+    touches:
+      - .control/memlog/autopilot-DEC-013.md
+      - .control/registry/specs.yaml
+      - .control/registry/decisions.yaml
 

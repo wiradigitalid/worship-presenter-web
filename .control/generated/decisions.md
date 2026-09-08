@@ -4,7 +4,7 @@
 
 Decisions are no longer looked up through the memlog — the memlog goes back to being just a pass log.
 
-**8 decisions** — applied: 8.
+**13 decisions** — accepted: 1 · applied: 12.
 
 | id | Title | Status | Type | Touches | File |
 | --- | --- | --- | --- | --- | --- |
@@ -16,3 +16,8 @@ Decisions are no longer looked up through the memlog — the memlog goes back to
 | `DEC-006` | A server realtime channel is admitted, for the remote-to-laptop direction only | `applied` | — | `.how/_platform/ARCHITECTURE-SPINE.md`, `.control/registry/usecases.yaml`, `.what/presenter/SRS-presenter.md` | `.control/decisions/DEC-006-remote-presenter-control.md` |
 | `DEC-007` | Autopilot mandate for G5 release execution | `applied` | mandate | `.control/memlog/autopilot-DEC-007.md`, `.control/registry/specs.yaml` | `.control/decisions/DEC-007-autopilot-mandate.md` |
 | `DEC-008` | Autopilot mandate for Artifacts overhaul (Main Spine, Song Sets, Announcement Sets) | `applied` | mandate | `.control/memlog/autopilot-DEC-008.md`, `.control/registry/specs.yaml`, `.control/registry/decisions.yaml` | `.control/decisions/DEC-008-autopilot-artifacts-overhaul.md` |
+| `DEC-009` | Every primary create-action button uses the default (primary) Button variant | `applied` | — | `.how/_platform/design-system.md`, `.control/registry/defects.yaml`, `.scratch/SPEC-12-artifacts-qa-followup/issues/06-main-spine-toolbar-title-consistency.md`, `.scratch/SPEC-12-artifacts-qa-followup/issues/07-song-sets-consistency.md`, `.scratch/SPEC-12-artifacts-qa-followup/issues/08-announcement-sets-consistency.md` | `.control/decisions/DEC-009-create-action-button-variant.md` |
+| `DEC-010` | "New" starts a top-level entity needing identity first; "Add" inserts into an open context; "Insert" is retir… | `applied` | — | `.how/_platform/design-system.md`, `.scratch/SPEC-12-artifacts-qa-followup/issues/06-main-spine-toolbar-title-consistency.md`, `.scratch/SPEC-12-artifacts-qa-followup/issues/07-song-sets-consistency.md`, `.scratch/SPEC-12-artifacts-qa-followup/issues/08-announcement-sets-consistency.md` | `.control/decisions/DEC-010-new-add-naming-convention.md` |
+| `DEC-011` | Every per-slide title area in the Registry canvas editor keeps its own Rename, grouped under "Canvas:" | `applied` | — | `.how/_platform/design-system.md`, `.scratch/SPEC-12-artifacts-qa-followup/issues/06-main-spine-toolbar-title-consistency.md`, `.scratch/SPEC-12-artifacts-qa-followup/issues/07-song-sets-consistency.md`, `.scratch/SPEC-12-artifacts-qa-followup/issues/08-announcement-sets-consistency.md` | `.control/decisions/DEC-011-song-set-sub-slide-title-actions.md` |
+| `DEC-012` | The canvas admits one keyboard shortcut (Delete/Backspace); OQ-13 narrows, does not fall | `applied` | — | `.scratch/SPEC-12-artifacts-qa-followup/issues/02-canvas-interaction-regressions.md` | `.control/decisions/DEC-012-canvas-keyboard-delete-exception.md` |
+| `DEC-013` | Autopilot mandate for Artifacts QA Follow-up (SPEC-12) | `accepted` | mandate | `.control/memlog/autopilot-DEC-013.md`, `.control/registry/specs.yaml`, `.control/registry/decisions.yaml` | `.control/decisions/DEC-013-autopilot-mandate-artifacts-qa-followup.md` |

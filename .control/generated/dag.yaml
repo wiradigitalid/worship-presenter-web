@@ -1,4 +1,22 @@
 dag:
+- spec: SPEC-12
+  order:
+  - parallel:
+    - SPEC-12-01
+  - parallel:
+    - SPEC-12-02
+  - parallel:
+    - SPEC-12-03
+  - parallel:
+    - SPEC-12-04
+  - parallel:
+    - SPEC-12-05
+  - parallel:
+    - SPEC-12-06
+  - parallel:
+    - SPEC-12-07
+  - parallel:
+    - SPEC-12-08
 - spec: W1
   order:
   - parallel:
