@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-015-autopilot-mandate-artifacts-qa-followup-rou
 
 ## Resume
 
-Iteration: 1 (boundary: completed SPEC-13-09)
+Iteration: 1 (boundary: completed SPEC-13-10)
 Run branch: autopilot/DEC-015 (PR: not open yet)
-Stopped at: SPEC-13-09 completed; ready to commence SPEC-13-10
+Stopped at: SPEC-13-10 completed; ready to commence SPEC-13-11
 Blocked: —
 Parked: —
-Next: SPEC-13-10: Inline status fixed slot to eliminate layout jump (BUG-20, DEC-011)
+Next: SPEC-13-11: Announcement set default text handling (BUG-21)
 
 ## Decisions
 
@@ -25,3 +25,4 @@ Next: SPEC-13-10: Inline status fixed slot to eliminate layout jump (BUG-20, DEC
 | It 1 (autopilot/DEC-015) | SPEC-13-07 | Sized rename inputs to h-8 on 58px cards and dropped vestigial Rename on fixed Song Set trio roles | Vertical height shift on entering rename and useless rename on static trio tabs (BUG-16, BUG-23) | Canvas jumping during rename and non-persisted edits | ArtifactEditor.tsx, SongSetEntriesPanel.tsx, canvas-adapters.ts, artifact-editor-layout.test.mjs |
 | It 1 (autopilot/DEC-015) | SPEC-13-08 | Canvas Reset discards in-memory edits to last-Saved state with saveSeq guard; drop seed element delete refusal | Restoring template from filesystem seed and refusing to delete seeded elements (DEC-014) | Overwriting user edits with factory seed or inability to delete default elements | ArtifactEditor.tsx, keys.ts, catalogue-en.ts, catalogue-id.ts, ARCHITECTURE-SPINE.md, DEC-014, decisions.yaml, artifact-editor-controls.test.mjs |
 | It 1 (autopilot/DEC-015) | SPEC-13-09 | Background replace removes existing background elements with isBackgroundElement; load failure keeps prior bg | Stacking extra background layers on top of existing ones (DEC-014, BUG-19) | Obscured backgrounds and visual clutter on canvas | ArtifactEditor.tsx, canvas-utils.ts, artifact-editor-controls.test.mjs |
+| It 1 (autopilot/DEC-015) | SPEC-13-10 | Fixed-height h-6 min-h-[24px] slot with overflow-hidden and truncate for inline status message | Dynamically inserting uncontained alert text that pushes down canvas panel (BUG-20, DEC-011) | Vertical layout shift on status message display | ArtifactEditor.tsx, operator-shadcn-guard.test.mjs |

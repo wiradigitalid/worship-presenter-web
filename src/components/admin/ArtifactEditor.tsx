@@ -2083,18 +2083,20 @@ export default function ArtifactEditor({
         {bannerNote ? <div>{bannerNote}</div> : null}
         {!template ? (
           <>
-            {message ? (
-              <p
-                role="alert"
-                className={`text-sm ${
-                  status === 'error' || status === 'conflict'
-                    ? 'text-destructive'
-                    : 'text-emerald-600 dark:text-emerald-400'
-                }`}
-              >
-                {message}
-              </p>
-            ) : null}
+            <div className="h-6 min-h-[24px] flex items-center overflow-hidden">
+              {message ? (
+                <p
+                  role="alert"
+                  className={`text-xs truncate ${
+                    status === 'error' || status === 'conflict'
+                      ? 'text-destructive'
+                      : 'text-emerald-600 dark:text-emerald-400'
+                  }`}
+                >
+                  {message}
+                </p>
+              ) : null}
+            </div>
             <p className="text-sm text-muted-foreground">{t('admin.artifacts.selectHint')}</p>
           </>
         ) : (
@@ -2201,18 +2203,20 @@ export default function ArtifactEditor({
               </div>
             </div>
 
-            {message ? (
-              <p
-                role="alert"
-                className={`text-sm ${
-                  status === 'error' || status === 'conflict'
-                    ? 'text-destructive'
-                    : 'text-emerald-600 dark:text-emerald-400'
-                }`}
-              >
-                {message}
-              </p>
-            ) : null}
+            <div className="h-6 min-h-[24px] flex items-center overflow-hidden">
+              {message ? (
+                <p
+                  role="alert"
+                  className={`text-xs truncate ${
+                    status === 'error' || status === 'conflict'
+                      ? 'text-destructive'
+                      : 'text-emerald-600 dark:text-emerald-400'
+                  }`}
+                >
+                  {message}
+                </p>
+              ) : null}
+            </div>
 
             {!isEditable ? (
               <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
