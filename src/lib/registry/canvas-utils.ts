@@ -409,3 +409,70 @@ export function handleContextMenuTrigger(
     setContextMenu(null);
   }
 }
+
+/**
+ * Re-fits a Fabric image object to its updated bounding box (e.g. after user scales via handles)
+ * preserving its natural aspect ratio with uniform contain fit and updated clipPath.
+ */
+export function updateImageElementFit(
+  imgObj: any,
+  fabric: any
+): boolean {
+  if (!imgObj || !imgObj.data?.imageRef) return false;
+  const element = imgObj._element as HTMLImageElement | undefined;
+  const naturalWidth = element?.naturalWidth || imgObj.width || 0;
+  const naturalHeight = element?.naturalHeight || imgObj.height || 0;
+  if (naturalWidth <= 0 || naturalHeight <= 0) return false;
+
+  // Current outer bounding box in canvas coordinates
+  const scaleX = Math.abs(imgObj.scaleX ?? 1);
+  const scaleY = Math.abs(imgObj.scaleY ?? 1);
+  const boxWidth = (imgObj.width ?? 0) * scaleX;
+  const boxHeight = (imgObj.height ?? 0) * scaleY;
+  if (boxWidth <= 0 || boxHeight <= 0) return false;
+
+  const boxLeft = imgObj.left ?? 0;
+  const boxTop = imgObj.top ?? 0;
+  const objectFit = imgObj.data?.objectFit === 'cover' ? 'cover' : 'contain';
+  const fit = calculateImageFit(
+    { left: boxLeft, top: boxTop, width: boxWidth, height: boxHeight },
+    { width: naturalWidth, height: naturalHeight },
+    objectFit
+  );
+
+  let clipBox = imgObj.clipPath;
+  if (!clipBox && fabric?.Rect) {
+    clipBox = new fabric.Rect({
+      left: boxLeft,
+      top: boxTop,
+      width: boxWidth,
+      height: boxHeight,
+      scaleX: 1,
+      scaleY: 1,
+      absolutePositioned: true,
+    });
+  } else if (clipBox) {
+    clipBox.set({
+      left: boxLeft,
+      top: boxTop,
+      width: boxWidth,
+      height: boxHeight,
+      scaleX: 1,
+      scaleY: 1,
+      absolutePositioned: true,
+    });
+  }
+
+  imgObj.set({
+    width: fit.width,
+    height: fit.height,
+    scaleX: fit.scaleX,
+    scaleY: fit.scaleY,
+    left: fit.left,
+    top: fit.top,
+    clipPath: clipBox,
+  });
+  imgObj.setCoords();
+  return true;
+}
+

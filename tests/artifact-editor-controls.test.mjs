@@ -25,6 +25,7 @@ const {
   shouldPreserveSelectionOnContextMenu,
   computeContextMenuCoords,
   handleContextMenuTrigger,
+  updateImageElementFit,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'canvas-utils.ts')).href
 );
@@ -1102,6 +1103,123 @@ test('SPEC-13-02: Canvas context menu wired to Fabric contextmenu event and mult
   assert.ok(
     !code.includes('onContextMenu={(e) => {\n                    e.preventDefault();\n                    const canvas = fabricCanvasRef.current;'),
     'Shell div must not duplicate context menu trigger execution'
+  );
+});
+
+test('SPEC-13-03: Image element grows and shrinks when resized with aspect ratio contain-fit (BUG-7)', async () => {
+  // 1. Behavioral test: Growing an image element via resize handles
+  // Start with image of natural size 400x200 (2:1 aspect ratio) in an initial box of 200x100
+  const initialFit = calculateImageFit(
+    { left: 10, top: 20, width: 200, height: 100 },
+    { width: 400, height: 200 },
+    'contain'
+  );
+  assert.equal(initialFit.width, 400);
+  assert.equal(initialFit.height, 200);
+  assert.equal(initialFit.scaleX, 0.5);
+  assert.equal(initialFit.scaleY, 0.5);
+
+  let coordsSet = false;
+  const mockImageObj = {
+    data: { imageRef: '/api/uploads/photo.jpg' },
+    left: initialFit.left,
+    top: initialFit.top,
+    width: initialFit.width,
+    height: initialFit.height,
+    scaleX: initialFit.scaleX,
+    scaleY: initialFit.scaleY,
+    _element: { naturalWidth: 400, naturalHeight: 200 },
+    set: function (props) { Object.assign(this, props); },
+    setCoords: function () { coordsSet = true; },
+  };
+
+  const mockFabric = {
+    Rect: class {
+      constructor(opts) { Object.assign(this, opts); }
+      set(opts) { Object.assign(this, opts); }
+    },
+  };
+
+  // User drags resize handles outward to grow bounding box to 400x300 (scaleX=1.0, scaleY=1.5 on current dimensions)
+  mockImageObj.scaleX = 1.0;
+  mockImageObj.scaleY = 1.5;
+  const didGrow = updateImageElementFit(mockImageObj, mockFabric);
+  assert.equal(didGrow, true, 'updateImageElementFit must succeed on valid image object');
+
+  // Rendered dimensions must fit within box (400x300), preserving 2:1 aspect ratio:
+  // contain fit scale should be min(400/400, 300/200) = min(1.0, 1.5) = 1.0
+  const renderedW_grow = mockImageObj.width * mockImageObj.scaleX;
+  const renderedH_grow = mockImageObj.height * mockImageObj.scaleY;
+  assert.equal(renderedW_grow, 400, 'Rendered width must grow to 400');
+  assert.equal(renderedH_grow, 200, 'Rendered height must grow to 200 (preserving 2:1 ratio)');
+  assert.equal(renderedW_grow / renderedH_grow, 2, 'Aspect ratio must stay 2:1');
+  assert.equal(coordsSet, true, 'setCoords must be called after resize');
+
+  // 2. Behavioral test: Shrinking an image element via resize handles
+  // User drags resize handles inward to shrink bounding box to 100x100
+  mockImageObj.scaleX = 0.25; // 400 * 0.25 = 100px width
+  mockImageObj.scaleY = 0.5;  // 200 * 0.5 = 100px height
+  coordsSet = false;
+  const didShrink = updateImageElementFit(mockImageObj, mockFabric);
+  assert.equal(didShrink, true);
+
+  // contain fit scale: min(100/400, 100/200) = min(0.25, 0.5) = 0.25
+  const renderedW_shrink = mockImageObj.width * mockImageObj.scaleX;
+  const renderedH_shrink = mockImageObj.height * mockImageObj.scaleY;
+  assert.equal(renderedW_shrink, 100, 'Rendered width must shrink to 100');
+  assert.equal(renderedH_shrink, 50, 'Rendered height must shrink to 50 (preserving 2:1 ratio)');
+  assert.equal(renderedW_shrink / renderedH_shrink, 2, 'Aspect ratio must stay 2:1 on shrink');
+
+  // 3. Behavioral test: Cover objectFit correctly anchors clipBox to outer box coordinates
+  // Portrait image (200x400, 1:2) inside landscape box (200x100) with cover fit
+  mockImageObj.data = { imageRef: '/api/uploads/photo.jpg', objectFit: 'cover' };
+  mockImageObj.left = 50;
+  mockImageObj.top = 60;
+  mockImageObj.width = 200;
+  mockImageObj.height = 400;
+  mockImageObj.scaleX = 1.0;
+  mockImageObj.scaleY = 0.25; // 200x100 box
+  mockImageObj._element = { naturalWidth: 200, naturalHeight: 400 };
+
+  let clipBoxInstance = null;
+  const mockFabricWithCapture = {
+    Rect: class {
+      constructor(opts) {
+        Object.assign(this, opts);
+        clipBoxInstance = this;
+      }
+      set(opts) { Object.assign(this, opts); }
+    },
+  };
+
+  mockImageObj.clipPath = null;
+  const didCover = updateImageElementFit(mockImageObj, mockFabricWithCapture);
+  assert.equal(didCover, true);
+  // ClipBox must be anchored to boxLeft (50) and boxTop (60) with boxWidth (200) and boxHeight (100)
+  assert.ok(clipBoxInstance);
+  assert.equal(clipBoxInstance.left, 50, 'ClipBox left must anchor to outer box left');
+  assert.equal(clipBoxInstance.top, 60, 'ClipBox top must anchor to outer box top');
+  assert.equal(clipBoxInstance.width, 200, 'ClipBox width must match outer box width');
+  assert.equal(clipBoxInstance.height, 100, 'ClipBox height must match outer box height');
+  assert.equal(clipBoxInstance.scaleX, 1, 'ClipBox scaleX must be 1');
+  assert.equal(clipBoxInstance.scaleY, 1, 'ClipBox scaleY must be 1');
+
+  // 4. Source scan guard: ArtifactEditor hooks object:modified to updateImageElementFit
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  assert.ok(
+    code.includes("canvas.on('object:modified', onObjectModified)"),
+    'ArtifactEditor must listen to object:modified on canvas'
+  );
+  assert.ok(
+    code.includes('updateImageElementFit(target, fabric)'),
+    'onObjectModified must invoke updateImageElementFit for resized images'
+  );
+  assert.ok(
+    code.includes("canvas.off('object:modified', onObjectModified)"),
+    'ArtifactEditor must unregister object:modified listener on unmount'
   );
 });
 

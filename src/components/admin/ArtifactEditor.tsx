@@ -86,6 +86,7 @@ import {
   serializeTextStyle,
   shouldPreserveSelectionOnContextMenu,
   toStrictHexColor,
+  updateImageElementFit,
 } from '@/lib/registry/canvas-utils';
 
 function placeholderLabelKey(key: string): I18nKey {
@@ -192,7 +193,7 @@ function elementToFabricObject(
         scaleX: initial.scaleX,
         scaleY: initial.scaleY,
         clipPath: clipBox,
-        data: { elementId: element.id, imageRef: element.imageRef },
+        data: { elementId: element.id, imageRef: element.imageRef, objectFit: element.style?.objectFit },
       });
       imgEl.onload = () => {
         const updated = calcFit();
@@ -567,6 +568,17 @@ export default function ArtifactEditor({
       };
       upperCanvasEl?.addEventListener('contextmenu', onNativeContextMenu);
 
+      // SPEC-13-03: On image object scaling/modification, recalculate contain fit so image content grows/shrinks with handles
+      const onObjectModified = (opt: any) => {
+        const target = opt.target;
+        if (target && target.data?.imageRef) {
+          if (updateImageElementFit(target, fabric)) {
+            canvas.requestRenderAll();
+          }
+        }
+      };
+      canvas.on('object:modified', onObjectModified);
+
       // Registered here and not one line earlier: the paint loop above calls
       // `canvas.add()` for every seed element, and `canvas.add()` fires
       // `object:added`. Attached any sooner, a fresh mount would mark itself
@@ -580,6 +592,7 @@ export default function ArtifactEditor({
         canvas.off('selection:cleared', onSelectionChange);
         canvas.off('mouse:down', onMouseDown);
         canvas.off('mouse:up', onMouseUp);
+        canvas.off('object:modified', onObjectModified);
         upperCanvasEl?.removeEventListener('contextmenu', onNativeContextMenu);
         for (const event of CANVAS_MUTATION_EVENTS) {
           canvas.off(event, markDirty);
