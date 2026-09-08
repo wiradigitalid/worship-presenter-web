@@ -276,6 +276,8 @@ export default function ArtifactEditor({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const dragSourceIndexRef = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const fitCanvasToShell = useCallback(() => {
     const shell = canvasShellRef.current;
@@ -428,6 +430,8 @@ export default function ArtifactEditor({
         width: CANVAS_WIDTH,
         height: CANVAS_HEIGHT,
         selection: true,
+        fireRightClick: true,
+        stopContextMenu: true,
         backgroundColor: layout.backgroundColor,
       });
       fabricCanvasRef.current = canvas;
@@ -971,6 +975,47 @@ export default function ArtifactEditor({
     );
   }, [template, syncSelection, markDirty, t]);
 
+  // DEC-012: The canvas admits one keyboard shortcut: Delete/Backspace on the selected element.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+
+      const activeEl = document.activeElement;
+      if (
+        activeEl instanceof HTMLInputElement ||
+        activeEl instanceof HTMLTextAreaElement ||
+        (activeEl instanceof HTMLElement && activeEl.isContentEditable) ||
+        activeEl instanceof HTMLButtonElement ||
+        activeEl?.getAttribute('role') === 'button'
+      ) {
+        return;
+      }
+
+      const shell = canvasShellRef.current;
+      const isCanvasFocused =
+        shell &&
+        (shell.contains(activeEl) || activeEl === document.body || activeEl === null);
+      if (!isCanvasFocused) return;
+
+      const canvas = fabricCanvasRef.current;
+      if (!canvas) return;
+
+      const activeObjects = canvas.getActiveObjects();
+      if (activeObjects.length === 0) return;
+
+      const isTextEditing = activeObjects.some((obj) => (obj as any).isEditing === true);
+      if (isTextEditing) return;
+
+      e.preventDefault();
+      handleDeleteSelected();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleDeleteSelected]);
+
   const handleDuplicateSelected = useCallback(async () => {
     const canvas = fabricCanvasRef.current;
     const layout = template ? getEditableLayout(template) : null;
@@ -1308,26 +1353,41 @@ export default function ArtifactEditor({
   };
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
+    dragSourceIndexRef.current = index;
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', String(index));
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
   };
 
   const handleDrop = async (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault();
-    if (draggedIndex === null || draggedIndex === targetIndex) {
-      setDraggedIndex(null);
+    setDragOverIndex(null);
+    const rawData = e.dataTransfer.getData('text/plain');
+    const sourceIndex =
+      rawData !== '' && !Number.isNaN(Number(rawData))
+        ? Number(rawData)
+        : (dragSourceIndexRef.current ?? draggedIndex);
+    dragSourceIndexRef.current = null;
+    setDraggedIndex(null);
+    if (
+      sourceIndex === null ||
+      sourceIndex === targetIndex ||
+      sourceIndex < 0 ||
+      sourceIndex >= templates.length
+    ) {
       return;
     }
     const next = [...templates];
-    const [moved] = next.splice(draggedIndex, 1);
+    const [moved] = next.splice(sourceIndex, 1);
     next.splice(targetIndex, 0, moved);
-    setDraggedIndex(null);
     setTemplates(next);
     await handleReorderTemplates(next);
   };
@@ -1825,9 +1885,18 @@ export default function ArtifactEditor({
                     key={item.id}
                     draggable={!busy}
                     onDragStart={(e) => handleDragStart(e, index)}
-                    onDragOver={handleDragOver}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragLeave={() => {
+                      if (dragOverIndex === index) setDragOverIndex(null);
+                    }}
+                    onDragEnd={() => {
+                      setDragOverIndex(null);
+                      dragSourceIndexRef.current = null;
+                    }}
                     onDrop={(e) => void handleDrop(e, index)}
-                    className="group relative"
+                    className={`group relative transition-all ${
+                      dragOverIndex === index ? 'ring-2 ring-primary bg-primary/20 rounded-lg' : ''
+                    }`}
                   >
                     <div
                       role="button"
@@ -1854,7 +1923,7 @@ export default function ArtifactEditor({
                         if (!proceed) return;
                         setSelectedId(item.id);
                       }}
-                      className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all ${
+                      className={`flex items-center justify-between p-2 rounded-lg border cursor-grab active:cursor-grabbing select-none transition-all ${
                         isSelected
                           ? 'border-primary bg-primary/10'
                           : 'border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border'
@@ -2296,6 +2365,29 @@ export default function ArtifactEditor({
                 <div
                   ref={canvasShellRef}
                   className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-black/90"
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    const canvas = fabricCanvasRef.current;
+                    if (!canvas || !canvasShellRef.current) return;
+                    const rect = canvasShellRef.current.getBoundingClientRect();
+                    const x = Math.max(10, Math.min(e.clientX - rect.left, rect.width - 170));
+                    const y = Math.max(10, Math.min(e.clientY - rect.top, rect.height - 220));
+
+                    const target = canvas.findTarget(e.nativeEvent);
+                    if (target) {
+                      if (!canvas.getActiveObjects().includes(target)) {
+                        canvas.setActiveObject(target);
+                        canvas.requestRenderAll();
+                        syncSelection(canvas);
+                      }
+                      setContextMenu({ x, y });
+                    } else {
+                      canvas.discardActiveObject();
+                      canvas.requestRenderAll();
+                      syncSelection(canvas);
+                      setContextMenu(null);
+                    }
+                  }}
                 >
                   <canvas ref={canvasRef} />
 

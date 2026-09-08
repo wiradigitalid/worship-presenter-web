@@ -749,3 +749,37 @@ test('SPEC-12-01: ArtifactEditor source guards for realtime styling, underline, 
   );
 });
 
+test('SPEC-12-02: Canvas interaction regressions - context menu, keyboard delete, drag reorder', async () => {
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. Right-click context menu must have an opener wired
+  assert.ok(
+    code.includes('onContextMenu={') && code.includes('setContextMenu('),
+    'Canvas shell must have onContextMenu handler that opens the context menu'
+  );
+
+  // 2. Keyboard Delete/Backspace shortcut with isEditing guard (DEC-012)
+  assert.ok(
+    code.includes("e.key !== 'Delete' && e.key !== 'Backspace'") ||
+    (code.includes("'Delete'") && code.includes("'Backspace'")),
+    'Must handle Delete and Backspace keys for selected canvas element'
+  );
+  assert.ok(
+    code.includes('.isEditing'),
+    'Keyboard delete must guard against active inline text editing'
+  );
+
+  // 3. Deck Sequence drag reorder handles dataTransfer and visual feedback
+  assert.ok(
+    code.includes('dragOverIndex') || code.includes('dropEffect'),
+    'Deck sequence must handle drag events properly'
+  );
+  assert.ok(
+    code.includes("getData('text/plain')") && code.includes('handleReorderTemplates'),
+    'handleDrop must read source index from dataTransfer and persist reorder'
+  );
+});
+
+

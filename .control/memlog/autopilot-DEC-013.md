@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-013-autopilot-mandate-artifacts-qa-followup.md
 
 ## Resume
 
-Iteration: 1 (boundary: complete SPEC-12-01 realtime apply, underline, shape sync)
+Iteration: 1 (boundary: complete SPEC-12-02 context menu, keyboard delete, drag reorder)
 Run branch: autopilot/DEC-013 (PR: not open yet)
-Stopped at: Finished SPEC-12-01; ready for SPEC-12-02
+Stopped at: Finished SPEC-12-02; ready for SPEC-12-03
 Blocked: —
 Parked: —
-Next: SPEC-12-02: Canvas interaction regressions & shortcuts (BUG-1, BUG-2, BUG-3, DEC-012)
+Next: SPEC-12-03: Image aspect ratio contain-fit (BUG-7)
 
 ## Decisions
 
@@ -17,3 +17,4 @@ Next: SPEC-12-02: Canvas interaction regressions & shortcuts (BUG-1, BUG-2, BUG-
 |---|---|---|---|---|---|
 | It 1 (autopilot/DEC-013) | wdi-autopilot preflight | Mandate DEC-013 accepted by owner kodesh87 for Artifacts QA Follow-up (SPEC-12) | Interactive approval at each ticket | Full autonomous recording | DEC-013, decisions.yaml |
 | It 1 (autopilot/DEC-013) | SPEC-12-01 | Add textDecoration underline to validators/render-model/Fabric and wire realtime font/shape handlers | Manual apply button or missing underline round-trip | Discarded styling on reopen | ArtifactEditor.tsx, validate_artifact.go, validate.ts, canvas-utils.ts, render-model.ts, pptx-draw.ts |
+| It 1 (autopilot/DEC-013) | SPEC-12-02 | Wire context menu on canvasShellRef right-click, add scoped Delete/Backspace listener per DEC-012, and add drag visual feedback | Missing openers and unhandled keyboard events | Non-functional context menu & trapped delete | ArtifactEditor.tsx, DEC-012 |
