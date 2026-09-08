@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-013-autopilot-mandate-artifacts-qa-followup.md
 
 ## Resume
 
-Iteration: 1 (boundary: complete SPEC-12-05 main spine page layout & viewport height)
+Iteration: 1 (boundary: complete SPEC-12-06 main spine toolbar & title consistency)
 Run branch: autopilot/DEC-013 (PR: not open yet)
-Stopped at: Finished SPEC-12-05; ready for SPEC-12-06
+Stopped at: Finished SPEC-12-06; ready for SPEC-12-07
 Blocked: —
 Parked: —
-Next: SPEC-12-06: Main Spine toolbar & title consistency (BUG-11, BUG-12, BUG-13, BUG-14)
+Next: SPEC-12-07: Song Sets UX & button consistency (BUG-16, DEC-009, DEC-010, DEC-011)
 
 ## Decisions
 
@@ -21,3 +21,4 @@ Next: SPEC-12-06: Main Spine toolbar & title consistency (BUG-11, BUG-12, BUG-13
 | It 1 (autopilot/DEC-013) | SPEC-12-03 | Implement calculateImageFit with natural dimensions, uniform contain scaling, centering, and element bounding clipBox | Independent axis stretching (squashed image) | Distorted image display on canvas | ArtifactEditor.tsx, canvas-utils.ts, artifact-preview.test.mjs, artifact-editor-controls.test.mjs |
 | It 1 (autopilot/DEC-013) | SPEC-12-04 | Extract Select item labels in select-utils and feed into Base UI native items prop in select.tsx | Touching 15+ call sites or parallel custom context | Stale label resolution on custom dropdowns | select.tsx, select-utils.ts, artifact-editor-controls.test.mjs |
 | It 1 (autopilot/DEC-013) | SPEC-12-05 | Add viewport height constraints and min-h floor on editor and canvasShellRef | Outer window scrolling on 1080p laptop displays | Pushing deck sequence & header off screen | ArtifactEditor.tsx, RegistryAdmin.tsx, artifact-editor-layout.test.mjs |
+| It 1 (autopilot/DEC-013) | SPEC-12-06 | Make Properties row always mounted with fallback placeholders, group title buttons with Canvas: label per DEC-011, make add buttons icon-only | Conditional render shifting canvas position | Visual layout jumps when selecting elements | ArtifactEditor.tsx, artifact-editor-controls.test.mjs, DEC-009, DEC-011 |

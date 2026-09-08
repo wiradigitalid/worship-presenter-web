@@ -10,10 +10,11 @@ import {
   Copy,
   Image as ImageIcon,
   Italic,
-  Palette,
   Plus,
   SendToBack,
+  Square,
   Trash2,
+  Type,
   Underline,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -1870,7 +1871,7 @@ export default function ArtifactEditor({
                   type="button"
                   onClick={() => void handleCreate()}
                   disabled={busy}
-                  className="bg-primary hover:bg-blue-600 text-white px-3.5 py-2 rounded-lg text-xs font-semibold shrink-0 h-8"
+                  className="shrink-0 h-8"
                 >
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   Add
@@ -1891,7 +1892,7 @@ export default function ArtifactEditor({
                   size="sm"
                   onClick={() => void handleCreate()}
                   disabled={busy || !newLabel.trim()}
-                  className="bg-primary hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
+                  className="shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   Add
@@ -2084,10 +2085,11 @@ export default function ArtifactEditor({
                 ) : null}
 
                 {isRenaming ? (
-                  <>
+                  <div className="flex items-center gap-1.5">
                     <Button
                       type="button"
                       variant="outline"
+                      size="sm"
                       onClick={() => {
                         setIsRenaming(false);
                         setDraftLabel(template.label);
@@ -2098,6 +2100,7 @@ export default function ArtifactEditor({
                     </Button>
                     <Button
                       type="button"
+                      size="sm"
                       onClick={async () => {
                         await handleRename();
                         setIsRenaming(false);
@@ -2106,37 +2109,43 @@ export default function ArtifactEditor({
                     >
                       Save
                     </Button>
-                  </>
+                  </div>
                 ) : (
-                  <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsRenaming(true)}
+                    disabled={busy}
+                  >
+                    {t('admin.artifacts.rename')}
+                  </Button>
+                )}
+
+                <div className="h-4 w-px bg-border mx-1" />
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-muted-foreground">Canvas:</span>
+                  {isResettable ? (
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setIsRenaming(true)}
+                      size="sm"
+                      onClick={handleReset}
                       disabled={busy}
                     >
-                      {t('admin.artifacts.rename')}
+                      {t('admin.artifacts.reset')}
                     </Button>
-                    {isResettable ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleReset}
-                        disabled={busy}
-                      >
-                        {t('admin.artifacts.reset')}
-                      </Button>
-                    ) : null}
-                  </>
-                )}
-
-                <Button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={!isEditable || busy}
-                >
-                  {t('admin.artifacts.save')}
-                </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={!isEditable || busy}
+                  >
+                    {t('admin.artifacts.save')}
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -2185,36 +2194,61 @@ export default function ArtifactEditor({
                     <Button
                       type="button"
                       variant={drawingTool === 'text' ? 'default' : 'outline'}
-                      size="sm"
+                      size="icon-sm"
                       onClick={() => setDrawingTool((cur) => (cur === 'text' ? null : 'text'))}
                       disabled={busy}
-                      className="text-xs font-medium"
+                      title="Text"
                     >
-                      <span className="font-bold mr-1">T</span> Text (Drag)
+                      <Type className="w-3.5 h-3.5" />
                     </Button>
                     <Button
                       type="button"
                       variant={drawingTool === 'rect' ? 'default' : 'outline'}
-                      size="sm"
+                      size="icon-sm"
                       onClick={() => setDrawingTool((cur) => (cur === 'rect' ? null : 'rect'))}
                       disabled={busy}
-                      className="text-xs font-medium"
+                      title="Rectangle"
                     >
-                      <span className="mr-1">▭</span> Rectangle (Drag)
+                      <Square className="w-3.5 h-3.5" />
                     </Button>
                     {allowImages ? (
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
+                        size="icon-sm"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={busy}
-                        className="text-xs font-medium"
+                        title="Image"
                       >
-                        <ImageIcon className="w-3.5 h-3.5 mr-1" />
-                        Image
+                        <ImageIcon className="w-3.5 h-3.5" />
                       </Button>
                     ) : null}
+
+                    <div className="h-4 w-px bg-border mx-1" />
+
+                    <div>
+                      <input
+                        ref={bgFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) void handleUploadBackgroundFile(f);
+                          if (bgFileInputRef.current) bgFileInputRef.current.value = '';
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowBgDialog(true)}
+                        className="text-xs font-medium flex items-center gap-1.5"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        Background
+                      </Button>
+                    </div>
 
                     <div className="h-4 w-px bg-border mx-1" />
 
@@ -2244,7 +2278,6 @@ export default function ArtifactEditor({
                     </Select>
                     <Button
                       type="button"
-                      variant="outline"
                       size="sm"
                       onClick={() => {
                         void insertPlaceholder(insertPlaceholderKey);
@@ -2255,140 +2288,121 @@ export default function ArtifactEditor({
                       + Placeholder
                     </Button>
                   </div>
-
-                  {/* CHANGE BACKGROUND BUTTON (POIN 10) */}
-                  <div>
-                    <input
-                      ref={bgFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) void handleUploadBackgroundFile(f);
-                        if (bgFileInputRef.current) bgFileInputRef.current.value = '';
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowBgDialog(true)}
-                      className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/30 text-xs font-semibold flex items-center gap-1.5"
-                    >
-                      <Palette className="w-3.5 h-3.5" />
-                      Change Background
-                    </Button>
-                  </div>
                 </div>
 
                 {/* TOOLBAR ROW 2: ELEMENT PROPERTIES (POIN 8) */}
-                {selectedElementIds.length > 0 ? (
-                  <div className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-background border border-border text-xs">
-                    {selectedTextCount > 0 ? (
-                      <>
-                        <span className="text-[11px] font-mono text-muted-foreground uppercase">Properties (Text):</span>
+                <div className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-background border border-border text-xs min-h-[44px]">
+                  {selectedElementIds.length === 0 ? (
+                    <span className="text-muted-foreground text-xs italic">
+                      Properties (None): Select element first
+                    </span>
+                  ) : selectedTextCount > 0 ? (
+                    <>
+                      <span className="text-[11px] font-mono text-muted-foreground uppercase">Properties (Text):</span>
+                      <input
+                        type="color"
+                        value={fontColor}
+                        onChange={(e) => handleFontColorChange(e.target.value)}
+                        className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded"
+                        title="Font Color"
+                      />
+                      <Input
+                        type="number"
+                        min={MIN_FONT_SIZE}
+                        max={MAX_FONT_SIZE}
+                        value={fontSizeInput}
+                        onChange={(e) => handleFontSizeInput(e.target.value)}
+                        onBlur={() => setFontSizeInput(String(fontSize))}
+                        className="w-20 h-7 text-xs text-center"
+                        title="Font Size"
+                      />
+                      <Button
+                        type="button"
+                        variant={fontWeight === 'bold' ? 'default' : 'outline'}
+                        size="icon-sm"
+                        onClick={handleToggleBold}
+                        disabled={busy}
+                        title={t('admin.artifacts.bold')}
+                      >
+                        <Bold className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={fontStyle === 'italic' ? 'default' : 'outline'}
+                        size="icon-sm"
+                        onClick={handleToggleItalic}
+                        disabled={busy}
+                        title={t('admin.artifacts.italic')}
+                      >
+                        <Italic className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={underline ? 'default' : 'outline'}
+                        size="icon-sm"
+                        onClick={handleToggleUnderline}
+                        disabled={busy}
+                        title={t('admin.artifacts.underline')}
+                      >
+                        <Underline className="w-3.5 h-3.5" />
+                      </Button>
+                      <div className="h-4 w-px bg-border mx-1" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => handleSetTextAlign('left')}
+                        title="Align Left"
+                      >
+                        <AlignLeft className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => handleSetTextAlign('center')}
+                        title="Align Center"
+                      >
+                        <AlignCenter className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => handleSetTextAlign('right')}
+                        title="Align Right"
+                      >
+                        <AlignRight className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={applyTextStyle}
+                        className="text-xs h-7 ml-auto"
+                      >
+                        {t('admin.artifacts.applyStyle')}
+                      </Button>
+                    </>
+                  ) : fabricCanvasRef.current?.getActiveObjects().some((o) => Boolean((o as any).data?.imageRef)) ? (
+                    <span className="text-muted-foreground text-xs italic">
+                      Properties (Image): No properties to change
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-[11px] font-mono text-muted-foreground uppercase">Properties (Shape):</span>
+                      <Label className="flex items-center gap-1 text-xs">
+                        Color:
                         <input
                           type="color"
-                          value={fontColor}
-                          onChange={(e) => handleFontColorChange(e.target.value)}
-                          className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded"
-                          title="Font Color"
+                          value={shapeFill}
+                          onChange={(e) => handleSetShapeFill(e.target.value)}
+                          className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded ml-1"
                         />
-                        <Input
-                          type="number"
-                          min={MIN_FONT_SIZE}
-                          max={MAX_FONT_SIZE}
-                          value={fontSizeInput}
-                          onChange={(e) => handleFontSizeInput(e.target.value)}
-                          onBlur={() => setFontSizeInput(String(fontSize))}
-                          className="w-20 h-7 text-xs text-center"
-                          title="Font Size"
-                        />
-                        <Button
-                          type="button"
-                          variant={fontWeight === 'bold' ? 'default' : 'outline'}
-                          size="icon-sm"
-                          onClick={handleToggleBold}
-                          disabled={busy}
-                          title={t('admin.artifacts.bold')}
-                        >
-                          <Bold className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={fontStyle === 'italic' ? 'default' : 'outline'}
-                          size="icon-sm"
-                          onClick={handleToggleItalic}
-                          disabled={busy}
-                          title={t('admin.artifacts.italic')}
-                        >
-                          <Italic className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={underline ? 'default' : 'outline'}
-                          size="icon-sm"
-                          onClick={handleToggleUnderline}
-                          disabled={busy}
-                          title={t('admin.artifacts.underline')}
-                        >
-                          <Underline className="w-3.5 h-3.5" />
-                        </Button>
-                        <div className="h-4 w-px bg-border mx-1" />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-sm"
-                          onClick={() => handleSetTextAlign('left')}
-                          title="Align Left"
-                        >
-                          <AlignLeft className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-sm"
-                          onClick={() => handleSetTextAlign('center')}
-                          title="Align Center"
-                        >
-                          <AlignCenter className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-sm"
-                          onClick={() => handleSetTextAlign('right')}
-                          title="Align Right"
-                        >
-                          <AlignRight className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={applyTextStyle}
-                          className="text-xs h-7 ml-auto"
-                        >
-                          {t('admin.artifacts.applyStyle')}
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-[11px] font-mono text-muted-foreground uppercase">Properties (Shape):</span>
-                        <Label className="flex items-center gap-1 text-xs">
-                          Color:
-                          <input
-                            type="color"
-                            value={shapeFill}
-                            onChange={(e) => handleSetShapeFill(e.target.value)}
-                            className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded ml-1"
-                          />
-                        </Label>
-                      </>
-                    )}
-                  </div>
-                ) : null}
+                      </Label>
+                    </>
+                  )}
+                </div>
 
                 {/* CANVAS WORKSPACE & CONTEXT MENU (POIN 5 & 6) */}
                 <div

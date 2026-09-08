@@ -883,6 +883,47 @@ test('SPEC-12-04: Select dropdown renders item label instead of raw value key', 
   );
 });
 
+test('SPEC-12-06: Main Spine toolbar and title area consistency (BUG-12, BUG-13, BUG-17, DEC-009, DEC-011)', async () => {
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. Element Properties row is always mounted (BUG-13)
+  assert.ok(
+    code.includes('Properties (None): Select element first'),
+    'Element Properties row must show "Properties (None): Select element first" when nothing selected'
+  );
+  assert.ok(
+    code.includes('Properties (Image): No properties to change'),
+    'Element Properties row must show "Properties (Image): No properties to change" when image selected'
+  );
+
+  // 2. Title area grouping per DEC-011
+  assert.ok(
+    code.includes('Canvas:'),
+    'Title area must group canvas actions under "Canvas:" label per DEC-011'
+  );
+
+  // 3. Toolbar add buttons icon only, no "(Drag)" suffix (BUG-12)
+  assert.ok(
+    !code.includes('Text (Drag)') && !code.includes('Rectangle (Drag)'),
+    'Toolbar add buttons must not include "(Drag)" text suffix'
+  );
+
+  // 4. Background button uses Background label and no Palette icon (BUG-12)
+  assert.ok(
+    !code.includes('<Palette') && code.includes('Background'),
+    'Background button must use image icon and Background label'
+  );
+
+  // 5. No custom hover:bg-blue-600 overrides (DEC-009, BUG-17)
+  assert.ok(
+    !code.includes('hover:bg-blue-600'),
+    'ArtifactEditor must not carry hand-written hover:bg-blue-600 button overrides'
+  );
+});
+
+
 
 
 
