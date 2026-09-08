@@ -26,6 +26,8 @@ const {
   computeContextMenuCoords,
   handleContextMenuTrigger,
   updateImageElementFit,
+  isBackgroundElement,
+  filterOutBackgroundElements,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'canvas-utils.ts')).href
 );
@@ -1276,6 +1278,54 @@ test('SPEC-13-08: Canvas Reset becomes discard-unsaved-changes; seeded elements 
     spineCode.includes('DEC-014') && spineCode.includes('Canvas Reset discards unsaved in-memory edits back to the last Saved state'),
     'AD-11 in ARCHITECTURE-SPINE.md must describe discard-unsaved-changes per DEC-014'
   );
+});
+
+test('SPEC-13-09: Adding a background replaces the existing one instead of stacking extra layers (DEC-014, BUG-19)', async () => {
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. Guard against failed background load: try/catch wraps FabricImage.fromURL and keeps prior background
+  assert.ok(
+    code.includes('try {') && code.includes('FabricImage.fromURL') && code.includes('Failed to load background'),
+    'handleChangeBackgroundUrl must wrap FabricImage.fromURL in try/catch to preserve prior background on failure'
+  );
+
+  // 2. Removal of existing background element to prevent stacking and stale canvas check
+  assert.ok(
+    code.includes('isBackgroundElement') && code.includes('filterOutBackgroundElements'),
+    'handleChangeBackgroundUrl must use isBackgroundElement and filterOutBackgroundElements'
+  );
+  assert.ok(
+    code.includes('if (fabricCanvasRef.current !== canvas) return;'),
+    'handleChangeBackgroundUrl must guard against stale canvas after async calls'
+  );
+
+  // 3. Behavioral test: isBackgroundElement and filterOutBackgroundElements exported helpers
+  const bgCandidate1 = { id: 'e2', type: 'image', x: 0, y: 0, w: 100, h: 100, zIndex: 0, imageRef: '/assets/song-title-bottom.jpeg' };
+  const userImageAtZero = { id: 'usr-img-1', type: 'image', x: 10, y: 10, w: 20, h: 20, zIndex: 0, imageRef: '/api/uploads/logo.png' };
+  const bannerAtHighZ = { id: 'usr-banner', type: 'image', x: 0, y: 0, w: 100, h: 20, zIndex: 2, imageRef: '/api/uploads/banner.png' };
+  const shapeAtZero = { id: 'e1', type: 'shape', x: 0, y: 0, w: 100, h: 100, zIndex: 0 };
+  const textElement = { id: 'e3', type: 'text', x: 10, y: 20, w: 50, h: 10, zIndex: 1, content: 'Title' };
+
+  // Positive: seeded/full-width image at zIndex 0 is a background element
+  assert.equal(isBackgroundElement(bgCandidate1), true, 'Full-width image at zIndex 0 is recognized as background element');
+
+  // Negatives: regular user images, banners, shapes, and texts must NOT be identified as background element
+  assert.equal(isBackgroundElement(userImageAtZero), false, 'Non-fullwidth user image at zIndex 0 must NOT be treated as background element');
+  assert.equal(isBackgroundElement(bannerAtHighZ), false, 'Image at zIndex > 0 must NOT be treated as background element');
+  assert.equal(isBackgroundElement(shapeAtZero), false, 'Shape element must NOT be treated as background element');
+  assert.equal(isBackgroundElement(textElement), false, 'Text element must NOT be treated as background element');
+
+  // filterOutBackgroundElements removes only genuine background element
+  const elements = [bgCandidate1, userImageAtZero, bannerAtHighZ, shapeAtZero, textElement];
+  const filtered = filterOutBackgroundElements(elements);
+  assert.equal(filtered.length, 4, 'Exactly one background element should be removed');
+  assert.equal(filtered.some((e) => e.id === 'e2'), false, 'e2 must be removed');
+  assert.equal(filtered.some((e) => e.id === 'usr-img-1'), true, 'User logo must be kept');
+  assert.equal(filtered.some((e) => e.id === 'usr-banner'), true, 'Banner must be kept');
+  assert.equal(filtered.some((e) => e.id === 'e1'), true, 'Shape e1 must be kept');
+  assert.equal(filtered.some((e) => e.id === 'e3'), true, 'Text e3 must be kept');
 });
 
 

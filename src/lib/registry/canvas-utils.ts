@@ -69,6 +69,19 @@ export function isUserAuthoredId(elementId: string) {
   return elementId.startsWith(USER_ELEMENT_PREFIX);
 }
 
+export function isBackgroundElement(el: CanvasElement): boolean {
+  return (
+    el.type === 'image' &&
+    el.zIndex === 0 &&
+    el.x === 0 &&
+    el.w === 100
+  );
+}
+
+export function filterOutBackgroundElements(elements: CanvasElement[]): CanvasElement[] {
+  return elements.filter((el) => !isBackgroundElement(el));
+}
+
 export function nextElementId(usedIds: Set<string>, counter: number) {
   let candidate = `${USER_ELEMENT_PREFIX}${Date.now().toString(36)}-${counter.toString(36)}`;
   let salt = 0;

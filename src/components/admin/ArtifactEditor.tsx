@@ -73,8 +73,10 @@ import {
   NEW_TEXT_SIZE_PX,
   clampFontSize,
   computeContextMenuCoords,
+  filterOutBackgroundElements,
   getElementId,
   handleContextMenuTrigger,
+  isBackgroundElement,
   isFabricTextObject,
   isUserAuthoredId,
   nextElementId,
@@ -699,8 +701,24 @@ export default function ArtifactEditor({
       if (!canvas || !layout) return;
 
       const fabric = await import('fabric');
+      if (fabricCanvasRef.current !== canvas) return;
+
+      let bg: any = undefined;
       if (url) {
-        const bg = await fabric.FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
+        try {
+          bg = await fabric.FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : 'Failed to load background');
+          return;
+        }
+
+        if (fabricCanvasRef.current !== canvas) return;
+
+        if (!bg || !bg.width) {
+          toast.error('Failed to load background: invalid image');
+          return;
+        }
+
         bg.set({
           left: 0,
           top: 0,
@@ -709,16 +727,31 @@ export default function ArtifactEditor({
           selectable: false,
           evented: false,
         });
-        canvas.backgroundImage = bg;
-      } else {
-        canvas.backgroundImage = undefined;
       }
+
+      // Replace or clear canvas background image
+      canvas.backgroundImage = bg;
+      if (url) {
+        layout.backgroundImage = url;
+      } else {
+        delete layout.backgroundImage;
+      }
+
+      // SPEC-13-09 / DEC-014: Replace existing background element instead of stacking extra layers
+      const bgElements = (layout.elements ?? []).filter(isBackgroundElement);
+      for (const bgEl of bgElements) {
+        addedElementsRef.current.delete(bgEl.id);
+        const obj = canvas.getObjects().find((o) => getElementId(o) === bgEl.id);
+        if (obj) canvas.remove(obj);
+      }
+      layout.elements = filterOutBackgroundElements(layout.elements ?? []);
+
       canvas.requestRenderAll();
-      layout.backgroundImage = url || undefined;
+      syncSelection(canvas);
       markDirty();
       setShowBgDialog(false);
     },
-    [template, markDirty]
+    [template, syncSelection, markDirty]
   );
 
   const handleUploadBackgroundFile = useCallback(
