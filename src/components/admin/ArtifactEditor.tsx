@@ -315,6 +315,7 @@ export default function ArtifactEditor({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const dragSourceIndexRef = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const saveSequenceRef = useRef(0);
 
   const fitCanvasToShell = useCallback(() => {
     const shell = canvasShellRef.current;
@@ -1006,15 +1007,9 @@ export default function ArtifactEditor({
     }
 
     const removable: import('fabric').FabricObject[] = [];
-    const refused: string[] = [];
     for (const obj of active) {
       const elementId = getElementId(obj);
       if (!elementId) continue;
-      const source = byId.get(elementId);
-      if (!isUserAuthoredId(elementId) || source?.required) {
-        refused.push(elementId);
-        continue;
-      }
       removable.push(obj);
     }
 
@@ -1033,13 +1028,6 @@ export default function ArtifactEditor({
       markDirty();
     }
 
-    if (refused.length > 0) {
-      setStatus('error');
-      setMessage(
-        `Cannot delete ${refused.join(', ')} — shipped and required elements are part of the template.`
-      );
-      return;
-    }
     setStatus('idle');
     setMessage(
       `Removed ${removable.length} element${removable.length === 1 ? '' : 's'}. Save to persist.`
@@ -1542,6 +1530,7 @@ export default function ArtifactEditor({
     const canvas = fabricCanvasRef.current;
     if (!layout || !canvas) return;
 
+    const currentSaveSeq = ++saveSequenceRef.current;
     setStatus('saving');
     setMessage(null);
     try {
@@ -1579,6 +1568,7 @@ export default function ArtifactEditor({
       };
 
       const res = await adapter.save(template.id, payload);
+      if (currentSaveSeq !== saveSequenceRef.current) return;
       if (res.status === 409) {
         // Reload first: `loadTemplate` clears the banner, so the explanation
         // has to be written after it or the admin sees nothing at all.
@@ -1618,7 +1608,7 @@ export default function ArtifactEditor({
   };
 
   const handleReset = async () => {
-    if (!template) return;
+    if (!template || busy) return;
     if (
       !window.confirm(
         t('admin.artifacts.confirmReset').replace('{label}', template.label)
@@ -1626,30 +1616,24 @@ export default function ArtifactEditor({
     )
       return;
 
+    // Discard any in-flight Save by incrementing sequence counter
+    saveSequenceRef.current += 1;
+
     setStatus('resetting');
     setMessage(null);
     try {
-      const res = await adapter.reset(template.id, template.updatedAt);
-      if (res.status === 409) {
-        await loadTemplate(template.id);
-        setStatus('conflict');
-        setMessage(
-          t('admin.artifacts.resetConflict').replace(
-            '{error}',
-            res.error || t('admin.artifacts.modifiedElsewhere')
-          )
-        );
-        return;
-      }
-      if (!res.ok || !res.data) throw new Error(res.error || t('admin.artifacts.resetFailed'));
-      const data = res.data;
-      setTemplate(data);
+      // Revert in-memory canvas state to the last-Saved template from adapter/store
+      const data = await adapter.getOne(template.id);
+      addedElementsRef.current = new Map();
+      addedPlaceholdersRef.current = new Map();
+      setSelectedElementIds([]);
+      setContextMenu(null);
+      setTemplate({ ...data });
       if (typeof data.label === 'string') setDraftLabel(data.label);
       setIsDirty((current) => nextDirtyState(current, 'reset'));
       setStatus('success');
       setMessage(t('admin.artifacts.resetDone'));
       toast(t('admin.artifacts.resetDone'));
-      await loadList();
     } catch (err) {
       setStatus('error');
       setMessage(err instanceof Error ? err.message : t('admin.artifacts.resetFailed'));
@@ -1777,9 +1761,7 @@ export default function ArtifactEditor({
   };
 
   const isEditable = template ? isCanvasAuthorable(template.baseType) : false;
-  const isResettable = Boolean(
-    template && templates.find((item) => item.id === template.id)?.resettable
-  );
+  const isResettable = Boolean(template && isEditable);
   const labelDirty = Boolean(
     template && draftLabel.trim() !== '' && draftLabel.trim() !== template.label
   );
@@ -1853,16 +1835,7 @@ export default function ArtifactEditor({
     }
     canvas.requestRenderAll();
   }, [busy]);
-  const requiredElementIds = new Set(
-    (template ? (getEditableLayout(template)?.elements ?? []) : [])
-      .filter((element) => element.required)
-      .map((element) => element.id)
-  );
-  const canDeleteSelection =
-    selectedElementIds.length > 0 &&
-    selectedElementIds.every(
-      (id) => isUserAuthoredId(id) && !requiredElementIds.has(id)
-    );
+  const canDeleteSelection = selectedElementIds.length > 0;
 
   return (
     <div className={hideList ? 'block' : 'grid gap-6 lg:grid-cols-[330px_minmax(0,1fr)] min-h-[580px]'}>
@@ -2178,7 +2151,7 @@ export default function ArtifactEditor({
                       variant="outline"
                       size="sm"
                       onClick={handleReset}
-                      disabled={busy}
+                      disabled={!isEditable || busy || (!isDirty && !labelDirty)}
                     >
                       {t('admin.artifacts.reset')}
                     </Button>

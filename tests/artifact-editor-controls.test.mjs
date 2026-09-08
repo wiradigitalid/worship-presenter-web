@@ -1223,6 +1223,61 @@ test('SPEC-13-03: Image element grows and shrinks when resized with aspect ratio
   );
 });
 
+test('SPEC-13-08: Canvas Reset becomes discard-unsaved-changes; seeded elements become deletable (DEC-014)', async () => {
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. Shipped/seeded element deletion protection is removed
+  assert.ok(
+    !code.includes('deleteHintShipped') && !code.includes('shipped and required elements are part of the template'),
+    'ArtifactEditor must remove the refused / deleteHintShipped refusal path'
+  );
+  assert.ok(
+    !code.includes('!isUserAuthoredId(elementId) || source?.required'),
+    'handleDelete must not refuse deletion of seeded or required elements'
+  );
+
+  // 2. canDeleteSelection allows deleting any selected elements
+  assert.ok(
+    !code.includes('requiredElementIds.has(id)') && !code.includes('isUserAuthoredId(id) && !requiredElementIds'),
+    'canDeleteSelection must not restrict deletion to user-authored non-required elements'
+  );
+
+  // 3. Canvas Reset discards in-memory edits back to last-saved state and guards against in-flight saves
+  assert.ok(
+    code.includes('saveSequenceRef') || code.includes('saveCounterRef'),
+    'handleReset and handleSave must use sequence counter to guard against in-flight saves'
+  );
+
+  // 4. i18n keys check: deleteHintShipped removed from keys and catalogues
+  const keysPath = path.join(root, 'src', 'lib', 'i18n', 'keys.ts');
+  const keysCode = fs.readFileSync(keysPath, 'utf8');
+  assert.ok(
+    !keysCode.includes('admin.artifacts.deleteHintShipped'),
+    'keys.ts must not contain admin.artifacts.deleteHintShipped'
+  );
+
+  const catEnPath = path.join(root, 'src', 'lib', 'i18n', 'catalogue-en.ts');
+  const catEnCode = fs.readFileSync(catEnPath, 'utf8');
+  assert.ok(
+    !catEnCode.includes('deleteHintShipped'),
+    'catalogue-en.ts must not contain deleteHintShipped'
+  );
+  assert.ok(
+    catEnCode.includes('Discard unsaved changes to "{label}"?'),
+    'catalogue-en.ts must prompt to discard unsaved changes'
+  );
+
+  // 5. AD-11 in ARCHITECTURE-SPINE.md updated per DEC-014
+  const spinePath = path.join(root, '.how', '_platform', 'ARCHITECTURE-SPINE.md');
+  const spineCode = fs.readFileSync(spinePath, 'utf8');
+  assert.ok(
+    spineCode.includes('DEC-014') && spineCode.includes('Canvas Reset discards unsaved in-memory edits back to the last Saved state'),
+    'AD-11 in ARCHITECTURE-SPINE.md must describe discard-unsaved-changes per DEC-014'
+  );
+});
+
 
 
 

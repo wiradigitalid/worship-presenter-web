@@ -1,8 +1,13 @@
 ---
 id: DEC-014
-status: accepted
+status: applied
 accepted_by: 'kodesh87 (2026-09-08)'
-touches: []
+touches:
+  - .how/_platform/ARCHITECTURE-SPINE.md
+  - src/components/admin/ArtifactEditor.tsx
+  - src/lib/i18n/keys.ts
+  - src/lib/i18n/catalogue-en.ts
+  - src/lib/i18n/catalogue-id.ts
 supersedes: null
 superseded_by: null
 created: '2026-09-08'

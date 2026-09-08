@@ -384,10 +384,10 @@ rtm:
   test:
   - tests/operator-shadcn-guard.test.mjs
   - tests/artifact-editor-layout.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -790,10 +790,10 @@ rtm:
   test:
   - tests/registry-kind-rename.test.mjs
   - tests/registry.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-29
@@ -805,10 +805,10 @@ rtm:
   test:
   - tests/operator-shadcn-guard.test.mjs
   - tests/artifact-editor-layout.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-29
@@ -1040,10 +1040,10 @@ rtm:
   test:
   - tests/operator-shadcn-guard.test.mjs
   - tests/artifact-editor-layout.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
