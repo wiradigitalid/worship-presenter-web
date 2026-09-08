@@ -321,6 +321,7 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'admin.artifacts.sendToBack': 'Send to back',
   'admin.artifacts.bold': 'Bold',
   'admin.artifacts.italic': 'Italic',
+  'admin.artifacts.underline': 'Underline',
   'admin.artifacts.insertPlaceholder': 'Insert placeholder',
   'admin.artifacts.placeholder.service_date': 'Service date',
   'admin.artifacts.placeholder.scripture_reference': 'Scripture reference',

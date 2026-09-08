@@ -323,6 +323,7 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'admin.artifacts.sendToBack': 'Paling belakang',
   'admin.artifacts.bold': 'Tebal',
   'admin.artifacts.italic': 'Miring',
+  'admin.artifacts.underline': 'Garis bawah',
   'admin.artifacts.insertPlaceholder': 'Sisipkan placeholder',
   'admin.artifacts.placeholder.service_date': 'Tanggal ibadah',
   'admin.artifacts.placeholder.scripture_reference': 'Referensi ayat',

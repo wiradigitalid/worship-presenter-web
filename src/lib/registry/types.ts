@@ -70,6 +70,7 @@ export type TextStyle = {
   fontColor?: string;
   fontWeight?: string;
   fontStyle?: string;
+  textDecoration?: 'none' | 'underline' | string;
   textAlign?: 'left' | 'center' | 'right';
   verticalAlign?: 'top' | 'middle' | 'bottom';
 };

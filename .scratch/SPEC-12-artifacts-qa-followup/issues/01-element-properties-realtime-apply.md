@@ -7,23 +7,23 @@ Bold and Italic and survives a save.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Start with `wdi-systematic-debugging` for the font size / font color parts — `defects.yaml`
+- [x] Start with `wdi-systematic-debugging` for the font size / font color parts — `defects.yaml`
       BUG-4/BUG-5 record a strong hypothesis (`applyTextStyle()` never called from those two
       handlers) but it has not been reproduced live; confirm before patching.
-- [ ] Editing Font Size on a selected text element changes its rendered size on the canvas with no
+- [x] Editing Font Size on a selected text element changes its rendered size on the canvas with no
       extra "Apply" step.
-- [ ] Editing Font Color on a selected text element changes its rendered color on the canvas with
+- [x] Editing Font Color on a selected text element changes its rendered color on the canvas with
       no extra "Apply" step.
-- [ ] The Font Size input is wide enough to show a 3-digit value without truncation.
-- [ ] Selecting a shape element shows that shape's own current fill color in the color picker, not
+- [x] The Font Size input is wide enough to show a 3-digit value without truncation.
+- [x] Selecting a shape element shows that shape's own current fill color in the color picker, not
       a default color (BUG-6 — this element sync currently only has a branch for text, none for
       shapes).
-- [ ] An Underline toggle exists next to Bold and Italic, toggles the selected text's underline on
+- [x] An Underline toggle exists next to Bold and Italic, toggles the selected text's underline on
       the canvas, and a template saved with underline round-trips through
       `internal/plan/validate_artifact.go`'s `allowedStyleKeys` without being rejected (BUG-10,
       closes `OQ-41` — `textDecoration` is not currently in that allowlist).
-- [ ] Every new absence/regression assertion is seen failing against the current code before the
+- [x] Every new absence/regression assertion is seen failing against the current code before the
       fix, then passing after — per this project's TDD guard convention, and because BUG-2's own
       ticket (`W11-03`) was marked `done` with tests that never asserted the behaviour they claimed.

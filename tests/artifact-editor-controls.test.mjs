@@ -58,6 +58,7 @@ class MockFabricText extends MockFabricObject {
     this.fontFamily = options.fontFamily;
     this.fontWeight = options.fontWeight;
     this.fontStyle = options.fontStyle;
+    this.underline = options.underline;
     this.textAlign = options.textAlign;
   }
 }
@@ -269,6 +270,56 @@ test('Part 3: Bold and Italic serialization follows setIfMeaningful discipline',
   assert.ok(styleBoth);
   assert.equal(styleBoth.fontWeight, 'bold');
   assert.equal(styleBoth.fontStyle, 'italic');
+
+  // Case E: Underline (BUG-10, OQ-41)
+  const textObjUnderline = new MockFabricText('Hello', {
+    fill: '#FFFFFF',
+    fontSize: 32,
+    fontFamily: 'Arial',
+    underline: true,
+    textAlign: 'left',
+  });
+  const styleUnderline = serializeTextStyle(sourceElem, textObjUnderline);
+  assert.ok(styleUnderline);
+  assert.equal(styleUnderline.textDecoration, 'underline');
+});
+
+test('SPEC-12-01 / BUG-10: Template with textDecoration: underline passes validator', () => {
+  const templateWithUnderline = {
+    schemaVersion: 1,
+    id: 'underline-template',
+    label: 'Underline Template',
+    baseType: 'general',
+    placeholders: [],
+    layouts: {
+      default: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [
+          {
+            id: 'e1',
+            type: 'text',
+            required: false,
+            x: 10,
+            y: 10,
+            w: 80,
+            h: 20,
+            zIndex: 0,
+            content: 'Underlined Header',
+            style: {
+              fontFamily: 'Arial',
+              fontSize: 32,
+              fontColor: '#FFFFFF',
+              textDecoration: 'underline',
+              textAlign: 'center',
+            },
+          },
+        ],
+      },
+    },
+  };
+  const validated = validateArtifactTemplate(templateWithUnderline);
+  assert.equal(validated.layouts.default.elements[0].style.textDecoration, 'underline');
 });
 
 test('Seed conformance proof: saving an untouched template does NOT introduce new fontStyle or fontWeight keys', () => {
@@ -645,6 +696,56 @@ test('AC-07: Seed template with non-dense zIndex preserves stored zIndex on elem
   assert.deepEqual(
     serialized.map((e) => e.zIndex),
     [1, 1]
+  );
+});
+
+test('SPEC-12-01: ArtifactEditor source guards for realtime styling, underline, and shape color sync', async () => {
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. Textbox construction in elementToFabricObject handles textDecoration underline
+  assert.ok(
+    code.includes("style?.textDecoration === 'underline' ? { underline: true } : {}"),
+    'elementToFabricObject must construct Textbox with underline when style.textDecoration is underline'
+  );
+
+  // 2. Realtime font color apply
+  assert.ok(
+    code.includes('handleFontColorChange'),
+    'ArtifactEditor must have handleFontColorChange for realtime color update'
+  );
+
+  // 3. Realtime font size apply
+  assert.ok(
+    code.includes('handleFontSizeInput') && code.includes('obj.set({ fontSize: clamped })'),
+    'handleFontSizeInput must update active text objects on canvas immediately'
+  );
+
+  // 4. Font size input is w-20 to fit 3 digits
+  assert.ok(
+    code.includes('className="w-20 h-7 text-xs text-center"'),
+    'Font size input must use w-20 so 3 digits are not truncated'
+  );
+
+  // 5. Shape color sync and realtime apply
+  assert.ok(
+    code.includes('setShapeFill(toStrictHexColor'),
+    'syncSelection must sync shape fill color from active shape'
+  );
+  assert.ok(
+    code.includes('value={shapeFill}'),
+    'Shape color input must be controlled with value={shapeFill}'
+  );
+
+  // 6. Underline toggle button
+  assert.ok(
+    code.includes('handleToggleUnderline'),
+    'ArtifactEditor must define handleToggleUnderline'
+  );
+  assert.ok(
+    code.includes("title={t('admin.artifacts.underline')}"),
+    'ArtifactEditor must render an Underline button'
   );
 });
 

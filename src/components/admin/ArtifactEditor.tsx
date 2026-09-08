@@ -14,6 +14,7 @@ import {
   Plus,
   SendToBack,
   Trash2,
+  Underline,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
@@ -139,6 +140,7 @@ function elementToFabricObject(
       // undefined. Every shipped text element omits fontStyle.
       ...(style?.fontWeight !== undefined ? { fontWeight: style.fontWeight } : {}),
       ...(style?.fontStyle !== undefined ? { fontStyle: style.fontStyle } : {}),
+      ...(style?.textDecoration === 'underline' ? { underline: true } : {}),
       textAlign: style?.textAlign ?? DEFAULT_TEXT_ALIGN,
       splitByGrapheme: true,
       editable: editable,
@@ -252,6 +254,8 @@ export default function ArtifactEditor({
   const [fontSizeInput, setFontSizeInput] = useState(String(DEFAULT_FONT_SIZE));
   const [fontWeight, setFontWeight] = useState<'normal' | 'bold'>('normal');
   const [fontStyle, setFontStyle] = useState<'normal' | 'italic'>('normal');
+  const [underline, setUnderline] = useState(false);
+  const [shapeFill, setShapeFill] = useState('#5C2E16');
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [selectedTextCount, setSelectedTextCount] = useState(0);
   const [textContent, setTextContent] = useState('');
@@ -325,15 +329,21 @@ export default function ArtifactEditor({
     const selectedText = texts[0];
     // The content field edits one box at a time; anything else clears it.
     setTextContent(texts.length === 1 && selectedText ? (selectedText.text ?? '') : '');
-    if (!selectedText) return;
-    setFontColor(
-      toStrictHexColor(selectedText.fill, DEFAULT_FONT_COLOR) ?? DEFAULT_FONT_COLOR
-    );
-    const size = normalizeFontSize(selectedText.fontSize);
-    setFontSize(size);
-    setFontSizeInput(String(size));
-    setFontWeight(selectedText.fontWeight === 'bold' ? 'bold' : 'normal');
-    setFontStyle(selectedText.fontStyle === 'italic' ? 'italic' : 'normal');
+    if (selectedText) {
+      setFontColor(
+        toStrictHexColor(selectedText.fill, DEFAULT_FONT_COLOR) ?? DEFAULT_FONT_COLOR
+      );
+      const size = normalizeFontSize(selectedText.fontSize);
+      setFontSize(size);
+      setFontSizeInput(String(size));
+      setFontWeight(selectedText.fontWeight === 'bold' ? 'bold' : 'normal');
+      setFontStyle(selectedText.fontStyle === 'italic' ? 'italic' : 'normal');
+      setUnderline(Boolean((selectedText as any).underline));
+    }
+    const shapes = active.filter((obj) => (obj as any).type === 'rect' && !(obj as any).data?.imageRef);
+    if (shapes.length > 0) {
+      setShapeFill(toStrictHexColor((shapes[0] as any).fill, '#5C2E16') ?? '#5C2E16');
+    }
   }, []);
 
   const loadList = useCallback(async () => {
@@ -1052,12 +1062,28 @@ export default function ArtifactEditor({
     let updated = false;
     for (const obj of canvas.getActiveObjects()) {
       if (!isFabricTextObject(obj)) continue;
-      obj.set({ fill: fontColor, fontSize });
+      obj.set({ fill: fontColor, fontSize, underline } as any);
       updated = true;
     }
     // `obj.set(...)` raises no canvas event, so the mutation listeners never see
     // this; and pressing Apply with nothing selected changed nothing, so it must
     // not claim otherwise.
+    if (updated) {
+      canvas.requestRenderAll();
+      markDirty();
+    }
+  };
+
+  const handleFontColorChange = (color: string) => {
+    setFontColor(color);
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    let updated = false;
+    for (const obj of canvas.getActiveObjects()) {
+      if (!isFabricTextObject(obj)) continue;
+      obj.set({ fill: color });
+      updated = true;
+    }
     if (updated) {
       canvas.requestRenderAll();
       markDirty();
@@ -1092,6 +1118,20 @@ export default function ArtifactEditor({
     markDirty();
   }, [fontStyle, markDirty]);
 
+  const handleToggleUnderline = useCallback(() => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const texts = canvas.getActiveObjects().filter(isFabricTextObject);
+    if (texts.length === 0) return;
+    const nextUnderline = !underline;
+    setUnderline(nextUnderline);
+    for (const obj of texts) {
+      obj.set({ underline: nextUnderline } as any);
+    }
+    canvas.requestRenderAll();
+    markDirty();
+  }, [underline, markDirty]);
+
   /**
    * Writes the words of the selected text box straight through to Fabric, so
    * the next Save picks them up. Deliberately limited to a single selected text
@@ -1116,7 +1156,20 @@ export default function ArtifactEditor({
     // An empty field is `Number('') === 0`; never commit that — the server
     // rejects the entire save with an opaque `style.fontSize must be positive`.
     if (!raw.trim() || !Number.isFinite(parsed) || parsed <= 0) return;
-    setFontSize(clampFontSize(parsed));
+    const clamped = clampFontSize(parsed);
+    setFontSize(clamped);
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    let updated = false;
+    for (const obj of canvas.getActiveObjects()) {
+      if (!isFabricTextObject(obj)) continue;
+      obj.set({ fontSize: clamped });
+      updated = true;
+    }
+    if (updated) {
+      canvas.requestRenderAll();
+      markDirty();
+    }
   };
 
   const [internalCopiedSlidePayload, setInternalCopiedSlidePayload] = useState<CopiedSlide | null>(null);
@@ -1199,6 +1252,7 @@ export default function ArtifactEditor({
 
   const handleSetShapeFill = useCallback(
     (color: string) => {
+      setShapeFill(color);
       const canvas = fabricCanvasRef.current;
       if (!canvas) return;
       for (const obj of canvas.getActiveObjects()) {
@@ -2139,7 +2193,7 @@ export default function ArtifactEditor({
                         <input
                           type="color"
                           value={fontColor}
-                          onChange={(e) => setFontColor(e.target.value)}
+                          onChange={(e) => handleFontColorChange(e.target.value)}
                           className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded"
                           title="Font Color"
                         />
@@ -2150,7 +2204,7 @@ export default function ArtifactEditor({
                           value={fontSizeInput}
                           onChange={(e) => handleFontSizeInput(e.target.value)}
                           onBlur={() => setFontSizeInput(String(fontSize))}
-                          className="w-16 h-7 text-xs text-center"
+                          className="w-20 h-7 text-xs text-center"
                           title="Font Size"
                         />
                         <Button
@@ -2172,6 +2226,16 @@ export default function ArtifactEditor({
                           title={t('admin.artifacts.italic')}
                         >
                           <Italic className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={underline ? 'default' : 'outline'}
+                          size="icon-sm"
+                          onClick={handleToggleUnderline}
+                          disabled={busy}
+                          title={t('admin.artifacts.underline')}
+                        >
+                          <Underline className="w-3.5 h-3.5" />
                         </Button>
                         <div className="h-4 w-px bg-border mx-1" />
                         <Button
@@ -2218,7 +2282,7 @@ export default function ArtifactEditor({
                           Color:
                           <input
                             type="color"
-                            defaultValue="#5C2E16"
+                            value={shapeFill}
                             onChange={(e) => handleSetShapeFill(e.target.value)}
                             className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded ml-1"
                           />

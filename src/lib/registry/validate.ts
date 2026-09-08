@@ -62,6 +62,7 @@ const ALLOWED_STYLE_KEYS = new Set([
   'fontColor',
   'fontWeight',
   'fontStyle',
+  'textDecoration',
   'textAlign',
   'verticalAlign',
   'objectFit',
@@ -164,6 +165,12 @@ function parseStyle(value: unknown, label: string) {
       throw new RegistryValidationError(`${label}.fontStyle is invalid`);
     }
     style.fontStyle = obj.fontStyle;
+  }
+  if (obj.textDecoration !== undefined) {
+    if (obj.textDecoration !== 'none' && obj.textDecoration !== 'underline') {
+      throw new RegistryValidationError(`${label}.textDecoration is invalid`);
+    }
+    style.textDecoration = obj.textDecoration;
   }
   if (obj.textAlign !== undefined) {
     if (

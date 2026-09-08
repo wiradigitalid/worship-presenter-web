@@ -94,6 +94,7 @@ export type FabricTextLike = {
   fontFamily?: string;
   fontWeight?: unknown;
   fontStyle?: string;
+  underline?: unknown;
   textAlign?: string;
 };
 
@@ -117,6 +118,7 @@ export function serializeTextStyle(
     fontFamily?: string;
     fontWeight?: unknown;
     fontStyle?: string;
+    underline?: unknown;
     textAlign?: string;
   }
 ): CanvasElement['style'] | undefined {
@@ -149,6 +151,13 @@ export function serializeTextStyle(
     'normal'
   );
   setIfMeaningful('fontStyle', textObj.fontStyle, 'normal');
+  if (textObj.underline !== undefined) {
+    if (Boolean(textObj.underline)) {
+      style.textDecoration = 'underline';
+    } else if (source.style?.textDecoration === 'underline') {
+      delete style.textDecoration;
+    }
+  }
   setIfMeaningful(
     'textAlign',
     textObj.textAlign === 'left' ||

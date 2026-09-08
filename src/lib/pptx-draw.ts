@@ -26,6 +26,7 @@ import {
   resolveElementText,
   resolveFontFamily,
   resolveItalic,
+  resolveUnderline,
   resolveObjectFit,
   resolveTextAlign,
   resolveVerticalAlign,
@@ -259,6 +260,7 @@ function renderTextElement(slide: PptxSlide, element: ResolvedElement): void {
     color: toPptxColor(style.fontColor) ?? 'FFFFFF',
     bold: resolveBold(style),
     italic: resolveItalic(style),
+    underline: resolveUnderline(style) ? { style: 'sng' } : undefined,
     align: resolveTextAlign(style),
     valign: resolveVerticalAlign(style),
   });

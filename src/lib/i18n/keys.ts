@@ -287,6 +287,7 @@ export const I18N_KEYS = [
   'admin.artifacts.sendToBack',
   'admin.artifacts.bold',
   'admin.artifacts.italic',
+  'admin.artifacts.underline',
   'admin.artifacts.insertPlaceholder',
   'admin.artifacts.placeholder.service_date',
   'admin.artifacts.placeholder.scripture_reference',
