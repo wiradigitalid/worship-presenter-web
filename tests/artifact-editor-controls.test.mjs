@@ -838,5 +838,51 @@ test('SPEC-12-03: Image aspect ratio contain-fit in ArtifactEditor and canvas-ut
   );
 });
 
+test('SPEC-12-04: Select dropdown renders item label instead of raw value key', async () => {
+  const React = (await import('react')).default;
+  const { extractSelectItems } = await import(
+    pathToFileURL(path.join(root, 'src', 'lib', 'select-utils.ts')).href
+  );
+
+  // 1. Behavioral test: extractSelectItems scans JSX children and resolves value -> label
+  const mockChildren = React.createElement(
+    'div',
+    null,
+    React.createElement('div', { value: 'general' }, '📄 General Slide (Canvas)'),
+    React.createElement('div', { value: 'song:opening_song_bt' }, '🎵 Bible Talk Opening Song'),
+    React.createElement('div', { value: 'ann:1' }, '📢 Announcement Set 1')
+  );
+
+  const itemsMap = extractSelectItems(mockChildren);
+  assert.equal(itemsMap.get('general'), '📄 General Slide (Canvas)');
+  assert.equal(itemsMap.get('song:opening_song_bt'), '🎵 Bible Talk Opening Song');
+  assert.equal(itemsMap.get('ann:1'), '📢 Announcement Set 1');
+
+  // 2. Non-item children with native input type are not registered as select items
+  const mockWithInput = React.createElement(
+    'div',
+    null,
+    React.createElement('input', { type: 'text', value: 'stray-input-value' }),
+    React.createElement('div', { value: 'legit-item' }, 'Legitimate Item')
+  );
+  const safeMap = extractSelectItems(mockWithInput);
+  assert.equal(safeMap.has('stray-input-value'), false);
+  assert.equal(safeMap.get('legit-item'), 'Legitimate Item');
+
+  // 3. select.tsx wiring check: feeds extracted labels to Base UI native items prop
+  const fs = await import('node:fs');
+  const selectPath = path.join(root, 'src', 'components', 'ui', 'select.tsx');
+  const code = fs.readFileSync(selectPath, 'utf8');
+  assert.ok(
+    code.includes('items={mergedItems}'),
+    'select.tsx must feed extracted labels into Base UI native items prop'
+  );
+  assert.ok(
+    code.includes('extractSelectItems'),
+    'select.tsx must use extractSelectItems to resolve item labels'
+  );
+});
+
+
 
 
