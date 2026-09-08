@@ -400,10 +400,10 @@ rtm:
   - tests/registry-reseed.test.mjs
   - tests/registry-three-kind-reset.test.mjs
   - tests/artifact-editor-controls.test.mjs
-  status: 'open — gated by `DEC-014` (`status: accepted`, already satisfied; this ticket proceeds)'
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -414,10 +414,10 @@ rtm:
   release: artifacts-qa-followup-round2
   test:
   - tests/artifact-editor-controls.test.mjs
-  status: 'open — gated by `DEC-014` (`status: accepted`, already satisfied; this ticket proceeds)'
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -428,10 +428,10 @@ rtm:
   release: artifacts-qa-followup-round2
   test:
   - tests/operator-shadcn-guard.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -444,10 +444,10 @@ rtm:
   - tests/artifact-editor-controls.test.mjs
   - tests/registry.test.mjs
   - tests/registry-go-http.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -568,10 +568,10 @@ rtm:
   - tests/registry-reseed.test.mjs
   - tests/registry-three-kind-reset.test.mjs
   - tests/artifact-editor-controls.test.mjs
-  status: 'open — gated by `DEC-014` (`status: accepted`, already satisfied; this ticket proceeds)'
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-21
@@ -819,10 +819,10 @@ rtm:
   release: artifacts-qa-followup-round2
   test:
   - tests/announcement-sets.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-29
@@ -833,10 +833,10 @@ rtm:
   release: artifacts-qa-followup-round2
   test:
   - tests/operator-shadcn-guard.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-29
@@ -1056,10 +1056,10 @@ rtm:
   - tests/registry-reseed.test.mjs
   - tests/registry-three-kind-reset.test.mjs
   - tests/artifact-editor-controls.test.mjs
-  status: 'open — gated by `DEC-014` (`status: accepted`, already satisfied; this ticket proceeds)'
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -1070,10 +1070,10 @@ rtm:
   release: artifacts-qa-followup-round2
   test:
   - tests/artifact-editor-controls.test.mjs
-  status: 'open — gated by `DEC-014` (`status: accepted`, already satisfied; this ticket proceeds)'
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -1084,10 +1084,10 @@ rtm:
   release: artifacts-qa-followup-round2
   test:
   - tests/operator-shadcn-guard.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -1100,10 +1100,10 @@ rtm:
   - tests/artifact-editor-controls.test.mjs
   - tests/registry.test.mjs
   - tests/registry-go-http.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30

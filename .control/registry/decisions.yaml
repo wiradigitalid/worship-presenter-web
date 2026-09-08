@@ -290,7 +290,7 @@ decisions:
       - src/lib/i18n/catalogue-id.ts
   - id: DEC-015
     type: mandate
-    status: accepted
+    status: applied
     accepted_by: "kodesh87 (2026-09-08)"
     title: Autopilot mandate for Artifacts QA Follow-up Round 2 (SPEC-13)
     file: .control/decisions/DEC-015-autopilot-mandate-artifacts-qa-followup-round2.md

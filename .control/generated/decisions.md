@@ -4,7 +4,7 @@
 
 Decisions are no longer looked up through the memlog — the memlog goes back to being just a pass log.
 
-**15 decisions** — accepted: 1 · applied: 14.
+**15 decisions** — applied: 15.
 
 | id | Title | Status | Type | Touches | File |
 | --- | --- | --- | --- | --- | --- |
@@ -22,4 +22,4 @@ Decisions are no longer looked up through the memlog — the memlog goes back to
 | `DEC-012` | The canvas admits one keyboard shortcut (Delete/Backspace); OQ-13 narrows, does not fall | `applied` | — | `.scratch/SPEC-12-artifacts-qa-followup/issues/02-canvas-interaction-regressions.md` | `.control/decisions/DEC-012-canvas-keyboard-delete-exception.md` |
 | `DEC-013` | Autopilot mandate for Artifacts QA Follow-up (SPEC-12) | `applied` | mandate | `.control/memlog/autopilot-DEC-013.md`, `.control/registry/specs.yaml`, `.control/registry/decisions.yaml`, `.control/registry/defects.yaml`, `src/components/admin/ArtifactEditor.tsx`, `src/components/admin/SongSetEntriesPanel.tsx`, `src/components/admin/AnnouncementSetsPanel.tsx`, `src/components/ui/select.tsx`, `src/lib/select-utils.ts`, `src/lib/registry/canvas-utils.ts`, `src/lib/registry/canvas-adapters.ts`, `src/lib/registry/validate.ts`, `src/lib/artifacts/render-model.ts`, `src/lib/artifacts/runtime-contract.ts`, `src/lib/pptx-draw.ts`, `internal/plan/validate_artifact.go`, `tests/artifact-editor-controls.test.mjs`, `tests/artifact-editor-layout.test.mjs`, `tests/artifact-preview.test.mjs`, `tests/announcement-sets.test.mjs`, `tests/registry.test.mjs` | `.control/decisions/DEC-013-autopilot-mandate-artifacts-qa-followup.md` |
 | `DEC-014` | Canvas "Reset" becomes discard-unsaved-changes; shipped/seeded content becomes ordinary editable content | `applied` | — | `.how/_platform/ARCHITECTURE-SPINE.md`, `src/components/admin/ArtifactEditor.tsx`, `src/lib/i18n/keys.ts`, `src/lib/i18n/catalogue-en.ts`, `src/lib/i18n/catalogue-id.ts` | `.control/decisions/DEC-014-canvas-reset-becomes-discard-unsaved-changes.md` |
-| `DEC-015` | Autopilot mandate for Artifacts QA Follow-up Round 2 (SPEC-13) | `accepted` | mandate | `.control/memlog/autopilot-DEC-015.md`, `.control/registry/specs.yaml`, `.control/registry/decisions.yaml` | `.control/decisions/DEC-015-autopilot-mandate-artifacts-qa-followup-round2.md` |
+| `DEC-015` | Autopilot mandate for Artifacts QA Follow-up Round 2 (SPEC-13) | `applied` | mandate | `.control/memlog/autopilot-DEC-015.md`, `.control/registry/specs.yaml`, `.control/registry/decisions.yaml` | `.control/decisions/DEC-015-autopilot-mandate-artifacts-qa-followup-round2.md` |

@@ -673,7 +673,7 @@ waves:
           - tests/registry.test.mjs
 
   - id: SPEC-13
-    status: open
+    status: closed
     release: artifacts-qa-followup-round2
     prd: [offline-deck]
     fr: [FR-20, FR-21, FR-29]
