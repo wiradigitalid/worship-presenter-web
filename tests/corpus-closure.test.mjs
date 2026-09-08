@@ -95,6 +95,8 @@ const ALLOWED_CORPUS_WRITES = new Set([
   'internal/httpapi/song_sets.go writes hymns',
   // Hub weekly inputs — not corpus hymn/book data (DEC-004 song_set_inputs).
   'internal/httpapi/services.go writes song_set_inputs',
+  // Admin registry entry rename migrating weekly inputs (SPEC-13-06).
+  'internal/httpapi/song_set_entries.go writes song_set_inputs',
   // Admin registry trio — not song-book corpus (DEC-004 song_set_layouts).
   'internal/httpapi/song_set_entries.go writes song_set_layouts',
   // Admin song-books CRUD contract (.how/registry/02-contracts/05-song-books.md, DEC-005 / AD-36).

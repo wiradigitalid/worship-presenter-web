@@ -60,3 +60,28 @@ test('renaming a general row label updates the next built plan for an existing s
     'Presenter/preview must read the live registry label on the next plan build'
   );
 });
+
+test('SPEC-13-06 / BUG-15: Song Set code Rename control exists and updates variableName in UI and API', async () => {
+  const panelPath = path.join(root, 'src', 'components', 'admin', 'SongSetEntriesPanel.tsx');
+  const code = fs.readFileSync(panelPath, 'utf8');
+
+  // 1. Rename UI provides Code editing input bound to draftVarName
+  assert.ok(
+    code.includes('value={draftVarName}') && code.includes('setDraftVarName'),
+    'Code input must bind to draftVarName state with setter'
+  );
+
+  // 2. handleSaveRename validates variableName with pattern and sends in payload
+  assert.ok(
+    code.includes('variableName: trimmedVar'),
+    'handleSaveRename must include variableName in PATCH body'
+  );
+
+  // 3. Selection updates to new variableName on successful rename and handles duplicate conflict
+  assert.ok(
+    code.includes('setSelectedVarName(updated.variableName)') &&
+    code.includes("data.error && String(data.error).includes('already exists')"),
+    'Must update selectedVarName and branch on duplicate conflict error message'
+  );
+});
+

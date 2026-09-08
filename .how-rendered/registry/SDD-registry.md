@@ -380,8 +380,8 @@ UC-24 (entry list), UC-14 (trio layout edit). Admin-only (AD-14).
 | --- | --- | --- |
 | GET `/api/admin/song-set-entries` | Ordered list of live entries (`variable_name`, title, position) | UC-24 |
 | POST `/api/admin/song-set-entries` | Add an entry (`{ variable_name, title }`), appended to the spine | UC-24 |
-| PATCH `/api/admin/song-set-entries/[variable_name]` | Rename title only; `variable_name` immutable | UC-24 |
-| DELETE `/api/admin/song-set-entries/[variable_name]` | Remove the entry from the spine; Hub's weekly values for that name stay stored, inert | UC-24 (UC-15 shape) |
+| PATCH `/api/admin/song-set-entries/[variable_name]` | Rename title and/or `variable_name` (migrating `song_set_inputs` atomically per SPEC-13-06 Option A) | UC-24 |
+| DELETE `/api/admin/song-set-entries/[variable_name]` | Remove the entry from the spine; Hub's weekly values for that name stay stored, inert until reused or replaced | UC-24 (UC-15 shape) |
 | GET `/api/admin/song-set-layouts/[role]` | One trio layout (`role` = `title`\|`verse`\|`reff`) | UC-14 |
 | PUT `/api/admin/song-set-layouts/[role]` | Save that layout | UC-14 |
 | POST `/api/admin/song-set-layouts/[role]/reset` | Restore that layout to seed | UC-14 |
@@ -409,8 +409,8 @@ contract only adds the entry-identity fields the artifacts contract does not car
 
 | Condition | Response | Caller should |
 | --- | --- | --- |
-| `variable_name` collides with a live entry | 409 `Song set entry already exists` | Pick another name (a name freed by deleting a prior entry is not a collision and MAY be reused) |
-| Rename attempts to change `variable_name` | 400 `variable_name is immutable` | Delete and re-add if the identity itself must change (accepted cost: weekly values under the old name go inert) |
+| `variable_name` collides with a live entry | 409 `Song set entry already exists` | Pick another name (a name freed by deleting a prior entry is not a collision and MAY be reused on create; on rename, any existing inert weekly inputs under that name are replaced by the renamed entry's active inputs) |
+| Rename attempts invalid `variable_name` pattern | 400 `Invalid variableName` | Correct pattern (kebab/snake lowercase, 1–80 chars) |
 | Trio `verse`/`reff` PUT includes a background image element | 400 naming the offending element (`layouts.verse.elements[n] must not set a background image`) | Remove the background; it resolves at hydrate/live time instead (AD-33) |
 | Reset on `role` with no seed (should not happen — all 3 roles ship seeded) | 500, logged as a defect | Report; not a normal user path |
 | DELETE missing `updatedAt` | 400 `updatedAt is required` | Send the list token |

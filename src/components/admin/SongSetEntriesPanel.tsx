@@ -32,6 +32,7 @@ export function SongSetEntriesPanel() {
   // Rename state
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
+  const [draftVarName, setDraftVarName] = useState('');
   const [renaming, setRenaming] = useState(false);
 
   // Layout trio active role
@@ -68,6 +69,7 @@ export function SongSetEntriesPanel() {
   useEffect(() => {
     if (activeEntry) {
       setDraftTitle(activeEntry.title);
+      setDraftVarName(activeEntry.variableName);
       setIsRenaming(false);
     }
   }, [activeEntry?.variableName]);
@@ -131,6 +133,15 @@ export function SongSetEntriesPanel() {
       toast.error(t('admin.songSets.titleInvalid'));
       return;
     }
+    const trimmedVar = draftVarName.trim().toLowerCase();
+    if (!trimmedVar) {
+      toast.error(t('admin.songSets.variableNameInvalid'));
+      return;
+    }
+    if (!/^[a-z][a-z0-9_-]{0,79}$/.test(trimmedVar)) {
+      toast.error(t('admin.songSets.variableNameInvalid'));
+      return;
+    }
 
     setRenaming(true);
     try {
@@ -142,15 +153,21 @@ export function SongSetEntriesPanel() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             title: trimmedTitle,
+            variableName: trimmedVar,
             updatedAt: activeEntry.updatedAt,
           }),
         }
       );
 
       if (res.status === 409) {
-        toast.error(t('admin.songSets.staleConflict'));
-        void fetchEntries();
-        setIsRenaming(false);
+        const data = await res.json().catch(() => ({}));
+        if (data.error && String(data.error).includes('already exists')) {
+          toast.error(t('admin.songSets.createConflict'));
+        } else {
+          toast.error(t('admin.songSets.staleConflict'));
+          void fetchEntries();
+          setIsRenaming(false);
+        }
         return;
       }
 
@@ -161,8 +178,9 @@ export function SongSetEntriesPanel() {
 
       const updated = (await res.json()) as SongSetEntry;
       setEntries((prev) =>
-        prev.map((item) => (item.variableName === updated.variableName ? updated : item))
+        prev.map((item) => (item.variableName === activeEntry.variableName ? updated : item))
       );
+      setSelectedVarName(updated.variableName);
       toast.success(t('admin.songSets.renamed').replace('{title}', updated.title));
       setIsRenaming(false);
     } catch {
@@ -339,22 +357,41 @@ export function SongSetEntriesPanel() {
             <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-3">
                 {isRenaming ? (
-                  <div className="space-y-0.5">
-                    <Label className="text-[10px] text-muted-foreground uppercase font-semibold">Title:</Label>
-                    <Input
-                      value={draftTitle}
-                      disabled={renaming}
-                      onChange={(e) => setDraftTitle(e.target.value)}
-                      className="text-sm font-semibold max-w-sm h-8"
-                      autoFocus
-                    />
+                  <div className="flex items-center gap-3">
+                    <div className="space-y-0.5">
+                      <Label className="text-[10px] text-muted-foreground uppercase font-semibold">
+                        {t('admin.songSets.entryTitle')}:
+                      </Label>
+                      <Input
+                        value={draftTitle}
+                        disabled={renaming}
+                        onChange={(e) => setDraftTitle(e.target.value)}
+                        className="text-sm font-semibold max-w-xs h-8"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="space-y-0.5">
+                      <Label className="text-[10px] text-muted-foreground uppercase font-semibold">
+                        {t('admin.songSets.variableName')}:
+                      </Label>
+                      <Input
+                        value={draftVarName}
+                        disabled={renaming}
+                        onChange={(e) =>
+                          setDraftVarName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '_'))
+                        }
+                        className="text-xs font-mono max-w-[160px] h-8"
+                      />
+                    </div>
                   </div>
                 ) : (
-                  <span className="text-base font-bold text-foreground">{activeEntry.title}</span>
+                  <>
+                    <span className="text-base font-bold text-foreground">{activeEntry.title}</span>
+                    <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                      [slot: {activeEntry.variableName}]
+                    </span>
+                  </>
                 )}
-                <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                  [slot: {activeEntry.variableName}]
-                </span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -368,6 +405,7 @@ export function SongSetEntriesPanel() {
                       onClick={() => {
                         setIsRenaming(false);
                         setDraftTitle(activeEntry.title);
+                        setDraftVarName(activeEntry.variableName);
                       }}
                     >
                       {t('admin.songSets.cancel')}
@@ -375,7 +413,7 @@ export function SongSetEntriesPanel() {
                     <Button
                       type="button"
                       size="sm"
-                      disabled={renaming || !draftTitle.trim()}
+                      disabled={renaming || !draftTitle.trim() || !draftVarName.trim()}
                       onClick={() => void handleSaveRename()}
                     >
                       {renaming ? t('admin.songSets.renaming') : t('admin.songSets.save')}

@@ -132,7 +132,7 @@ func TestSongSetLayoutSeedsInstalled(t *testing.T) {
 }
 
 func TestSongSetEntryLifecycle(t *testing.T) {
-	ts, _, _ := newSongSetTestServer(t)
+	ts, handle, _ := newSongSetTestServer(t)
 
 	res := songSetRequest(t, ts, "GET", "/api/admin/song-set-entries", "", nil)
 	if res.StatusCode != http.StatusUnauthorized {
@@ -178,11 +178,17 @@ func TestSongSetEntryLifecycle(t *testing.T) {
 	}
 	res.Body.Close()
 
-	// PATCH: immutable, stale, unknown, then a real rename.
+	// PATCH: stale, unknown, invalid variableName, empty variableName, conflict on existing variableName.
 	res = songSetRequest(t, ts, "PATCH", "/api/admin/song-set-entries/special_anthem",
-		fmt.Sprintf(`{"title":"Renamed","updatedAt":%q,"variableName":"other"}`, created), cookie)
+		fmt.Sprintf(`{"title":"Renamed","updatedAt":%q,"variableName":"Invalid Name!"}`, created), cookie)
 	if res.StatusCode != http.StatusBadRequest {
-		t.Errorf("immutable variableName patch = %d, want 400", res.StatusCode)
+		t.Errorf("invalid variableName patch = %d, want 400", res.StatusCode)
+	}
+	res.Body.Close()
+	res = songSetRequest(t, ts, "PATCH", "/api/admin/song-set-entries/special_anthem",
+		fmt.Sprintf(`{"title":"Renamed","updatedAt":%q,"variableName":""}`, created), cookie)
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("empty variableName patch = %d, want 400", res.StatusCode)
 	}
 	res.Body.Close()
 	res = songSetRequest(t, ts, "PATCH", "/api/admin/song-set-entries/special_anthem",
@@ -197,21 +203,94 @@ func TestSongSetEntryLifecycle(t *testing.T) {
 		t.Errorf("unknown entry patch = %d, want 404", res.StatusCode)
 	}
 	res.Body.Close()
+
+	// Conflict: rename to an already-existing variable_name (e.g. opening_song_bt)
 	res = songSetRequest(t, ts, "PATCH", "/api/admin/song-set-entries/special_anthem",
-		fmt.Sprintf(`{"title":"Anthem Renamed","updatedAt":%q}`, created), cookie)
+		fmt.Sprintf(`{"title":"Anthem Conflict","variableName":"opening_song_bt","updatedAt":%q}`, created), cookie)
+	body = songSetJSON(t, res)
+	if res.StatusCode != http.StatusConflict || body["error"] != "Song set entry already exists" {
+		t.Errorf("duplicate variableName patch = %d (%v), want 409 Song set entry already exists", res.StatusCode, body)
+	}
+
+	// 1. Title-only rename (variableName omitted)
+	res = songSetRequest(t, ts, "PATCH", "/api/admin/song-set-entries/special_anthem",
+		fmt.Sprintf(`{"title":"Anthem Title Only","updatedAt":%q}`, created), cookie)
 	body = songSetJSON(t, res)
 	if res.StatusCode != http.StatusOK {
-		t.Fatalf("rename patch = %d (%v), want 200", res.StatusCode, body)
+		t.Fatalf("title-only patch = %d (%v), want 200", res.StatusCode, body)
+	}
+	if body["variableName"] != "special_anthem" || body["title"] != "Anthem Title Only" {
+		t.Errorf("title-only patch unexpected body: %v", body)
+	}
+	afterTitlePatch, _ := body["updatedAt"].(string)
+
+	// 2. Multi-service test for renaming into a freed variable_name with inert rows:
+	// Service 1 has active row for special_anthem (42) and inert row for inert_anthem (99).
+	// Service 2 has ONLY an inert row for inert_anthem (77).
+	var serviceID1, serviceID2 int64
+	err := handle.QueryRow(`INSERT INTO services (date, raw_payload) VALUES ('2026-09-20', '{}') RETURNING id`).Scan(&serviceID1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = handle.QueryRow(`INSERT INTO services (date, raw_payload) VALUES ('2026-09-27', '{}') RETURNING id`).Scan(&serviceID2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = handle.Exec(`INSERT INTO song_set_inputs (service_id, variable_name, song_number) VALUES (?, 'special_anthem', 42)`, serviceID1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = handle.Exec(`INSERT INTO song_set_inputs (service_id, variable_name, song_number) VALUES (?, 'inert_anthem', 99)`, serviceID1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = handle.Exec(`INSERT INTO song_set_inputs (service_id, variable_name, song_number) VALUES (?, 'inert_anthem', 77)`, serviceID2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Rename special_anthem -> inert_anthem:
+	// - Purges inert rows across all services (99 on s1, 77 on s2)
+	// - Migrates active row (42 on s1) to inert_anthem
+	res = songSetRequest(t, ts, "PATCH", "/api/admin/song-set-entries/special_anthem",
+		fmt.Sprintf(`{"title":"Anthem Renamed","variableName":"inert_anthem","updatedAt":%q}`, afterTitlePatch), cookie)
+	body = songSetJSON(t, res)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("rename into inert variableName = %d (%v), want 200", res.StatusCode, body)
+	}
+	if body["variableName"] != "inert_anthem" {
+		t.Errorf("rename patch variableName = %v, want inert_anthem", body["variableName"])
 	}
 	renamed, _ := body["updatedAt"].(string)
 
-	// DELETE: missing token, stale token, then success.
-	res = songSetRequest(t, ts, "DELETE", "/api/admin/song-set-entries/special_anthem", `{}`, cookie)
+	// Verify service 1: active row migrated to inert_anthem (song_number 42, not 99)
+	var s1SongNum int
+	err = handle.QueryRow(`SELECT song_number FROM song_set_inputs WHERE service_id = ? AND variable_name = 'inert_anthem'`, serviceID1).Scan(&s1SongNum)
+	if err != nil || s1SongNum != 42 {
+		t.Errorf("service 1 inert_anthem row: num=%d err=%v, want 42", s1SongNum, err)
+	}
+
+	// Verify service 2: inert row was purged, not adopted (count is 0)
+	var s2Count int
+	err = handle.QueryRow(`SELECT COUNT(*) FROM song_set_inputs WHERE service_id = ? AND variable_name = 'inert_anthem'`, serviceID2).Scan(&s2Count)
+	if err != nil || s2Count != 0 {
+		t.Errorf("service 2 inert_anthem row count=%d err=%v, want 0 (purged)", s2Count, err)
+	}
+
+	// Verify old variable_name special_anthem is completely gone
+	var oldCount int
+	err = handle.QueryRow(`SELECT COUNT(*) FROM song_set_inputs WHERE variable_name = 'special_anthem'`).Scan(&oldCount)
+	if err != nil || oldCount != 0 {
+		t.Errorf("old song_set_inputs row still exists: count=%d err=%v", oldCount, err)
+	}
+
+	// DELETE: missing token, stale token, then success on renamed variableName.
+	res = songSetRequest(t, ts, "DELETE", "/api/admin/song-set-entries/inert_anthem", `{}`, cookie)
 	if res.StatusCode != http.StatusBadRequest {
 		t.Errorf("delete without updatedAt = %d, want 400", res.StatusCode)
 	}
 	res.Body.Close()
-	res = songSetRequest(t, ts, "DELETE", "/api/admin/song-set-entries/special_anthem",
+	res = songSetRequest(t, ts, "DELETE", "/api/admin/song-set-entries/inert_anthem",
 		fmt.Sprintf(`{"updatedAt":%q}`, renamed), cookie)
 	body = songSetJSON(t, res)
 	if res.StatusCode != http.StatusOK {
@@ -220,7 +299,7 @@ func TestSongSetEntryLifecycle(t *testing.T) {
 	res = songSetRequest(t, ts, "GET", "/api/admin/song-set-entries", "", cookie)
 	body = songSetJSON(t, res)
 	for _, raw := range body["entries"].([]any) {
-		if e := raw.(map[string]any); e["variableName"] == "special_anthem" {
+		if e := raw.(map[string]any); e["variableName"] == "inert_anthem" || e["variableName"] == "special_anthem" {
 			t.Error("deleted entry still listed")
 		}
 	}

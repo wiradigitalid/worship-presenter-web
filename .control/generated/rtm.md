@@ -340,10 +340,10 @@ rtm:
   release: artifacts-qa-followup-round2
   test:
   - tests/artifact-editor-controls.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -355,10 +355,10 @@ rtm:
   test:
   - tests/artifact-editor-controls.test.mjs
   - tests/artifact-preview.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -369,10 +369,10 @@ rtm:
   release: artifacts-qa-followup-round2
   test:
   - tests/artifact-editor-layout.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -552,10 +552,10 @@ rtm:
   release: artifacts-qa-followup-round2
   test:
   - tests/artifact-editor-controls.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-21
@@ -775,10 +775,10 @@ rtm:
   release: artifacts-qa-followup-round2
   test:
   - tests/artifact-editor-layout.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-29
@@ -996,10 +996,10 @@ rtm:
   release: artifacts-qa-followup-round2
   test:
   - tests/artifact-editor-controls.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -1011,10 +1011,10 @@ rtm:
   test:
   - tests/artifact-editor-controls.test.mjs
   - tests/artifact-preview.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -1025,10 +1025,10 @@ rtm:
   release: artifacts-qa-followup-round2
   test:
   - tests/artifact-editor-layout.test.mjs
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
