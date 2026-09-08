@@ -283,4 +283,22 @@ decisions:
     title: Canvas "Reset" becomes discard-unsaved-changes; shipped/seeded content becomes ordinary editable content
     file: .control/decisions/DEC-014-canvas-reset-becomes-discard-unsaved-changes.md
     touches: []
+  - id: DEC-015
+    type: mandate
+    status: accepted
+    accepted_by: "kodesh87 (2026-09-08)"
+    title: Autopilot mandate for Artifacts QA Follow-up Round 2 (SPEC-13)
+    file: .control/decisions/DEC-015-autopilot-mandate-artifacts-qa-followup-round2.md
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent
+      loop: 10m
+      expires: '2026-09-15'
+    touches:
+      - .control/memlog/autopilot-DEC-015.md
+      - .control/registry/specs.yaml
+      - .control/registry/decisions.yaml
+
 

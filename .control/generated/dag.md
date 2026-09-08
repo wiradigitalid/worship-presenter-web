@@ -22,6 +22,34 @@ dag:
     - SPEC-12-07
   - parallel:
     - SPEC-12-08
+- spec: SPEC-13
+  order:
+  - parallel:
+    - SPEC-13-01
+  - parallel:
+    - SPEC-13-02
+  - parallel:
+    - SPEC-13-03
+  - parallel:
+    - SPEC-13-04
+  - parallel:
+    - SPEC-13-05
+  - parallel:
+    - SPEC-13-06
+  - parallel:
+    - SPEC-13-07
+  - parallel:
+    - SPEC-13-08
+  - parallel:
+    - SPEC-13-09
+  - parallel:
+    - SPEC-13-10
+  - parallel:
+    - SPEC-13-11
+  - parallel:
+    - SPEC-13-12
+  - parallel:
+    - SPEC-13-13
 - spec: W1
   order:
   - parallel:
