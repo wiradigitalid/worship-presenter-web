@@ -257,6 +257,7 @@ export interface ArtifactEditorProps {
   onCopySlidePayloadChange?: (slide: CopiedSlide | null) => void;
   hideList?: boolean;
   allowImages?: boolean;
+  allowRename?: boolean;
   bannerNote?: React.ReactNode;
   prefixListSlot?: React.ReactNode;
 }
@@ -268,6 +269,7 @@ export default function ArtifactEditor({
   onCopySlidePayloadChange,
   hideList = false,
   allowImages = true,
+  allowRename = true,
   bannerNote = null,
   prefixListSlot = null,
 }: ArtifactEditorProps = {}) {
@@ -2092,9 +2094,9 @@ export default function ArtifactEditor({
         ) : (
           <>
             {/* POIN 4: SLIDE HEADER REGION (CARD RESMI DENGAN SIKLUS RENAME/RESET KONSISTEN) */}
-            <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm">
+            <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm min-h-[58px]">
               <div className="flex items-center gap-3">
-                {isRenaming ? (
+                {allowRename && isRenaming ? (
                   <Input
                     id="artifact-label"
                     type="text"
@@ -2102,7 +2104,9 @@ export default function ArtifactEditor({
                     onChange={(event) => setDraftLabel(event.target.value)}
                     maxLength={80}
                     disabled={busy}
-                    className="text-base font-semibold max-w-sm"
+                    aria-label={t('admin.artifacts.rename')}
+                    placeholder={template.label}
+                    className="text-base font-semibold max-w-sm h-8"
                     autoFocus
                   />
                 ) : (
@@ -2123,45 +2127,48 @@ export default function ArtifactEditor({
                   </span>
                 ) : null}
 
-                {isRenaming ? (
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setIsRenaming(false);
-                        setDraftLabel(template.label);
-                      }}
-                      disabled={busy}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={async () => {
-                        await handleRename();
-                        setIsRenaming(false);
-                      }}
-                      disabled={!labelDirty || busy}
-                    >
-                      Save
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsRenaming(true)}
-                    disabled={busy}
-                  >
-                    {t('admin.artifacts.rename')}
-                  </Button>
-                )}
-
-                <div className="h-4 w-px bg-border mx-1" />
+                {allowRename ? (
+                  <>
+                    {isRenaming ? (
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setIsRenaming(false);
+                            setDraftLabel(template.label);
+                          }}
+                          disabled={busy}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={async () => {
+                            await handleRename();
+                            setIsRenaming(false);
+                          }}
+                          disabled={!labelDirty || busy}
+                        >
+                          Save
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsRenaming(true)}
+                        disabled={busy}
+                      >
+                        {t('admin.artifacts.rename')}
+                      </Button>
+                    )}
+                    <div className="h-4 w-px bg-border mx-1" />
+                  </>
+                ) : null}
 
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-semibold text-muted-foreground">Canvas:</span>

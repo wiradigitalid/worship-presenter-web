@@ -354,35 +354,35 @@ export function SongSetEntriesPanel() {
         ) : (
           <>
             {/* Rename Header Card */}
-            <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm">
+            <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm min-h-[58px]">
               <div className="flex items-center gap-3">
                 {isRenaming ? (
-                  <div className="flex items-center gap-3">
-                    <div className="space-y-0.5">
-                      <Label className="text-[10px] text-muted-foreground uppercase font-semibold">
-                        {t('admin.songSets.entryTitle')}:
-                      </Label>
-                      <Input
-                        value={draftTitle}
-                        disabled={renaming}
-                        onChange={(e) => setDraftTitle(e.target.value)}
-                        className="text-sm font-semibold max-w-xs h-8"
-                        autoFocus
-                      />
-                    </div>
-                    <div className="space-y-0.5">
-                      <Label className="text-[10px] text-muted-foreground uppercase font-semibold">
-                        {t('admin.songSets.variableName')}:
-                      </Label>
-                      <Input
-                        value={draftVarName}
-                        disabled={renaming}
-                        onChange={(e) =>
-                          setDraftVarName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '_'))
-                        }
-                        className="text-xs font-mono max-w-[160px] h-8"
-                      />
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">
+                      {t('admin.songSets.entryTitle')}:
+                    </span>
+                    <Input
+                      value={draftTitle}
+                      disabled={renaming}
+                      onChange={(e) => setDraftTitle(e.target.value)}
+                      placeholder={t('admin.songSets.entryTitle')}
+                      aria-label={t('admin.songSets.entryTitle')}
+                      className="text-sm font-semibold max-w-xs h-8"
+                      autoFocus
+                    />
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase ml-1">
+                      {t('admin.songSets.variableName')}:
+                    </span>
+                    <Input
+                      value={draftVarName}
+                      disabled={renaming}
+                      onChange={(e) =>
+                        setDraftVarName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '_'))
+                      }
+                      placeholder={t('admin.songSets.variableName')}
+                      aria-label={t('admin.songSets.variableName')}
+                      className="text-xs font-mono max-w-[140px] h-8"
+                    />
                   </div>
                 ) : (
                   <>
@@ -473,7 +473,7 @@ export function SongSetEntriesPanel() {
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  3. Reffrain Layout
+                  3. Refrain Layout
                 </Button>
               </div>
 
@@ -484,6 +484,7 @@ export function SongSetEntriesPanel() {
                 initialSelectedId={selectedRole}
                 hideList={true}
                 allowImages={selectedRole === 'title'}
+                allowRename={false}
                 bannerNote={
                   <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-2.5 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between min-h-[42px] h-[42px] overflow-hidden">
                     {selectedRole === 'title' ? (
