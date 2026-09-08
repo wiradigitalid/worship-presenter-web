@@ -204,4 +204,24 @@ decisions:
       - .control/memlog/autopilot-DEC-008.md
       - .control/registry/specs.yaml
       - .control/registry/decisions.yaml
+  - id: DEC-009
+    status: draft
+    title: Every primary create-action button uses the default (primary) Button variant
+    file: .control/decisions/DEC-009-create-action-button-variant.md
+    touches: []
+  - id: DEC-010
+    status: draft
+    title: '"New" starts a top-level entity needing identity first; "Add" inserts into an open context; "Insert" is retired'
+    file: .control/decisions/DEC-010-new-add-naming-convention.md
+    touches: []
+  - id: DEC-011
+    status: draft
+    title: A Song Set's Title/Verse/Reff sub-slide keeps its own Rename, grouped under "Canvas:" like Main Spine
+    file: .control/decisions/DEC-011-song-set-sub-slide-title-actions.md
+    touches: []
+  - id: DEC-012
+    status: draft
+    title: The canvas admits one keyboard shortcut (Delete/Backspace); OQ-13 narrows, does not fall
+    file: .control/decisions/DEC-012-canvas-keyboard-delete-exception.md
+    touches: []
 

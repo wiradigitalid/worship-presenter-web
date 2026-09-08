@@ -1,3 +1,231 @@
 # defects.yaml — SSOT for defects: ordinary bugs and hotfixes.
+#
+# BUG-1..BUG-16 filed 2026-09-08 from manual QA of the W11 Artifacts overhaul (DEC-008), recorded
+# verbatim in .work/requirements/prompt-04..07-*.md. Each `source` line names the exact prompt-file
+# section. Where code inspection already located the mechanism, `summary` names the file/lines so
+# the eventual fix does not re-discover it; that is not the same as a formal `root_cause` (this
+# method reserves that field for resolving a `[MISSING]` doc marker — corpus-guide.md — which none
+# of these are). Several of these look like an existing feature failing silently rather than a
+# missing one, and per this project's AGENTS.md policy a bug goes through `wdi-systematic-debugging`
+# BEFORE any patch is written.
 
-defects: []
+defects:
+  - id: BUG-1
+    status: open
+    title: "Deck Sequence drag-move-and-release reorder does not work"
+    component: registry
+    violates: [FR-21, UC-15, DEC-008]
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § DECK SEQUENCE AREA"
+    summary: >
+      Manual QA: dragging a Deck Sequence card to reposition it has no effect. Code inspection
+      found `onDragStart`/`onDragOver`/`onDrop`/`draggable` already wired on the list item
+      (ArtifactEditor.tsx ~L1772-1776) — this reads as a regression in already-built behaviour,
+      not an unbuilt feature. Debug before patching.
+  - id: BUG-2
+    status: open
+    title: "Canvas right-click context menu (bring forward/back, duplicate, delete) does not appear"
+    component: registry
+    violates: [DEC-008]
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § CANVAS #2"
+    summary: >
+      Manual QA: right-click on a canvas element shows no custom menu; none of alignment,
+      duplicate/clone, or delete are reachable. Code inspection found the full menu already
+      implemented — `contextMenu` state + `onContextMenu` handler, `handleDeleteSelected`,
+      `handleDuplicateSelected`, and bringToFront/bringForward/sendBackward/sendToBack menu items
+      (ArtifactEditor.tsx ~L272, ~L2239-2320). Ticket W11-03 (`_bmad-output/specs/spec-w11-artifacts-overhaul/issues/03-canvas-context-menu-drag-create.md`)
+      is marked `Status: done` with this exact scope. This is a regression or a conditional-render
+      gap (menu never opening), not a missing build — debug first, per project policy.
+  - id: BUG-3
+    status: open
+    title: "No keyboard Delete/Backspace shortcut for a selected canvas element"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § CANVAS #1"
+    summary: >
+      Manual QA: pressing the Delete key with an element selected does nothing. Unlike BUG-2, this
+      one is genuinely unbuilt — `handleDeleteSelected` exists but is wired only to a click handler
+      (context-menu item / sidebar button), no `keydown` listener for Delete/Backspace was found
+      on the canvas. Note the tension with OQ-13 (`.control/questions/assumptions.md`, "canvas
+      editor stays pointer-first with no keyboard equivalent") — see DEC-012, which narrows that
+      assumption to admit this one shortcut rather than full keyboard navigation.
+  - id: BUG-4
+    status: open
+    title: "Font size field does not update the selected text element in realtime"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT PROPERTIES #2"
+    summary: >
+      Confirmed root cause: `handleFontSizeInput` (ArtifactEditor.tsx ~L1113) only updates the
+      `fontSize` React state; it never calls `applyTextStyle()` (~L1048), which is the one
+      function that actually pushes `{ fill, fontSize }` onto the selected Fabric object via
+      `obj.set(...)` + `canvas.requestRenderAll()`. Bold/Italic/Align work because their handlers
+      (`handleToggleBold`, `handleToggleItalic`, ~L1067-1093) call `obj.set` directly — Font Size
+      and Font Color (BUG-5) are the two controls that were left state-only. Also widen the input
+      (point #2, "besarin widthnya") for a 3-digit font size.
+  - id: BUG-5
+    status: open
+    title: "Font color picker does not apply to the selected text element"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT PROPERTIES #4"
+    summary: >
+      Same mechanism as BUG-4: the color `<input type=\"color\">` `onChange` (ArtifactEditor.tsx
+      ~L2142) calls only `setFontColor(e.target.value)`, never `applyTextStyle()`. Fix both in the
+      same pass — they are the same missing call, not two separate bugs to debug independently.
+  - id: BUG-6
+    status: open
+    title: "Shape color picker shows the default color instead of the selected shape's existing fill"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT PROPERTIES #5"
+    summary: >
+      Confirmed root cause: the selection-sync function (ArtifactEditor.tsx ~L318-337) reads a
+      selected TEXT object's `fill`/`fontSize`/`fontWeight`/`fontStyle` back into state
+      (`setFontColor`, `setFontSize`, ...) but has no equivalent branch for a selected SHAPE
+      object — nothing reads the shape's existing `fill` (~L151, `element.style?.fillColor`) back
+      into a shape-color state on select, so the picker keeps its last value instead.
+  - id: BUG-7
+    status: open
+    title: "An inserted image renders stretched instead of at its native aspect ratio"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT #5"
+    summary: >
+      Confirmed root cause: image element creation (ArtifactEditor.tsx ~L156-174) sets
+      `scaleX: width / imgEl.naturalWidth` and `scaleY: height / imgEl.naturalHeight` independently
+      against the drag-created bounding box's `width`/`height` — both axes are forced to fill the
+      box exactly, so any box whose ratio does not match the source image's ratio stretches it.
+      Needs a contain-style fit (uniform scale from `min(width/naturalWidth, height/naturalHeight)`,
+      or resize the box to match on insert) instead of independent axis scaling.
+  - id: BUG-8
+    status: open
+    title: "Every Select control shows the raw value, not the matching item's label, once an item is chosen"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § NEW SLIDE AREA #2; prompt-07-artifacts-dropdown-consistency-crosscutting.md"
+    summary: >
+      Confirmed root cause, and it is a SINGLE shared-component defect, not one per screen:
+      `src/components/ui/select.tsx`'s `SelectValue` wrapper (built on `@base-ui/react/select`,
+      not Radix) is used bare everywhere in this codebase — `<SelectValue />` with no children
+      render function — so it falls back to the raw `value` string (e.g. `song:opening_song_bt`)
+      instead of the matching `<SelectItem>`'s rendered label (e.g. "🎵 Bible Talk Opening Song").
+      Confirmed call sites: ArtifactEditor.tsx L1706 (Main Spine "New Slide" dropdown) and L2081
+      (Toolbar predefined-placeholder dropdown) — both bare. Fixing `SelectValue` itself (give it a
+      children render function that looks up the selected item's label) resolves this app-wide in
+      one place; this closes the "LAINNYA" cross-cutting scan request without auditing every
+      individual dropdown call site first, since they all share this one component.
+  - id: BUG-9
+    status: open
+    title: "Announcement Set editor shows two stacked title areas, and renaming shifts surrounding layout"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-06-artifacts-announcement-sets-qa-followup.md § TITLE AREA, § SLIDES IN SET #2 — owner clarification 2026-09-08 in chat"
+    summary: >
+      Manual QA (screenshots): the Announcement Set editor renders a title block for the active
+      Announcement Set ("[set: Opening Announcement]") immediately above a second, near-identical
+      title block for the currently selected slide-in-set ("[general]") — confusing which Rename
+      acts on which. Separately, entering rename mode shifts the "Active Announcement Set" label
+      and changes the title area's height, pushing the canvas down and back up.
+
+      **Owner clarification (2026-09-08), and this is the load-bearing part:** the two blocks'
+      content was identical (same title text top and bottom). The owner edited/saved the TOP block
+      first, then tried to edit the BOTTOM block — that second edit is what produced the "Slide was
+      modified by another session... discarded" conflict banner previously filed separately as
+      OQ-59 (now folded in here and removed from `assumptions.md` — same defect, not a coincidence
+      or a separate incidental race). Working theory: the two title blocks are two different UI
+      bindings reading/writing what is either the same underlying record, or two records that are
+      supposed to stay in sync and do not — saving the top one advances a concurrency token
+      (`updatedAt`) that the bottom block's already-fetched copy does not know about, so the second
+      save is rejected as stale. This reframes BUG-9 from a cosmetic duplicate-title-area
+      complaint into a reproducible edit-conflict bug: confirm via `wdi-systematic-debugging`
+      which two things the top and bottom blocks actually read from/write to before deciding
+      whether the fix is "delete the duplicate block" or "these are two real things that need one
+      shared concurrency token instead of two independent ones."
+  - id: BUG-10
+    status: open
+    title: "Underline is not available on canvas text, and the server rejects it if the UI ever sent it"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT PROPERTIES #3"
+    summary: >
+      Confirms and closes assumption OQ-41 (`.control/questions/assumptions.md`, recorded
+      2026-08-21): `allowedStyleKeys` in `internal/plan/validate_artifact.go` (~L49-52) still has
+      no `textDecoration` entry alongside `fontWeight`/`fontStyle` — a server-side allowlist gap,
+      not only a missing toolbar button. Needs both: add `textDecoration` to the backend allowlist
+      and its render path, and add the toolbar button next to Bold/Italic
+      (ArtifactEditor.tsx ~L2156-2175 is the pattern to follow).
+  - id: BUG-11
+    status: open
+    title: "Main Spine editor requires page scroll instead of fitting the viewport with a sane minimum height"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § PAGE LAYOUT"
+    summary: >
+      Manual QA: the page layout is not `100%` of the viewport height with a minimum floor, so most
+      of the Deck Sequence list is below the fold and the page scrolls as a whole instead of the
+      editor filling available height. Not yet code-inspected; needs a debugging/layout pass on the
+      Main Spine page shell (likely a missing `h-screen`/`min-h-*` + flex constraint chain from the
+      route shell down to the Deck Sequence list container).
+  - id: BUG-12
+    status: open
+    title: "Toolbar wording/iconography/order does not match the intended design (\"(Drag)\" labels, Change Background icon, toolbar order)"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT #1, #2, #4"
+    summary: >
+      Three grouped polish items against the same toolbar row: (1) drop the "(Drag)" suffix from
+      the Text/Rectangle/Image add-buttons, icon-only; (2) the Change Background control uses an
+      icon that reads as a color-picker swatch — replace with an image/background icon and drop the
+      word "Background" from the label, keep only the icon + a short label per the icon; (3)
+      reorder the row to `Add: [Text] [Shape] [Image] | [Background icon] | [Placeholder dropdown]
+      [Add Placeholder]`. Ties into BUG-8 for the placeholder dropdown's label-vs-value part.
+  - id: BUG-13
+    status: open
+    title: "Element Properties panel hides/shows by selection, pushing the canvas up and down"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT PROPERTIES #1"
+    summary: >
+      The Properties row (ArtifactEditor.tsx ~L2134, `selectedElementIds.length > 0 ? ... : null`)
+      is conditionally rendered, so the canvas below it shifts vertically every time selection
+      changes. Requested: the row stays mounted always, with placeholder content — `Properties
+      (Image): No properties to change` when the selected element has none, `Properties (None):
+      Select element first` when nothing is selected.
+  - id: BUG-14
+    status: open
+    title: "Song Sets: \"2/3 Formula\" wording is user-visible, and the auto-lyric-box banner only appears on one tab, changing canvas height between tabs"
+    component: registry
+    violates: [DEC-011]
+    source: ".work/requirements/prompt-05-artifacts-song-sets-qa-followup.md § COMPONENT AREA #1, #2"
+    summary: >
+      In the Song Set editor's "2. Verse Layout" tab, the tab label itself reads "Verse Layout (2/3
+      Formula)" and a banner below it ("Auto Lyric Box: 2/3 Height Standard...") appears only on
+      that tab, not on "1. Title Slide" or "3. Reffrain Layout" — the differing banner height is
+      why the canvas visibly grows/shrinks when switching tabs. Fix: drop "(2/3 Formula)" from the
+      tab label; either show an equivalent-height explanatory line on every tab or move the
+      explanation somewhere that does not sit above the canvas.
+  - id: BUG-15
+    status: open
+    title: "Song Set / Announcement Set \"New ...\" creation area does not match the Main Spine layout, and the song-set code field has no rename"
+    component: registry
+    violates: [DEC-009, DEC-010]
+    source: ".work/requirements/prompt-05-artifacts-song-sets-qa-followup.md § NEW SONG SET AREA, § TITLE AREA; prompt-06-artifacts-announcement-sets-qa-followup.md § NEW SONG SET AREA (sic, means Announcement)"
+    summary: >
+      (a) The "New Song Set" / "New Announcement Set" creation block's layout does not mirror Main
+      Spine's "New Slide" panel (small section label, then the input fields, then the create
+      button) — restyle for parity, once DEC-009/DEC-010 are accepted so the button variant and
+      label ("New" vs "Add") are settled together with the layout pass. (b) The Song Set's code
+      field (its `variableName`/slug) has no Rename affordance next to the title's — add one beside
+      it, per the raw feedback's "(bisa disampingnya?)".
+  - id: BUG-16
+    status: open
+    title: "Announcement Set: \"Active Announcement Set\" label position and title-area height are not stable across rename"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-06-artifacts-announcement-sets-qa-followup.md § SLIDES IN SET #2, § TITLE AREA #1"
+    summary: >
+      Distinct from BUG-9's duplicate-title-area layout question: even without touching that, the
+      "Active Announcement Set" label visibly moves when rename mode toggles, and the title area's
+      own height changes while renaming — both push the canvas. Same family of fix as BUG-13
+      (stop conditional layout shifts around the canvas), scoped to this screen's rename cycle.
+
