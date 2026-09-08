@@ -86,6 +86,39 @@ export function getElementId(obj: { get?: (key: string) => unknown; data?: { ele
   return obj.data?.elementId;
 }
 
+/**
+ * Calculates uniform contain or cover scaling and centering offsets for an image
+ * inside a container box so the image's native aspect ratio is strictly preserved.
+ */
+export function calculateImageFit(
+  box: { left: number; top: number; width: number; height: number },
+  natural: { width: number; height: number },
+  objectFit: 'contain' | 'cover' = 'contain'
+): {
+  width: number;
+  height: number;
+  scaleX: number;
+  scaleY: number;
+  left: number;
+  top: number;
+} {
+  const natW = natural.width || box.width || 1;
+  const natH = natural.height || box.height || 1;
+  const scale =
+    objectFit === 'cover'
+      ? Math.max(box.width / natW, box.height / natH)
+      : Math.min(box.width / natW, box.height / natH);
+
+  return {
+    width: natW,
+    height: natH,
+    scaleX: scale,
+    scaleY: scale,
+    left: box.left + (box.width - natW * scale) / 2,
+    top: box.top + (box.height - natH * scale) / 2,
+  };
+}
+
 export type FabricTextLike = {
   type: string;
   text?: string;

@@ -20,6 +20,7 @@ const root = path.resolve(__dirname, '..');
 const {
   serializeTextStyle,
   serializeCanvas,
+  calculateImageFit,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'canvas-utils.ts')).href
 );
@@ -781,5 +782,61 @@ test('SPEC-12-02: Canvas interaction regressions - context menu, keyboard delete
     'handleDrop must read source index from dataTransfer and persist reorder'
   );
 });
+
+test('SPEC-12-03: Image aspect ratio contain-fit in ArtifactEditor and canvas-utils', async () => {
+  // 1. Behavioral test: Wide image (400x100 = 4:1) inside box (200x100 = 2:1)
+  const wideFit = calculateImageFit(
+    { left: 10, top: 20, width: 200, height: 100 },
+    { width: 400, height: 100 },
+    'contain'
+  );
+  assert.equal(wideFit.width, 400);
+  assert.equal(wideFit.height, 100);
+  assert.equal(wideFit.scaleX, 0.5);
+  assert.equal(wideFit.scaleY, 0.5);
+  // Rendered dimensions must preserve 4:1 ratio
+  const wideRenderedW = wideFit.width * wideFit.scaleX;
+  const wideRenderedH = wideFit.height * wideFit.scaleY;
+  assert.equal(wideRenderedW, 200);
+  assert.equal(wideRenderedH, 50);
+  assert.equal(wideRenderedW / wideRenderedH, 4);
+  // Centered vertically inside 100px box (top=20 + (100-50)/2 = 45)
+  assert.equal(wideFit.top, 45);
+  assert.equal(wideFit.left, 10);
+
+  // 2. Behavioral test: Tall image (100x400 = 1:4) inside box (200x200 = 1:1)
+  const tallFit = calculateImageFit(
+    { left: 0, top: 0, width: 200, height: 200 },
+    { width: 100, height: 400 },
+    'contain'
+  );
+  assert.equal(tallFit.width, 100);
+  assert.equal(tallFit.height, 400);
+  assert.equal(tallFit.scaleX, 0.5);
+  assert.equal(tallFit.scaleY, 0.5);
+  // Rendered dimensions must preserve 1:4 ratio
+  const tallRenderedW = tallFit.width * tallFit.scaleX;
+  const tallRenderedH = tallFit.height * tallFit.scaleY;
+  assert.equal(tallRenderedW, 50);
+  assert.equal(tallRenderedH, 200);
+  assert.equal(tallRenderedW / tallRenderedH, 0.25);
+  // Centered horizontally inside 200px box (left=0 + (200-50)/2 = 75)
+  assert.equal(tallFit.left, 75);
+  assert.equal(tallFit.top, 0);
+
+  // 3. ArtifactEditor wiring
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+  assert.ok(
+    code.includes('calculateImageFit('),
+    'ArtifactEditor must use calculateImageFit to compute contain dimensions and position'
+  );
+  assert.ok(
+    code.includes('width: initial.width') && code.includes('height: initial.height'),
+    'FabricImage must use natural dimensions for width/height so scaleX/scaleY preserve aspect ratio'
+  );
+});
+
 
 

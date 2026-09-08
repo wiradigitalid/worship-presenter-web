@@ -61,6 +61,7 @@ import {
   DEFAULT_FONT_SIZE,
   DEFAULT_TEXT_ALIGN,
   FabricTextLike,
+  calculateImageFit,
   INSERT_CASCADE_PX,
   INSERT_CASCADE_STEPS,
   MAX_FONT_SIZE,
@@ -160,16 +161,44 @@ function elementToFabricObject(
       const imgEl = new Image();
       imgEl.crossOrigin = 'anonymous';
       imgEl.src = element.imageRef;
+
+      const calcFit = () =>
+        calculateImageFit(
+          { left, top, width, height },
+          { width: imgEl.naturalWidth, height: imgEl.naturalHeight },
+          element.style?.objectFit
+        );
+
+      const initial = calcFit();
+      const clipBox = new fabric.Rect({
+        left,
+        top,
+        width,
+        height,
+        absolutePositioned: true,
+      });
+
       const fabricImg = new fabric.FabricImage(imgEl, {
         ...common,
-        scaleX: width / (imgEl.naturalWidth || width || 1),
-        scaleY: height / (imgEl.naturalHeight || height || 1),
+        width: initial.width,
+        height: initial.height,
+        left: initial.left,
+        top: initial.top,
+        scaleX: initial.scaleX,
+        scaleY: initial.scaleY,
+        clipPath: clipBox,
         data: { elementId: element.id, imageRef: element.imageRef },
       });
       imgEl.onload = () => {
+        const updated = calcFit();
         fabricImg.set({
-          scaleX: width / (imgEl.naturalWidth || 1),
-          scaleY: height / (imgEl.naturalHeight || 1),
+          width: updated.width,
+          height: updated.height,
+          left: updated.left,
+          top: updated.top,
+          scaleX: updated.scaleX,
+          scaleY: updated.scaleY,
+          clipPath: clipBox,
         });
         fabricImg.canvas?.requestRenderAll();
       };

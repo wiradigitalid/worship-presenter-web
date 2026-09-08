@@ -278,6 +278,31 @@ test('badge tone is derived once for both preview surfaces', () => {
   }
 });
 
+test('SPEC-12-03: image elements preserve aspect ratio and default to contain objectFit in render model', async () => {
+  const { resolveObjectFit, DEFAULT_OBJECT_FIT } = await import(
+    srcUrl('lib', 'artifacts', 'render-model.ts')
+  );
+  assert.equal(DEFAULT_OBJECT_FIT, 'contain');
+  assert.equal(resolveObjectFit({}), 'contain');
+  assert.equal(resolveObjectFit({ objectFit: 'contain' }), 'contain');
+  assert.equal(resolveObjectFit({ objectFit: 'cover' }), 'cover');
+
+  const { calculateImageFit } = await import(
+    srcUrl('lib', 'registry', 'canvas-utils.ts')
+  );
+  // Wide image (600x100 = 6:1) in container (300x100 = 3:1)
+  const fitWide = calculateImageFit(
+    { left: 0, top: 0, width: 300, height: 100 },
+    { width: 600, height: 100 },
+    'contain'
+  );
+  assert.equal(fitWide.scaleX, fitWide.scaleY);
+  assert.equal((fitWide.width * fitWide.scaleX) / (fitWide.height * fitWide.scaleY), 6);
+  assert.equal(fitWide.top, 25); // Centered vertically in 100px box ((100 - 50) / 2)
+  assert.equal(fitWide.left, 0);
+});
+
+
 test('preview row badge resolution produces type, song-set-N, ann-set-N, and lyric roles with i18n support', async () => {
   const { resolveString } = await import(srcUrl('lib', 'i18n', 'index.ts'));
 
