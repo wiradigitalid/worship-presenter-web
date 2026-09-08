@@ -10,35 +10,53 @@
 # BEFORE any patch is written. BUG-17 was added the same day from a full-codebase sweep the owner
 # requested when accepting DEC-009 through DEC-012 ("tegakkan ke semua coding yang lain, cek ulang")
 # — not from the original manual QA pass.
+#
+# 2026-09-08, round 2: the owner ran a second manual QA pass over SPEC-12's shipped fixes (recorded
+# verbatim in .work/requirements/prompt-08-artifacts-qa-followup-round2.md) and found several marked
+# `fixed` did not actually hold — reopened below with `status: open` and a note on what SPEC-12
+# delivered vs what is still broken (`fixed_in` is kept as history, it does not mean "still true").
+# BUG-18..BUG-24 are new from that same pass, filed into SPEC-13.
 
 defects:
   - id: BUG-1
-    status: fixed
+    status: open
     fixed_in: SPEC-12
-    title: "Deck Sequence drag-move-and-release reorder does not work"
+    reopened_in: SPEC-13
+    title: "Deck Sequence drag-move-and-release requires a manual click before it activates on a fresh load"
     component: registry
     violates: [FR-21, UC-15, DEC-008]
-    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § DECK SEQUENCE AREA"
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § DECK SEQUENCE AREA; prompt-08-artifacts-qa-followup-round2.md § BUG-1"
     summary: >
-      Manual QA: dragging a Deck Sequence card to reposition it has no effect. Code inspection
-      found `onDragStart`/`onDragOver`/`onDrop`/`draggable` already wired on the list item
-      (ArtifactEditor.tsx ~L1772-1776) — this reads as a regression in already-built behaviour,
-      not an unbuilt feature. Debug before patching.
+      SPEC-12 fixed the drag-reorder mechanism itself (confirmed round 2: "Fitur click-drag-release
+      bekerja dengan baik dan berhasil save"). Reopened for a narrower residual: on a fresh Main
+      Spine editor load, no Deck Sequence slide is selected, and drag-reorder does not activate
+      until the admin manually clicks a slide first. Announcement Sets does not have this problem —
+      it auto-selects the first slide-in-set on load (see BUG-21's related gap: that
+      auto-selection's text field is itself empty). Fix: Main Spine auto-selects the first Deck
+      Sequence slide on mount, matching Announcement Sets. Same root cause as reopened BUG-8's
+      residual (the New Slide dropdown reads inactive for the same reason) — one fix closes both.
   - id: BUG-2
-    status: fixed
+    status: open
     fixed_in: SPEC-12
+    reopened_in: SPEC-13
     title: "Canvas right-click context menu (bring forward/back, duplicate, delete) does not appear"
     component: registry
     violates: [DEC-008]
-    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § CANVAS #2"
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § CANVAS #2; prompt-08-artifacts-qa-followup-round2.md § BUG-2"
     summary: >
       Manual QA: right-click on a canvas element shows no custom menu; none of alignment,
       duplicate/clone, or delete are reachable. Code inspection found the full menu already
       implemented — `contextMenu` state + `onContextMenu` handler, `handleDeleteSelected`,
       `handleDuplicateSelected`, and bringToFront/bringForward/sendBackward/sendToBack menu items
       (ArtifactEditor.tsx ~L272, ~L2239-2320). Ticket W11-03 (`_bmad-output/specs/spec-w11-artifacts-overhaul/issues/03-canvas-context-menu-drag-create.md`)
-      is marked `Status: done` with this exact scope. This is a regression or a conditional-render
-      gap (menu never opening), not a missing build — debug first, per project policy.
+      is marked `Status: done` with this exact scope, and SPEC-12 ticket 02
+      (`.scratch/SPEC-12-artifacts-qa-followup/issues/02-canvas-interaction-regressions.md`) also
+      marked this `[x] done`. Reopened: round 2 manual QA confirms the context menu STILL does not
+      appear at all ("Context menu belum muncul"). Two attempts have now claimed this fixed without
+      it actually working live — `wdi-systematic-debugging` runs fresh, and whatever test SPEC-12
+      added for this must be re-examined for the same failure mode already called out in this
+      project's own AGENTS.md TDD guard convention (an absence-guard that was never seen failing
+      against the broken code proves nothing).
   - id: BUG-3
     status: fixed
     fixed_in: SPEC-12
@@ -93,37 +111,39 @@ defects:
       object — nothing reads the shape's existing `fill` (~L151, `element.style?.fillColor`) back
       into a shape-color state on select, so the picker keeps its last value instead.
   - id: BUG-7
-    status: fixed
+    status: open
     fixed_in: SPEC-12
-    title: "An inserted image renders stretched instead of at its native aspect ratio"
+    reopened_in: SPEC-13
+    title: "An inserted image does not grow when its selection handles are resized"
     component: registry
     violates: []
-    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT #5"
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT #5; prompt-08-artifacts-qa-followup-round2.md § BUG-7"
     summary: >
-      Confirmed root cause: image element creation (ArtifactEditor.tsx ~L156-174) sets
-      `scaleX: width / imgEl.naturalWidth` and `scaleY: height / imgEl.naturalHeight` independently
-      against the drag-created bounding box's `width`/`height` — both axes are forced to fill the
-      box exactly, so any box whose ratio does not match the source image's ratio stretches it.
-      Needs a contain-style fit (uniform scale from `min(width/naturalWidth, height/naturalHeight)`,
-      or resize the box to match on insert) instead of independent axis scaling.
+      SPEC-12's contain-fit change is confirmed working AT INSERT TIME ("Gambar sudah inserted
+      sesuai ratio aslinya"). Reopened for a different, narrower symptom found in round 2: resizing
+      an already-inserted image by dragging its handles enlarges the handles/bounding box visibly,
+      but the rendered image content stays at its original small size instead of growing with it
+      (screenshot: a QR-code image whose selection square is dragged large, the QR code itself stays
+      tiny inside it). Working theory: the contain-fit `scaleX`/`scaleY` computed once at insert
+      time is not recomputed on the Fabric `scaling`/`modified` events the way a plain shape's size
+      is — needs `wdi-systematic-debugging` to confirm which event path the resize handle drives for
+      an image object versus a rectangle, and why the image's own render does not track it.
   - id: BUG-8
-    status: fixed
+    status: open
     fixed_in: SPEC-12
-    title: "Every Select control shows the raw value, not the matching item's label, once an item is chosen"
+    reopened_in: SPEC-13
+    title: "New Slide dropdown reads as inactive until a Deck Sequence slide is manually selected"
     component: registry
     violates: []
-    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § NEW SLIDE AREA #2; prompt-07-artifacts-dropdown-consistency-crosscutting.md"
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § NEW SLIDE AREA #2; prompt-07-artifacts-dropdown-consistency-crosscutting.md; prompt-08-artifacts-qa-followup-round2.md § BUG-8"
     summary: >
-      Confirmed root cause, and it is a SINGLE shared-component defect, not one per screen:
-      `src/components/ui/select.tsx`'s `SelectValue` wrapper (built on `@base-ui/react/select`,
-      not Radix) is used bare everywhere in this codebase — `<SelectValue />` with no children
-      render function — so it falls back to the raw `value` string (e.g. `song:opening_song_bt`)
-      instead of the matching `<SelectItem>`'s rendered label (e.g. "🎵 Bible Talk Opening Song").
-      Confirmed call sites: ArtifactEditor.tsx L1706 (Main Spine "New Slide" dropdown) and L2081
-      (Toolbar predefined-placeholder dropdown) — both bare. Fixing `SelectValue` itself (give it a
-      children render function that looks up the selected item's label) resolves this app-wide in
-      one place; this closes the "LAINNYA" cross-cutting scan request without auditing every
-      individual dropdown call site first, since they all share this one component.
+      SPEC-12's `SelectValue` label-lookup fix is confirmed working ("dropdown new slide sudah
+      menampilkan teks seharusnya"). Reopened for a different, narrower symptom: on a fresh Main
+      Spine editor load (before any Deck Sequence slide is selected) the "New Slide" dropdown reads
+      as inactive/disabled-looking, and only becomes visually active once the admin selects a slide
+      in the Deck Sequence. Same root cause as reopened BUG-1: nothing is auto-selected on load.
+      Fix together with BUG-1 — auto-selecting the first Deck Sequence slide on mount should resolve
+      both symptoms in one change.
   - id: BUG-9
     status: fixed
     fixed_in: SPEC-12
@@ -167,18 +187,23 @@ defects:
       and its render path, and add the toolbar button next to Bold/Italic
       (ArtifactEditor.tsx ~L2156-2175 is the pattern to follow).
   - id: BUG-11
-    status: fixed
+    status: open
     fixed_in: SPEC-12
-    title: "Main Spine editor requires page scroll instead of fitting the viewport with a sane minimum height"
+    reopened_in: SPEC-13
+    title: "Main Spine editor still shows a vertical window scrollbar, and Deck Sequence's own height overshoots the layer"
     component: registry
     violates: []
-    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § PAGE LAYOUT"
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § PAGE LAYOUT; prompt-08-artifacts-qa-followup-round2.md § BUG-11"
     summary: >
-      Manual QA: the page layout is not `100%` of the viewport height with a minimum floor, so most
-      of the Deck Sequence list is below the fold and the page scrolls as a whole instead of the
-      editor filling available height. Not yet code-inspected; needs a debugging/layout pass on the
-      Main Spine page shell (likely a missing `h-screen`/`min-h-*` + flex constraint chain from the
-      route shell down to the Deck Sequence list container).
+      SPEC-12 fixed the canvas itself fitting the viewport ("canvas sudah muncul dengan aman/tepat").
+      Reopened for the residual: the browser window still shows a vertical scrollbar, and the Deck
+      Sequence list's own height is visibly taller than the editor's layer/window edge — round 2
+      hypothesis is that the Deck Sequence list container's height is still keyed to content
+      (unbounded) rather than to the available flex space, and that unbounded height is what
+      produces the window-level vertical scrollbar SPEC-12's fit-to-viewport pass did not fully
+      close. Expected: (a) no vertical scrollbar on the window; (b) Deck Sequence's height stops
+      exactly at the editor layer's own edge, scrolling internally past that point instead of
+      growing the page.
   - id: BUG-12
     status: fixed
     fixed_in: SPEC-12
@@ -207,45 +232,63 @@ defects:
       (Image): No properties to change` when the selected element has none, `Properties (None):
       Select element first` when nothing is selected.
   - id: BUG-14
-    status: fixed
+    status: open
     fixed_in: SPEC-12
-    title: "Song Sets: \"2/3 Formula\" wording is user-visible, and the auto-lyric-box banner only appears on one tab, changing canvas height between tabs"
+    reopened_in: SPEC-13
+    title: "Song Sets: switching tabs still changes canvas height, because the layout banner wraps to a different line count per tab"
     component: registry
     violates: [DEC-011]
-    source: ".work/requirements/prompt-05-artifacts-song-sets-qa-followup.md § COMPONENT AREA #1, #2"
+    source: ".work/requirements/prompt-05-artifacts-song-sets-qa-followup.md § COMPONENT AREA #1, #2; prompt-08-artifacts-qa-followup-round2.md § BUG-14"
     summary: >
-      In the Song Set editor's "2. Verse Layout" tab, the tab label itself reads "Verse Layout (2/3
-      Formula)" and a banner below it ("Auto Lyric Box: 2/3 Height Standard...") appears only on
-      that tab, not on "1. Title Slide" or "3. Reffrain Layout" — the differing banner height is
-      why the canvas visibly grows/shrinks when switching tabs. Fix: drop "(2/3 Formula)" from the
-      tab label; either show an equivalent-height explanatory line on every tab or move the
-      explanation somewhere that does not sit above the canvas.
+      SPEC-12 removed the "(2/3 Formula)" tab-label wording — confirmed fixed. Reopened for the
+      height-instability half of the original defect, which round 2 shows is NOT fixed: switching
+      between "1. Title Slide", "2. Verse Layout", "3. Reffrain Layout" still moves the canvas up
+      and down, because the role badge (e.g. `VERSE LAYOUT`) sits on the same row as the
+      explanatory banner text ("📐 Auto Lyric Box: 2/3 Height Standard — Automated formula for hymn
+      lyrics. Canvas customizes background & shapes."), and that banner text wraps to a different
+      number of lines depending on the tab's copy length — its margin then forces a taller row on
+      whichever tab wraps more. Confirmed on both "Verse Layout" and "Reffrain Layout". Fix needs
+      the badge+banner row to report the SAME height on every tab regardless of text length (a
+      fixed-height/line-clamped container, or moving the explanatory text off that row entirely) —
+      SPEC-12's fix addressed the wording but not the layout mechanism that actually causes the
+      canvas to move.
   - id: BUG-15
-    status: fixed
+    status: open
     fixed_in: SPEC-12
-    title: "Song Set / Announcement Set \"New ...\" creation area does not match the Main Spine layout, and the song-set code field has no rename"
+    reopened_in: SPEC-13
+    title: "Song Set's code (variableName) field still has no Rename affordance"
     component: registry
     violates: [DEC-009, DEC-010]
-    source: ".work/requirements/prompt-05-artifacts-song-sets-qa-followup.md § NEW SONG SET AREA, § TITLE AREA; prompt-06-artifacts-announcement-sets-qa-followup.md § NEW SONG SET AREA (sic, means Announcement)"
+    source: ".work/requirements/prompt-05-artifacts-song-sets-qa-followup.md § NEW SONG SET AREA, § TITLE AREA; prompt-06-artifacts-announcement-sets-qa-followup.md § NEW SONG SET AREA (sic, means Announcement); prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #7"
     summary: >
-      (a) The "New Song Set" / "New Announcement Set" creation block's layout does not mirror Main
-      Spine's "New Slide" panel (small section label, then the input fields, then the create
-      button) — restyle for parity, once DEC-009/DEC-010 are accepted so the button variant and
-      label ("New" vs "Add") are settled together with the layout pass. (b) The Song Set's code
-      field (its `variableName`/slug) has no Rename affordance next to the title's — add one beside
-      it, per the raw feedback's "(bisa disampingnya?)".
+      (a) Layout parity between "New Song Set"/"New Announcement Set" and Main Spine's "New Slide"
+      panel — confirmed fixed in round 2 ("Layout new song set sudah sama dengan main spine").
+      (b) REOPENED: SPEC-12 ticket 07 marked "a Rename affordance exists next to the Song Set's
+      code (`variableName`/slug) field" as `[x] done`, but round 2 manual QA confirms it is still
+      not there ("Saat ini kode song-set belum bisa direname, harusnya bisa"). This sub-item alone
+      is reopened; (a) stays closed. Needs the same `[Rename] | Canvas: [Reset] [Save]`-style
+      affordance DEC-011 already established elsewhere in this editor, scoped to the code field
+      next to the existing title Rename.
   - id: BUG-16
-    status: fixed
+    status: open
     fixed_in: SPEC-12
-    title: "Announcement Set: \"Active Announcement Set\" label position and title-area height are not stable across rename"
+    reopened_in: SPEC-13
+    title: "Rename mode changes panel height across every title area in the Artifact editor, not only Announcement Set"
     component: registry
     violates: []
-    source: ".work/requirements/prompt-06-artifacts-announcement-sets-qa-followup.md § SLIDES IN SET #2, § TITLE AREA #1"
+    source: ".work/requirements/prompt-06-artifacts-announcement-sets-qa-followup.md § SLIDES IN SET #2, § TITLE AREA #1; prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #4"
     summary: >
-      Distinct from BUG-9's duplicate-title-area layout question: even without touching that, the
-      "Active Announcement Set" label visibly moves when rename mode toggles, and the title area's
-      own height changes while renaming — both push the canvas. Same family of fix as BUG-13
-      (stop conditional layout shifts around the canvas), scoped to this screen's rename cycle.
+      SPEC-12 fixed this for the Announcement Set's own "Active Announcement Set" label
+      specifically — confirmed stable in round 2 ("Sudah stabil ukurannya ketika rename"). Reopened
+      and WIDENED: round 2 shows the underlying problem (entering rename mode grows the panel's
+      height, moving the canvas) is still present across Main Spine, Song Books, and Announcement
+      Sets' own per-slide title areas — SPEC-12's ticket 08 only closed the one instance it
+      targeted. It is worse on the Song Set's own title area, where rename mode adds an extra
+      `TITLE:` label that grows the height further still. Fix needs a title-area component that
+      reserves the SAME height for its idle and rename states everywhere it is used (Main Spine
+      slide, Song Book entry, Announcement Set and its slide-in-set, Song Set), not a per-screen
+      patch. Folds in BUG-23 (Song Set's Title/Verse/Reff trio should drop its Rename control
+      entirely rather than be stabilized, since that control has no persisted field behind it).
   - id: BUG-17
     status: fixed
     fixed_in: SPEC-12
@@ -260,4 +303,116 @@ defects:
       `SongSetEntriesPanel.tsx:213`) — confirmed by grepping the whole `src/`/`spa/src/` tree for
       the pattern, not found during the original manual QA pass. Same fix as the other three: drop
       the custom className, use `Button` `variant="default"` plain.
+  - id: BUG-18
+    status: open
+    title: "Canvas Reset restores from the seed and blocks deleting seeded/shipped elements — owner wants Reset to mean discard-unsaved-changes"
+    component: registry
+    violates: [DEC-014]
+    source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § BUG-2, BUG-3, DEC-012; § Catatan Tambahan #2"
+    summary: >
+      Keyboard/menu delete works for every element except one the seeder created, refused with
+      `Cannot delete e2 — shipped and required elements are part of the template.`
+      (ArtifactEditor.tsx ~L998, `admin.artifacts.deleteHintShipped` in catalogue-en.ts). Per
+      `DEC-014` (accepted 2026-09-08), this refusal is removed — a seeded element becomes ordinary,
+      deletable content like any other — and the canvas "Reset" button is repurposed from
+      restore-from-seed (`AD-11`) to discard-the-current-unsaved-edits, with no in-UI path back to
+      the original shipped template once content has been changed or deleted. Implementing this
+      requires editing `AD-11` in `.how/_platform/ARCHITECTURE-SPINE.md` (the "Reset restores one
+      selected template from that seed" clause, and the `songset-*` override-record clause that
+      references the same Reset) in the same change, per `DEC-014`'s Cost section — this is not a
+      UI-only patch.
+  - id: BUG-19
+    status: open
+    title: "Adding a new canvas background stacks it on top of the existing one instead of replacing it"
+    component: registry
+    violates: [DEC-014]
+    source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #2"
+    summary: >
+      "Change Background" adds a new background layer without removing the previous one, so
+      repeated use stacks images. Per `DEC-014`, this includes the seeded background — it is
+      ordinary replaceable content, not protected seed content. Fix: setting a background replaces
+      whatever background element currently occupies that role, for every template kind (`general`,
+      `songset-*`), not only admin-authored ones.
+  - id: BUG-20
+    status: open
+    title: "Inline status text (e.g. \"Template renamed\", \"Template order saved\") shifts the canvas panel's position"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #1"
+    summary: >
+      The editor shows both a toaster (fine, keep as-is) and an inline success/error line above the
+      toolbar. The inline line is conditionally rendered, so its presence/absence and text length
+      change the layout height above the canvas, pushing the canvas panel down when it appears —
+      same family of layout-shift bug as BUG-13/BUG-16, but for status messages rather than
+      selection/rename state. Fix: reserve a fixed-height slot for this line (empty when there is
+      nothing to show), or drop the inline copy in favour of the toaster alone — owner's stated
+      preference is keeping both, so the fixed-height-slot approach is the one to build first.
+  - id: BUG-21
+    status: open
+    title: "Announcement Set's default-selected slide-in-set shows an empty text field until rename is triggered"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #9"
+    summary: >
+      Announcement Sets already auto-selects the first slide-in-set on load (the behaviour BUG-1
+      wants Main Spine to match). But that auto-selected slide's text field renders empty on load —
+      the text only appears once the admin triggers rename mode. The text exists (it is not
+      actually blank data); this reads as the text-content state not being populated from the
+      auto-selected slide until an explicit user interaction re-syncs it. Fix so the field shows the
+      slide's real text immediately on auto-selection, with no rename trigger needed.
+  - id: BUG-22
+    status: open
+    title: "Text properties panel has no line-height (leading) control and no text-shadow toggle"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #3"
+    summary: >
+      New capability, not a regression. The Text properties row (font size/color/underline/bold/
+      italic/align, per BUG-4/5/6/10) has no way to adjust line spacing for multi-line text, and no
+      text-shadow effect. Requested: an icon-only line-height control (a slider is one acceptable
+      shape, not mandated) that applies realtime to the selected text element's rendering on the
+      canvas, the same realtime pattern BUG-4/5 already established via `applyTextStyle`/
+      `handleFontColorChange`; and an icon-only text-shadow toggle, same realtime pattern. Needs a
+      registry-vocabulary check first — `internal/plan/validate_artifact.go`'s `allowedStyleKeys`
+      (the same allowlist BUG-10 extended for `textDecoration`) must admit whatever style keys these
+      two controls write, on both the canvas save path and the render paths (PPTX, slideshow),
+      mirroring how BUG-10 closed the underline gap.
+  - id: BUG-23
+    status: open
+    title: "Song Set's Title/Verse/Reff trio exposes a Rename control with no persisted field behind it"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #5"
+    summary: >
+      Investigated this session (read-only): `createSongSetTrioAdapter()`
+      (`src/lib/registry/canvas-adapters.ts:381-386`) defines the three role tabs ("Title", "Verse",
+      "Reff") as fixed, hardcoded UI labels (`{ id: 'title', label: 'Title' }`, etc.) — not a stored
+      field. The Rename control shown for these tabs is inherited from the shared title-area
+      component this editor also uses for Main Spine (where the label IS a real, persisted
+      `template.label`), so it renders here without anything real to rename. Remove the Rename
+      control specifically for these three fixed-role tabs; keep the static labels "Title Slide" /
+      "Verse Layout" / "Reffrain Layout". Folds into the widened BUG-16 (this is one of the sources
+      of rename-triggered height instability, and removing a control that does nothing useful is
+      simpler than stabilizing it).
+  - id: BUG-24
+    status: open
+    title: "Song Set editor does not show that its Title/Verse/Reff canvas is shared by every entry, not owned by whichever one is selected"
+    component: registry
+    violates: []
+    source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #8; corrected during SPEC-13's wdi-review (edge-case-hunter lens, 2026-09-08)"
+    summary: >
+      Originally filed as "no way to duplicate/clone a Song Set entry", reasoning the owner wanted
+      a new entry to start from an already-configured canvas instead of reconfiguring one from
+      scratch. Corrected during this SPEC's review: `AD-33` (2026-08-20, DEC-004) already makes
+      every Song Set entry share ONE authored Title/Verse/Reff trio — `SongSetEntry`
+      (`SongSetEntriesPanel.tsx`) carries only `variableName`/`title`/`position`/`updatedAt`,
+      nothing canvas-related, so there is no per-entry canvas configuration to clone; a new entry
+      already gets the exact same shared layout automatically. The owner confirmed, once shown
+      this, that the actual problem is the UI's own fault for looking like each entry owns its own
+      canvas (matching how Main Spine and Announcement Set slides each own theirs) when it does
+      not — that false impression is what produced the original "let me clone it" request. Fix:
+      make the shared scope visually unmistakable in the Song Set editor, and reconsider whether
+      the entries list and the trio editor should be separated so switching entries does not read
+      as switching canvases. See ticket 13
+      (`.scratch/SPEC-13-artifacts-qa-followup-round2/issues/13-song-set-shared-trio-clarity.md`).
 

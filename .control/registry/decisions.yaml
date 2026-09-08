@@ -277,4 +277,10 @@ decisions:
       - tests/artifact-preview.test.mjs
       - tests/announcement-sets.test.mjs
       - tests/registry.test.mjs
+  - id: DEC-014
+    status: accepted
+    accepted_by: 'kodesh87 (2026-09-08)'
+    title: Canvas "Reset" becomes discard-unsaved-changes; shipped/seeded content becomes ordinary editable content
+    file: .control/decisions/DEC-014-canvas-reset-becomes-discard-unsaved-changes.md
+    touches: []
 
