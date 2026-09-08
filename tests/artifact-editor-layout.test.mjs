@@ -44,3 +44,27 @@ test('SPEC-12-05: Main Spine editor layout height and viewport constraints', () 
     'Deck sequence list must be constrained to viewport with internal overflow-y-auto'
   );
 });
+
+test('SPEC-13-04: Deck Sequence card flex containment and internal scroll height clamp (BUG-11)', () => {
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // Deck sequence card must be flex flex-col with max-h clamp
+  assert.ok(
+    code.includes('flex flex-col max-h-[calc(100vh-320px)]'),
+    'Deck sequence card must use flex flex-col with viewport max-h constraint'
+  );
+
+  // Deck sequence header must be shrink-0 co-located with layout classes
+  assert.ok(
+    code.includes('justify-between shrink-0'),
+    'Deck sequence header div must carry shrink-0 alongside its layout classes'
+  );
+
+  // Deck sequence ul must have flex-1 min-h-0 overflow-y-auto
+  assert.ok(
+    code.includes('overflow-y-auto pr-1 flex-1 min-h-0'),
+    'Deck sequence ul must have flex-1 min-h-0 overflow-y-auto to scroll within bounded card'
+  );
+});
+

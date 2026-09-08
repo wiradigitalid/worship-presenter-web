@@ -1941,12 +1941,12 @@ export default function ArtifactEditor({
           </div>
 
           {/* LIST TEMPLATES (POIN 3: HOVER ACTIONS & DND REORDER) */}
-          <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm">
-            <div className="flex items-center justify-between">
+          <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm flex flex-col max-h-[calc(100vh-320px)] min-h-[220px]">
+            <div className="flex items-center justify-between shrink-0">
               <span className="text-xs font-semibold text-foreground">Deck Sequence</span>
               <span className="text-[11px] text-muted-foreground font-mono">{templates.length} slides</span>
             </div>
-            <ul className="space-y-1.5 max-h-[calc(100vh-340px)] min-h-[220px] overflow-y-auto pr-1">
+            <ul className="space-y-1.5 overflow-y-auto pr-1 flex-1 min-h-0">
               {templates.map((item, index) => {
                 const isSelected = selectedId === item.id;
                 return (
