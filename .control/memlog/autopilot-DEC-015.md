@@ -4,15 +4,16 @@ artifact: .control/decisions/DEC-015-autopilot-mandate-artifacts-qa-followup-rou
 
 ## Resume
 
-Iteration: 1 (boundary: open mandate DEC-015 and commence SPEC-13 ticket execution)
+Iteration: 1 (boundary: completed SPEC-13-01)
 Run branch: autopilot/DEC-015 (PR: not open yet)
-Stopped at: Mandate accepted; ready to commence SPEC-13-01
+Stopped at: SPEC-13-01 completed; ready to commence SPEC-13-02
 Blocked: —
 Parked: —
-Next: SPEC-13-01: Auto-select first Deck Sequence slide on Main Spine mount (BUG-1, BUG-8)
+Next: SPEC-13-02: Canvas context menu investigation & live fix (BUG-2)
 
 ## Decisions
 
 | When | Where | Decided | Instead of | Cost if wrong | Landed in |
 |---|---|---|---|---|---|
 | It 1 (autopilot/DEC-015) | wdi-autopilot preflight | Mandate DEC-015 accepted by owner kodesh87 for Artifacts QA Follow-up Round 2 (SPEC-13) | Interactive approval at each ticket | Full autonomous recording | DEC-015, decisions.yaml |
+| It 1 (autopilot/DEC-015) | SPEC-13-01 | Auto-select first Deck Sequence slide on mount via resolveInitialSelectedId with empty summaries guard | Requiring manual click on fresh load (BUG-1, BUG-8) | Inactive drag reorder and new slide dropdown | ArtifactEditor.tsx, canvas-utils.ts, artifact-editor-controls.test.mjs |

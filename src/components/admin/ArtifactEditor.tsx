@@ -79,6 +79,7 @@ import {
   normalizeFontSize,
   pctToPx,
   pxToPct,
+  resolveInitialSelectedId,
   serializeCanvas,
   serializeTextStyle,
   toStrictHexColor,
@@ -401,10 +402,14 @@ export default function ArtifactEditor({
   }, [adapter]);
 
   useEffect(() => {
-    loadList().catch((err) => {
-      setStatus('error');
-      setMessage(err instanceof Error ? err.message : t('admin.artifacts.loadFailed'));
-    });
+    loadList()
+      .then((summaries) => {
+        setSelectedId((current) => resolveInitialSelectedId(current, initialSelectedId, summaries));
+      })
+      .catch((err) => {
+        setStatus('error');
+        setMessage(err instanceof Error ? err.message : t('admin.artifacts.loadFailed'));
+      });
     void fetchAvailableSongSets().then(setAvailableSongSets);
     void fetchAvailableAnnouncementSets().then(setAvailableAnnSets);
     void fetchBackgroundLibrary().then(setBgLibrary);

@@ -322,3 +322,21 @@ export function serializeCanvas(
     .sort((a, b) => a.rank - b.rank || a.index - b.index)
     .map((entry) => entry.next);
 }
+
+/**
+ * Resolves the initial slide to select on editor mount or list load.
+ * If nothing is currently selected and no explicit initialSelectedId was provided,
+ * auto-selects the first available slide (BUG-1, BUG-8).
+ * Guards against the empty list case by returning null.
+ */
+export function resolveInitialSelectedId(
+  currentSelectedId: string | null,
+  initialSelectedId: string | null,
+  summaries: Array<{ id: string }>
+): string | null {
+  if (!currentSelectedId && !initialSelectedId && summaries && summaries.length > 0) {
+    return summaries[0].id;
+  }
+  return currentSelectedId ?? initialSelectedId ?? null;
+}
+

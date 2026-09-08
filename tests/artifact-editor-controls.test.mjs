@@ -21,6 +21,7 @@ const {
   serializeTextStyle,
   serializeCanvas,
   calculateImageFit,
+  resolveInitialSelectedId,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'canvas-utils.ts')).href
 );
@@ -922,6 +923,50 @@ test('SPEC-12-06: Main Spine toolbar and title area consistency (BUG-12, BUG-13,
     'ArtifactEditor must not carry hand-written hover:bg-blue-600 button overrides'
   );
 });
+
+test('SPEC-13-01: Main Spine auto-selects first Deck Sequence slide on mount (BUG-1, BUG-8)', async () => {
+  // 1. Behavioral tests for resolveInitialSelectedId (pure logic)
+  const summaries = [{ id: 'slide-1' }, { id: 'slide-2' }, { id: 'slide-3' }];
+
+  // Case A: Fresh load with no initial id -> auto-selects first slide
+  assert.equal(
+    resolveInitialSelectedId(null, null, summaries),
+    'slide-1',
+    'Must auto-select first slide on fresh load when nothing selected'
+  );
+
+  // Case B: Empty summaries guard -> returns null, does not select non-existent slide
+  assert.equal(
+    resolveInitialSelectedId(null, null, []),
+    null,
+    'Must return null when summaries list is empty'
+  );
+
+  // Case C: Pre-set initialSelectedId -> preserves explicit initial selection
+  assert.equal(
+    resolveInitialSelectedId(null, 'slide-2', summaries),
+    'slide-2',
+    'Must preserve explicit initialSelectedId'
+  );
+
+  // Case D: Existing current selection -> preserves current selected id
+  assert.equal(
+    resolveInitialSelectedId('slide-3', null, summaries),
+    'slide-3',
+    'Must preserve existing selection when current is already set'
+  );
+
+  // 2. Source scan guard: ArtifactEditor uses resolveInitialSelectedId in loadList resolution
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  assert.ok(
+    code.includes('setSelectedId((current) => resolveInitialSelectedId(current, initialSelectedId, summaries))'),
+    'ArtifactEditor must resolve initial selection via setSelectedId functional updater with resolveInitialSelectedId'
+  );
+});
+
 
 
 

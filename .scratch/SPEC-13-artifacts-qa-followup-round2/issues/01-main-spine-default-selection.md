@@ -5,15 +5,16 @@ it mounts, matching the behaviour Announcement Sets already has.
 
 **Blocked by:** none
 
-**Status:** open
+**Status:** done
 
-- [ ] Ordinary implementation work, no debugging pass needed — the auto-select mechanism to copy
+- [x] Ordinary implementation work, no debugging pass needed — the auto-select mechanism to copy
       already exists and works in `AnnouncementSetsPanel.tsx`.
-- [ ] Closes `BUG-1`'s residual: on a fresh page load, the first Deck Sequence slide is selected
+- [x] Closes `BUG-1`'s residual: on a fresh page load, the first Deck Sequence slide is selected
       without the admin clicking one, and drag-move-and-release works immediately.
-- [ ] Closes `BUG-8`'s residual: the "New Slide" dropdown reads as active immediately on load, for
+- [x] Closes `BUG-8`'s residual: the "New Slide" dropdown reads as active immediately on load, for
       the same reason (something is now selected).
-- [ ] Guard the empty case: a Main Spine with zero Deck Sequence slides does not attempt to
+- [x] Guard the empty case: a Main Spine with zero Deck Sequence slides does not attempt to
       auto-select a non-existent slide (no-op, no selected id set).
-- [ ] A test proves the residual reproduces against current code (nothing selected on mount) before
+- [x] A test proves the residual reproduces against current code (nothing selected on mount) before
       the fix, then passes after.
+
