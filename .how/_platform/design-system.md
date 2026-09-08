@@ -67,3 +67,32 @@ shadcn/ui (base-nova), generated into `src/components/ui/`. Add primitives with 
 Presenter `<Select>` controls that hand keyboard focus back to the deck call `blurFocusedControl()` after `onValueChange` (`PresenterOperator`).
 
 Slide geometry is Registry, not a `slide-surface` CSS class.
+
+## Create-action buttons (DEC-009)
+
+Every button whose sole job is to create a new entity or insert a new item renders with `Button`
+`variant="default"` (the primary token) — never `secondary`, `outline`, or a bespoke muted style. A
+disabled state uses the `Button` `disabled` prop, never a manually chosen gray. `default` is already
+`buttonVariants`' fallback (`src/components/ui/button.tsx`) — a create-action button needs no
+`variant` prop at all, only no *override* of it. In dark mode `primary` is a near-white token
+(`oklch(0.922 0 0)`, § Tokens); pairing it with a hardcoded `text-white` instead of the variant's own
+`text-primary-foreground` renders unreadable, not merely low-contrast — this was the actual W11 bug
+DEC-009 fixes, not a missing token.
+
+## "New" vs "Add" vs "Insert" (DEC-010)
+
+A create-action button reads **"New"** when it starts a top-level entity that needs its own identity
+(name/code) filled in before it exists — e.g. "New Song Set", "New Announcement Set". It reads
+**"Add"** when it inserts one more item into a collection whose context is already open and
+named — e.g. "Add Slide", "Add Placeholder", Main Spine's "New Slide" panel's own `+ Add` button
+(the slide *kind* is chosen by the dropdown next to it first). **"Insert" is retired** from the
+product vocabulary — nothing is relabelled to it, and an existing use renames to "New" or "Add" per
+this rule.
+
+## Per-slide title area (DEC-011)
+
+Every per-slide title area in the Registry canvas editor — Main Spine's own slide, a Song Set's
+Title/Verse/Reff sub-slide, an Announcement Set's slide-in-set — keeps its own Rename action (its
+display name is not its parent's name). Reset and Save move under a "Canvas:" label instead of
+standing beside Rename as peer buttons: `[Rename] | Canvas: [Reset] [Save]`, switching to
+`[Cancel] [Save] | Canvas: [Reset] [Save]` while rename is active.

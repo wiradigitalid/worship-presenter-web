@@ -1,7 +1,12 @@
 ---
 id: DEC-010
-status: draft
-touches: []
+status: applied
+accepted_by: 'kodesh87 (2026-09-08)'
+touches:
+  - .how/_platform/design-system.md
+  - .scratch/SPEC-12-artifacts-qa-followup/issues/06-main-spine-toolbar-title-consistency.md
+  - .scratch/SPEC-12-artifacts-qa-followup/issues/07-song-sets-consistency.md
+  - .scratch/SPEC-12-artifacts-qa-followup/issues/08-announcement-sets-consistency.md
 supersedes: null
 superseded_by: null
 created: '2026-09-08'
@@ -31,8 +36,15 @@ create a named top-level entity first) rather than inventing a new pattern.
 
 ## Cost
 
-- Every button currently labelled "Insert" (if any exist beyond the ones surfaced in QA) must be
-  relabelled, and any documentation or screenshot referencing "Insert" goes stale until updated.
+- Every button currently labelled "Insert" must be relabelled. Confirmed by a full `src/`/`spa/src/`
+  sweep (2026-09-08, at owner request when accepting this decision): no user-visible "Insert" label
+  exists anywhere today — the only matches are internal variable names
+  (`insertPlaceholderKey`, `ArtifactEditor.tsx:298,2072`), which are not user-facing and are
+  unaffected. This cost item is precautionary, not a fix already owed.
+- One real mislabel found by the same sweep: `AnnouncementSetsPanel.tsx:545` reads "Add New
+  Announcement Set" — mixing both words in one label. Per this rule it is a top-level entity
+  needing identity first (name filled in before it exists), so it relabels to "New Announcement
+  Set", matching `SongSetEntriesPanel.tsx:216`'s "New Song Set".
 - A future screen that genuinely does not fit either case (starts a top-level entity but from an
   already-open context, or vice versa) has no third label to fall back on and must be judged
   against this rule rather than reach for "Insert" as an escape hatch.

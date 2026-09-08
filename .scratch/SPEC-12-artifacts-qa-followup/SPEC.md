@@ -72,13 +72,16 @@ gaps in existing code**, not unbuilt features:
   pointer-first"), recorded as `DEC-012`; the second closes a previously-recorded gap (`OQ-41`) where
   the server's own `allowedStyleKeys` allowlist (`internal/plan/validate_artifact.go` ~L49-52) has
   never included `textDecoration`.
-- The remaining consistency items (`BUG-11` through `BUG-16`) are UX/design-system work gated on
-  three decisions opened alongside this spec, all `status: draft`, **not yet accepted by the
-  owner**: `DEC-009` (every create-action button uses the shadcn `Button` `default`/primary variant,
-  not a muted gray), `DEC-010` (a "New" vs "Add" naming convention; "Insert" retired from the
-  vocabulary), `DEC-011` (a Song Set sub-slide keeps its own Rename, with Reset/Save regrouped under
-  a "Canvas:" label matching the Main Spine pattern). Any ticket touching these states the
-  dependency explicitly and does not assume acceptance.
+- The remaining consistency items (`BUG-11` through `BUG-17`) are UX/design-system work under three
+  decisions opened alongside this spec — `DEC-009` (every create-action button uses the shadcn
+  `Button` `default`/primary variant, not a muted gray), `DEC-010` (a "New" vs "Add" naming
+  convention; "Insert" retired from the vocabulary), `DEC-011` (every per-slide title area in this
+  editor keeps its own Rename, with Reset/Save regrouped under a "Canvas:" label) — all three
+  **`status: applied`** as of 2026-09-08, accepted by the owner and landed into
+  `.how/_platform/design-system.md`. A same-day codebase sweep (requested by the owner when
+  accepting these) found a fourth `DEC-009` site (`BUG-17`, the Toolbar's "+ Add Placeholder"
+  button) and a third `DEC-011` site (the Announcement Set's slide-level title area) beyond what
+  manual QA alone had surfaced — both folded in.
 
 ## User Stories
 
@@ -126,11 +129,11 @@ gaps in existing code**, not unbuilt features:
 18. As an Admin creating a new Song Set, Announcement Set, or Main Spine slide, I want the "New ..."
     creation area laid out the same way across all three screens, so the UI feels like one product.
 19. As an Admin, I want every primary create-action button (New Song Set, New Announcement Set, Main
-    Spine's "+ Add") to be clearly legible (not gray-on-white), consistent with how the rest of the
-    app already renders a primary button, once `DEC-009` is accepted.
+    Spine's "+ Add", the Toolbar's "+ Add Placeholder") to be clearly legible (not gray-on-white),
+    consistent with how the rest of the app already renders a primary button (`DEC-009`).
 20. As an Admin, I want "New" and "Add" used consistently across every creation button in the
-    Artifact Registry per one written rule, once `DEC-010` is accepted, so I don't have to guess
-    which verb a given button will use.
+    Artifact Registry per one written rule, so I don't have to guess which verb a given button will
+    use (`DEC-010`).
 
 ## Implementation Decisions
 
@@ -146,20 +149,20 @@ gaps in existing code**, not unbuilt features:
   - `src/components/ui/select.tsx` — the shared `SelectValue` label-lookup fix (one change, every
     dropdown app-wide).
   - `internal/plan/validate_artifact.go` — `allowedStyleKeys` gains `textDecoration`.
-  - `.how/_platform/design-system.md` — gains the create-action button variant rule (`DEC-009`) and
-    the New/Add naming rule (`DEC-010`) once accepted; this SPEC does not restate their content, it
-    cites the `DEC-` files.
+  - `.how/_platform/design-system.md` — carries the create-action button variant rule (`DEC-009`),
+    the New/Add naming rule (`DEC-010`), and the per-slide title-area rule (`DEC-011`), applied
+    2026-09-08; this SPEC does not restate their content, it cites the `DEC-` files.
 - **Debugging-first items** (per this project's `AGENTS.md`, `wdi-systematic-debugging` runs before
   any patch): BUG-1, BUG-2, BUG-4, BUG-5, BUG-8, BUG-9 all touch code that already exists and reads
-  as correct — confirm the actual failure live before changing anything. BUG-3, BUG-6, BUG-7,
-  BUG-10 through BUG-16 are ordinary implementation/UX work with no live-reproduction step needed.
-- **Decision gates, all `status: draft`:** `DEC-009`, `DEC-010`, `DEC-011` (button variant, New/Add
-  naming, Song Set sub-slide title actions) and `DEC-012` (the one keyboard-Delete exception to
-  OQ-13). A ticket whose scope depends on one of these says so explicitly; none is assumed accepted.
-- **This spec stops before any code is written.** Only `to-spec`/`to-tickets` run here (`wdi-build`
+  as correct — confirm the actual failure live before changing anything. BUG-3, BUG-6, BUG-7, BUG-10
+  through BUG-17 are ordinary implementation/UX work with no live-reproduction step needed.
+- **Decision gates — `DEC-009`, `DEC-010`, `DEC-011`, `DEC-012`, all `status: applied`** (accepted
+  by the owner 2026-09-08; button variant, New/Add naming, per-slide title-area grouping, and the
+  keyboard-Delete exception to OQ-13, respectively). Every gated ticket item now proceeds without a
+  waiting condition.
+- **This spec stops before any code is written.** Only `to-spec`/`to-tickets` ran here (`wdi-build`
   Phase 1-2); Phase 3 (tdd/implement/code-review/ship) runs in a separate session under
-  `wdi-autopilot`, in its own isolated worktree, once the owner has accepted or rejected DEC-009
-  through DEC-012.
+  `wdi-autopilot`, in its own isolated worktree.
 
 ## Testing Decisions
 
@@ -195,7 +198,6 @@ gaps in existing code**, not unbuilt features:
   authorized by this spec if the reproduction turns out to need one; that would stop and go back to
   the owner as its own decision.
 - Anything in `Presenter` or `Hub` — this spec is `registry`-only.
-- Actually accepting or rejecting `DEC-009` through `DEC-012` — that is the owner's, not this spec's.
 
 ## Further Notes
 
@@ -207,3 +209,8 @@ gaps in existing code**, not unbuilt features:
   (`.control/registry/defects.yaml`, `.control/registry/decisions.yaml`,
   `.control/questions/answered.md`) with full detail; this document does not repeat their content,
   only cites it, per this project's "the contract is a projection, not a duplicate" rule.
+- `DEC-009` through `DEC-012` were accepted and applied the same day they were opened (2026-09-08),
+  at the owner's explicit request to enforce each rule across the whole codebase rather than only
+  the sites manual QA had already found. That sweep is what surfaced `BUG-17` and the third
+  `DEC-011` site — recorded here so a later reader does not read the smaller original scope in
+  `defects.yaml`'s header comment as the whole story.

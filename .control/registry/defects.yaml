@@ -7,7 +7,9 @@
 # method reserves that field for resolving a `[MISSING]` doc marker — corpus-guide.md — which none
 # of these are). Several of these look like an existing feature failing silently rather than a
 # missing one, and per this project's AGENTS.md policy a bug goes through `wdi-systematic-debugging`
-# BEFORE any patch is written.
+# BEFORE any patch is written. BUG-17 was added the same day from a full-codebase sweep the owner
+# requested when accepting DEC-009 through DEC-012 ("tegakkan ke semua coding yang lain, cek ulang")
+# — not from the original manual QA pass.
 
 defects:
   - id: BUG-1
@@ -228,4 +230,17 @@ defects:
       "Active Announcement Set" label visibly moves when rename mode toggles, and the title area's
       own height changes while renaming — both push the canvas. Same family of fix as BUG-13
       (stop conditional layout shifts around the canvas), scoped to this screen's rename cycle.
+  - id: BUG-17
+    status: open
+    title: "Toolbar \"+ Add Placeholder\" button has the same gray/low-contrast bug as the three create-action buttons already filed under DEC-009"
+    component: registry
+    violates: [DEC-009]
+    source: "found 2026-09-08 during a full-codebase sweep the owner requested when accepting DEC-009 (\"tegakkan ke semua coding yang lain, cek ulang\") — not in the original 16 from manual QA"
+    summary: >
+      `ArtifactEditor.tsx:1751`, the toolbar's "+ Add Placeholder" button, carries the exact same
+      `className="bg-primary hover:bg-blue-600 text-white ..."` override as the other three DEC-009
+      sites (`AnnouncementSetsPanel.tsx:542`, `ArtifactEditor.tsx:1730`,
+      `SongSetEntriesPanel.tsx:213`) — confirmed by grepping the whole `src/`/`spa/src/` tree for
+      the pattern, not found during the original manual QA pass. Same fix as the other three: drop
+      the custom className, use `Button` `variant="default"` plain.
 

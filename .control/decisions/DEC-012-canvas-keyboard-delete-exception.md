@@ -1,7 +1,9 @@
 ---
 id: DEC-012
-status: draft
-touches: []
+status: applied
+accepted_by: 'kodesh87 (2026-09-08)'
+touches:
+  - .scratch/SPEC-12-artifacts-qa-followup/issues/02-canvas-interaction-regressions.md
 supersedes: null
 superseded_by: null
 created: '2026-09-08'
@@ -38,3 +40,8 @@ manual QA pass, not a reversal of the deliberate v1 accessibility-floor scope de
 - OQ-13 still stands for everything else; a future request for broader keyboard support (arrow-key
   nudge, Tab focus order) needs its own decision rather than reading this one as having opened the
   door generally.
+
+Confirmed by a codebase sweep (2026-09-08, at owner request when accepting this decision): the
+Registry canvas (`ArtifactEditor.tsx`) is the only Fabric.js canvas in the app (grepped
+`src/`/`spa/src/` for `fabric.Canvas`/`FabricImage`/`fabric.Textbox`) — this decision's scope is
+already complete; no other editor needs the same exception.

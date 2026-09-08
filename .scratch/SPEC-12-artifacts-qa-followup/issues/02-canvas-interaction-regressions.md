@@ -17,10 +17,9 @@ canvas element selected removes it.
       (not just visually — the change persists).
 - [ ] Right-clicking a selected canvas element opens a context menu with working Bring to
       Front/Forward, Send Backward/to Back, Duplicate, and Delete actions.
-- [ ] Pressing Delete or Backspace while a canvas element is selected (and not mid inline-text-edit)
-      removes that element — this part is gated on `DEC-012` (status: draft) being accepted; if it
-      is still draft when this ticket is picked up, do the debugging/context-menu/drag-reorder parts
-      first and report the keyboard-Delete part as waiting.
+- [ ] Per `DEC-012` (`status: accepted` 2026-09-08): pressing Delete or Backspace while a canvas
+      element is selected (and not mid inline-text-edit) removes that element, calling the existing
+      `handleDeleteSelected`.
 - [ ] The keyboard-Delete listener does not fire while the active object is in inline text-edit
       mode (typing must still edit text, not delete the whole element).
 - [ ] If reproduction shows drag-reorder or the context menu already working correctly (QA false
