@@ -238,10 +238,10 @@ rtm:
   - tests/artifact-editor-controls.test.mjs
   - tests/registry.test.mjs
   - tests/registry-go-http.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -254,10 +254,10 @@ rtm:
   - tests/canvas-dirty-guard.test.mjs
   - tests/artifact-preview.test.mjs
   - tests/artifact-editor-controls.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -268,10 +268,10 @@ rtm:
   release: artifacts-qa-followup
   test:
   - tests/artifact-preview.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -282,10 +282,10 @@ rtm:
   release: artifacts-qa-followup
   test:
   - tests/artifact-editor-controls.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -296,10 +296,10 @@ rtm:
   release: artifacts-qa-followup
   test:
   - tests/artifact-editor-layout.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -311,10 +311,10 @@ rtm:
   test:
   - tests/operator-shadcn-guard.test.mjs
   - tests/artifact-editor-controls.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -326,10 +326,10 @@ rtm:
   test:
   - tests/announcement-sets.test.mjs
   - tests/registry.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -405,10 +405,10 @@ rtm:
   - tests/canvas-dirty-guard.test.mjs
   - tests/artifact-preview.test.mjs
   - tests/artifact-editor-controls.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-21
@@ -420,10 +420,10 @@ rtm:
   test:
   - tests/announcement-sets.test.mjs
   - tests/registry.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-21
@@ -613,10 +613,10 @@ rtm:
   test:
   - tests/song-books-seed.test.mjs
   - tests/registry.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-29
@@ -674,10 +674,10 @@ rtm:
   - tests/artifact-editor-controls.test.mjs
   - tests/registry.test.mjs
   - tests/registry-go-http.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -690,10 +690,10 @@ rtm:
   - tests/canvas-dirty-guard.test.mjs
   - tests/artifact-preview.test.mjs
   - tests/artifact-editor-controls.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -704,10 +704,10 @@ rtm:
   release: artifacts-qa-followup
   test:
   - tests/artifact-preview.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -718,10 +718,10 @@ rtm:
   release: artifacts-qa-followup
   test:
   - tests/artifact-editor-controls.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -732,10 +732,10 @@ rtm:
   release: artifacts-qa-followup
   test:
   - tests/artifact-editor-layout.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -747,10 +747,10 @@ rtm:
   test:
   - tests/operator-shadcn-guard.test.mjs
   - tests/artifact-editor-controls.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -762,10 +762,10 @@ rtm:
   test:
   - tests/announcement-sets.test.mjs
   - tests/registry.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30

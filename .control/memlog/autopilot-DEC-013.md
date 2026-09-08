@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-013-autopilot-mandate-artifacts-qa-followup.md
 
 ## Resume
 
-Iteration: 1 (boundary: complete SPEC-12-08 announcement sets duplicate title & concurrency fix)
-Run branch: autopilot/DEC-013 (PR: not open yet)
-Stopped at: Finished SPEC-12-08; ready for SPEC-12-Finish (smoke test, validation, PR)
+Iteration: 1 (boundary: completed SPEC-12-01 through SPEC-12-08, closed SPEC-12, fixed BUG-1 through BUG-17)
+Run branch: autopilot/DEC-013 (PR: ready to open)
+Stopped at: Done — every FR in scope closed, all 8 tickets completed and passing green
 Blocked: —
 Parked: —
-Next: SPEC-12-Finish: Smoke test & PR delivery
+Next: Push run branch, open PR, and hand over to owner
 
 ## Decisions
 
