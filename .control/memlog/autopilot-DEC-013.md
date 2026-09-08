@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-013-autopilot-mandate-artifacts-qa-followup.md
 
 ## Resume
 
-Iteration: 1 (boundary: complete SPEC-12-07 song sets UX & button consistency)
+Iteration: 1 (boundary: complete SPEC-12-08 announcement sets duplicate title & concurrency fix)
 Run branch: autopilot/DEC-013 (PR: not open yet)
-Stopped at: Finished SPEC-12-07; ready for SPEC-12-08
+Stopped at: Finished SPEC-12-08; ready for SPEC-12-Finish (smoke test, validation, PR)
 Blocked: —
 Parked: —
-Next: SPEC-12-08: Announcement Sets duplicate title & concurrency fix (BUG-9, BUG-17, DEC-009, DEC-010, DEC-011)
+Next: SPEC-12-Finish: Smoke test & PR delivery
 
 ## Decisions
 
@@ -23,3 +23,4 @@ Next: SPEC-12-08: Announcement Sets duplicate title & concurrency fix (BUG-9, BU
 | It 1 (autopilot/DEC-013) | SPEC-12-05 | Add viewport height constraints and min-h floor on editor and canvasShellRef | Outer window scrolling on 1080p laptop displays | Pushing deck sequence & header off screen | ArtifactEditor.tsx, RegistryAdmin.tsx, artifact-editor-layout.test.mjs |
 | It 1 (autopilot/DEC-013) | SPEC-12-06 | Make Properties row always mounted with fallback placeholders, group title buttons with Canvas: label per DEC-011, make add buttons icon-only | Conditional render shifting canvas position | Visual layout jumps when selecting elements | ArtifactEditor.tsx, artifact-editor-controls.test.mjs, DEC-009, DEC-011 |
 | It 1 (autopilot/DEC-013) | SPEC-12-07 | Mirror Main Spine creation panel with title/code inputs, stable min-h-[42px] banner on all 3 tabs, drop (2/3 Formula) from tab label | Auto-generating song_set_N and jumping canvas | Inconsistent creation UI & shifting canvas | SongSetEntriesPanel.tsx, registry.test.mjs, DEC-009, DEC-010, DEC-011 |
+| It 1 (autopilot/DEC-013) | SPEC-12-08 | Collapse duplicate Slide Header Card in AnnouncementSetsPanel leaving ArtifactEditor as canonical editor, add onListChange to adapter, stabilize Active Set row height min-h-[58px] | Stacked duplicate cards with conflicting concurrency tokens | Stale conflict errors when editing announcement slides | AnnouncementSetsPanel.tsx, canvas-adapters.ts, announcement-sets.test.mjs, DEC-009, DEC-010, DEC-011 |

@@ -13,27 +13,27 @@ distinct from the Announcement *Set*'s own Rename (`handleSaveRenameSet`, ~L175)
 
 **Blocked by:** 06, 07
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Start with `wdi-systematic-debugging` for `BUG-9` (the duplicate title area) specifically.
+- [x] Start with `wdi-systematic-debugging` for `BUG-9` (the duplicate title area) specifically.
       This is not only cosmetic: the owner clarified live that the two blocks held identical
       content, and saving the top one then editing the bottom one produced a "modified by another
       session" conflict banner. Confirm exactly what each block reads from and writes to (the same
       record with two independent concurrency tokens, two records meant to mirror each other, or
       something else) before deciding the fix.
-- [ ] Closes `BUG-9`: collapse the two stacked title blocks into one title area for "slides in
+- [x] Closes `BUG-9`: collapse the two stacked title blocks into one title area for "slides in
       set" — unless the reproduction shows they are genuinely different actions on genuinely
       different objects, in which case do not collapse the UI, but still fix the stale-conflict bug
       (the two objects need to share or synchronize one concurrency token), and report the UI
       question back to the owner separately from that fix.
-- [ ] Per `DEC-011`: whichever title area remains after the `BUG-9` fix reads `[Rename] | Canvas:
+- [x] Per `DEC-011`: whichever title area remains after the `BUG-9` fix reads `[Rename] | Canvas:
       [Reset] [Save]`, switching to `[Cancel] [Save] | Canvas: [Reset] [Save]` while rename is
       active — same pattern as tickets 06 and 07, third instance.
-- [ ] Closes `BUG-16`: the "Active Announcement Set" label does not move, and the title area's
+- [x] Closes `BUG-16`: the "Active Announcement Set" label does not move, and the title area's
       height does not change, when rename mode toggles on or off.
-- [ ] Closes the Announcement Set half of `BUG-15`, per `DEC-009`/`DEC-010`: the "New Announcement
+- [x] Closes the Announcement Set half of `BUG-15`, per `DEC-009`/`DEC-010`: the "New Announcement
       Set" creation block mirrors Main Spine's "New Slide" panel layout, uses the `default`/primary
       button variant, and relabels from "Add New Announcement Set" to "New Announcement Set" (the
       mixed-word mislabel `DEC-010` names explicitly).
-- [ ] A new test proves the reproduction from the debugging step fails against current code, then
+- [x] A new test proves the reproduction from the debugging step fails against current code, then
       passes after the fix.
