@@ -22,6 +22,9 @@ const {
   serializeCanvas,
   calculateImageFit,
   resolveInitialSelectedId,
+  shouldPreserveSelectionOnContextMenu,
+  computeContextMenuCoords,
+  handleContextMenuTrigger,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'canvas-utils.ts')).href
 );
@@ -966,6 +969,142 @@ test('SPEC-13-01: Main Spine auto-selects first Deck Sequence slide on mount (BU
     'ArtifactEditor must resolve initial selection via setSelectedId functional updater with resolveInitialSelectedId'
   );
 });
+
+test('SPEC-13-02: Canvas context menu wired to Fabric contextmenu event and multi-selection (BUG-2)', async () => {
+  // 1. Behavioral tests: shouldPreserveSelectionOnContextMenu
+  const objA = { id: 'objA' };
+  const objB = { id: 'objB' };
+  const objC = { id: 'objC' };
+
+  // Case A: target is member of active multi-selection -> preserves multi-selection
+  assert.equal(
+    shouldPreserveSelectionOnContextMenu([objA, objB], objA),
+    true,
+    'Must preserve selection when right-clicking an already selected element in multi-selection'
+  );
+  assert.equal(
+    shouldPreserveSelectionOnContextMenu([objA, objB], objB),
+    true,
+    'Must preserve selection when right-clicking another selected element in multi-selection'
+  );
+
+  // Case B: target is NOT member of active selection -> does not preserve (switch target)
+  assert.equal(
+    shouldPreserveSelectionOnContextMenu([objA, objB], objC),
+    false,
+    'Must not preserve selection when right-clicking an unselected element'
+  );
+
+  // Case C: no active selection or invalid target -> false
+  assert.equal(
+    shouldPreserveSelectionOnContextMenu([], objA),
+    false,
+    'Must return false when active selection is empty'
+  );
+  assert.equal(
+    shouldPreserveSelectionOnContextMenu([objA], null),
+    false,
+    'Must return false when target is null'
+  );
+
+  // 2. Behavioral tests: computeContextMenuCoords clamping
+  const shellRect = { left: 100, top: 50, width: 800, height: 500 };
+  // Normal coordinate
+  const coords1 = computeContextMenuCoords(200, 150, shellRect);
+  assert.equal(coords1.x, 100);
+  assert.equal(coords1.y, 100);
+
+  // Clamped at right/bottom edges
+  const coordsClamped = computeContextMenuCoords(900, 550, shellRect);
+  assert.equal(coordsClamped.x, 800 - 170);
+  assert.equal(coordsClamped.y, 500 - 220);
+
+  // 3. Behavioral tests: handleContextMenuTrigger execution flow
+  {
+    let activeSelection = [objA, objB];
+    let selectedTarget = null;
+    let menuCoords = null;
+    let rendered = false;
+    let selectionSynced = false;
+
+    const mockCanvas = {
+      findTarget: (evt) => (evt.targetFound ? objA : null),
+      getActiveObjects: () => activeSelection,
+      setActiveObject: (obj) => { selectedTarget = obj; activeSelection = [obj]; },
+      discardActiveObject: () => { selectedTarget = null; activeSelection = []; },
+      requestRenderAll: () => { rendered = true; },
+    };
+
+    const mockSync = () => { selectionSynced = true; };
+    const mockSetMenu = (c) => { menuCoords = c; };
+
+    // Case 3A: Click on element already in multi-selection -> preserves selection, sets menu
+    handleContextMenuTrigger(
+      { clientX: 250, clientY: 150 },
+      mockCanvas,
+      shellRect,
+      mockSync,
+      mockSetMenu,
+      objA
+    );
+    assert.deepEqual(activeSelection, [objA, objB], 'Multi-selection must be preserved');
+    assert.ok(menuCoords, 'Menu coords must be set');
+    assert.equal(menuCoords.x, 150);
+
+    // Case 3B: Click on unselected element -> sets active object to target, syncs selection, sets menu
+    handleContextMenuTrigger(
+      { clientX: 250, clientY: 150 },
+      mockCanvas,
+      shellRect,
+      mockSync,
+      mockSetMenu,
+      objC
+    );
+    assert.equal(selectedTarget, objC, 'Selection must switch to target objC');
+    assert.ok(selectionSynced, 'Selection must be synced');
+    assert.ok(menuCoords, 'Menu coords must be set');
+
+    // Case 3C: Click on empty space (null target) -> discards selection, closes menu
+    handleContextMenuTrigger(
+      { clientX: 250, clientY: 150 },
+      mockCanvas,
+      shellRect,
+      mockSync,
+      mockSetMenu,
+      null
+    );
+    assert.equal(selectedTarget, null, 'Selection must be cleared');
+    assert.equal(menuCoords, null, 'Menu must be closed on empty space');
+  }
+
+  // 4. Source scan guards for ArtifactEditor
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // Must wire native contextmenu listener on upperCanvasEl directly and clean up on unmount
+  assert.ok(
+    code.includes("upperCanvasEl?.addEventListener('contextmenu', onNativeContextMenu)"),
+    'upperCanvasEl must register native contextmenu listener'
+  );
+  assert.ok(
+    code.includes("upperCanvasEl?.removeEventListener('contextmenu', onNativeContextMenu)"),
+    'upperCanvasEl cleanup must unregister native contextmenu listener'
+  );
+
+  // Must delegate to handleContextMenuTrigger helper
+  assert.ok(
+    code.includes('handleContextMenuTrigger('),
+    'Context menu handler must use handleContextMenuTrigger helper'
+  );
+
+  // Shell div must not duplicate trigger execution
+  assert.ok(
+    !code.includes('onContextMenu={(e) => {\n                    e.preventDefault();\n                    const canvas = fabricCanvasRef.current;'),
+    'Shell div must not duplicate context menu trigger execution'
+  );
+});
+
 
 
 

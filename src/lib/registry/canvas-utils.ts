@@ -340,3 +340,72 @@ export function resolveInitialSelectedId(
   return currentSelectedId ?? initialSelectedId ?? null;
 }
 
+/**
+ * Determines whether right-clicking on a canvas target should preserve the existing
+ * selection or replace it.
+ * If the target object is already part of the active selection (including multi-selection),
+ * the entire active selection is preserved (so actions like duplicate, delete, or
+ * layer reordering apply to all selected elements).
+ * If the target is NOT currently selected, the selection changes to that single target.
+ */
+export function shouldPreserveSelectionOnContextMenu(
+  activeObjects: unknown[],
+  target: unknown
+): boolean {
+  if (!target || !Array.isArray(activeObjects)) return false;
+  return activeObjects.includes(target);
+}
+
+/**
+ * Computes context menu popup coordinates clamped within the canvas shell bounding box.
+ */
+export function computeContextMenuCoords(
+  clientX: number,
+  clientY: number,
+  shellRect: { left: number; top: number; width: number; height: number },
+  menuWidth = 170,
+  menuHeight = 220
+): { x: number; y: number } {
+  const x = Math.max(10, Math.min(clientX - shellRect.left, shellRect.width - menuWidth));
+  const y = Math.max(10, Math.min(clientY - shellRect.top, shellRect.height - menuHeight));
+  return { x, y };
+}
+
+/**
+ * Handles context menu event logic on a canvas.
+ * Dispatches target discovery and updates selection and context menu coordinates.
+ */
+export function handleContextMenuTrigger(
+  e: MouseEvent | { clientX: number; clientY: number; nativeEvent?: MouseEvent },
+  canvas: {
+    findTarget: (e: any) => any;
+    getActiveObjects: () => any[];
+    setActiveObject: (obj: any) => void;
+    discardActiveObject: () => void;
+    requestRenderAll: () => void;
+  },
+  shellRect: { left: number; top: number; width: number; height: number } | null,
+  syncSelection: (canvas: any) => void,
+  setContextMenu: (coords: { x: number; y: number } | null) => void,
+  explicitTarget?: any
+) {
+  if (!shellRect) return;
+  const nativeEvt = 'nativeEvent' in e && e.nativeEvent ? e.nativeEvent : (e as MouseEvent);
+  const coords = computeContextMenuCoords(nativeEvt.clientX ?? 0, nativeEvt.clientY ?? 0, shellRect);
+  const target = explicitTarget ?? canvas.findTarget(nativeEvt);
+
+  if (target) {
+    const active = canvas.getActiveObjects();
+    if (!shouldPreserveSelectionOnContextMenu(active, target)) {
+      canvas.setActiveObject(target);
+      canvas.requestRenderAll();
+      syncSelection(canvas);
+    }
+    setContextMenu(coords);
+  } else {
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    syncSelection(canvas);
+    setContextMenu(null);
+  }
+}

@@ -72,7 +72,9 @@ import {
   NEW_TEXT_CONTENT,
   NEW_TEXT_SIZE_PX,
   clampFontSize,
+  computeContextMenuCoords,
   getElementId,
+  handleContextMenuTrigger,
   isFabricTextObject,
   isUserAuthoredId,
   nextElementId,
@@ -82,6 +84,7 @@ import {
   resolveInitialSelectedId,
   serializeCanvas,
   serializeTextStyle,
+  shouldPreserveSelectionOnContextMenu,
   toStrictHexColor,
 } from '@/lib/registry/canvas-utils';
 
@@ -547,6 +550,23 @@ export default function ArtifactEditor({
       canvas.on('mouse:down', onMouseDown);
       canvas.on('mouse:up', onMouseUp);
 
+      // Native DOM listener on upperCanvasEl: Fabric wraps canvas in an upper-canvas DOM layer
+      // that receives pointer events. Handling contextmenu here guarantees reliable execution.
+      const upperCanvasEl = canvas.upperCanvasEl;
+      const onNativeContextMenu = (e: MouseEvent) => {
+        e.preventDefault();
+        const shell = canvasShellRef.current;
+        const rect = shell ? shell.getBoundingClientRect() : null;
+        handleContextMenuTrigger(
+          e,
+          canvas,
+          rect,
+          syncSelection,
+          setContextMenu
+        );
+      };
+      upperCanvasEl?.addEventListener('contextmenu', onNativeContextMenu);
+
       // Registered here and not one line earlier: the paint loop above calls
       // `canvas.add()` for every seed element, and `canvas.add()` fires
       // `object:added`. Attached any sooner, a fresh mount would mark itself
@@ -560,6 +580,7 @@ export default function ArtifactEditor({
         canvas.off('selection:cleared', onSelectionChange);
         canvas.off('mouse:down', onMouseDown);
         canvas.off('mouse:up', onMouseUp);
+        upperCanvasEl?.removeEventListener('contextmenu', onNativeContextMenu);
         for (const event of CANVAS_MUTATION_EVENTS) {
           canvas.off(event, markDirty);
         }
@@ -2414,27 +2435,8 @@ export default function ArtifactEditor({
                   ref={canvasShellRef}
                   className="relative flex aspect-video w-full max-h-[calc(100vh-310px)] min-h-[320px] items-center justify-center overflow-hidden rounded-xl border border-border bg-black/90"
                   onContextMenu={(e) => {
+                    // Prevent native browser context menu on canvas shell
                     e.preventDefault();
-                    const canvas = fabricCanvasRef.current;
-                    if (!canvas || !canvasShellRef.current) return;
-                    const rect = canvasShellRef.current.getBoundingClientRect();
-                    const x = Math.max(10, Math.min(e.clientX - rect.left, rect.width - 170));
-                    const y = Math.max(10, Math.min(e.clientY - rect.top, rect.height - 220));
-
-                    const target = canvas.findTarget(e.nativeEvent);
-                    if (target) {
-                      if (!canvas.getActiveObjects().includes(target)) {
-                        canvas.setActiveObject(target);
-                        canvas.requestRenderAll();
-                        syncSelection(canvas);
-                      }
-                      setContextMenu({ x, y });
-                    } else {
-                      canvas.discardActiveObject();
-                      canvas.requestRenderAll();
-                      syncSelection(canvas);
-                      setContextMenu(null);
-                    }
                   }}
                 >
                   <canvas ref={canvasRef} />
