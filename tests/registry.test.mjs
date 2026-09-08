@@ -630,3 +630,50 @@ test('seed bundled assets exist on disk', () => {
     }
   }
 });
+
+test('SPEC-12-07: Song Sets UX & button consistency (BUG-14, BUG-15, DEC-009, DEC-010, DEC-011)', async () => {
+  const panelPath = path.join(root, 'src', 'components', 'admin', 'SongSetEntriesPanel.tsx');
+  const code = fs.readFileSync(panelPath, 'utf8');
+
+  // 1. Drop "(2/3 Formula)" from tab label (BUG-14)
+  assert.ok(
+    !code.includes('2. Verse Layout (2/3 Formula)'),
+    'Verse Layout tab label must drop "(2/3 Formula)"'
+  );
+  assert.ok(
+    code.includes('2. Verse Layout'),
+    'Verse Layout tab must read "2. Verse Layout"'
+  );
+
+  // 2. Banner note appears on all 3 tabs with consistent height (BUG-14)
+  assert.ok(
+    code.includes('TITLE SLIDE') && code.includes('VERSE LAYOUT') && code.includes('REFRAIN LAYOUT'),
+    'Banner note must render informative badge across all 3 trio tabs'
+  );
+  assert.ok(
+    code.includes('min-h-[42px]'),
+    'Banner note container must maintain consistent min-h-[42px] so canvas does not shift'
+  );
+
+  // 3. New Song Set creation panel mirrors Main Spine (DEC-009 / DEC-010 / BUG-15)
+  assert.ok(
+    code.includes('placeholder="Song set title (e.g. Fellowship Song)"') &&
+    code.includes('placeholder="Variable code (e.g. fellowship_song)"'),
+    'New Song Set panel must have title and variable code inputs'
+  );
+  assert.ok(
+    !code.includes('hover:bg-blue-600'),
+    'SongSetEntriesPanel must not carry hand-written hover:bg-blue-600 button overrides'
+  );
+
+  // 4. Rename affordance on the Song Set header card (DEC-011 / BUG-15)
+  assert.ok(
+    code.includes('[slot: {activeEntry.variableName}]'),
+    'Slot code must be displayed alongside title'
+  );
+  assert.ok(
+    code.includes('onClick={() => setIsRenaming(true)}'),
+    'Rename affordance must exist on the Song Set header card'
+  );
+});
+

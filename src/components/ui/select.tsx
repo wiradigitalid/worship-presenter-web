@@ -4,9 +4,33 @@ import * as React from "react"
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 
 import { cn } from "@/lib/utils"
+import { extractSelectItems } from "@/lib/select-utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+function Select<Value = any, Multiple extends boolean | undefined = false>({
+  children,
+  items: itemsProp,
+  ...props
+}: SelectPrimitive.Root.Props<Value, Multiple>) {
+  // Feed extracted value -> label record into Base UI's native items prop
+  // so Select.Value resolves labels naturally via resolveSelectedLabel / resolveMultipleLabels
+  const mergedItems = React.useMemo(() => {
+    if (itemsProp !== undefined) return itemsProp;
+    const map = extractSelectItems(children);
+    if (map.size === 0) return undefined;
+    const record: Record<string, React.ReactNode> = {};
+    for (const [k, v] of map.entries()) {
+      record[k] = v;
+    }
+    return record;
+  }, [children, itemsProp]);
+
+  return (
+    <SelectPrimitive.Root items={mergedItems} {...(props as any)}>
+      {children}
+    </SelectPrimitive.Root>
+  );
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
@@ -198,4 +222,5 @@ export {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
+  extractSelectItems,
 }

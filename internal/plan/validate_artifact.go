@@ -47,7 +47,7 @@ var (
 		"content": {}, "placeholderKey": {}, "imageRef": {}, "style": {},
 	}
 	allowedStyleKeys = map[string]struct{}{
-		"fontFamily": {}, "fontSize": {}, "fontColor": {}, "fontWeight": {}, "fontStyle": {},
+		"fontFamily": {}, "fontSize": {}, "fontColor": {}, "fontWeight": {}, "fontStyle": {}, "textDecoration": {},
 		"textAlign": {}, "verticalAlign": {}, "objectFit": {}, "fillColor": {}, "opacity": {},
 	}
 	entryKeys = map[string]struct{}{"general": {}, "song-set": {}, "song-set-entry": {}, "ann-set-marker": {}, "announcement": {}}
@@ -176,6 +176,13 @@ func parseStyle(raw any, label string) (map[string]any, error) {
 			return nil, failf("%s.fontStyle is invalid", label)
 		}
 		style["fontStyle"] = s
+	}
+	if v, ok := obj["textDecoration"]; ok {
+		s, _ := v.(string)
+		if s != "none" && s != "underline" {
+			return nil, failf("%s.textDecoration is invalid", label)
+		}
+		style["textDecoration"] = s
 	}
 	if v, ok := obj["textAlign"]; ok {
 		s, _ := v.(string)

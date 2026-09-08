@@ -20,6 +20,7 @@ const root = path.resolve(__dirname, '..');
 const {
   serializeTextStyle,
   serializeCanvas,
+  calculateImageFit,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'canvas-utils.ts')).href
 );
@@ -58,6 +59,7 @@ class MockFabricText extends MockFabricObject {
     this.fontFamily = options.fontFamily;
     this.fontWeight = options.fontWeight;
     this.fontStyle = options.fontStyle;
+    this.underline = options.underline;
     this.textAlign = options.textAlign;
   }
 }
@@ -269,6 +271,56 @@ test('Part 3: Bold and Italic serialization follows setIfMeaningful discipline',
   assert.ok(styleBoth);
   assert.equal(styleBoth.fontWeight, 'bold');
   assert.equal(styleBoth.fontStyle, 'italic');
+
+  // Case E: Underline (BUG-10, OQ-41)
+  const textObjUnderline = new MockFabricText('Hello', {
+    fill: '#FFFFFF',
+    fontSize: 32,
+    fontFamily: 'Arial',
+    underline: true,
+    textAlign: 'left',
+  });
+  const styleUnderline = serializeTextStyle(sourceElem, textObjUnderline);
+  assert.ok(styleUnderline);
+  assert.equal(styleUnderline.textDecoration, 'underline');
+});
+
+test('SPEC-12-01 / BUG-10: Template with textDecoration: underline passes validator', () => {
+  const templateWithUnderline = {
+    schemaVersion: 1,
+    id: 'underline-template',
+    label: 'Underline Template',
+    baseType: 'general',
+    placeholders: [],
+    layouts: {
+      default: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [
+          {
+            id: 'e1',
+            type: 'text',
+            required: false,
+            x: 10,
+            y: 10,
+            w: 80,
+            h: 20,
+            zIndex: 0,
+            content: 'Underlined Header',
+            style: {
+              fontFamily: 'Arial',
+              fontSize: 32,
+              fontColor: '#FFFFFF',
+              textDecoration: 'underline',
+              textAlign: 'center',
+            },
+          },
+        ],
+      },
+    },
+  };
+  const validated = validateArtifactTemplate(templateWithUnderline);
+  assert.equal(validated.layouts.default.elements[0].style.textDecoration, 'underline');
 });
 
 test('Seed conformance proof: saving an untouched template does NOT introduce new fontStyle or fontWeight keys', () => {
@@ -647,4 +699,231 @@ test('AC-07: Seed template with non-dense zIndex preserves stored zIndex on elem
     [1, 1]
   );
 });
+
+test('SPEC-12-01: ArtifactEditor source guards for realtime styling, underline, and shape color sync', async () => {
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. Textbox construction in elementToFabricObject handles textDecoration underline
+  assert.ok(
+    code.includes("style?.textDecoration === 'underline' ? { underline: true } : {}"),
+    'elementToFabricObject must construct Textbox with underline when style.textDecoration is underline'
+  );
+
+  // 2. Realtime font color apply
+  assert.ok(
+    code.includes('handleFontColorChange'),
+    'ArtifactEditor must have handleFontColorChange for realtime color update'
+  );
+
+  // 3. Realtime font size apply
+  assert.ok(
+    code.includes('handleFontSizeInput') && code.includes('obj.set({ fontSize: clamped })'),
+    'handleFontSizeInput must update active text objects on canvas immediately'
+  );
+
+  // 4. Font size input is w-20 to fit 3 digits
+  assert.ok(
+    code.includes('className="w-20 h-7 text-xs text-center"'),
+    'Font size input must use w-20 so 3 digits are not truncated'
+  );
+
+  // 5. Shape color sync and realtime apply
+  assert.ok(
+    code.includes('setShapeFill(toStrictHexColor'),
+    'syncSelection must sync shape fill color from active shape'
+  );
+  assert.ok(
+    code.includes('value={shapeFill}'),
+    'Shape color input must be controlled with value={shapeFill}'
+  );
+
+  // 6. Underline toggle button
+  assert.ok(
+    code.includes('handleToggleUnderline'),
+    'ArtifactEditor must define handleToggleUnderline'
+  );
+  assert.ok(
+    code.includes("title={t('admin.artifacts.underline')}"),
+    'ArtifactEditor must render an Underline button'
+  );
+});
+
+test('SPEC-12-02: Canvas interaction regressions - context menu, keyboard delete, drag reorder', async () => {
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. Right-click context menu must have an opener wired
+  assert.ok(
+    code.includes('onContextMenu={') && code.includes('setContextMenu('),
+    'Canvas shell must have onContextMenu handler that opens the context menu'
+  );
+
+  // 2. Keyboard Delete/Backspace shortcut with isEditing guard (DEC-012)
+  assert.ok(
+    code.includes("e.key !== 'Delete' && e.key !== 'Backspace'") ||
+    (code.includes("'Delete'") && code.includes("'Backspace'")),
+    'Must handle Delete and Backspace keys for selected canvas element'
+  );
+  assert.ok(
+    code.includes('.isEditing'),
+    'Keyboard delete must guard against active inline text editing'
+  );
+
+  // 3. Deck Sequence drag reorder handles dataTransfer and visual feedback
+  assert.ok(
+    code.includes('dragOverIndex') || code.includes('dropEffect'),
+    'Deck sequence must handle drag events properly'
+  );
+  assert.ok(
+    code.includes("getData('text/plain')") && code.includes('handleReorderTemplates'),
+    'handleDrop must read source index from dataTransfer and persist reorder'
+  );
+});
+
+test('SPEC-12-03: Image aspect ratio contain-fit in ArtifactEditor and canvas-utils', async () => {
+  // 1. Behavioral test: Wide image (400x100 = 4:1) inside box (200x100 = 2:1)
+  const wideFit = calculateImageFit(
+    { left: 10, top: 20, width: 200, height: 100 },
+    { width: 400, height: 100 },
+    'contain'
+  );
+  assert.equal(wideFit.width, 400);
+  assert.equal(wideFit.height, 100);
+  assert.equal(wideFit.scaleX, 0.5);
+  assert.equal(wideFit.scaleY, 0.5);
+  // Rendered dimensions must preserve 4:1 ratio
+  const wideRenderedW = wideFit.width * wideFit.scaleX;
+  const wideRenderedH = wideFit.height * wideFit.scaleY;
+  assert.equal(wideRenderedW, 200);
+  assert.equal(wideRenderedH, 50);
+  assert.equal(wideRenderedW / wideRenderedH, 4);
+  // Centered vertically inside 100px box (top=20 + (100-50)/2 = 45)
+  assert.equal(wideFit.top, 45);
+  assert.equal(wideFit.left, 10);
+
+  // 2. Behavioral test: Tall image (100x400 = 1:4) inside box (200x200 = 1:1)
+  const tallFit = calculateImageFit(
+    { left: 0, top: 0, width: 200, height: 200 },
+    { width: 100, height: 400 },
+    'contain'
+  );
+  assert.equal(tallFit.width, 100);
+  assert.equal(tallFit.height, 400);
+  assert.equal(tallFit.scaleX, 0.5);
+  assert.equal(tallFit.scaleY, 0.5);
+  // Rendered dimensions must preserve 1:4 ratio
+  const tallRenderedW = tallFit.width * tallFit.scaleX;
+  const tallRenderedH = tallFit.height * tallFit.scaleY;
+  assert.equal(tallRenderedW, 50);
+  assert.equal(tallRenderedH, 200);
+  assert.equal(tallRenderedW / tallRenderedH, 0.25);
+  // Centered horizontally inside 200px box (left=0 + (200-50)/2 = 75)
+  assert.equal(tallFit.left, 75);
+  assert.equal(tallFit.top, 0);
+
+  // 3. ArtifactEditor wiring
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+  assert.ok(
+    code.includes('calculateImageFit('),
+    'ArtifactEditor must use calculateImageFit to compute contain dimensions and position'
+  );
+  assert.ok(
+    code.includes('width: initial.width') && code.includes('height: initial.height'),
+    'FabricImage must use natural dimensions for width/height so scaleX/scaleY preserve aspect ratio'
+  );
+});
+
+test('SPEC-12-04: Select dropdown renders item label instead of raw value key', async () => {
+  const React = (await import('react')).default;
+  const { extractSelectItems } = await import(
+    pathToFileURL(path.join(root, 'src', 'lib', 'select-utils.ts')).href
+  );
+
+  // 1. Behavioral test: extractSelectItems scans JSX children and resolves value -> label
+  const mockChildren = React.createElement(
+    'div',
+    null,
+    React.createElement('div', { value: 'general' }, '📄 General Slide (Canvas)'),
+    React.createElement('div', { value: 'song:opening_song_bt' }, '🎵 Bible Talk Opening Song'),
+    React.createElement('div', { value: 'ann:1' }, '📢 Announcement Set 1')
+  );
+
+  const itemsMap = extractSelectItems(mockChildren);
+  assert.equal(itemsMap.get('general'), '📄 General Slide (Canvas)');
+  assert.equal(itemsMap.get('song:opening_song_bt'), '🎵 Bible Talk Opening Song');
+  assert.equal(itemsMap.get('ann:1'), '📢 Announcement Set 1');
+
+  // 2. Non-item children with native input type are not registered as select items
+  const mockWithInput = React.createElement(
+    'div',
+    null,
+    React.createElement('input', { type: 'text', value: 'stray-input-value' }),
+    React.createElement('div', { value: 'legit-item' }, 'Legitimate Item')
+  );
+  const safeMap = extractSelectItems(mockWithInput);
+  assert.equal(safeMap.has('stray-input-value'), false);
+  assert.equal(safeMap.get('legit-item'), 'Legitimate Item');
+
+  // 3. select.tsx wiring check: feeds extracted labels to Base UI native items prop
+  const fs = await import('node:fs');
+  const selectPath = path.join(root, 'src', 'components', 'ui', 'select.tsx');
+  const code = fs.readFileSync(selectPath, 'utf8');
+  assert.ok(
+    code.includes('items={mergedItems}'),
+    'select.tsx must feed extracted labels into Base UI native items prop'
+  );
+  assert.ok(
+    code.includes('extractSelectItems'),
+    'select.tsx must use extractSelectItems to resolve item labels'
+  );
+});
+
+test('SPEC-12-06: Main Spine toolbar and title area consistency (BUG-12, BUG-13, BUG-17, DEC-009, DEC-011)', async () => {
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. Element Properties row is always mounted (BUG-13)
+  assert.ok(
+    code.includes('Properties (None): Select element first'),
+    'Element Properties row must show "Properties (None): Select element first" when nothing selected'
+  );
+  assert.ok(
+    code.includes('Properties (Image): No properties to change'),
+    'Element Properties row must show "Properties (Image): No properties to change" when image selected'
+  );
+
+  // 2. Title area grouping per DEC-011
+  assert.ok(
+    code.includes('Canvas:'),
+    'Title area must group canvas actions under "Canvas:" label per DEC-011'
+  );
+
+  // 3. Toolbar add buttons icon only, no "(Drag)" suffix (BUG-12)
+  assert.ok(
+    !code.includes('Text (Drag)') && !code.includes('Rectangle (Drag)'),
+    'Toolbar add buttons must not include "(Drag)" text suffix'
+  );
+
+  // 4. Background button uses Background label and no Palette icon (BUG-12)
+  assert.ok(
+    !code.includes('<Palette') && code.includes('Background'),
+    'Background button must use image icon and Background label'
+  );
+
+  // 5. No custom hover:bg-blue-600 overrides (DEC-009, BUG-17)
+  assert.ok(
+    !code.includes('hover:bg-blue-600'),
+    'ArtifactEditor must not carry hand-written hover:bg-blue-600 button overrides'
+  );
+});
+
+
+
+
 

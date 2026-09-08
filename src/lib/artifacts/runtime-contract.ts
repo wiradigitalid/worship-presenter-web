@@ -38,6 +38,7 @@ export type ResolvedStyle = {
   fontColor?: string;
   fontWeight?: string;
   fontStyle?: string;
+  textDecoration?: string;
   textAlign?: 'left' | 'center' | 'right';
   verticalAlign?: 'top' | 'middle' | 'bottom';
   objectFit?: 'contain' | 'cover';

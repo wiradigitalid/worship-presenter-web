@@ -53,10 +53,9 @@ export function AnnouncementSetsPanel({
   const [loadingSlides, setLoadingSlides] = useState(false);
   const [selectedSlideId, setSelectedSlideId] = useState<number | null>(null);
 
-  // Slide Rename state
-  const [isRenamingSlide, setIsRenamingSlide] = useState(false);
-  const [draftSlideLabel, setDraftSlideLabel] = useState('');
-  const [renamingSlide, setRenamingSlide] = useState(false);
+  // Set creation state
+  const [newSetName, setNewSetName] = useState('');
+  const [creatingSet, setCreatingSet] = useState(false);
 
   // Set Rename / Delete state
   const [isEditingSetName, setIsEditingSetName] = useState(false);
@@ -127,27 +126,25 @@ export function AnnouncementSetsPanel({
   const activeSlide = slides.find((s) => s.id === selectedSlideId) ?? slides[0] ?? null;
 
   useEffect(() => {
-    if (activeSlide) {
-      setDraftSlideLabel(activeSlide.label);
-      setIsRenamingSlide(false);
-    }
-  }, [activeSlide?.id]);
-
-  useEffect(() => {
     if (selectedSet) {
       setEditSetLabel(selectedSet.label);
       setIsEditingSetName(false);
     }
   }, [selectedSet?.id]);
 
-  const handleCreateSetAuto = async () => {
-    let nextNum = sets.length + 1;
-    let label = `Announcement Set ${nextNum}`;
-    while (sets.some((s) => s.label === label)) {
-      nextNum++;
+  const handleCreateSet = async () => {
+    const trimmed = newSetName.trim();
+    let label = trimmed;
+    if (!label) {
+      let nextNum = sets.length + 1;
       label = `Announcement Set ${nextNum}`;
+      while (sets.some((s) => s.label === label)) {
+        nextNum++;
+        label = `Announcement Set ${nextNum}`;
+      }
     }
 
+    setCreatingSet(true);
     try {
       const res = await fetch('/api/admin/announcement-sets', {
         method: 'POST',
@@ -166,9 +163,12 @@ export function AnnouncementSetsPanel({
       const created = (await res.json()) as AnnouncementSet;
       setSets((prev) => [...prev, created]);
       setSelectedSetId(created.id);
+      setNewSetName('');
       toast.success(t('admin.annSets.created').replace('{label}', created.label));
     } catch {
       toast.error(t('admin.annSets.createFailed'));
+    } finally {
+      setCreatingSet(false);
     }
   };
 
@@ -274,60 +274,12 @@ export function AnnouncementSetsPanel({
       const created = (await res.json()) as AnnouncementSlide;
       setSlides((prev) => [...prev, created].sort((a, b) => a.position - b.position));
       setSelectedSlideId(created.id);
-      setDraftSlideLabel(created.label);
-      setIsRenamingSlide(false);
       toast.success(t('admin.annSets.slideAdded').replace('{label}', created.label));
       setSets((prev) =>
         prev.map((s) => (s.id === selectedSet.id ? { ...s, slideCount: s.slideCount + 1 } : s))
       );
     } catch {
       toast.error(t('admin.annSets.slideAddFailed'));
-    }
-  };
-
-  const handleSaveRenameSlide = async () => {
-    if (!selectedSet || !activeSlide) return;
-    const label = draftSlideLabel.trim();
-    if (!label || label.length > 80) {
-      toast.error(t('admin.annSets.slideLabelHint'));
-      return;
-    }
-
-    setRenamingSlide(true);
-    try {
-      const res = await fetch(
-        `/api/admin/announcement-sets/${selectedSet.id}/slides/${activeSlide.id}`,
-        {
-          method: 'PATCH',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            label,
-            updatedAt: activeSlide.updatedAt,
-          }),
-        }
-      );
-
-      if (res.status === 409) {
-        toast.error(t('admin.annSets.staleConflict'));
-        void fetchSlides(selectedSet.id);
-        setIsRenamingSlide(false);
-        return;
-      }
-
-      if (!res.ok) {
-        toast.error(t('admin.annSets.slideRenameFailed'));
-        return;
-      }
-
-      const updated = (await res.json()) as AnnouncementSlide;
-      setSlides((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
-      toast.success(t('admin.annSets.slideRenamed').replace('{label}', updated.label));
-      setIsRenamingSlide(false);
-    } catch {
-      toast.error(t('admin.annSets.slideRenameFailed'));
-    } finally {
-      setRenamingSlide(false);
     }
   };
 
@@ -372,34 +324,6 @@ export function AnnouncementSetsPanel({
       );
     } catch {
       toast.error(t('admin.annSets.slideDeleteFailed'));
-    }
-  };
-
-  const handleResetSlide = async (slide: AnnouncementSlide) => {
-    if (!selectedSet) return;
-    const ok = window.confirm(
-      t('admin.annSets.confirmResetSlide').replace('{label}', slide.label)
-    );
-    if (!ok) return;
-
-    try {
-      const res = await fetch(
-        `/api/admin/announcement-sets/${selectedSet.id}/slides/${slide.id}/reset`,
-        {
-          method: 'POST',
-          credentials: 'same-origin',
-        }
-      );
-
-      if (!res.ok) {
-        toast.error(t('admin.annSets.slideResetFailed'));
-        return;
-      }
-
-      toast.success(t('admin.annSets.slideResetDone'));
-      void fetchSlides(selectedSet.id);
-    } catch {
-      toast.error(t('admin.annSets.slideResetFailed'));
     }
   };
 
@@ -527,29 +451,49 @@ export function AnnouncementSetsPanel({
 
   const announcementSetAdapter = useMemo(() => {
     if (selectedSetId === null) return null;
-    return createAnnouncementSetAdapter(selectedSetId);
+    return createAnnouncementSetAdapter(selectedSetId, () => {
+      void fetchSlides(selectedSetId);
+    });
   }, [selectedSetId]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[330px_minmax(0,1fr)] gap-6">
       {/* Panel Kiri: 3-Tier Hierarchy (Button -> Dropdown -> Slides List) */}
       <aside className="space-y-4">
-        {/* Tier A: Add New Announcement Set */}
-        <div className="rounded-xl border border-border bg-card p-3.5 shadow-sm">
-          <Button
-            type="button"
-            onClick={() => void handleCreateSetAuto()}
-            className="w-full bg-primary hover:bg-blue-600 text-white py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add New Announcement Set</span>
-          </Button>
+        {/* Tier A: New Announcement Set panel per DEC-009 / DEC-010 */}
+        <div className="rounded-xl border border-border bg-card p-3.5 space-y-2.5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">New Announcement Set</span>
+            <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
+              Announcement Set
+            </span>
+          </div>
+          <div className="flex gap-1.5 pt-0.5">
+            <Input
+              type="text"
+              placeholder="Announcement set label..."
+              value={newSetName}
+              onChange={(e) => setNewSetName(e.target.value)}
+              disabled={creatingSet || loading}
+              className="flex-1 text-xs h-8"
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void handleCreateSet()}
+              disabled={creatingSet || loading}
+              className="shrink-0 h-8 font-semibold"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              New
+            </Button>
+          </div>
         </div>
 
         {/* Tier B & C: Dropdown Selector & Slides in Set */}
         <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm">
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
+          <div className="min-h-[58px]">
+            <div className="flex items-center justify-between h-6 mb-1.5">
               <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
                 Active Announcement Set
               </label>
@@ -579,14 +523,14 @@ export function AnnouncementSetsPanel({
             </div>
 
             {isEditingSetName ? (
-              <div className="flex gap-1.5 items-center">
+              <div className="flex gap-1.5 items-center h-8">
                 <Input
                   value={editSetLabel}
                   onChange={(e) => setEditSetLabel(e.target.value)}
                   className="h-8 text-xs flex-1"
                   autoFocus
                 />
-                <Button type="button" size="sm" onClick={() => void handleSaveRenameSet()} className="h-8 text-xs">
+                <Button type="button" size="sm" onClick={() => void handleSaveRenameSet()} className="h-8 text-xs font-semibold">
                   Save
                 </Button>
                 <Button
@@ -659,14 +603,10 @@ export function AnnouncementSetsPanel({
                       tabIndex={0}
                       onClick={() => {
                         setSelectedSlideId(slide.id);
-                        setDraftSlideLabel(slide.label);
-                        setIsRenamingSlide(false);
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           setSelectedSlideId(slide.id);
-                          setDraftSlideLabel(slide.label);
-                          setIsRenamingSlide(false);
                         }
                       }}
                       className={`group flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all ${
@@ -741,85 +681,14 @@ export function AnnouncementSetsPanel({
             No announcement slide selected. Click "Add Slide" to create one.
           </div>
         ) : (
-          <>
-            {/* Slide Header Card */}
-            <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-3">
-                {isRenamingSlide ? (
-                  <Input
-                    value={draftSlideLabel}
-                    disabled={renamingSlide}
-                    onChange={(e) => setDraftSlideLabel(e.target.value)}
-                    className="text-base font-semibold max-w-sm"
-                    autoFocus
-                  />
-                ) : (
-                  <span className="text-base font-bold text-foreground">{activeSlide.label}</span>
-                )}
-                <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                  [set: {selectedSet.label}]
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {isRenamingSlide ? (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={renamingSlide}
-                      onClick={() => {
-                        setIsRenamingSlide(false);
-                        setDraftSlideLabel(activeSlide.label);
-                      }}
-                    >
-                      {t('admin.annSets.cancel')}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={renamingSlide || !draftSlideLabel.trim()}
-                      onClick={() => void handleSaveRenameSlide()}
-                    >
-                      {renamingSlide ? t('admin.annSets.renaming') : t('admin.annSets.save')}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsRenamingSlide(true)}
-                    >
-                      {t('admin.annSets.rename')}
-                    </Button>
-                    {activeSlide.resettable ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void handleResetSlide(activeSlide)}
-                      >
-                        {t('admin.annSets.slideReset')}
-                      </Button>
-                    ) : null}
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Canvas Editor Workspace */}
-            <ArtifactEditor
-              key={`ann-set-${selectedSet.id}-slide-${activeSlide.id}`}
-              adapter={announcementSetAdapter}
-              initialSelectedId={String(activeSlide.id)}
-              hideList={true}
-              copiedSlidePayload={copiedSlidePayload}
-              onCopySlidePayloadChange={onCopySlidePayloadChange}
-            />
-          </>
+          <ArtifactEditor
+            key={`ann-set-${selectedSet.id}-slide-${activeSlide.id}`}
+            adapter={announcementSetAdapter}
+            initialSelectedId={String(activeSlide.id)}
+            hideList={true}
+            copiedSlidePayload={copiedSlidePayload}
+            onCopySlidePayloadChange={onCopySlidePayloadChange}
+          />
         )}
       </section>
     </div>

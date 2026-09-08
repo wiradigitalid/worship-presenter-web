@@ -108,3 +108,43 @@ test('Announcement Sets and slides can be inserted and spliced into slide plan v
   const idx2 = plan.findIndex((s) => s.id === `ann-slide-${s2Id}`);
   assert.ok(idx1 < idx2, 'slides in set must follow position order');
 });
+
+test('SPEC-12-08: Announcement Sets duplicate title & concurrency fix, creation layout (BUG-9, BUG-15, BUG-16, DEC-009, DEC-010, DEC-011)', async () => {
+  const panelPath = path.join(root, 'src', 'components', 'admin', 'AnnouncementSetsPanel.tsx');
+  const code = fs.readFileSync(panelPath, 'utf8');
+
+  // 1. Collapse duplicate Slide Header Card (BUG-9)
+  assert.ok(
+    !code.includes('/* Slide Header Card */'),
+    'AnnouncementSetsPanel must not render a duplicate Slide Header Card above ArtifactEditor'
+  );
+  assert.ok(
+    !code.includes('handleSaveRenameSlide'),
+    'AnnouncementSetsPanel must eliminate redundant slide rename function'
+  );
+
+  // 2. New Announcement Set creation panel mirrors Main Spine (DEC-009, DEC-010, BUG-15)
+  assert.ok(
+    code.includes('placeholder="Announcement set label..."'),
+    'New Announcement Set panel must have label input'
+  );
+  assert.ok(
+    !code.includes('hover:bg-blue-600'),
+    'AnnouncementSetsPanel must not carry hand-written hover:bg-blue-600 button overrides'
+  );
+
+  // 3. Active Announcement Set label stability (BUG-16)
+  assert.ok(
+    code.includes('min-h-[58px]'),
+    'Active Announcement Set container must enforce stable min-h-[58px] across rename'
+  );
+
+  // 4. createAnnouncementSetAdapter callback integration
+  const adapterPath = path.join(root, 'src', 'lib', 'registry', 'canvas-adapters.ts');
+  const adapterCode = fs.readFileSync(adapterPath, 'utf8');
+  assert.ok(
+    adapterCode.includes('onListChange?.()'),
+    'createAnnouncementSetAdapter must invoke onListChange callback on slide mutations'
+  );
+});
+

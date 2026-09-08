@@ -10,10 +10,12 @@ import {
   Copy,
   Image as ImageIcon,
   Italic,
-  Palette,
   Plus,
   SendToBack,
+  Square,
   Trash2,
+  Type,
+  Underline,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
@@ -60,6 +62,7 @@ import {
   DEFAULT_FONT_SIZE,
   DEFAULT_TEXT_ALIGN,
   FabricTextLike,
+  calculateImageFit,
   INSERT_CASCADE_PX,
   INSERT_CASCADE_STEPS,
   MAX_FONT_SIZE,
@@ -139,6 +142,7 @@ function elementToFabricObject(
       // undefined. Every shipped text element omits fontStyle.
       ...(style?.fontWeight !== undefined ? { fontWeight: style.fontWeight } : {}),
       ...(style?.fontStyle !== undefined ? { fontStyle: style.fontStyle } : {}),
+      ...(style?.textDecoration === 'underline' ? { underline: true } : {}),
       textAlign: style?.textAlign ?? DEFAULT_TEXT_ALIGN,
       splitByGrapheme: true,
       editable: editable,
@@ -158,16 +162,44 @@ function elementToFabricObject(
       const imgEl = new Image();
       imgEl.crossOrigin = 'anonymous';
       imgEl.src = element.imageRef;
+
+      const calcFit = () =>
+        calculateImageFit(
+          { left, top, width, height },
+          { width: imgEl.naturalWidth, height: imgEl.naturalHeight },
+          element.style?.objectFit
+        );
+
+      const initial = calcFit();
+      const clipBox = new fabric.Rect({
+        left,
+        top,
+        width,
+        height,
+        absolutePositioned: true,
+      });
+
       const fabricImg = new fabric.FabricImage(imgEl, {
         ...common,
-        scaleX: width / (imgEl.naturalWidth || width || 1),
-        scaleY: height / (imgEl.naturalHeight || height || 1),
+        width: initial.width,
+        height: initial.height,
+        left: initial.left,
+        top: initial.top,
+        scaleX: initial.scaleX,
+        scaleY: initial.scaleY,
+        clipPath: clipBox,
         data: { elementId: element.id, imageRef: element.imageRef },
       });
       imgEl.onload = () => {
+        const updated = calcFit();
         fabricImg.set({
-          scaleX: width / (imgEl.naturalWidth || 1),
-          scaleY: height / (imgEl.naturalHeight || 1),
+          width: updated.width,
+          height: updated.height,
+          left: updated.left,
+          top: updated.top,
+          scaleX: updated.scaleX,
+          scaleY: updated.scaleY,
+          clipPath: clipBox,
         });
         fabricImg.canvas?.requestRenderAll();
       };
@@ -252,6 +284,8 @@ export default function ArtifactEditor({
   const [fontSizeInput, setFontSizeInput] = useState(String(DEFAULT_FONT_SIZE));
   const [fontWeight, setFontWeight] = useState<'normal' | 'bold'>('normal');
   const [fontStyle, setFontStyle] = useState<'normal' | 'italic'>('normal');
+  const [underline, setUnderline] = useState(false);
+  const [shapeFill, setShapeFill] = useState('#5C2E16');
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [selectedTextCount, setSelectedTextCount] = useState(0);
   const [textContent, setTextContent] = useState('');
@@ -272,6 +306,8 @@ export default function ArtifactEditor({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const dragSourceIndexRef = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const fitCanvasToShell = useCallback(() => {
     const shell = canvasShellRef.current;
@@ -325,15 +361,21 @@ export default function ArtifactEditor({
     const selectedText = texts[0];
     // The content field edits one box at a time; anything else clears it.
     setTextContent(texts.length === 1 && selectedText ? (selectedText.text ?? '') : '');
-    if (!selectedText) return;
-    setFontColor(
-      toStrictHexColor(selectedText.fill, DEFAULT_FONT_COLOR) ?? DEFAULT_FONT_COLOR
-    );
-    const size = normalizeFontSize(selectedText.fontSize);
-    setFontSize(size);
-    setFontSizeInput(String(size));
-    setFontWeight(selectedText.fontWeight === 'bold' ? 'bold' : 'normal');
-    setFontStyle(selectedText.fontStyle === 'italic' ? 'italic' : 'normal');
+    if (selectedText) {
+      setFontColor(
+        toStrictHexColor(selectedText.fill, DEFAULT_FONT_COLOR) ?? DEFAULT_FONT_COLOR
+      );
+      const size = normalizeFontSize(selectedText.fontSize);
+      setFontSize(size);
+      setFontSizeInput(String(size));
+      setFontWeight(selectedText.fontWeight === 'bold' ? 'bold' : 'normal');
+      setFontStyle(selectedText.fontStyle === 'italic' ? 'italic' : 'normal');
+      setUnderline(Boolean((selectedText as any).underline));
+    }
+    const shapes = active.filter((obj) => (obj as any).type === 'rect' && !(obj as any).data?.imageRef);
+    if (shapes.length > 0) {
+      setShapeFill(toStrictHexColor((shapes[0] as any).fill, '#5C2E16') ?? '#5C2E16');
+    }
   }, []);
 
   const loadList = useCallback(async () => {
@@ -418,6 +460,8 @@ export default function ArtifactEditor({
         width: CANVAS_WIDTH,
         height: CANVAS_HEIGHT,
         selection: true,
+        fireRightClick: true,
+        stopContextMenu: true,
         backgroundColor: layout.backgroundColor,
       });
       fabricCanvasRef.current = canvas;
@@ -961,6 +1005,47 @@ export default function ArtifactEditor({
     );
   }, [template, syncSelection, markDirty, t]);
 
+  // DEC-012: The canvas admits one keyboard shortcut: Delete/Backspace on the selected element.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+
+      const activeEl = document.activeElement;
+      if (
+        activeEl instanceof HTMLInputElement ||
+        activeEl instanceof HTMLTextAreaElement ||
+        (activeEl instanceof HTMLElement && activeEl.isContentEditable) ||
+        activeEl instanceof HTMLButtonElement ||
+        activeEl?.getAttribute('role') === 'button'
+      ) {
+        return;
+      }
+
+      const shell = canvasShellRef.current;
+      const isCanvasFocused =
+        shell &&
+        (shell.contains(activeEl) || activeEl === document.body || activeEl === null);
+      if (!isCanvasFocused) return;
+
+      const canvas = fabricCanvasRef.current;
+      if (!canvas) return;
+
+      const activeObjects = canvas.getActiveObjects();
+      if (activeObjects.length === 0) return;
+
+      const isTextEditing = activeObjects.some((obj) => (obj as any).isEditing === true);
+      if (isTextEditing) return;
+
+      e.preventDefault();
+      handleDeleteSelected();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleDeleteSelected]);
+
   const handleDuplicateSelected = useCallback(async () => {
     const canvas = fabricCanvasRef.current;
     const layout = template ? getEditableLayout(template) : null;
@@ -1052,12 +1137,28 @@ export default function ArtifactEditor({
     let updated = false;
     for (const obj of canvas.getActiveObjects()) {
       if (!isFabricTextObject(obj)) continue;
-      obj.set({ fill: fontColor, fontSize });
+      obj.set({ fill: fontColor, fontSize, underline } as any);
       updated = true;
     }
     // `obj.set(...)` raises no canvas event, so the mutation listeners never see
     // this; and pressing Apply with nothing selected changed nothing, so it must
     // not claim otherwise.
+    if (updated) {
+      canvas.requestRenderAll();
+      markDirty();
+    }
+  };
+
+  const handleFontColorChange = (color: string) => {
+    setFontColor(color);
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    let updated = false;
+    for (const obj of canvas.getActiveObjects()) {
+      if (!isFabricTextObject(obj)) continue;
+      obj.set({ fill: color });
+      updated = true;
+    }
     if (updated) {
       canvas.requestRenderAll();
       markDirty();
@@ -1092,6 +1193,20 @@ export default function ArtifactEditor({
     markDirty();
   }, [fontStyle, markDirty]);
 
+  const handleToggleUnderline = useCallback(() => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const texts = canvas.getActiveObjects().filter(isFabricTextObject);
+    if (texts.length === 0) return;
+    const nextUnderline = !underline;
+    setUnderline(nextUnderline);
+    for (const obj of texts) {
+      obj.set({ underline: nextUnderline } as any);
+    }
+    canvas.requestRenderAll();
+    markDirty();
+  }, [underline, markDirty]);
+
   /**
    * Writes the words of the selected text box straight through to Fabric, so
    * the next Save picks them up. Deliberately limited to a single selected text
@@ -1116,7 +1231,20 @@ export default function ArtifactEditor({
     // An empty field is `Number('') === 0`; never commit that — the server
     // rejects the entire save with an opaque `style.fontSize must be positive`.
     if (!raw.trim() || !Number.isFinite(parsed) || parsed <= 0) return;
-    setFontSize(clampFontSize(parsed));
+    const clamped = clampFontSize(parsed);
+    setFontSize(clamped);
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    let updated = false;
+    for (const obj of canvas.getActiveObjects()) {
+      if (!isFabricTextObject(obj)) continue;
+      obj.set({ fontSize: clamped });
+      updated = true;
+    }
+    if (updated) {
+      canvas.requestRenderAll();
+      markDirty();
+    }
   };
 
   const [internalCopiedSlidePayload, setInternalCopiedSlidePayload] = useState<CopiedSlide | null>(null);
@@ -1199,6 +1327,7 @@ export default function ArtifactEditor({
 
   const handleSetShapeFill = useCallback(
     (color: string) => {
+      setShapeFill(color);
       const canvas = fabricCanvasRef.current;
       if (!canvas) return;
       for (const obj of canvas.getActiveObjects()) {
@@ -1254,26 +1383,41 @@ export default function ArtifactEditor({
   };
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
+    dragSourceIndexRef.current = index;
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', String(index));
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
   };
 
   const handleDrop = async (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault();
-    if (draggedIndex === null || draggedIndex === targetIndex) {
-      setDraggedIndex(null);
+    setDragOverIndex(null);
+    const rawData = e.dataTransfer.getData('text/plain');
+    const sourceIndex =
+      rawData !== '' && !Number.isNaN(Number(rawData))
+        ? Number(rawData)
+        : (dragSourceIndexRef.current ?? draggedIndex);
+    dragSourceIndexRef.current = null;
+    setDraggedIndex(null);
+    if (
+      sourceIndex === null ||
+      sourceIndex === targetIndex ||
+      sourceIndex < 0 ||
+      sourceIndex >= templates.length
+    ) {
       return;
     }
     const next = [...templates];
-    const [moved] = next.splice(draggedIndex, 1);
+    const [moved] = next.splice(sourceIndex, 1);
     next.splice(targetIndex, 0, moved);
-    setDraggedIndex(null);
     setTemplates(next);
     await handleReorderTemplates(next);
   };
@@ -1680,7 +1824,7 @@ export default function ArtifactEditor({
     );
 
   return (
-    <div className={hideList ? 'block' : 'grid gap-6 lg:grid-cols-[330px_minmax(0,1fr)]'}>
+    <div className={hideList ? 'block' : 'grid gap-6 lg:grid-cols-[330px_minmax(0,1fr)] min-h-[580px]'}>
       {!hideList ? (
         <aside className="space-y-4">
           {prefixListSlot}
@@ -1727,7 +1871,7 @@ export default function ArtifactEditor({
                   type="button"
                   onClick={() => void handleCreate()}
                   disabled={busy}
-                  className="bg-primary hover:bg-blue-600 text-white px-3.5 py-2 rounded-lg text-xs font-semibold shrink-0 h-8"
+                  className="shrink-0 h-8"
                 >
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   Add
@@ -1748,7 +1892,7 @@ export default function ArtifactEditor({
                   size="sm"
                   onClick={() => void handleCreate()}
                   disabled={busy || !newLabel.trim()}
-                  className="bg-primary hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
+                  className="shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   Add
@@ -1763,7 +1907,7 @@ export default function ArtifactEditor({
               <span className="text-xs font-semibold text-foreground">Deck Sequence</span>
               <span className="text-[11px] text-muted-foreground font-mono">{templates.length} slides</span>
             </div>
-            <ul className="space-y-1.5 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+            <ul className="space-y-1.5 max-h-[calc(100vh-340px)] min-h-[220px] overflow-y-auto pr-1">
               {templates.map((item, index) => {
                 const isSelected = selectedId === item.id;
                 return (
@@ -1771,9 +1915,18 @@ export default function ArtifactEditor({
                     key={item.id}
                     draggable={!busy}
                     onDragStart={(e) => handleDragStart(e, index)}
-                    onDragOver={handleDragOver}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragLeave={() => {
+                      if (dragOverIndex === index) setDragOverIndex(null);
+                    }}
+                    onDragEnd={() => {
+                      setDragOverIndex(null);
+                      dragSourceIndexRef.current = null;
+                    }}
                     onDrop={(e) => void handleDrop(e, index)}
-                    className="group relative"
+                    className={`group relative transition-all ${
+                      dragOverIndex === index ? 'ring-2 ring-primary bg-primary/20 rounded-lg' : ''
+                    }`}
                   >
                     <div
                       role="button"
@@ -1800,7 +1953,7 @@ export default function ArtifactEditor({
                         if (!proceed) return;
                         setSelectedId(item.id);
                       }}
-                      className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all ${
+                      className={`flex items-center justify-between p-2 rounded-lg border cursor-grab active:cursor-grabbing select-none transition-all ${
                         isSelected
                           ? 'border-primary bg-primary/10'
                           : 'border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border'
@@ -1932,10 +2085,11 @@ export default function ArtifactEditor({
                 ) : null}
 
                 {isRenaming ? (
-                  <>
+                  <div className="flex items-center gap-1.5">
                     <Button
                       type="button"
                       variant="outline"
+                      size="sm"
                       onClick={() => {
                         setIsRenaming(false);
                         setDraftLabel(template.label);
@@ -1946,6 +2100,7 @@ export default function ArtifactEditor({
                     </Button>
                     <Button
                       type="button"
+                      size="sm"
                       onClick={async () => {
                         await handleRename();
                         setIsRenaming(false);
@@ -1954,37 +2109,43 @@ export default function ArtifactEditor({
                     >
                       Save
                     </Button>
-                  </>
+                  </div>
                 ) : (
-                  <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsRenaming(true)}
+                    disabled={busy}
+                  >
+                    {t('admin.artifacts.rename')}
+                  </Button>
+                )}
+
+                <div className="h-4 w-px bg-border mx-1" />
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-muted-foreground">Canvas:</span>
+                  {isResettable ? (
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setIsRenaming(true)}
+                      size="sm"
+                      onClick={handleReset}
                       disabled={busy}
                     >
-                      {t('admin.artifacts.rename')}
+                      {t('admin.artifacts.reset')}
                     </Button>
-                    {isResettable ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleReset}
-                        disabled={busy}
-                      >
-                        {t('admin.artifacts.reset')}
-                      </Button>
-                    ) : null}
-                  </>
-                )}
-
-                <Button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={!isEditable || busy}
-                >
-                  {t('admin.artifacts.save')}
-                </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={!isEditable || busy}
+                  >
+                    {t('admin.artifacts.save')}
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -2033,36 +2194,61 @@ export default function ArtifactEditor({
                     <Button
                       type="button"
                       variant={drawingTool === 'text' ? 'default' : 'outline'}
-                      size="sm"
+                      size="icon-sm"
                       onClick={() => setDrawingTool((cur) => (cur === 'text' ? null : 'text'))}
                       disabled={busy}
-                      className="text-xs font-medium"
+                      title="Text"
                     >
-                      <span className="font-bold mr-1">T</span> Text (Drag)
+                      <Type className="w-3.5 h-3.5" />
                     </Button>
                     <Button
                       type="button"
                       variant={drawingTool === 'rect' ? 'default' : 'outline'}
-                      size="sm"
+                      size="icon-sm"
                       onClick={() => setDrawingTool((cur) => (cur === 'rect' ? null : 'rect'))}
                       disabled={busy}
-                      className="text-xs font-medium"
+                      title="Rectangle"
                     >
-                      <span className="mr-1">▭</span> Rectangle (Drag)
+                      <Square className="w-3.5 h-3.5" />
                     </Button>
                     {allowImages ? (
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
+                        size="icon-sm"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={busy}
-                        className="text-xs font-medium"
+                        title="Image"
                       >
-                        <ImageIcon className="w-3.5 h-3.5 mr-1" />
-                        Image
+                        <ImageIcon className="w-3.5 h-3.5" />
                       </Button>
                     ) : null}
+
+                    <div className="h-4 w-px bg-border mx-1" />
+
+                    <div>
+                      <input
+                        ref={bgFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) void handleUploadBackgroundFile(f);
+                          if (bgFileInputRef.current) bgFileInputRef.current.value = '';
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowBgDialog(true)}
+                        className="text-xs font-medium flex items-center gap-1.5"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        Background
+                      </Button>
+                    </div>
 
                     <div className="h-4 w-px bg-border mx-1" />
 
@@ -2092,7 +2278,6 @@ export default function ArtifactEditor({
                     </Select>
                     <Button
                       type="button"
-                      variant="outline"
                       size="sm"
                       onClick={() => {
                         void insertPlaceholder(insertPlaceholderKey);
@@ -2103,135 +2288,149 @@ export default function ArtifactEditor({
                       + Placeholder
                     </Button>
                   </div>
-
-                  {/* CHANGE BACKGROUND BUTTON (POIN 10) */}
-                  <div>
-                    <input
-                      ref={bgFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) void handleUploadBackgroundFile(f);
-                        if (bgFileInputRef.current) bgFileInputRef.current.value = '';
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowBgDialog(true)}
-                      className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/30 text-xs font-semibold flex items-center gap-1.5"
-                    >
-                      <Palette className="w-3.5 h-3.5" />
-                      Change Background
-                    </Button>
-                  </div>
                 </div>
 
                 {/* TOOLBAR ROW 2: ELEMENT PROPERTIES (POIN 8) */}
-                {selectedElementIds.length > 0 ? (
-                  <div className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-background border border-border text-xs">
-                    {selectedTextCount > 0 ? (
-                      <>
-                        <span className="text-[11px] font-mono text-muted-foreground uppercase">Properties (Text):</span>
+                <div className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-background border border-border text-xs min-h-[44px]">
+                  {selectedElementIds.length === 0 ? (
+                    <span className="text-muted-foreground text-xs italic">
+                      Properties (None): Select element first
+                    </span>
+                  ) : selectedTextCount > 0 ? (
+                    <>
+                      <span className="text-[11px] font-mono text-muted-foreground uppercase">Properties (Text):</span>
+                      <input
+                        type="color"
+                        value={fontColor}
+                        onChange={(e) => handleFontColorChange(e.target.value)}
+                        className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded"
+                        title="Font Color"
+                      />
+                      <Input
+                        type="number"
+                        min={MIN_FONT_SIZE}
+                        max={MAX_FONT_SIZE}
+                        value={fontSizeInput}
+                        onChange={(e) => handleFontSizeInput(e.target.value)}
+                        onBlur={() => setFontSizeInput(String(fontSize))}
+                        className="w-20 h-7 text-xs text-center"
+                        title="Font Size"
+                      />
+                      <Button
+                        type="button"
+                        variant={fontWeight === 'bold' ? 'default' : 'outline'}
+                        size="icon-sm"
+                        onClick={handleToggleBold}
+                        disabled={busy}
+                        title={t('admin.artifacts.bold')}
+                      >
+                        <Bold className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={fontStyle === 'italic' ? 'default' : 'outline'}
+                        size="icon-sm"
+                        onClick={handleToggleItalic}
+                        disabled={busy}
+                        title={t('admin.artifacts.italic')}
+                      >
+                        <Italic className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={underline ? 'default' : 'outline'}
+                        size="icon-sm"
+                        onClick={handleToggleUnderline}
+                        disabled={busy}
+                        title={t('admin.artifacts.underline')}
+                      >
+                        <Underline className="w-3.5 h-3.5" />
+                      </Button>
+                      <div className="h-4 w-px bg-border mx-1" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => handleSetTextAlign('left')}
+                        title="Align Left"
+                      >
+                        <AlignLeft className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => handleSetTextAlign('center')}
+                        title="Align Center"
+                      >
+                        <AlignCenter className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => handleSetTextAlign('right')}
+                        title="Align Right"
+                      >
+                        <AlignRight className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={applyTextStyle}
+                        className="text-xs h-7 ml-auto"
+                      >
+                        {t('admin.artifacts.applyStyle')}
+                      </Button>
+                    </>
+                  ) : fabricCanvasRef.current?.getActiveObjects().some((o) => Boolean((o as any).data?.imageRef)) ? (
+                    <span className="text-muted-foreground text-xs italic">
+                      Properties (Image): No properties to change
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-[11px] font-mono text-muted-foreground uppercase">Properties (Shape):</span>
+                      <Label className="flex items-center gap-1 text-xs">
+                        Color:
                         <input
                           type="color"
-                          value={fontColor}
-                          onChange={(e) => setFontColor(e.target.value)}
-                          className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded"
-                          title="Font Color"
+                          value={shapeFill}
+                          onChange={(e) => handleSetShapeFill(e.target.value)}
+                          className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded ml-1"
                         />
-                        <Input
-                          type="number"
-                          min={MIN_FONT_SIZE}
-                          max={MAX_FONT_SIZE}
-                          value={fontSizeInput}
-                          onChange={(e) => handleFontSizeInput(e.target.value)}
-                          onBlur={() => setFontSizeInput(String(fontSize))}
-                          className="w-16 h-7 text-xs text-center"
-                          title="Font Size"
-                        />
-                        <Button
-                          type="button"
-                          variant={fontWeight === 'bold' ? 'default' : 'outline'}
-                          size="icon-sm"
-                          onClick={handleToggleBold}
-                          disabled={busy}
-                          title={t('admin.artifacts.bold')}
-                        >
-                          <Bold className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={fontStyle === 'italic' ? 'default' : 'outline'}
-                          size="icon-sm"
-                          onClick={handleToggleItalic}
-                          disabled={busy}
-                          title={t('admin.artifacts.italic')}
-                        >
-                          <Italic className="w-3.5 h-3.5" />
-                        </Button>
-                        <div className="h-4 w-px bg-border mx-1" />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-sm"
-                          onClick={() => handleSetTextAlign('left')}
-                          title="Align Left"
-                        >
-                          <AlignLeft className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-sm"
-                          onClick={() => handleSetTextAlign('center')}
-                          title="Align Center"
-                        >
-                          <AlignCenter className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-sm"
-                          onClick={() => handleSetTextAlign('right')}
-                          title="Align Right"
-                        >
-                          <AlignRight className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={applyTextStyle}
-                          className="text-xs h-7 ml-auto"
-                        >
-                          {t('admin.artifacts.applyStyle')}
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-[11px] font-mono text-muted-foreground uppercase">Properties (Shape):</span>
-                        <Label className="flex items-center gap-1 text-xs">
-                          Color:
-                          <input
-                            type="color"
-                            defaultValue="#5C2E16"
-                            onChange={(e) => handleSetShapeFill(e.target.value)}
-                            className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded ml-1"
-                          />
-                        </Label>
-                      </>
-                    )}
-                  </div>
-                ) : null}
+                      </Label>
+                    </>
+                  )}
+                </div>
 
                 {/* CANVAS WORKSPACE & CONTEXT MENU (POIN 5 & 6) */}
                 <div
                   ref={canvasShellRef}
-                  className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-black/90"
+                  className="relative flex aspect-video w-full max-h-[calc(100vh-310px)] min-h-[320px] items-center justify-center overflow-hidden rounded-xl border border-border bg-black/90"
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    const canvas = fabricCanvasRef.current;
+                    if (!canvas || !canvasShellRef.current) return;
+                    const rect = canvasShellRef.current.getBoundingClientRect();
+                    const x = Math.max(10, Math.min(e.clientX - rect.left, rect.width - 170));
+                    const y = Math.max(10, Math.min(e.clientY - rect.top, rect.height - 220));
+
+                    const target = canvas.findTarget(e.nativeEvent);
+                    if (target) {
+                      if (!canvas.getActiveObjects().includes(target)) {
+                        canvas.setActiveObject(target);
+                        canvas.requestRenderAll();
+                        syncSelection(canvas);
+                      }
+                      setContextMenu({ x, y });
+                    } else {
+                      canvas.discardActiveObject();
+                      canvas.requestRenderAll();
+                      syncSelection(canvas);
+                      setContextMenu(null);
+                    }
+                  }}
                 >
                   <canvas ref={canvasRef} />
 

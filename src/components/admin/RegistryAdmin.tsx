@@ -25,7 +25,7 @@ export function RegistryAdmin() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card className="p-1.5">
         <div className="flex flex-wrap gap-1">
           {tabs.map((tab) => (

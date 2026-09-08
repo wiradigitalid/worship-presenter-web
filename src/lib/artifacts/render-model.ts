@@ -327,6 +327,12 @@ export function resolveItalic(style: ResolvedStyle): boolean {
   return normalized === 'italic' || normalized === 'oblique';
 }
 
+export function resolveUnderline(style: ResolvedStyle): boolean {
+  const textDecoration = style.textDecoration;
+  if (typeof textDecoration !== 'string') return false;
+  return textDecoration.trim().toLowerCase() === 'underline';
+}
+
 /** Always 0..1; out-of-range or missing values fall back to fully opaque. */
 export function resolveOpacity(style: ResolvedStyle): number {
   const opacity = style.opacity;

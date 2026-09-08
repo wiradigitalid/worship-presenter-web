@@ -165,7 +165,10 @@ export const mainSpineAdapter: ArtifactEditorAdapter = {
   },
 };
 
-export function createAnnouncementSetAdapter(setId: number): ArtifactEditorAdapter {
+export function createAnnouncementSetAdapter(
+  setId: number,
+  onListChange?: () => void
+): ArtifactEditorAdapter {
   return {
     list: async () => {
       const res = await fetch(`/api/admin/announcement-sets/${setId}/slides`, {
@@ -224,6 +227,7 @@ export function createAnnouncementSetAdapter(setId: number): ArtifactEditorAdapt
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create slide');
+      onListChange?.();
       return {
         id: String(data.id),
         label: data.label,
@@ -244,6 +248,7 @@ export function createAnnouncementSetAdapter(setId: number): ArtifactEditorAdapt
       if (!res.ok) {
         return { ok: false, status: res.status, error: data.error };
       }
+      onListChange?.();
       const slide = data.slide;
       const outPayload = (slide.payload ?? {}) as Record<string, unknown>;
       const template: StoredArtifactTemplate = {
@@ -272,6 +277,7 @@ export function createAnnouncementSetAdapter(setId: number): ArtifactEditorAdapt
       if (!res.ok) {
         return { ok: false, status: res.status, error: data.error };
       }
+      onListChange?.();
       return {
         ok: true,
         status: res.status,
@@ -300,6 +306,7 @@ export function createAnnouncementSetAdapter(setId: number): ArtifactEditorAdapt
       if (!res.ok) {
         return { ok: false, status: res.status, error: data.error };
       }
+      onListChange?.();
       return { ok: true, status: res.status };
     },
     reset: async (id: string, updatedAt: string) => {
@@ -319,6 +326,7 @@ export function createAnnouncementSetAdapter(setId: number): ArtifactEditorAdapt
       if (!res.ok) {
         return { ok: false, status: res.status, error: data.error };
       }
+      onListChange?.();
       const slideRes = await fetch(
         `/api/admin/announcement-sets/${setId}/slides/${id}`,
         { credentials: 'same-origin' }
@@ -354,6 +362,7 @@ export function createAnnouncementSetAdapter(setId: number): ArtifactEditorAdapt
       if (!res.ok) {
         return { ok: false, status: res.status, error: data.error };
       }
+      onListChange?.();
       const summaries: ArtifactTemplateSummary[] = (data.slides ?? []).map(
         (slide: any) => ({
           id: String(slide.id),

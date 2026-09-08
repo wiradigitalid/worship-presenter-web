@@ -12,6 +12,7 @@ import {
   resolveElementText,
   resolveFontFamily,
   resolveItalic,
+  resolveUnderline,
   resolveObjectFit,
   resolveOpacity,
   resolveTextAlign,
@@ -126,6 +127,7 @@ function TextElement({ element }: { element: ResolvedElement }) {
         color: toCssColor(style.fontColor) ?? '#FFFFFF',
         fontWeight: resolveBold(style) ? 700 : 400,
         fontStyle: resolveItalic(style) ? 'italic' : 'normal',
+        textDecoration: resolveUnderline(style) ? 'underline' : 'none',
       }}
     >
       {/* `em` in `font-size` resolves against the box, so the scale multiplies

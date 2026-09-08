@@ -1,9 +1,14 @@
 promise_progress: 100%
 rtm_rows:
-  green: 53
-  counted: 53
+  green: 70
+  counted: 70
   excluded_no_uc: 1
 work_progress:
+- spec: SPEC-12
+  status: closed
+  tickets_done: 8
+  tickets_total: 8
+  work_progress: 100%
 - spec: W1
   status: closed
   tickets_done: 2
@@ -72,14 +77,14 @@ validators_skipped:
     (changed at 56db449, reviewed at 42c967c)'
 open_questions:
   blocking: 0
-  assumptions: 50
+  assumptions: 49
   external: 1
-  answered: 8
+  answered: 10
   open_by_whose:
     owner: 0
     run: 0
     frozen: 0
-    unstated: 50
+    unstated: 49
   blocking_budget: 9
   blocking_over_budget: false
   assumptions_budget_per_gate: 15
