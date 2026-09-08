@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useT } from '@/lib/i18n/operator';
 import ArtifactEditor from '@/components/admin/ArtifactEditor';
 import { createSongSetTrioAdapter } from '@/lib/registry/canvas-adapters';
@@ -22,6 +23,11 @@ export function SongSetEntriesPanel() {
   const [entries, setEntries] = useState<SongSetEntry[]>([]);
   const [selectedVarName, setSelectedVarName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // New Song Set creation inputs
+  const [newTitle, setNewTitle] = useState('');
+  const [newVarName, setNewVarName] = useState('');
+  const [creating, setCreating] = useState(false);
 
   // Rename state
   const [isRenaming, setIsRenaming] = useState(false);
@@ -66,15 +72,22 @@ export function SongSetEntriesPanel() {
     }
   }, [activeEntry?.variableName]);
 
-  const handleCreateAuto = async () => {
-    let nextNum = entries.length + 1;
-    let candidateVar = `song_set_${nextNum}`;
-    while (entries.some((e) => e.variableName === candidateVar)) {
-      nextNum++;
-      candidateVar = `song_set_${nextNum}`;
+  const handleCreate = async () => {
+    const trimmedTitle = newTitle.trim();
+    if (!trimmedTitle) {
+      toast.error('Song set title is required');
+      return;
     }
-    const defaultTitle = `Song Set ${nextNum}`;
-
+    let candidateVar = newVarName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    if (!candidateVar) {
+      let nextNum = entries.length + 1;
+      candidateVar = `song_set_${nextNum}`;
+      while (entries.some((e) => e.variableName === candidateVar)) {
+        nextNum++;
+        candidateVar = `song_set_${nextNum}`;
+      }
+    }
+    setCreating(true);
     try {
       const res = await fetch('/api/admin/song-set-entries', {
         method: 'POST',
@@ -82,7 +95,7 @@ export function SongSetEntriesPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           variableName: candidateVar,
-          title: defaultTitle,
+          title: trimmedTitle,
         }),
       });
 
@@ -100,10 +113,14 @@ export function SongSetEntriesPanel() {
       setEntries((prev) => [...prev, created].sort((a, b) => a.position - b.position));
       setSelectedVarName(created.variableName);
       setDraftTitle(created.title);
+      setNewTitle('');
+      setNewVarName('');
       setIsRenaming(false);
       toast.success(t('admin.songSets.created').replace('{title}', created.title));
     } catch {
       toast.error(t('admin.songSets.createFailed'));
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -205,16 +222,44 @@ export function SongSetEntriesPanel() {
     <div className="grid grid-cols-1 lg:grid-cols-[330px_minmax(0,1fr)] gap-6">
       {/* Panel Kiri: Add New Song Set & List */}
       <aside className="space-y-4">
-        {/* Tombol New Song Set otomatis */}
-        <div className="rounded-xl border border-border bg-card p-3.5 shadow-sm">
-          <Button
-            type="button"
-            onClick={() => void handleCreateAuto()}
-            className="w-full bg-primary hover:bg-blue-600 text-white py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Song Set</span>
-          </Button>
+        {/* New Song Set creation panel per DEC-009 / DEC-010 */}
+        <div className="rounded-xl border border-border bg-card p-3.5 space-y-2.5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">New Song Set</span>
+            <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
+              Song Set
+            </span>
+          </div>
+          <div className="space-y-2 pt-0.5">
+            <Input
+              type="text"
+              placeholder="Song set title (e.g. Fellowship Song)"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              disabled={creating || loading}
+              className="text-xs h-8"
+            />
+            <div className="flex gap-1.5">
+              <Input
+                type="text"
+                placeholder="Variable code (e.g. fellowship_song)"
+                value={newVarName}
+                onChange={(e) => setNewVarName(e.target.value)}
+                disabled={creating || loading}
+                className="flex-1 text-xs h-8 font-mono"
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void handleCreate()}
+                disabled={creating || loading || !newTitle.trim()}
+                className="shrink-0 h-8 font-semibold"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                New
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* List Song Sets */}
@@ -294,13 +339,16 @@ export function SongSetEntriesPanel() {
             <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-3">
                 {isRenaming ? (
-                  <Input
-                    value={draftTitle}
-                    disabled={renaming}
-                    onChange={(e) => setDraftTitle(e.target.value)}
-                    className="text-base font-semibold max-w-sm"
-                    autoFocus
-                  />
+                  <div className="space-y-0.5">
+                    <Label className="text-[10px] text-muted-foreground uppercase font-semibold">Title:</Label>
+                    <Input
+                      value={draftTitle}
+                      disabled={renaming}
+                      onChange={(e) => setDraftTitle(e.target.value)}
+                      className="text-sm font-semibold max-w-sm h-8"
+                      autoFocus
+                    />
+                  </div>
                 ) : (
                   <span className="text-base font-bold text-foreground">{activeEntry.title}</span>
                 )}
@@ -374,7 +422,7 @@ export function SongSetEntriesPanel() {
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  2. Verse Layout (2/3 Formula)
+                  2. Verse Layout
                 </Button>
                 <Button
                   type="button"
@@ -399,12 +447,24 @@ export function SongSetEntriesPanel() {
                 hideList={true}
                 allowImages={selectedRole === 'title'}
                 bannerNote={
-                  selectedRole !== 'title' ? (
-                    <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-2.5 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between">
-                      <span>📐 <strong>Auto Lyric Box: 2/3 Height Standard</strong> — Automated formula for hymn lyrics. Canvas customizes background & shapes.</span>
-                      <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30">2/3 FORMULA</span>
-                    </div>
-                  ) : null
+                  <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-2.5 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between min-h-[42px]">
+                    {selectedRole === 'title' ? (
+                      <>
+                        <span>🎨 <strong>Song Title Slide</strong> — Title, hymn number, author, and song metadata. Canvas customizes layout & graphics.</span>
+                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30">TITLE SLIDE</span>
+                      </>
+                    ) : selectedRole === 'verse' ? (
+                      <>
+                        <span>📐 <strong>Auto Lyric Box: 2/3 Height Standard</strong> — Automated formula for hymn lyrics. Canvas customizes background & shapes.</span>
+                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30">VERSE LAYOUT</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📐 <strong>Auto Lyric Box: 2/3 Height Standard</strong> — Automated formula for refrain/chorus. Canvas customizes background & shapes.</span>
+                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30">REFRAIN LAYOUT</span>
+                      </>
+                    )}
+                  </div>
                 }
               />
             </div>

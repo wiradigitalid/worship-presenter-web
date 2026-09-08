@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-013-autopilot-mandate-artifacts-qa-followup.md
 
 ## Resume
 
-Iteration: 1 (boundary: complete SPEC-12-06 main spine toolbar & title consistency)
+Iteration: 1 (boundary: complete SPEC-12-07 song sets UX & button consistency)
 Run branch: autopilot/DEC-013 (PR: not open yet)
-Stopped at: Finished SPEC-12-06; ready for SPEC-12-07
+Stopped at: Finished SPEC-12-07; ready for SPEC-12-08
 Blocked: —
 Parked: —
-Next: SPEC-12-07: Song Sets UX & button consistency (BUG-16, DEC-009, DEC-010, DEC-011)
+Next: SPEC-12-08: Announcement Sets duplicate title & concurrency fix (BUG-9, BUG-17, DEC-009, DEC-010, DEC-011)
 
 ## Decisions
 
@@ -22,3 +22,4 @@ Next: SPEC-12-07: Song Sets UX & button consistency (BUG-16, DEC-009, DEC-010, D
 | It 1 (autopilot/DEC-013) | SPEC-12-04 | Extract Select item labels in select-utils and feed into Base UI native items prop in select.tsx | Touching 15+ call sites or parallel custom context | Stale label resolution on custom dropdowns | select.tsx, select-utils.ts, artifact-editor-controls.test.mjs |
 | It 1 (autopilot/DEC-013) | SPEC-12-05 | Add viewport height constraints and min-h floor on editor and canvasShellRef | Outer window scrolling on 1080p laptop displays | Pushing deck sequence & header off screen | ArtifactEditor.tsx, RegistryAdmin.tsx, artifact-editor-layout.test.mjs |
 | It 1 (autopilot/DEC-013) | SPEC-12-06 | Make Properties row always mounted with fallback placeholders, group title buttons with Canvas: label per DEC-011, make add buttons icon-only | Conditional render shifting canvas position | Visual layout jumps when selecting elements | ArtifactEditor.tsx, artifact-editor-controls.test.mjs, DEC-009, DEC-011 |
+| It 1 (autopilot/DEC-013) | SPEC-12-07 | Mirror Main Spine creation panel with title/code inputs, stable min-h-[42px] banner on all 3 tabs, drop (2/3 Formula) from tab label | Auto-generating song_set_N and jumping canvas | Inconsistent creation UI & shifting canvas | SongSetEntriesPanel.tsx, registry.test.mjs, DEC-009, DEC-010, DEC-011 |

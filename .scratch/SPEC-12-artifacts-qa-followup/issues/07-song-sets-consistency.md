@@ -8,18 +8,18 @@ applied into `.how/_platform/design-system.md`).
 
 **Blocked by:** 06
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Ordinary UX work, no debugging pass needed.
-- [ ] Closes `BUG-14`: the "Verse Layout" tab label no longer shows "(2/3 Formula)"; the canvas
+- [x] Ordinary UX work, no debugging pass needed.
+- [x] Closes `BUG-14`: the "Verse Layout" tab label no longer shows "(2/3 Formula)"; the canvas
       height stays the same when switching between "Title Slide", "Verse Layout", and "Reffrain
       Layout" — either the "Auto Lyric Box" explanatory banner appears with equivalent height on
       all three tabs, or it moves somewhere that isn't above the canvas.
-- [ ] Closes the Song Set half of `BUG-15`: a Rename affordance exists next to the Song Set's code
+- [x] Closes the Song Set half of `BUG-15`: a Rename affordance exists next to the Song Set's code
       (`variableName`/slug) field, alongside the existing title Rename.
-- [ ] Closes the remainder of the Song Set half of `BUG-15`, per `DEC-009`/`DEC-010`: the "New Song
+- [x] Closes the remainder of the Song Set half of `BUG-15`, per `DEC-009`/`DEC-010`: the "New Song
       Set" creation block's layout mirrors Main Spine's "New Slide" panel (section label, then
       fields, then the create button), with the `default`/primary button variant and the accepted
       "New" label.
-- [ ] Per `DEC-011`: the Title/Verse/Reff sub-slide title area applies the same `[Rename] | Canvas:
+- [x] Per `DEC-011`: the Title/Verse/Reff sub-slide title area applies the same `[Rename] | Canvas:
       [Reset] [Save]` grouping built in ticket 06.
