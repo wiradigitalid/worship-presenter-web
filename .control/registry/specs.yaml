@@ -603,6 +603,10 @@ waves:
     size: M
     depends_on: [W11]
     spec_folder: .scratch/SPEC-12-artifacts-qa-followup/
+    spec_reviewed:
+      date: '2026-09-08'
+      sha: '781dc13'
+      lenses: [structure, prose, edge-case-hunter]
     tickets:
       - id: "SPEC-12-01"
         component: registry
