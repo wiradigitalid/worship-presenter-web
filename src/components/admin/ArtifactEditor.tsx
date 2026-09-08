@@ -1823,7 +1823,7 @@ export default function ArtifactEditor({
     );
 
   return (
-    <div className={hideList ? 'block' : 'grid gap-6 lg:grid-cols-[330px_minmax(0,1fr)]'}>
+    <div className={hideList ? 'block' : 'grid gap-6 lg:grid-cols-[330px_minmax(0,1fr)] min-h-[580px]'}>
       {!hideList ? (
         <aside className="space-y-4">
           {prefixListSlot}
@@ -1906,7 +1906,7 @@ export default function ArtifactEditor({
               <span className="text-xs font-semibold text-foreground">Deck Sequence</span>
               <span className="text-[11px] text-muted-foreground font-mono">{templates.length} slides</span>
             </div>
-            <ul className="space-y-1.5 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+            <ul className="space-y-1.5 max-h-[calc(100vh-340px)] min-h-[220px] overflow-y-auto pr-1">
               {templates.map((item, index) => {
                 const isSelected = selectedId === item.id;
                 return (
@@ -2393,7 +2393,7 @@ export default function ArtifactEditor({
                 {/* CANVAS WORKSPACE & CONTEXT MENU (POIN 5 & 6) */}
                 <div
                   ref={canvasShellRef}
-                  className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-black/90"
+                  className="relative flex aspect-video w-full max-h-[calc(100vh-310px)] min-h-[320px] items-center justify-center overflow-hidden rounded-xl border border-border bg-black/90"
                   onContextMenu={(e) => {
                     e.preventDefault();
                     const canvas = fabricCanvasRef.current;

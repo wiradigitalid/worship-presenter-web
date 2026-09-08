@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-013-autopilot-mandate-artifacts-qa-followup.md
 
 ## Resume
 
-Iteration: 1 (boundary: complete SPEC-12-04 select dropdown label lookup)
+Iteration: 1 (boundary: complete SPEC-12-05 main spine page layout & viewport height)
 Run branch: autopilot/DEC-013 (PR: not open yet)
-Stopped at: Finished SPEC-12-04; ready for SPEC-12-05
+Stopped at: Finished SPEC-12-05; ready for SPEC-12-06
 Blocked: —
 Parked: —
-Next: SPEC-12-05: Main spine page layout & viewport height (BUG-15)
+Next: SPEC-12-06: Main Spine toolbar & title consistency (BUG-11, BUG-12, BUG-13, BUG-14)
 
 ## Decisions
 
@@ -20,3 +20,4 @@ Next: SPEC-12-05: Main spine page layout & viewport height (BUG-15)
 | It 1 (autopilot/DEC-013) | SPEC-12-02 | Wire context menu on canvasShellRef right-click, add scoped Delete/Backspace listener per DEC-012, and add drag visual feedback | Missing openers and unhandled keyboard events | Non-functional context menu & trapped delete | ArtifactEditor.tsx, DEC-012 |
 | It 1 (autopilot/DEC-013) | SPEC-12-03 | Implement calculateImageFit with natural dimensions, uniform contain scaling, centering, and element bounding clipBox | Independent axis stretching (squashed image) | Distorted image display on canvas | ArtifactEditor.tsx, canvas-utils.ts, artifact-preview.test.mjs, artifact-editor-controls.test.mjs |
 | It 1 (autopilot/DEC-013) | SPEC-12-04 | Extract Select item labels in select-utils and feed into Base UI native items prop in select.tsx | Touching 15+ call sites or parallel custom context | Stale label resolution on custom dropdowns | select.tsx, select-utils.ts, artifact-editor-controls.test.mjs |
+| It 1 (autopilot/DEC-013) | SPEC-12-05 | Add viewport height constraints and min-h floor on editor and canvasShellRef | Outer window scrolling on 1080p laptop displays | Pushing deck sequence & header off screen | ArtifactEditor.tsx, RegistryAdmin.tsx, artifact-editor-layout.test.mjs |
