@@ -106,14 +106,11 @@ defects:
     title: "An inserted image does not grow when its selection handles are resized"
     component: registry
     violates: []
-    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT #5; prompt-08-artifacts-qa-followup-round2.md § BUG-7; Round 4 manual QA"
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT #5; prompt-08-artifacts-qa-followup-round2.md § BUG-7; Round 4 manual QA; Round 5 manual QA"
     summary: >
       SPEC-12 fixed contain-fit. SPEC-13 implemented handle scaling. SPEC-14 fixed clipBox sync on
-      translation movement (`object:moving`). Round 4 manual QA confirmed translation dragging is fully
-      visible without clipping. However, a residual remains during active corner handle resizing: while
-      actively scaling the image larger, the image is visually clipped to its starting rectangle until
-      mouse release (`object:modified`). Root cause: `clipPath` (`clipBox`) is not updated during
-      `object:scaling` events. Residual filed into SPEC-15 ticket 01.
+      translation movement (`object:moving`). SPEC-15 synchronized clipPath during active `object:scaling`.
+      Round 5 manual QA confirmed real-time scaling and clipPath sync works as expected without clipping.
   - id: BUG-8
     status: fixed
     fixed_in: SPEC-13
@@ -168,18 +165,20 @@ defects:
       and its render path, and add the toolbar button next to Bold/Italic
       (ArtifactEditor.tsx ~L2156-2175 is the pattern to follow).
   - id: BUG-11
-    status: fixed
-    fixed_in: SPEC-15
-    reopened_in: SPEC-15
+    status: open
+    fixed_in: SPEC-14
+    reopened_in: SPEC-16
     title: "Main Spine editor still shows a vertical window scrollbar, and Deck Sequence's own height overshoots the layer"
     component: registry
     violates: []
-    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § PAGE LAYOUT; prompt-08-artifacts-qa-followup-round2.md § BUG-11; Round 4 manual QA"
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § PAGE LAYOUT; prompt-08-artifacts-qa-followup-round2.md § BUG-11; Round 4 manual QA; Round 5 manual QA"
     summary: >
-      SPEC-14 clamped Deck Sequence to eliminate page-level window scrolling. Round 4 manual QA confirmed
-      window scrollbars are resolved, but noted that in desktop mode, the Deck Sequence container shrinks
-      too small (`max-h-[calc(100vh-380px)] min-h-[220px]`) rather than stretching to align its bottom
-      boundary with the bottom edge of the canvas. Residual filed into SPEC-15 ticket 02.
+      SPEC-14 clamped Deck Sequence to eliminate page-level window scrolling. Round 4 manual QA noted that
+      Deck Sequence shrank too small on desktop. SPEC-15-02 relaxed the height constraint with `lg:max-h-none`,
+      which caused a regression in Round 5 manual QA: inside an unconstrained CSS grid row, Deck Sequence
+      expanded indefinitely to contain all slides without internal scrolling, overshot the bottom edge of
+      the canvas card, and pushed the web page downward inducing a long window scrollbar. Reopened in SPEC-16
+      ticket 01 to enforce strict desktop height containment aligned to the canvas bottom boundary.
   - id: BUG-12
     status: fixed
     fixed_in: SPEC-12
@@ -378,22 +377,36 @@ defects:
     title: "Redundant 'Apply Style' button in text properties toolbar remains after realtime update adoption"
     component: registry
     violates: []
-    source: "Round 4 manual QA (2026-09-09) § Poin 5"
+    source: "Round 4 manual QA (2026-09-09) § Poin 5; Round 5 manual QA"
     summary: >
       The text properties toolbar still renders an explicit 'Apply Style' button (`ArtifactEditor.tsx:2602-2610`),
       even though all 9 text property controls apply in real time immediately to the active selection. The button
-      is obsolete, misleading to operators, and needlessly consumes toolbar space. Filed into SPEC-15 ticket 03.
+      is obsolete, misleading to operators, and needlessly consumes toolbar space. Confirmed resolved in Round 5 manual QA.
   - id: BUG-29
     status: fixed
     fixed_in: SPEC-15
     title: "Song Set entry list item expands height in edit mode, causing abrupt layout shift"
     component: registry
     violates: []
-    source: "Round 4 manual QA (2026-09-09) § Poin 6"
+    source: "Round 4 manual QA (2026-09-09) § Poin 6; Round 5 manual QA"
     summary: >
       Clicking the pencil edit icon on a Configured Song Sets item replaces the ~48px row with two vertically
       stacked `Input` components plus buttons (~86px), causing vertical layout shift and pushing subsequent
-      entries down. Requires zero-layout-shift editing (e.g. switching the top New Song Set card into edit mode).
-      Filed into SPEC-15 ticket 04.
+      entries down. SPEC-15 moved editing into the top form card, fixing list item expansion (confirmed in Round 5 QA).
+      Residual defect regarding top card header title wrapping filed under BUG-30.
+  - id: BUG-30
+    status: open
+    title: "Song Set top form card expands height when editing due to long title in card header label"
+    component: registry
+    violates: []
+    source: "Round 5 manual QA (2026-09-09) § Poin 3"
+    summary: >
+      When entering edit mode on a Song Set entry, the top form card header displays `Edit Song Set: {title}`
+      (or localized `Edit Set Lagu: {title}`). In the narrow 330px sidebar column alongside the badge, long
+      titles such as `Bible Talk Opening Song` wrap onto multiple lines, vertically expanding the top card
+      and pushing down the configured song sets list below it. Resolved by using a compact static header
+      (e.g. `Edit Song Set` / `Edit Set Lagu` without appending the long title, since the full title is already
+      displayed and editable in the input field directly underneath) with `truncate min-w-0` safety.
+      Filed into SPEC-16 ticket 02.
 
 

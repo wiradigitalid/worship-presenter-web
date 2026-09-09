@@ -905,6 +905,35 @@ waves:
         tests:
           - tests/operator-shadcn-guard.test.mjs
 
+  - id: SPEC-16
+    status: open
+    release: artifacts-qa-followup-round5
+    prd: [offline-deck]
+    fr: [FR-20, FR-21, FR-29]
+    size: S
+    depends_on: [SPEC-15]
+    spec_folder: .scratch/SPEC-16-artifacts-qa-followup-round5/
+    spec_reviewed:
+      date: '2026-09-09'
+      sha: '76a3f74'
+      lenses: [structure, prose, edge-case-hunter]
+    tickets:
+      - id: "SPEC-16-01"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-layout.test.mjs
+      - id: "SPEC-16-02"
+        component: registry
+        satisfies: [UC-24]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/operator-shadcn-guard.test.mjs
+
+
 
 
 

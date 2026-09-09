@@ -359,6 +359,30 @@ decisions:
       - tests/artifact-editor-controls.test.mjs
       - tests/artifact-editor-layout.test.mjs
       - tests/operator-shadcn-guard.test.mjs
+  - id: DEC-018
+    type: mandate
+    status: applied
+    accepted_by: "kodesh87 (2026-09-09)"
+    title: Autopilot mandate for Artifacts QA Follow-up Round 5 (SPEC-16)
+    file: .control/decisions/DEC-018-autopilot-mandate-artifacts-qa-followup-round5.md
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent
+      loop: 10m
+      expires: '2026-09-16'
+    touches:
+      - .control/registry/specs.yaml
+      - .control/registry/decisions.yaml
+      - .control/registry/defects.yaml
+      - src/components/admin/ArtifactEditor.tsx
+      - src/components/admin/SongSetEntriesPanel.tsx
+      - src/lib/i18n/catalogue-en.ts
+      - src/lib/i18n/catalogue-id.ts
+      - tests/artifact-editor-layout.test.mjs
+      - tests/operator-shadcn-guard.test.mjs
+
 
 
 
