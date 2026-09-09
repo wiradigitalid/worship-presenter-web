@@ -61,8 +61,12 @@ test('SPEC-13-04 / SPEC-14-02 / SPEC-15-02 / SPEC-16-01: Deck Sequence card flex
     'Left aside must carry lg:flex lg:flex-col to span full height on desktop'
   );
   assert.ok(
-    asideBlock.includes('flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-[min(440px,calc(100vh-380px))]'),
-    'Deck Sequence card inside aside must carry bounded desktop height lg:max-h-[min(440px,calc(100vh-380px))]'
+    asideBlock.includes('lg:h-0 lg:min-h-full'),
+    'Left aside must carry lg:h-0 lg:min-h-full to prevent unconstrained row height expansion'
+  );
+  assert.ok(
+    asideBlock.includes('flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-full'),
+    'Deck Sequence card inside aside must carry flex-1 with lg:max-h-full to stretch and align with canvas bottom'
   );
   assert.ok(
     !asideBlock.includes('lg:max-h-none'),

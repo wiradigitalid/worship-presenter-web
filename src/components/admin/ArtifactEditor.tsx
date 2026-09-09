@@ -2007,7 +2007,7 @@ export default function ArtifactEditor({
   return (
     <div className={hideList ? 'block' : 'grid gap-6 lg:grid-cols-[330px_minmax(0,1fr)] min-h-[580px]'}>
       {!hideList ? (
-        <aside className="space-y-4 lg:space-y-0 lg:flex lg:flex-col lg:gap-4">
+        <aside className="space-y-4 lg:space-y-0 lg:flex lg:flex-col lg:gap-4 lg:h-0 lg:min-h-full">
           {prefixListSlot ? <div className="shrink-0">{prefixListSlot}</div> : null}
 
           {/* POIN 1 & 2: REGION "NEW SLIDE" */}
@@ -2083,7 +2083,7 @@ export default function ArtifactEditor({
           </div>
 
           {/* LIST TEMPLATES (POIN 3: HOVER ACTIONS & DND REORDER) */}
-          <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-[min(440px,calc(100vh-380px))]">
+          <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-full">
             <div className="flex items-center justify-between shrink-0">
               <span className="text-xs font-semibold text-foreground">Deck Sequence</span>
               <span className="text-[11px] text-muted-foreground font-mono">{templates.length} slides</span>
