@@ -933,6 +933,43 @@ waves:
         tests:
           - tests/operator-shadcn-guard.test.mjs
 
+  - id: SPEC-17
+    status: open
+    release: artifacts-font-selector-two-row-toolbar
+    prd: [offline-deck]
+    fr: [FR-20, FR-21, FR-29]
+    size: M
+    depends_on: [SPEC-16]
+    spec_folder: .scratch/SPEC-17-artifacts-font-selector-two-row-toolbar/
+    spec_reviewed:
+      date: '2026-09-09'
+      sha: '36dfb17'
+      lenses: [structure, prose, edge-case-hunter]
+    tickets:
+      - id: "SPEC-17-01"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/artifact-font-catalog.test.mjs
+      - id: "SPEC-17-02"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-17-01"]
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-layout.test.mjs
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-17-03"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-17-02"]
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+
+
 
 
 

@@ -608,6 +608,49 @@ rtm:
   FR: FR-20
   DEC: []
   UC: UC-14
+  ticket: SPEC-17-01
+  spec: SPEC-17
+  release: artifacts-font-selector-two-row-toolbar
+  test:
+  - tests/artifact-font-catalog.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-17-02
+  spec: SPEC-17
+  release: artifacts-font-selector-two-row-toolbar
+  test:
+  - tests/artifact-editor-layout.test.mjs
+  - tests/artifact-editor-controls.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-17-03
+  spec: SPEC-17
+  release: artifacts-font-selector-two-row-toolbar
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
   ticket: W11-02
   spec: W11
   release: artifacts-overhaul
@@ -1486,6 +1529,49 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-17-01
+  spec: SPEC-17
+  release: artifacts-font-selector-two-row-toolbar
+  test:
+  - tests/artifact-font-catalog.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-17-02
+  spec: SPEC-17
+  release: artifacts-font-selector-two-row-toolbar
+  test:
+  - tests/artifact-editor-layout.test.mjs
+  - tests/artifact-editor-controls.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-17-03
+  spec: SPEC-17
+  release: artifacts-font-selector-two-row-toolbar
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
