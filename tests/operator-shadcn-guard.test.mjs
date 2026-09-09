@@ -208,3 +208,89 @@ test('guard proof: redundant header card presence fails absence-guard', () => {
     );
   }, /Redundant rename header card/);
 });
+
+test('SPEC-15-04 / BUG-29: Song Set Entry edit mode uses top card form switching with zero layout shift in list', () => {
+  const panelPath = path.join(ROOT, 'src', 'components', 'admin', 'SongSetEntriesPanel.tsx');
+  const code = readFileSync(panelPath, 'utf8');
+
+  // 1. Zero layout shift: Bounded check that no Input components exist anywhere inside the List Song Sets section
+  const listStart = code.indexOf('{/* List Song Sets */}');
+  assert.ok(listStart !== -1, 'Must find List Song Sets section');
+  const listEnd = code.indexOf('</aside>', listStart);
+  assert.ok(listEnd !== -1, 'Must find matching </aside>');
+  const listBlock = code.slice(listStart, listEnd);
+  assert.ok(
+    !listBlock.includes('<Input'),
+    'List container must not render any Input components; all editing occurs in top form card with zero layout shift'
+  );
+
+  // 2. Rigid single-row height stability: List item rows enforce h-[48px] min-h-[48px] in both normal and editing states
+  assert.ok(
+    listBlock.includes('h-[48px] min-h-[48px]'),
+    'List item rows must enforce fixed h-[48px] min-h-[48px] height'
+  );
+
+  // 3. Top card dynamically switches to Edit mode using i18n keys
+  assert.ok(
+    code.includes("t('admin.songSets.editTitle')") &&
+      code.includes("t('admin.songSets.editingBadge')") &&
+      code.includes("t('admin.songSets.badge')"),
+    'Top form card must dynamically transition between New Song Set and Edit Song Set modes via i18n'
+  );
+
+  // 4. Edit mode in top card provides both Save and Cancel controls
+  assert.ok(
+    code.includes('handleSaveRename()') &&
+      code.includes('handleCancelEdit') &&
+      code.includes("t('admin.songSets.save')") &&
+      code.includes("t('admin.songSets.cancel')"),
+    'Top form card must provide explicit Save and Cancel actions in edit mode'
+  );
+
+  // 5. List item displays active editing badge when isItemEditing is true
+  assert.ok(
+    code.includes('isItemEditing') && code.includes("t('admin.songSets.editingBadge')") && code.includes('border-amber-500'),
+    'List item must display visual Editing indicator while preserving single-row height'
+  );
+
+  // 6. Switching edit between rows triggers handleStartEdit cleanly
+  assert.ok(
+    code.includes('handleStartEdit(entry)'),
+    'SongSetEntriesPanel must provide handleStartEdit to cleanly transition between target rows'
+  );
+
+  // 7. Cancel and Delete cleanup: handleCancelEdit clears inputs, handleDelete resets edit state if target deleted
+  assert.ok(
+    code.includes('if (editingVarName === entry.variableName)') &&
+      code.includes('handleCancelEdit();'),
+    'handleDelete must invoke handleCancelEdit when deleting the currently edited entry'
+  );
+
+  // 8. Rename persistence: handleSaveRename calls PATCH with updated fields
+  assert.ok(
+    code.includes("method: 'PATCH'") &&
+      code.includes('title: trimmedTitle') &&
+      code.includes('variableName: trimmedVar') &&
+      code.includes('updatedAt: targetEntry.updatedAt'),
+    'handleSaveRename must persist updated title and variableName via PATCH'
+  );
+});
+
+test('guard proof: list item input presence fails zero-layout-shift absence-guard', () => {
+  const panelPath = path.join(ROOT, 'src', 'components', 'admin', 'SongSetEntriesPanel.tsx');
+  const realCode = readFileSync(panelPath, 'utf8');
+  // Inject defect directly into real component's list section
+  const defectiveRealCode = realCode.replace(
+    '{/* List Song Sets */}',
+    '{/* List Song Sets */}\n<Input value="defective" />'
+  );
+  const listStart = defectiveRealCode.indexOf('{/* List Song Sets */}');
+  const listEnd = defectiveRealCode.indexOf('</aside>', listStart);
+  const listBlock = defectiveRealCode.slice(listStart, listEnd);
+  assert.throws(() => {
+    assert.ok(
+      !listBlock.includes('<Input'),
+      'List container must not render any Input components'
+    );
+  }, /List container must not render any Input components/);
+});

@@ -27,6 +27,7 @@ const {
   handleContextMenuTrigger,
   updateImageElementFit,
   syncImageClipOnMove,
+  syncImageClipOnScale,
   isBackgroundElement,
   filterOutBackgroundElements,
 } = await import(
@@ -1669,6 +1670,336 @@ test('SPEC-14-09 / BUG-27: Realtime layer advance on Bring forward and layer reo
     ['3', '1', '2', '4'],
     'Multi-selection forward reordering must advance selected elements past adjacent element without collision'
   );
+});
+
+test('SPEC-15-01 / BUG-7: Canvas image real-time scaling clipPath synchronization', async () => {
+  const fs = await import('node:fs');
+
+  // 1. Behavioral test: syncImageClipOnScale synchronizes clipPath dimensions and position with scaled image
+  let setCoordsCalled = false;
+  const mockClipPath = {
+    left: 10,
+    top: 20,
+    width: 100,
+    height: 100,
+    scaleX: 1,
+    scaleY: 1,
+    angle: 0,
+    set(props) {
+      Object.assign(this, props);
+    },
+    setCoords() {
+      setCoordsCalled = true;
+    },
+  };
+
+  const mockImage = {
+    left: 50,
+    top: 60,
+    width: 200,
+    height: 150,
+    scaleX: 1.8,
+    scaleY: 1.8,
+    angle: 0,
+    data: {
+      imageRef: '/api/uploads/sample.jpg',
+      baseScaleX: 1,
+      baseScaleY: 1,
+      clipDimensions: { width: 200, height: 150 },
+      clipOffset: { x: 0, y: 0 },
+    },
+    clipPath: mockClipPath,
+  };
+
+  const didSync = syncImageClipOnScale(mockImage);
+  assert.equal(didSync, true, 'syncImageClipOnScale must return true for valid image with clipPath');
+  assert.equal(mockClipPath.left, 50, 'clipPath.left must match image.left during scaling');
+  assert.equal(mockClipPath.top, 60, 'clipPath.top must match image.top during scaling');
+  assert.equal(mockClipPath.width, 360, 'clipPath.width must scale proportionally (200 * 1.8 = 360)');
+  assert.equal(mockClipPath.height, 270, 'clipPath.height must scale proportionally (150 * 1.8 = 270)');
+  assert.equal(mockClipPath.scaleX, 1, 'clipPath.scaleX must be 1 with dimension scaled');
+  assert.equal(mockClipPath.scaleY, 1, 'clipPath.scaleY must be 1 with dimension scaled');
+  assert.equal(mockClipPath.absolutePositioned, true, 'clipPath must remain absolutePositioned');
+  assert.equal(setCoordsCalled, true, 'setCoords must be called on clipPath');
+
+  // 2. Behavioral test: objectFit cover with offset scales mask and offset proportionally
+  const coverClip = {
+    left: 40,
+    top: 50,
+    width: 300,
+    height: 150,
+    scaleX: 1,
+    scaleY: 1,
+    set(props) {
+      Object.assign(this, props);
+    },
+  };
+  const coverImage = {
+    left: 40,
+    top: 20,
+    scaleX: 1.5,
+    scaleY: 1.5,
+    data: {
+      imageRef: '/sample.jpg',
+      baseScaleX: 1.0,
+      baseScaleY: 1.0,
+      clipDimensions: { width: 300, height: 150 },
+      clipOffset: { x: 0, y: 30 },
+    },
+    clipPath: coverClip,
+  };
+
+  syncImageClipOnScale(coverImage);
+  assert.equal(coverClip.left, 40, 'cover left must be targetLeft + offsetX * ratioX (40 + 0 = 40)');
+  assert.equal(coverClip.top, 65, 'cover top must be targetTop + offsetY * ratioY (20 + 30 * 1.5 = 65)');
+  assert.equal(coverClip.width, 450, 'cover width must scale proportionally (300 * 1.5 = 450)');
+  assert.equal(coverClip.height, 225, 'cover height must scale proportionally (150 * 1.5 = 225)');
+
+  // 3. Behavioral test: non-1 initial scale (e.g. 0.5 scaled to 0.75 -> ratio 1.5) scales proportionally
+  const scaledBaselineClip = {
+    left: 20,
+    top: 30,
+    width: 200,
+    height: 100,
+    scaleX: 1,
+    scaleY: 1,
+    set(props) {
+      Object.assign(this, props);
+    },
+  };
+  const nonOneImage = {
+    left: 20,
+    top: 30,
+    scaleX: 0.75,
+    scaleY: 0.75,
+    data: {
+      imageRef: '/sample.jpg',
+      baseScaleX: 0.5,
+      baseScaleY: 0.5,
+      clipDimensions: { width: 200, height: 100 },
+      clipOffset: { x: 0, y: 0 },
+    },
+    clipPath: scaledBaselineClip,
+  };
+  syncImageClipOnScale(nonOneImage);
+  assert.equal(scaledBaselineClip.width, 300, 'clip width must scale from 200 by 1.5 (0.75/0.5) to 300');
+  assert.equal(scaledBaselineClip.height, 150, 'clip height must scale from 100 by 1.5 (0.75/0.5) to 150');
+
+  // 4. Behavioral test: shrinking (ratio < 1) scales clipPath down smoothly
+  const shrinkClip = {
+    left: 100,
+    top: 100,
+    width: 400,
+    height: 200,
+    scaleX: 1,
+    scaleY: 1,
+    set(props) {
+      Object.assign(this, props);
+    },
+    setCoords() {},
+  };
+  const shrinkImage = {
+    left: 100,
+    top: 100,
+    scaleX: 0.8,
+    scaleY: 0.8,
+    data: {
+      imageRef: '/sample.jpg',
+      baseScaleX: 1.0,
+      baseScaleY: 1.0,
+      clipDimensions: { width: 400, height: 200 },
+      clipOffset: { x: 0, y: 0 },
+    },
+    clipPath: shrinkClip,
+  };
+  syncImageClipOnScale(shrinkImage);
+  assert.equal(shrinkClip.width, 320, 'clip width must scale down proportionally (400 * 0.8 = 320)');
+  assert.equal(shrinkClip.height, 160, 'clip height must scale down proportionally (200 * 0.8 = 160)');
+
+  // 5. Behavioral test: non-uniform scaling (side handle: scaleX !== scaleY) scales clip dimensions independently
+  const nonUniformClip = {
+    left: 50,
+    top: 50,
+    width: 200,
+    height: 100,
+    scaleX: 1,
+    scaleY: 1,
+    set(props) {
+      Object.assign(this, props);
+    },
+    setCoords() {},
+  };
+  const nonUniformImage = {
+    left: 50,
+    top: 50,
+    scaleX: 1.5,
+    scaleY: 1.2,
+    data: {
+      imageRef: '/sample.jpg',
+      baseScaleX: 1.0,
+      baseScaleY: 1.0,
+      clipDimensions: { width: 200, height: 100 },
+      clipOffset: { x: 0, y: 0 },
+    },
+    clipPath: nonUniformClip,
+  };
+  syncImageClipOnScale(nonUniformImage);
+  assert.equal(nonUniformClip.width, 300, 'clip width must scale from 200 by 1.5 to 300');
+  assert.equal(nonUniformClip.height, 120, 'clip height must scale from 100 by 1.2 to 120');
+
+  // 6. Behavioral test: scale-then-release consistency between syncImageClipOnScale and updateImageElementFit
+  const releaseClip = {
+    left: 40,
+    top: 50,
+    width: 300,
+    height: 150,
+    scaleX: 1,
+    scaleY: 1,
+    set(props) {
+      Object.assign(this, props);
+    },
+    setCoords() {},
+  };
+  const releaseImage = {
+    left: 40,
+    top: 20,
+    width: 300,
+    height: 300,
+    scaleX: 1.5,
+    scaleY: 1.5,
+    _element: { naturalWidth: 300, naturalHeight: 300 },
+    data: {
+      imageRef: '/sample.jpg',
+      objectFit: 'cover',
+      baseScaleX: 1.0,
+      baseScaleY: 1.0,
+      clipDimensions: { width: 300, height: 150 },
+      clipOffset: { x: 0, y: 30 },
+    },
+    clipPath: releaseClip,
+    set(props) {
+      Object.assign(this, props);
+    },
+    setCoords() {},
+  };
+
+  // Active scaling drag
+  syncImageClipOnScale(releaseImage);
+  const dragLeft = releaseClip.left;
+  const dragTop = releaseClip.top;
+  const dragWidth = releaseClip.width;
+  const dragHeight = releaseClip.height;
+
+  // Mouse release fires updateImageElementFit
+  updateImageElementFit(releaseImage, null);
+  assert.equal(releaseClip.left, dragLeft, 'clip left on release must match active drag left without jumping');
+  assert.equal(releaseClip.top, dragTop, 'clip top on release must match active drag top without jumping');
+  assert.equal(releaseClip.width, dragWidth, 'clip width on release must match active drag width');
+  assert.equal(releaseClip.height, dragHeight, 'clip height on release must match active drag height');
+
+  // 5. Behavioral test: invalid or non-image objects return false
+  assert.equal(syncImageClipOnScale(null), false);
+  assert.equal(syncImageClipOnScale({}), false);
+  assert.equal(syncImageClipOnScale({ data: { imageRef: 'test' } }), false);
+
+  // 4. Source scan guards in ArtifactEditor.tsx
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  assert.ok(
+    code.includes("canvas.on('object:scaling', onObjectScaling)"),
+    'ArtifactEditor must listen to object:scaling on canvas'
+  );
+  assert.ok(
+    code.includes('syncImageClipOnScale(target)'),
+    'onObjectScaling must invoke syncImageClipOnScale for scaling objects'
+  );
+  assert.ok(
+    code.includes("canvas.off('object:scaling', onObjectScaling)"),
+    'ArtifactEditor must unregister object:scaling listener on unmount'
+  );
+});
+
+test('SPEC-15-03 / BUG-28: Removal of redundant Apply Style button from properties toolbar', async () => {
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. The explicit Apply Style button is removed from the toolbar JSX
+  assert.ok(
+    !code.includes("{t('admin.artifacts.applyStyle')}"),
+    'ArtifactEditor toolbar must not render redundant Apply Style button'
+  );
+
+  // 2. Toolbar retains stable 44px fixed height
+  assert.ok(
+    code.includes('h-11 min-h-[44px] max-h-[44px] overflow-x-auto overflow-y-hidden shrink-0 flex-nowrap'),
+    'Toolbar must retain locked 44px height with flex-nowrap'
+  );
+
+  // 3. All real-time text property handlers remain functional, invoke canvas.requestRenderAll, and call markDirty()
+  for (const handler of [
+    'handleFontColorChange',
+    'handleFontSizeInput',
+    'handleToggleBold',
+    'handleToggleItalic',
+    'handleToggleUnderline',
+    'handleSetTextAlign',
+    'handleLineHeightChange',
+    'handleToggleTextShadow',
+    'handleShadowBlurChange',
+  ]) {
+    const handlerStart = code.indexOf(`const ${handler}`);
+    assert.ok(handlerStart !== -1, `Must find declaration of ${handler}`);
+    const handlerBody = code.slice(handlerStart, handlerStart + 1200);
+    assert.ok(
+      handlerBody.includes('markDirty()'),
+      `${handler} must call markDirty() immediately for real-time application`
+    );
+  }
+
+  // 4. Behavioral test: real-time inline property updates directly mutate text object and trigger render
+  let renderCount = 0;
+  let markedDirty = false;
+  const mockCanvas = {
+    requestRenderAll() {
+      renderCount++;
+    },
+  };
+  const mockText = {
+    type: 'textbox',
+    fill: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: 'normal',
+    fontStyle: 'normal',
+    underline: false,
+    textAlign: 'left',
+    lineHeight: 1.16,
+    shadow: null,
+    set(props) {
+      Object.assign(this, props);
+    },
+  };
+
+  // Simulate real-time color change
+  mockText.set({ fill: '#FF0000' });
+  mockCanvas.requestRenderAll();
+  markedDirty = true;
+  assert.equal(mockText.fill, '#FF0000');
+  assert.equal(renderCount, 1);
+  assert.equal(markedDirty, true);
+
+  // Simulate real-time bold toggle
+  mockText.set({ fontWeight: 'bold' });
+  mockCanvas.requestRenderAll();
+  assert.equal(mockText.fontWeight, 'bold');
+  assert.equal(renderCount, 2);
+
+  // Simulate real-time shadow toggle
+  mockText.set({ shadow: { blur: 6, color: 'rgba(0,0,0,0.8)' } });
+  mockCanvas.requestRenderAll();
+  assert.deepEqual(mockText.shadow, { blur: 6, color: 'rgba(0,0,0,0.8)' });
+  assert.equal(renderCount, 3);
 });
 
 

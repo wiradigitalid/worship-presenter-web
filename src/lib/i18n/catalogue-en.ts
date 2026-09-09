@@ -457,7 +457,12 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
     'Each entry auto-generates weekly inputs on the Service form ({var}_song_number, {var}_song_book_name, {var}_song_background). Position on the spine is configured in the Main spine tab.',
   'admin.songSets.empty': 'No song set entries found.',
   'admin.songSets.loadFailed': 'Failed to load song set entries',
-  'admin.songSets.createTitle': 'Add Song Set Entry',
+  'admin.songSets.createTitle': 'New Song Set',
+  'admin.songSets.createTitlePlaceholder': 'Song set title (e.g. Fellowship Song)',
+  'admin.songSets.createVarPlaceholder': 'Variable code (e.g. fellowship_song)',
+  'admin.songSets.editTitle': 'Edit Song Set: {title}',
+  'admin.songSets.editingBadge': 'Editing',
+  'admin.songSets.badge': 'Song Set',
   'admin.songSets.variableName': 'Variable name',
   'admin.songSets.variableNameHint':
     '1–80 lowercase letters, numbers, hyphens, or underscores (e.g. opening_song_bt). Immutable once created.',

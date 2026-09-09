@@ -89,6 +89,7 @@ import {
   serializeTextStyle,
   shouldPreserveSelectionOnContextMenu,
   syncImageClipOnMove,
+  syncImageClipOnScale,
   toStrictHexColor,
   updateImageElementFit,
 } from '@/lib/registry/canvas-utils';
@@ -204,12 +205,18 @@ function elementToFabricObject(
           imageRef: element.imageRef,
           objectFit: element.style?.objectFit,
           clipOffset: { x: left - initial.left, y: top - initial.top },
+          clipDimensions: { width, height },
+          baseScaleX: initial.scaleX,
+          baseScaleY: initial.scaleY,
         },
       });
       imgEl.onload = () => {
         const updated = calcFit();
         if ((fabricImg as any).data) {
           (fabricImg as any).data.clipOffset = { x: left - updated.left, y: top - updated.top };
+          (fabricImg as any).data.clipDimensions = { width, height };
+          (fabricImg as any).data.baseScaleX = updated.scaleX;
+          (fabricImg as any).data.baseScaleY = updated.scaleY;
         }
         fabricImg.set({
           width: updated.width,
@@ -607,6 +614,15 @@ export default function ArtifactEditor({
       };
       canvas.on('object:moving', onObjectMoving);
 
+      // SPEC-15-01: On active image object scaling, synchronize clipPath coordinates and dimensions
+      const onObjectScaling = (opt: any) => {
+        const target = opt.target;
+        if (target && syncImageClipOnScale(target)) {
+          canvas.requestRenderAll();
+        }
+      };
+      canvas.on('object:scaling', onObjectScaling);
+
       // SPEC-13-03: On image object scaling/modification, recalculate contain fit so image content grows/shrinks with handles
       const onObjectModified = (opt: any) => {
         const target = opt.target;
@@ -637,6 +653,7 @@ export default function ArtifactEditor({
         canvas.off('mouse:down', onMouseDown);
         canvas.off('mouse:up', onMouseUp);
         canvas.off('object:moving', onObjectMoving);
+        canvas.off('object:scaling', onObjectScaling);
         canvas.off('object:modified', onObjectModified);
         upperCanvasEl?.removeEventListener('contextmenu', onNativeContextMenu);
         for (const event of CANVAS_MUTATION_EVENTS) {
@@ -1990,11 +2007,11 @@ export default function ArtifactEditor({
   return (
     <div className={hideList ? 'block' : 'grid gap-6 lg:grid-cols-[330px_minmax(0,1fr)] min-h-[580px]'}>
       {!hideList ? (
-        <aside className="space-y-4">
-          {prefixListSlot}
+        <aside className="space-y-4 lg:space-y-0 lg:flex lg:flex-col lg:gap-4">
+          {prefixListSlot ? <div className="shrink-0">{prefixListSlot}</div> : null}
 
           {/* POIN 1 & 2: REGION "NEW SLIDE" */}
-          <div className="rounded-xl border border-border bg-card p-3.5 space-y-2.5 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-3.5 space-y-2.5 shadow-sm shrink-0">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">New Slide</span>
               <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
@@ -2066,7 +2083,7 @@ export default function ArtifactEditor({
           </div>
 
           {/* LIST TEMPLATES (POIN 3: HOVER ACTIONS & DND REORDER) */}
-          <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm flex flex-col max-h-[calc(100vh-380px)] min-h-[220px]">
+          <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-none">
             <div className="flex items-center justify-between shrink-0">
               <span className="text-xs font-semibold text-foreground">Deck Sequence</span>
               <span className="text-[11px] text-muted-foreground font-mono">{templates.length} slides</span>
@@ -2599,15 +2616,6 @@ export default function ArtifactEditor({
                           />
                         )}
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={applyTextStyle}
-                        className="text-xs h-7 ml-auto"
-                      >
-                        {t('admin.artifacts.applyStyle')}
-                      </Button>
                     </>
                   ) : fabricCanvasRef.current?.getActiveObjects().some((o) => Boolean((o as any).data?.imageRef)) ? (
                     <span className="text-muted-foreground text-xs italic">

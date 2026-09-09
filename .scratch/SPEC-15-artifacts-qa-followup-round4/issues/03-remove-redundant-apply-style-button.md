@@ -1,5 +1,7 @@
 # Ticket SPEC-15-03 — Remove Redundant "Apply Style" Button in Text Properties Toolbar (`BUG-28`)
 
+**Status:** done
+
 ## Description
 
 The text properties toolbar currently includes an "Apply Style" button (`ArtifactEditor.tsx:2602-2610` using translation key `admin.artifacts.applyStyle`).

@@ -447,15 +447,22 @@ export function updateImageElementFit(
   const naturalHeight = element?.naturalHeight || imgObj.height || 0;
   if (naturalWidth <= 0 || naturalHeight <= 0) return false;
 
-  // Current outer bounding box in canvas coordinates
+  // Current outer bounding box in canvas coordinates, accounting for scaling ratio relative to base fit
   const scaleX = Math.abs(imgObj.scaleX ?? 1);
   const scaleY = Math.abs(imgObj.scaleY ?? 1);
-  const boxWidth = (imgObj.width ?? 0) * scaleX;
-  const boxHeight = (imgObj.height ?? 0) * scaleY;
+  const baseScaleX = imgObj.data?.baseScaleX || imgObj.data?.fitScaleX || scaleX || 1;
+  const baseScaleY = imgObj.data?.baseScaleY || imgObj.data?.fitScaleY || scaleY || 1;
+  const ratioX = baseScaleX !== 0 ? scaleX / baseScaleX : 1;
+  const ratioY = baseScaleY !== 0 ? scaleY / baseScaleY : 1;
+
+  const origClipWidth = imgObj.data?.clipDimensions?.width ?? (imgObj.width ?? 0) * baseScaleX;
+  const origClipHeight = imgObj.data?.clipDimensions?.height ?? (imgObj.height ?? 0) * baseScaleY;
+  const boxWidth = origClipWidth * ratioX;
+  const boxHeight = origClipHeight * ratioY;
   if (boxWidth <= 0 || boxHeight <= 0) return false;
 
-  const boxLeft = (imgObj.left ?? 0) + (imgObj.data?.clipOffset?.x ?? 0);
-  const boxTop = (imgObj.top ?? 0) + (imgObj.data?.clipOffset?.y ?? 0);
+  const boxLeft = (imgObj.left ?? 0) + (imgObj.data?.clipOffset?.x ?? 0) * ratioX;
+  const boxTop = (imgObj.top ?? 0) + (imgObj.data?.clipOffset?.y ?? 0) * ratioY;
   const objectFit = imgObj.data?.objectFit === 'cover' ? 'cover' : 'contain';
   const fit = calculateImageFit(
     { left: boxLeft, top: boxTop, width: boxWidth, height: boxHeight },
@@ -495,6 +502,12 @@ export function updateImageElementFit(
       x: boxLeft - fit.left,
       y: boxTop - fit.top,
     };
+    imgObj.data.clipDimensions = {
+      width: boxWidth,
+      height: boxHeight,
+    };
+    imgObj.data.baseScaleX = fit.scaleX;
+    imgObj.data.baseScaleY = fit.scaleY;
   }
 
   imgObj.set({
@@ -528,6 +541,57 @@ export function syncImageClipOnMove(target: any): boolean {
   clip.set({
     left: targetLeft + offsetX,
     top: targetTop + offsetY,
+  });
+  if (typeof clip.setCoords === 'function') {
+    clip.setCoords();
+  }
+  return true;
+}
+
+/**
+ * Synchronizes an image object's clipPath dimensions and coordinates during active scaling (object:scaling),
+ * ensuring the clipping mask expands or shrinks synchronously with the image so that no clipping
+ * or visual boundary cutoff occurs while dragging resize handles.
+ */
+export function syncImageClipOnScale(target: any): boolean {
+  if (!target || !target.data?.imageRef) return false;
+  const clip = target.clipPath;
+  if (!clip) return false;
+
+  if (target.data && (!target.data.baseScaleX || !target.data.clipDimensions)) {
+    target.data.baseScaleX = target.data.baseScaleX || target.scaleX || 1;
+    target.data.baseScaleY = target.data.baseScaleY || target.scaleY || 1;
+    target.data.clipDimensions = target.data.clipDimensions || {
+      width: clip.width ?? target.width ?? 0,
+      height: clip.height ?? target.height ?? 0,
+    };
+  }
+
+  const baseScaleX = target.data?.baseScaleX || target.data?.fitScaleX || 1;
+  const baseScaleY = target.data?.baseScaleY || target.data?.fitScaleY || 1;
+  const currentScaleX = target.scaleX ?? 1;
+  const currentScaleY = target.scaleY ?? 1;
+
+  const ratioX = baseScaleX !== 0 ? currentScaleX / baseScaleX : 1;
+  const ratioY = baseScaleY !== 0 ? currentScaleY / baseScaleY : 1;
+
+  const origClipWidth = target.data?.clipDimensions?.width ?? clip.width ?? target.width ?? 0;
+  const origClipHeight = target.data?.clipDimensions?.height ?? clip.height ?? target.height ?? 0;
+  const offsetX = target.data?.clipOffset?.x ?? 0;
+  const offsetY = target.data?.clipOffset?.y ?? 0;
+
+  const targetLeft = target.left ?? 0;
+  const targetTop = target.top ?? 0;
+
+  clip.set({
+    left: targetLeft + offsetX * ratioX,
+    top: targetTop + offsetY * ratioY,
+    width: origClipWidth * ratioX,
+    height: origClipHeight * ratioY,
+    scaleX: 1,
+    scaleY: 1,
+    angle: target.angle ?? 0,
+    absolutePositioned: true,
   });
   if (typeof clip.setCoords === 'function') {
     clip.setCoords();

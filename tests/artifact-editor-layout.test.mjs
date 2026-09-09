@@ -45,14 +45,24 @@ test('SPEC-12-05: Main Spine editor layout height and viewport constraints', () 
   );
 });
 
-test('SPEC-13-04 / SPEC-14-02: Deck Sequence card flex containment and internal scroll height clamp (BUG-11)', () => {
+test('SPEC-13-04 / SPEC-14-02 / SPEC-15-02: Deck Sequence card flex containment and desktop bottom alignment with canvas (BUG-11)', () => {
   const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
   const code = fs.readFileSync(editorPath, 'utf8');
 
-  // Deck sequence card must be flex flex-col with max-h clamp tightened to prevent window scroll
+  // Bounded structural assertion: <aside> contains lg:flex lg:flex-col, and its Deck Sequence child container carries flex-1 with lg:max-h-none
+  const asideStart = code.indexOf('<aside className=');
+  assert.ok(asideStart !== -1, 'Must find <aside');
+  const asideEnd = code.indexOf('</aside>', asideStart);
+  assert.ok(asideEnd !== -1, 'Must find matching </aside>');
+  const asideBlock = code.slice(asideStart, asideEnd);
+
   assert.ok(
-    code.includes('flex flex-col max-h-[calc(100vh-380px)]'),
-    'Deck sequence card must use flex flex-col with tightened viewport max-h constraint (380px)'
+    asideBlock.includes('lg:flex lg:flex-col'),
+    'Left aside must carry lg:flex lg:flex-col to span full height on desktop'
+  );
+  assert.ok(
+    asideBlock.includes('flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-none'),
+    'Deck Sequence card inside aside must carry flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-none'
   );
 
   // Deck sequence header must be shrink-0 co-located with layout classes
@@ -119,8 +129,8 @@ test('SPEC-13-07: Title area Rename height stability across canvas-bearing edito
     'Surface 2: Announcement Set Active Set row must enforce min-h-[58px] height stability'
   );
 
-  // Surface 3: Song Set inline rename in SongSetEntriesPanel (SPEC-14-06 / BUG-24)
-  // Inline rename inputs render inside the list row with fixed h-8 constraint, removing the redundant top card
+  // Surface 3: Song Set rename in SongSetEntriesPanel (SPEC-14-06 / SPEC-15-04 / BUG-24, BUG-29)
+  // Rename inputs render inside the top card edit mode with fixed h-8 constraint, removing the redundant canvas header card
   assert.ok(
     !songSetsCode.includes('min-h-[58px]'),
     'Surface 3: Redundant Rename Header Card above canvas trio must be removed'
@@ -128,7 +138,7 @@ test('SPEC-13-07: Title area Rename height stability across canvas-bearing edito
   assert.ok(
     songSetsCode.includes('className="text-xs font-semibold h-8 w-full"') &&
     songSetsCode.includes('className="text-xs font-mono h-8 flex-1 min-w-0"'),
-    'Surface 3: Song Set inline rename inputs must use h-8 height constraint'
+    'Surface 3: Song Set top card rename inputs must use h-8 height constraint'
   );
 
   // BUG-23: Song Set trio drops Rename control

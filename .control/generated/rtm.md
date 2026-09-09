@@ -552,6 +552,48 @@ rtm:
   FR: FR-20
   DEC: []
   UC: UC-14
+  ticket: SPEC-15-01
+  spec: SPEC-15
+  release: artifacts-qa-followup-round4
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-15-02
+  spec: SPEC-15
+  release: artifacts-qa-followup-round4
+  test:
+  - tests/artifact-editor-layout.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-15-03
+  spec: SPEC-15
+  release: artifacts-qa-followup-round4
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
   ticket: W11-02
   spec: W11
   release: artifacts-overhaul
@@ -985,6 +1027,20 @@ rtm:
   FR: FR-29
   DEC: []
   UC: UC-24
+  ticket: SPEC-15-04
+  spec: SPEC-15
+  release: artifacts-qa-followup-round4
+  test:
+  - tests/operator-shadcn-guard.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-29
+  DEC: []
+  UC: UC-24
   ticket: W11-05
   spec: W11
   release: artifacts-overhaul
@@ -1340,6 +1396,48 @@ rtm:
   ticket: SPEC-14-09
   spec: SPEC-14
   release: artifacts-qa-followup-round3
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-15-01
+  spec: SPEC-15
+  release: artifacts-qa-followup-round4
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-15-02
+  spec: SPEC-15
+  release: artifacts-qa-followup-round4
+  test:
+  - tests/artifact-editor-layout.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-15-03
+  spec: SPEC-15
+  release: artifacts-qa-followup-round4
   test:
   - tests/artifact-editor-controls.test.mjs
   status: done

@@ -70,6 +70,16 @@ dag:
     - SPEC-14-08
   - parallel:
     - SPEC-14-09
+- spec: SPEC-15
+  order:
+  - parallel:
+    - SPEC-15-01
+  - parallel:
+    - SPEC-15-02
+  - parallel:
+    - SPEC-15-03
+  - parallel:
+    - SPEC-15-04
 - spec: W1
   order:
   - parallel:

@@ -1,5 +1,7 @@
 # Ticket SPEC-15-04 — Song Set Entry List Item Edit UX Without Height Expansion (`BUG-29`)
 
+**Status:** done
+
 ## Description
 
 In SPEC-14, the redundant top Rename Card was removed from above the Song Set canvas trio, and rename affordances were added inline to the Configured Song Sets list items.
