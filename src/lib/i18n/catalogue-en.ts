@@ -450,6 +450,7 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
     'This row is a marker that expands an Announcement Set. It has no authorable canvas of its own.',
   'admin.artifacts.markerChip': 'marker',
   'admin.songSets.title': 'Song Set Entries',
+  'admin.songSets.active': 'Active:',
   'admin.songSets.description':
     'Each entry auto-generates weekly inputs on the Service form ({var}_song_number, {var}_song_book_name, {var}_song_background). Position on the spine is configured in the Main spine tab.',
   'admin.songSets.empty': 'No song set entries found.',

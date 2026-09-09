@@ -195,8 +195,7 @@ test('SPEC-14-04 / BUG-21: Announcement Set select value text contrast on load',
 
   // Trigger enforces text-foreground and overrides data-placeholder text color when a set is selected
   assert.ok(
-    code.includes('selectedSet !== null && "text-foreground [&[data-placeholder]]:text-foreground"') ||
-    code.includes('text-foreground [&[data-placeholder]]:text-foreground'),
+    code.includes('selectedSet !== null && "text-foreground [&[data-placeholder]]:text-foreground"'),
     'Announcement set SelectTrigger must enforce text-foreground and override placeholder greyed-out text'
   );
 });

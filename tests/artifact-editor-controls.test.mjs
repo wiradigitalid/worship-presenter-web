@@ -1587,7 +1587,14 @@ test('SPEC-14-09 / BUG-27: Realtime layer advance on Bring forward and layer reo
     'ArtifactEditor must support forward, backward, front, and back layer reordering'
   );
 
-  // 2. Behavioral layer order swap test
+  // 2. Active selection is sorted by stack index to prevent multi-selection collisions
+  assert.ok(
+    code.includes('const sorted = [...active].sort') &&
+    code.includes("action === 'forward' || action === 'front' ? idxB - idxA : idxA - idxB"),
+    'ArtifactEditor must sort active objects by stack index to prevent multi-selection collisions'
+  );
+
+  // 3. Behavioral layer order swap test
   class MockCanvasStack {
     constructor(objects) {
       this._objects = [...objects];
@@ -1633,6 +1640,35 @@ test('SPEC-14-09 / BUG-27: Realtime layer advance on Bring forward and layer reo
   // Bring elA forward at top returns false
   const movedTop = mockStack.bringObjectForward(elA);
   assert.equal(movedTop, false, 'bringObjectForward at top must return false');
+
+  // 4. Multi-selection sort proof: moving [A, B] forward in [A, B, C, D]
+  // Without sorting (top-down), moving A then B causes collisions where neither advances past C.
+  // With sorting (top-down: B first, then A), both advance past C.
+  const el1 = { id: '1' };
+  const el2 = { id: '2' };
+  const el3 = { id: '3' };
+  const el4 = { id: '4' };
+  const multiStack = new MockCanvasStack([el1, el2, el3, el4]);
+
+  const activeSelection = [el1, el2]; // indices 0 and 1
+  const objects = multiStack.getObjects();
+  const sortedActive = [...activeSelection].sort((a, b) => {
+    const idxA = objects.indexOf(a);
+    const idxB = objects.indexOf(b);
+    return idxB - idxA; // top-down for forward
+  });
+
+  for (const obj of sortedActive) {
+    multiStack.bringObjectForward(obj);
+  }
+
+  // After sorted forward move: el2 swapped with el3, then el1 swapped with el3
+  // Resulting stack: [el3, el1, el2, el4]
+  assert.deepEqual(
+    multiStack.getObjects().map((o) => o.id),
+    ['3', '1', '2', '4'],
+    'Multi-selection forward reordering must advance selected elements past adjacent element without collision'
+  );
 });
 
 

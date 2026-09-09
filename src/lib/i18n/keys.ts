@@ -404,6 +404,7 @@ export const I18N_KEYS = [
   'admin.artifacts.markerSpineNote',
   'admin.artifacts.markerChip',
   'admin.songSets.title',
+  'admin.songSets.active',
   'admin.songSets.description',
   'admin.songSets.empty',
   'admin.songSets.loadFailed',

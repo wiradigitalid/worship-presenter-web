@@ -13,7 +13,6 @@ import {
   MoveVertical,
   Plus,
   SendToBack,
-  Sparkles,
   Square,
   Trash2,
   Type,
@@ -263,7 +262,6 @@ export {
   elementToFabricObject,
   serializeCanvas,
   serializeTextStyle,
-  syncImageClipOnMove,
 };
 
 export interface ArtifactEditorProps {

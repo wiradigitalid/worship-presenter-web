@@ -553,7 +553,7 @@ export function AnnouncementSetsPanel({
                 items={Object.fromEntries(sets.map((s) => [String(s.id), `${s.label} (${s.slideCount} slides)`]))}
               >
                 <SelectTrigger className={cn("w-full text-xs font-semibold h-8", selectedSet !== null && "text-foreground [&[data-placeholder]]:text-foreground")}>
-                  <SelectValue placeholder={selectedSet ? `${selectedSet.label} (${selectedSet.slideCount} slides)` : 'Select set…'}>
+                  <SelectValue placeholder="Select set…">
                     {selectedSet ? `${selectedSet.label} (${selectedSet.slideCount} slides)` : undefined}
                   </SelectValue>
                 </SelectTrigger>

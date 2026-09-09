@@ -51,8 +51,8 @@ test('SPEC-13-04 / SPEC-14-02: Deck Sequence card flex containment and internal 
 
   // Deck sequence card must be flex flex-col with max-h clamp tightened to prevent window scroll
   assert.ok(
-    code.includes('flex flex-col max-h-[calc(100vh-380px)]') || code.includes('flex flex-col max-h-[calc(100vh-320px)]'),
-    'Deck sequence card must use flex flex-col with viewport max-h constraint'
+    code.includes('flex flex-col max-h-[calc(100vh-380px)]'),
+    'Deck sequence card must use flex flex-col with tightened viewport max-h constraint (380px)'
   );
 
   // Deck sequence header must be shrink-0 co-located with layout classes

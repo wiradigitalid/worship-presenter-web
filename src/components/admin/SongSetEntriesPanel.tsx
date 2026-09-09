@@ -77,7 +77,7 @@ export function SongSetEntriesPanel() {
   const handleCreate = async () => {
     const trimmedTitle = newTitle.trim();
     if (!trimmedTitle) {
-      toast.error('Song set title is required');
+      toast.error(t('admin.songSets.titleInvalid'));
       return;
     }
     let candidateVar = newVarName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
@@ -453,7 +453,8 @@ export function SongSetEntriesPanel() {
                   </span>
                 </div>
                 <span className="text-[11px] text-muted-foreground">
-                  Active: <strong className="text-foreground">{activeEntry.title}</strong>{' '}
+                  {t('admin.songSets.active')}{' '}
+                  <strong className="text-foreground">{activeEntry.title}</strong>{' '}
                   <span className="font-mono text-[10px]">[{activeEntry.variableName}]</span>
                   {' · '}
                   Edits apply to all {entries.length} song set {entries.length === 1 ? 'entry' : 'entries'}
