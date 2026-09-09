@@ -1,0 +1,141 @@
+/**
+ * SPEC-17-01: 45-Font Catalog Verification, Fallback Stacks, and Constant Deduplication
+ */
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname, '..');
+
+const srcUrl = (...parts) =>
+  pathToFileURL(path.join(root, 'src', ...parts)).href;
+
+const {
+  FONT_CATALOG,
+  FONT_CATEGORY_LABELS,
+  DEFAULT_FONT_FAMILY,
+  getFontDefinition,
+  getFontStack,
+  getGoogleFontsStylesheetUrl,
+} = await import(srcUrl('lib', 'registry', 'font-catalog.ts'));
+
+const { DEFAULT_FONT_FAMILY: CANVAS_DEFAULT_FONT } = await import(
+  srcUrl('lib', 'registry', 'canvas-utils.ts')
+);
+
+const { DEFAULT_FONT_FAMILY: RENDER_DEFAULT_FONT } = await import(
+  srcUrl('lib', 'artifacts', 'render-model.ts')
+);
+
+test('FONT_CATALOG contains exactly 45 unique font definitions', () => {
+  assert.equal(FONT_CATALOG.length, 45, 'Font catalog must contain exactly 45 fonts');
+
+  const families = new Set(FONT_CATALOG.map((f) => f.family.toLowerCase()));
+  assert.equal(families.size, 45, 'All font family names must be unique');
+});
+
+test('FONT_CATALOG is distributed across exactly 5 distinct categories', () => {
+  const counts = {
+    system: 0,
+    sans: 0,
+    serif: 0,
+    display: 0,
+    script: 0,
+  };
+
+  for (const font of FONT_CATALOG) {
+    assert.ok(font.category in counts, `Unknown category: ${font.category}`);
+    counts[font.category]++;
+  }
+
+  assert.equal(counts.system, 10, 'Must have 10 system/PowerPoint safe fonts');
+  assert.equal(counts.sans, 12, 'Must have 12 modern sans-serif fonts');
+  assert.equal(counts.serif, 8, 'Must have 8 dignified serif fonts');
+  assert.equal(counts.display, 8, 'Must have 8 bold display & title fonts');
+  assert.equal(counts.script, 7, 'Must have 7 script & handwriting fonts');
+
+  const categories = Object.keys(FONT_CATEGORY_LABELS);
+  assert.deepEqual(
+    categories.sort(),
+    ['display', 'sans', 'script', 'serif', 'system'],
+    'Categories must match defined types'
+  );
+});
+
+test('every font entry has valid family, label, category, and fallback', () => {
+  for (const font of FONT_CATALOG) {
+    assert.ok(typeof font.family === 'string' && font.family.trim().length > 0, 'Family required');
+    assert.ok(typeof font.label === 'string' && font.label.trim().length > 0, 'Label required');
+    assert.ok(['sans-serif', 'serif', 'cursive', 'monospace'].includes(font.fallback), `Valid fallback required: ${font.fallback}`);
+  }
+});
+
+test('getFontDefinition resolves case-insensitively and handles whitespace', () => {
+  assert.equal(getFontDefinition('inter')?.family, 'Inter');
+  assert.equal(getFontDefinition('  Montserrat  ')?.family, 'Montserrat');
+  assert.equal(getFontDefinition('GREAT VIBES')?.family, 'Great Vibes');
+  assert.equal(getFontDefinition('NonExistentFont'), undefined);
+  assert.equal(getFontDefinition(undefined), undefined);
+});
+
+test('getFontStack returns appropriate CSS font stack', () => {
+  assert.equal(getFontStack('Inter'), '"Inter", sans-serif');
+  assert.equal(getFontStack('Playfair Display'), '"Playfair Display", serif');
+  assert.equal(getFontStack('Pacifico'), '"Pacifico", cursive');
+  assert.equal(getFontStack('UnknownFont'), '"Arial", sans-serif');
+  assert.equal(getFontStack(undefined), '"Arial", sans-serif');
+});
+
+test('DEFAULT_FONT_FAMILY is canonical Arial and deduplicated across modules', () => {
+  assert.equal(DEFAULT_FONT_FAMILY, 'Arial');
+  assert.equal(CANVAS_DEFAULT_FONT, 'Arial');
+  assert.equal(RENDER_DEFAULT_FONT, 'Arial');
+
+  // Absence guard: verify canvas-utils.ts and render-model.ts re-export rather than declaring literal
+  const canvasUtilsSrc = fs.readFileSync(path.join(root, 'src', 'lib', 'registry', 'canvas-utils.ts'), 'utf8');
+  assert.ok(
+    canvasUtilsSrc.includes("from '@/lib/registry/font-catalog'") && canvasUtilsSrc.includes('export { DEFAULT_FONT_FAMILY }'),
+    'canvas-utils.ts must re-export DEFAULT_FONT_FAMILY from font-catalog'
+  );
+  assert.ok(
+    !canvasUtilsSrc.includes("export const DEFAULT_FONT_FAMILY = 'Arial'"),
+    'canvas-utils.ts must not declare hardcoded DEFAULT_FONT_FAMILY'
+  );
+
+  const renderModelSrc = fs.readFileSync(path.join(root, 'src', 'lib', 'artifacts', 'render-model.ts'), 'utf8');
+  assert.ok(
+    renderModelSrc.includes("from '@/lib/registry/font-catalog'") && renderModelSrc.includes('export { DEFAULT_FONT_FAMILY }'),
+    'render-model.ts must re-export DEFAULT_FONT_FAMILY from font-catalog'
+  );
+  assert.ok(
+    !renderModelSrc.includes("export const DEFAULT_FONT_FAMILY = 'Arial'"),
+    'render-model.ts must not declare hardcoded DEFAULT_FONT_FAMILY'
+  );
+});
+
+test('Google Fonts stylesheet URL includes all non-system fonts with googleFont definitions', () => {
+  const url = getGoogleFontsStylesheetUrl();
+  assert.ok(url.startsWith('https://fonts.googleapis.com/css2?'));
+  assert.ok(url.endsWith('&display=swap'));
+
+  const googleFonts = FONT_CATALOG.filter((f) => Boolean(f.googleFont));
+  assert.equal(googleFonts.length, 35, '35 non-system fonts must have Google Font definitions');
+
+  for (const font of googleFonts) {
+    assert.ok(url.includes(`family=${font.googleFont}`), `URL must include ${font.googleFont}`);
+  }
+});
+
+test('spa/index.html and spa/projected.html embed Google Fonts stylesheet link', () => {
+  const indexHtml = fs.readFileSync(path.join(root, 'spa', 'index.html'), 'utf8');
+  const projectedHtml = fs.readFileSync(path.join(root, 'spa', 'projected.html'), 'utf8');
+
+  for (const [name, content] of [['index.html', indexHtml], ['projected.html', projectedHtml]]) {
+    assert.ok(content.includes('https://fonts.googleapis.com'), `${name} must include fonts.googleapis.com`);
+    assert.ok(content.includes('https://fonts.gstatic.com'), `${name} must include fonts.gstatic.com`);
+    assert.ok(content.includes('display=swap'), `${name} must include display=swap stylesheet`);
+  }
+});

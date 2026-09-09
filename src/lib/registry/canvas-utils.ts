@@ -16,7 +16,8 @@ export const INSERT_CASCADE_PX = 18;
 export const INSERT_CASCADE_STEPS = 8;
 
 export const DEFAULT_FONT_COLOR = '#FFFFFF';
-export const DEFAULT_FONT_FAMILY = 'Arial';
+import { DEFAULT_FONT_FAMILY } from '@/lib/registry/font-catalog';
+export { DEFAULT_FONT_FAMILY };
 export const DEFAULT_TEXT_ALIGN = 'left' as const;
 export const DEFAULT_FONT_SIZE = 32;
 export const MIN_FONT_SIZE = 8;

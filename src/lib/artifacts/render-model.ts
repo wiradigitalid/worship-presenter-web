@@ -91,7 +91,8 @@ export const PX_TO_PT = PPTX_SLIDE_HEIGHT_PT / REFERENCE_CANVAS.height;
 
 /** Used whenever an element carries no explicit `style.fontSize`. */
 export const DEFAULT_FONT_SIZE_PX = 32;
-export const DEFAULT_FONT_FAMILY = 'Arial';
+import { DEFAULT_FONT_FAMILY } from '@/lib/registry/font-catalog';
+export { DEFAULT_FONT_FAMILY };
 export const DEFAULT_OBJECT_FIT = 'contain' as const;
 export const DEFAULT_TEXT_ALIGN = 'left' as const;
 export const DEFAULT_VERTICAL_ALIGN = 'top' as const;
