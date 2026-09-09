@@ -2044,6 +2044,13 @@ test('SPEC-17-03: PPTX and Web Slide font family resolution and fallbacks', asyn
   assert.equal(getFontStack('Playfair Display'), '"Playfair Display", serif');
   assert.equal(getFontStack('Great Vibes'), '"Great Vibes", cursive');
   assert.equal(getFontStack(undefined), '"Arial", sans-serif');
+
+  // 5. syncSelection sets fontFamily from active text object
+  const editorCode = fs.readFileSync(path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx'), 'utf8');
+  assert.ok(
+    editorCode.includes('setFontFamily(selectedText.fontFamily || DEFAULT_FONT_FAMILY)'),
+    'syncSelection must extract and set fontFamily state from selectedText'
+  );
 });
 
 

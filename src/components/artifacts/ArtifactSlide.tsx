@@ -11,7 +11,6 @@ import {
   resolveBold,
   resolveElementImage,
   resolveElementText,
-  resolveFontFamily,
   resolveItalic,
   resolveUnderline,
   resolveObjectFit,
