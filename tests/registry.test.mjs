@@ -654,8 +654,10 @@ test('SPEC-12-07: Song Sets UX & button consistency (BUG-14, BUG-15, DEC-009, DE
 
   // 3. New Song Set creation panel mirrors Main Spine (DEC-009 / DEC-010 / BUG-15)
   assert.ok(
-    code.includes('placeholder="Song set title (e.g. Fellowship Song)"') &&
-    code.includes('placeholder="Variable code (e.g. fellowship_song)"'),
+    (code.includes('placeholder="Song set title (e.g. Fellowship Song)"') ||
+      code.includes("placeholder={t('admin.songSets.createTitlePlaceholder')}")) &&
+    (code.includes('placeholder="Variable code (e.g. fellowship_song)"') ||
+      code.includes("placeholder={t('admin.songSets.createVarPlaceholder')}")),
     'New Song Set panel must have title and variable code inputs'
   );
   assert.ok(
