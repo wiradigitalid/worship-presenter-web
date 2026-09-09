@@ -1,5 +1,7 @@
 # Ticket SPEC-15-01 — Canvas Image Real-time Scaling ClipPath Synchronisation (`BUG-7` residual)
 
+**Status:** ready-for-agent
+
 ## Description
 
 In SPEC-14, dragging an image during translation (`object:moving`) was fixed by synchronizing the `clipPath` coordinates via `syncImageClipOnMove`. However, when resizing an image to a larger size using corner handles, the image content visually clips against its original bounding box while the drag handle is active. The newly expanded dimensions only render once the mouse is released (`object:modified`).

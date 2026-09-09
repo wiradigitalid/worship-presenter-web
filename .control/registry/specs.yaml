@@ -886,21 +886,21 @@ waves:
       - id: "SPEC-15-02"
         component: registry
         satisfies: [UC-14]
-        blocked_by: []
+        blocked_by: ["SPEC-15-01"]
         touches: [artifacts]
         tests:
           - tests/artifact-editor-layout.test.mjs
       - id: "SPEC-15-03"
         component: registry
         satisfies: [UC-14]
-        blocked_by: []
+        blocked_by: ["SPEC-15-02"]
         touches: [artifacts]
         tests:
           - tests/artifact-editor-controls.test.mjs
       - id: "SPEC-15-04"
         component: registry
         satisfies: [UC-24]
-        blocked_by: []
+        blocked_by: ["SPEC-15-03"]
         touches: [artifacts]
         tests:
           - tests/operator-shadcn-guard.test.mjs

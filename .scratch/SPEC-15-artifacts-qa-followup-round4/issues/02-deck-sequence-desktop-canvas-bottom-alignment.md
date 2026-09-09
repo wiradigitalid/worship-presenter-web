@@ -1,5 +1,7 @@
 # Ticket SPEC-15-02 — Deck Sequence Desktop Bottom Alignment with Canvas Edge (`BUG-11` residual)
 
+**Status:** ready-for-agent
+
 ## Description
 
 In SPEC-14, the Deck Sequence card was clamped to `max-h-[calc(100vh-380px)] min-h-[220px]` to eliminate window-level scrollbars on laptop displays.
