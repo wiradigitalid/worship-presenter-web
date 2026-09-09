@@ -864,7 +864,7 @@ waves:
           - tests/artifact-editor-controls.test.mjs
 
   - id: SPEC-15
-    status: open
+    status: closed
     release: artifacts-qa-followup-round4
     prd: [offline-deck]
     fr: [FR-20, FR-21, FR-29]

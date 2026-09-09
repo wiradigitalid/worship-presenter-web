@@ -1,9 +1,10 @@
 ---
 type: mandate
 id: DEC-017
-status: accepted
+status: applied
 accepted_by: 'kodesh87 (2026-09-09)'
 touches:
+  - .control/memlog/autopilot-DEC-017.md
   - .control/registry/specs.yaml
   - .control/registry/decisions.yaml
   - .control/registry/defects.yaml
@@ -13,6 +14,7 @@ touches:
   - tests/artifact-editor-controls.test.mjs
   - tests/artifact-editor-layout.test.mjs
   - tests/operator-shadcn-guard.test.mjs
+  - tests/theme-chrome.test.mjs
 supersedes: null
 superseded_by: null
 created: '2026-09-09'

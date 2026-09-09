@@ -273,7 +273,7 @@ export function SongSetEntriesPanel() {
             <span
               className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
                 editingVarName
-                  ? 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+                  ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20'
                   : 'text-primary bg-primary/10 border-primary/20'
               }`}
             >
@@ -423,7 +423,7 @@ export function SongSetEntriesPanel() {
                       <div className="flex items-center gap-1.5">
                         <p className="text-xs font-semibold truncate text-foreground">{entry.title}</p>
                         {isItemEditing && (
-                          <span className="text-[9px] font-mono text-amber-500 bg-amber-500/20 px-1 py-0.5 rounded border border-amber-500/30 leading-none shrink-0">
+                          <span className="text-[9px] font-mono text-amber-600 dark:text-amber-400 bg-amber-500/20 px-1 py-0.5 rounded border border-amber-500/30 leading-none shrink-0">
                             {t('admin.songSets.editingBadge')}
                           </span>
                         )}
@@ -441,7 +441,7 @@ export function SongSetEntriesPanel() {
                           handleStartEdit(entry);
                         }}
                         className={`h-7 w-7 p-1 hover:bg-muted hover:text-foreground ${
-                          isItemEditing ? 'text-amber-500' : 'text-muted-foreground'
+                          isItemEditing ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'
                         }`}
                       >
                         <Pencil className="w-3.5 h-3.5" />

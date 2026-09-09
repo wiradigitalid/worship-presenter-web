@@ -100,8 +100,8 @@ defects:
       object — nothing reads the shape's existing `fill` (~L151, `element.style?.fillColor`) back
       into a shape-color state on select, so the picker keeps its last value instead.
   - id: BUG-7
-    status: open
-    fixed_in: SPEC-14
+    status: fixed
+    fixed_in: SPEC-15
     reopened_in: SPEC-15
     title: "An inserted image does not grow when its selection handles are resized"
     component: registry
@@ -168,8 +168,8 @@ defects:
       and its render path, and add the toolbar button next to Bold/Italic
       (ArtifactEditor.tsx ~L2156-2175 is the pattern to follow).
   - id: BUG-11
-    status: open
-    fixed_in: SPEC-14
+    status: fixed
+    fixed_in: SPEC-15
     reopened_in: SPEC-15
     title: "Main Spine editor still shows a vertical window scrollbar, and Deck Sequence's own height overshoots the layer"
     component: registry
@@ -373,8 +373,8 @@ defects:
       `preserveObjectStacking: false` and needs verified layer swap and real-time re-render under
       `preserveObjectStacking: true`. Filed into SPEC-14 ticket 09.
   - id: BUG-28
-    status: open
-    fixed_in: null
+    status: fixed
+    fixed_in: SPEC-15
     title: "Redundant 'Apply Style' button in text properties toolbar remains after realtime update adoption"
     component: registry
     violates: []
@@ -384,8 +384,8 @@ defects:
       even though all 9 text property controls apply in real time immediately to the active selection. The button
       is obsolete, misleading to operators, and needlessly consumes toolbar space. Filed into SPEC-15 ticket 03.
   - id: BUG-29
-    status: open
-    fixed_in: null
+    status: fixed
+    fixed_in: SPEC-15
     title: "Song Set entry list item expands height in edit mode, causing abrupt layout shift"
     component: registry
     violates: []

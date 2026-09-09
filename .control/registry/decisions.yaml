@@ -338,7 +338,7 @@ decisions:
       - tests/operator-shadcn-guard.test.mjs
   - id: DEC-017
     type: mandate
-    status: accepted
+    status: applied
     accepted_by: "kodesh87 (2026-09-09)"
     title: Autopilot mandate for Artifacts QA Follow-up Round 4 (SPEC-15)
     file: .control/decisions/DEC-017-autopilot-mandate-artifacts-qa-followup-round4.md
