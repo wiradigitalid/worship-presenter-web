@@ -1,6 +1,6 @@
 # Ticket SPEC-15-02 — Deck Sequence Desktop Bottom Alignment with Canvas Edge (`BUG-11` residual)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Description
 

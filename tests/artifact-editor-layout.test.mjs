@@ -45,14 +45,24 @@ test('SPEC-12-05: Main Spine editor layout height and viewport constraints', () 
   );
 });
 
-test('SPEC-13-04 / SPEC-14-02: Deck Sequence card flex containment and internal scroll height clamp (BUG-11)', () => {
+test('SPEC-13-04 / SPEC-14-02 / SPEC-15-02: Deck Sequence card flex containment and desktop bottom alignment with canvas (BUG-11)', () => {
   const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
   const code = fs.readFileSync(editorPath, 'utf8');
 
-  // Deck sequence card must be flex flex-col with max-h clamp tightened to prevent window scroll
+  // Bounded structural assertion: <aside> contains lg:flex lg:flex-col, and its Deck Sequence child container carries flex-1 with lg:max-h-none
+  const asideStart = code.indexOf('<aside className=');
+  assert.ok(asideStart !== -1, 'Must find <aside');
+  const asideEnd = code.indexOf('</aside>', asideStart);
+  assert.ok(asideEnd !== -1, 'Must find matching </aside>');
+  const asideBlock = code.slice(asideStart, asideEnd);
+
   assert.ok(
-    code.includes('flex flex-col max-h-[calc(100vh-380px)]'),
-    'Deck sequence card must use flex flex-col with tightened viewport max-h constraint (380px)'
+    asideBlock.includes('lg:flex lg:flex-col'),
+    'Left aside must carry lg:flex lg:flex-col to span full height on desktop'
+  );
+  assert.ok(
+    asideBlock.includes('flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-none'),
+    'Deck Sequence card inside aside must carry flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-none'
   );
 
   // Deck sequence header must be shrink-0 co-located with layout classes
