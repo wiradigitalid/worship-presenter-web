@@ -294,3 +294,57 @@ test('guard proof: list item input presence fails zero-layout-shift absence-guar
     );
   }, /List container must not render any Input components/);
 });
+
+test('SPEC-16-02 / BUG-30: Song Set top card edit header compactness and zero wrapping layout shift', () => {
+  const panelPath = path.join(ROOT, 'src', 'components', 'admin', 'SongSetEntriesPanel.tsx');
+  const code = readFileSync(panelPath, 'utf8');
+
+  // Structural slice assertion on top card header block
+  const topCardHeaderStart = code.indexOf('{/* New / Edit Song Set creation/edit panel');
+  assert.ok(topCardHeaderStart !== -1, 'Must find top card header start');
+  const topCardHeaderEnd = code.indexOf('{editingVarName ? (', topCardHeaderStart);
+  assert.ok(topCardHeaderEnd !== -1, 'Must find top card header end');
+  const topCardHeader = code.slice(topCardHeaderStart, topCardHeaderEnd);
+
+  assert.ok(topCardHeader.includes('truncate'), 'Top card title span must carry truncate');
+  assert.ok(topCardHeader.includes('min-w-0'), 'Top card title span must carry min-w-0');
+  assert.ok(topCardHeader.includes('shrink-0'), 'Top card badge span must carry shrink-0');
+  assert.ok(
+    !topCardHeader.includes(".replace('{title}'") && !topCardHeader.includes('.replace("{title}"'),
+    'Top card title must not interpolate dynamic {title}, avoiding multi-line wrapping'
+  );
+
+  // i18n dictionaries assertions
+  const catEnPath = path.join(ROOT, 'src', 'lib', 'i18n', 'catalogue-en.ts');
+  const catIdPath = path.join(ROOT, 'src', 'lib', 'i18n', 'catalogue-id.ts');
+  const enSource = readFileSync(catEnPath, 'utf8');
+  const idSource = readFileSync(catIdPath, 'utf8');
+
+  assert.ok(
+    enSource.includes("'admin.songSets.editTitle': 'Edit Song Set'"),
+    'catalogue-en must define concise Edit Song Set title'
+  );
+  assert.ok(
+    idSource.includes("'admin.songSets.editTitle': 'Edit Set Lagu'"),
+    'catalogue-id must translate editTitle to Indonesian Edit Set Lagu'
+  );
+  assert.ok(
+    !enSource.includes("'admin.songSets.editTitle': 'Edit Song Set: {title}'"),
+    'catalogue-en must not include {title} placeholder'
+  );
+  assert.ok(
+    !idSource.includes("'admin.songSets.editTitle': 'Edit Song Set: {title}'"),
+    'catalogue-id must not include {title} placeholder'
+  );
+});
+
+test('SPEC-16-02: guard proof: presence of dynamic {title} interpolation fails absence-guard', () => {
+  const defectiveHeader = '<span className="truncate min-w-0">{editingVarName ? t(\'admin.songSets.editTitle\').replace(\'{title}\', editingEntry?.title ?? \'\') : t(\'admin.songSets.createTitle\')}</span>';
+  assert.throws(() => {
+    assert.ok(
+      !defectiveHeader.includes(".replace('{title}'"),
+      'Top card title must not interpolate dynamic {title}'
+    );
+  }, /Top card title must not interpolate dynamic {title}/);
+});
+

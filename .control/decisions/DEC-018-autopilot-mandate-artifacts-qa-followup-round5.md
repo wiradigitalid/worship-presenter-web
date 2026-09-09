@@ -14,6 +14,7 @@ touches:
   - src/lib/i18n/catalogue-id.ts
   - tests/artifact-editor-layout.test.mjs
   - tests/operator-shadcn-guard.test.mjs
+  - tests/smoke-spec-16.test.mjs
 supersedes: null
 superseded_by: null
 created: '2026-09-09'

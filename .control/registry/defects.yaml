@@ -165,8 +165,8 @@ defects:
       and its render path, and add the toolbar button next to Bold/Italic
       (ArtifactEditor.tsx ~L2156-2175 is the pattern to follow).
   - id: BUG-11
-    status: open
-    fixed_in: SPEC-14
+    status: fixed
+    fixed_in: SPEC-16
     reopened_in: SPEC-16
     title: "Main Spine editor still shows a vertical window scrollbar, and Deck Sequence's own height overshoots the layer"
     component: registry
@@ -395,7 +395,8 @@ defects:
       entries down. SPEC-15 moved editing into the top form card, fixing list item expansion (confirmed in Round 5 QA).
       Residual defect regarding top card header title wrapping filed under BUG-30.
   - id: BUG-30
-    status: open
+    status: fixed
+    fixed_in: SPEC-16
     title: "Song Set top form card expands height when editing due to long title in card header label"
     component: registry
     violates: []

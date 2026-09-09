@@ -462,7 +462,7 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'admin.songSets.createTitle': 'Song Set Baru',
   'admin.songSets.createTitlePlaceholder': 'Judul song set (contoh: Lagu Pujian)',
   'admin.songSets.createVarPlaceholder': 'Kode variabel (contoh: lagu_pujian)',
-  'admin.songSets.editTitle': 'Edit Song Set: {title}',
+  'admin.songSets.editTitle': 'Edit Set Lagu',
   'admin.songSets.editingBadge': 'Mengedit',
   'admin.songSets.badge': 'Song Set',
   'admin.songSets.variableName': 'Variable name',

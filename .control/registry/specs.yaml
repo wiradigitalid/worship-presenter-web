@@ -906,7 +906,7 @@ waves:
           - tests/operator-shadcn-guard.test.mjs
 
   - id: SPEC-16
-    status: open
+    status: closed
     release: artifacts-qa-followup-round5
     prd: [offline-deck]
     fr: [FR-20, FR-21, FR-29]
@@ -928,7 +928,7 @@ waves:
       - id: "SPEC-16-02"
         component: registry
         satisfies: [UC-24]
-        blocked_by: []
+        blocked_by: ["SPEC-16-01"]
         touches: [artifacts]
         tests:
           - tests/operator-shadcn-guard.test.mjs

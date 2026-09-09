@@ -373,6 +373,7 @@ decisions:
       loop: 10m
       expires: '2026-09-16'
     touches:
+      - .control/memlog/autopilot-DEC-018.md
       - .control/registry/specs.yaml
       - .control/registry/decisions.yaml
       - .control/registry/defects.yaml
@@ -382,6 +383,7 @@ decisions:
       - src/lib/i18n/catalogue-id.ts
       - tests/artifact-editor-layout.test.mjs
       - tests/operator-shadcn-guard.test.mjs
+      - tests/smoke-spec-16.test.mjs
 
 
 
