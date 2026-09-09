@@ -2083,7 +2083,7 @@ export default function ArtifactEditor({
           </div>
 
           {/* LIST TEMPLATES (POIN 3: HOVER ACTIONS & DND REORDER) */}
-          <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-none">
+          <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-[calc(100vh-270px)]">
             <div className="flex items-center justify-between shrink-0">
               <span className="text-xs font-semibold text-foreground">Deck Sequence</span>
               <span className="text-[11px] text-muted-foreground font-mono">{templates.length} slides</span>

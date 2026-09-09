@@ -45,11 +45,11 @@ test('SPEC-12-05: Main Spine editor layout height and viewport constraints', () 
   );
 });
 
-test('SPEC-13-04 / SPEC-14-02 / SPEC-15-02: Deck Sequence card flex containment and desktop bottom alignment with canvas (BUG-11)', () => {
+test('SPEC-13-04 / SPEC-14-02 / SPEC-15-02 / SPEC-16-01: Deck Sequence card flex containment and desktop bottom alignment with canvas (BUG-11)', () => {
   const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
   const code = fs.readFileSync(editorPath, 'utf8');
 
-  // Bounded structural assertion: <aside> contains lg:flex lg:flex-col, and its Deck Sequence child container carries flex-1 with lg:max-h-none
+  // Bounded structural assertion: <aside> contains lg:flex lg:flex-col, and its Deck Sequence child container carries flex-1 with lg:max-h-[calc(100vh-270px)]
   const asideStart = code.indexOf('<aside className=');
   assert.ok(asideStart !== -1, 'Must find <aside');
   const asideEnd = code.indexOf('</aside>', asideStart);
@@ -61,8 +61,12 @@ test('SPEC-13-04 / SPEC-14-02 / SPEC-15-02: Deck Sequence card flex containment 
     'Left aside must carry lg:flex lg:flex-col to span full height on desktop'
   );
   assert.ok(
-    asideBlock.includes('flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-none'),
-    'Deck Sequence card inside aside must carry flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-none'
+    asideBlock.includes('flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-[calc(100vh-270px)]'),
+    'Deck Sequence card inside aside must carry bounded desktop height lg:max-h-[calc(100vh-270px)]'
+  );
+  assert.ok(
+    !asideBlock.includes('lg:max-h-none'),
+    'Deck Sequence card must NOT carry lg:max-h-none, which causes indefinite expansion and page scrolling on desktop'
   );
 
   // Deck sequence header must be shrink-0 co-located with layout classes
@@ -213,6 +217,16 @@ test('SPEC-14-07 / BUG-25: Toolbar properties bar height stability on selection'
     code.includes('overflow-x-auto') && code.includes('overflow-y-hidden'),
     'Element Properties toolbar must enable horizontal scroll and hide vertical overflow'
   );
+});
+
+test('SPEC-16-01: guard proof: lg:max-h-none presence fails unconstrained desktop absence-guard', () => {
+  const defectiveCode = '<aside><div className="flex flex-col flex-1 min-h-[220px] max-h-[calc(100vh-380px)] lg:max-h-none"></div></aside>';
+  assert.throws(() => {
+    assert.ok(
+      !defectiveCode.includes('lg:max-h-none'),
+      'Deck Sequence card must NOT carry lg:max-h-none'
+    );
+  }, /Deck Sequence card must NOT carry lg:max-h-none/);
 });
 
 

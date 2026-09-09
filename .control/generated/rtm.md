@@ -594,6 +594,20 @@ rtm:
   FR: FR-20
   DEC: []
   UC: UC-14
+  ticket: SPEC-16-01
+  spec: SPEC-16
+  release: artifacts-qa-followup-round5
+  test:
+  - tests/artifact-editor-layout.test.mjs
+  status: ready
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
   ticket: W11-02
   spec: W11
   release: artifacts-overhaul
@@ -1041,6 +1055,20 @@ rtm:
   FR: FR-29
   DEC: []
   UC: UC-24
+  ticket: SPEC-16-02
+  spec: SPEC-16
+  release: artifacts-qa-followup-round5
+  test:
+  - tests/operator-shadcn-guard.test.mjs
+  status: ready
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-29
+  DEC: []
+  UC: UC-24
   ticket: W11-05
   spec: W11
   release: artifacts-overhaul
@@ -1444,6 +1472,20 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-16-01
+  spec: SPEC-16
+  release: artifacts-qa-followup-round5
+  test:
+  - tests/artifact-editor-layout.test.mjs
+  status: ready
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30

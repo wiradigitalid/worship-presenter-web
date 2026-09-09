@@ -928,7 +928,7 @@ waves:
       - id: "SPEC-16-02"
         component: registry
         satisfies: [UC-24]
-        blocked_by: []
+        blocked_by: ["SPEC-16-01"]
         touches: [artifacts]
         tests:
           - tests/operator-shadcn-guard.test.mjs
