@@ -784,3 +784,80 @@ waves:
         tests:
           - tests/operator-shadcn-guard.test.mjs
 
+  - id: SPEC-14
+    status: open
+    release: artifacts-qa-followup-round3
+    prd: [offline-deck]
+    fr: [FR-20, FR-21, FR-29]
+    size: M
+    depends_on: [SPEC-13]
+    spec_folder: .scratch/SPEC-14-artifacts-qa-followup-round3/
+    tickets:
+      - id: "SPEC-14-01"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-14-02"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-layout.test.mjs
+      - id: "SPEC-14-03"
+        component: registry
+        satisfies: [UC-14, UC-15]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/registry.test.mjs
+          - tests/registry-go-http.test.mjs
+      - id: "SPEC-14-04"
+        component: registry
+        satisfies: [UC-24]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/announcement-sets.test.mjs
+      - id: "SPEC-14-05"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-14-06"
+        component: registry
+        satisfies: [UC-24]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/operator-shadcn-guard.test.mjs
+          - tests/song-books-seed.test.mjs
+      - id: "SPEC-14-07"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-layout.test.mjs
+      - id: "SPEC-14-08"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-14-09"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-14-08"]
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+
+
+

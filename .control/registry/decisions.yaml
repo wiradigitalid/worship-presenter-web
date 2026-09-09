@@ -305,5 +305,26 @@ decisions:
       - .control/memlog/autopilot-DEC-015.md
       - .control/registry/specs.yaml
       - .control/registry/decisions.yaml
+  - id: DEC-016
+    type: mandate
+    status: accepted
+    accepted_by: "kodesh87 (2026-09-09)"
+    title: Autopilot mandate for Artifacts QA Follow-up Round 3 (SPEC-14)
+    file: .control/decisions/DEC-016-autopilot-mandate-artifacts-qa-followup-round3.md
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent
+      loop: 10m
+      expires: '2026-09-16'
+    touches:
+      - .control/memlog/autopilot-DEC-016.md
+      - .control/registry/specs.yaml
+      - .control/registry/decisions.yaml
+      - .control/registry/defects.yaml
+      - .how/_platform/ARCHITECTURE-SPINE.md
+
+
 
 

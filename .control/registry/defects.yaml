@@ -16,47 +16,36 @@
 # `fixed` did not actually hold — reopened below with `status: open` and a note on what SPEC-12
 # delivered vs what is still broken (`fixed_in` is kept as history, it does not mean "still true").
 # BUG-18..BUG-24 are new from that same pass, filed into SPEC-13.
+#
+# 2026-09-09, round 3: manual QA over SPEC-13's shipped fixes confirmed BUG-1, BUG-2, BUG-8, BUG-14,
+# BUG-15, BUG-16, BUG-19, BUG-20, BUG-23 resolved. Residuals and refinements on BUG-7, BUG-11, BUG-18,
+# BUG-21, BUG-22, BUG-24 and new defects BUG-25..BUG-27 filed into SPEC-14.
 
 defects:
   - id: BUG-1
-    status: open
-    fixed_in: SPEC-12
+    status: fixed
+    fixed_in: SPEC-13
     reopened_in: SPEC-13
     title: "Deck Sequence drag-move-and-release requires a manual click before it activates on a fresh load"
     component: registry
     violates: [FR-21, UC-15, DEC-008]
     source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § DECK SEQUENCE AREA; prompt-08-artifacts-qa-followup-round2.md § BUG-1"
     summary: >
-      SPEC-12 fixed the drag-reorder mechanism itself (confirmed round 2: "Fitur click-drag-release
-      bekerja dengan baik dan berhasil save"). Reopened for a narrower residual: on a fresh Main
-      Spine editor load, no Deck Sequence slide is selected, and drag-reorder does not activate
-      until the admin manually clicks a slide first. Announcement Sets does not have this problem —
-      it auto-selects the first slide-in-set on load (see BUG-21's related gap: that
-      auto-selection's text field is itself empty). Fix: Main Spine auto-selects the first Deck
-      Sequence slide on mount, matching Announcement Sets. Same root cause as reopened BUG-8's
-      residual (the New Slide dropdown reads inactive for the same reason) — one fix closes both.
+      SPEC-12 fixed the drag-reorder mechanism itself. SPEC-13 fixed default selection on mount so
+      the first slide is selected automatically. Confirmed working in round 3 manual QA ("Auto-select
+      slide pertama deck sequence -> sudah sesuai").
   - id: BUG-2
-    status: open
-    fixed_in: SPEC-12
+    status: fixed
+    fixed_in: SPEC-13
     reopened_in: SPEC-13
     title: "Canvas right-click context menu (bring forward/back, duplicate, delete) does not appear"
     component: registry
     violates: [DEC-008]
     source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § CANVAS #2; prompt-08-artifacts-qa-followup-round2.md § BUG-2"
     summary: >
-      Manual QA: right-click on a canvas element shows no custom menu; none of alignment,
-      duplicate/clone, or delete are reachable. Code inspection found the full menu already
-      implemented — `contextMenu` state + `onContextMenu` handler, `handleDeleteSelected`,
-      `handleDuplicateSelected`, and bringToFront/bringForward/sendBackward/sendToBack menu items
-      (ArtifactEditor.tsx ~L272, ~L2239-2320). Ticket W11-03 (`_bmad-output/specs/spec-w11-artifacts-overhaul/issues/03-canvas-context-menu-drag-create.md`)
-      is marked `Status: done` with this exact scope, and SPEC-12 ticket 02
-      (`.scratch/SPEC-12-artifacts-qa-followup/issues/02-canvas-interaction-regressions.md`) also
-      marked this `[x] done`. Reopened: round 2 manual QA confirms the context menu STILL does not
-      appear at all ("Context menu belum muncul"). Two attempts have now claimed this fixed without
-      it actually working live — `wdi-systematic-debugging` runs fresh, and whatever test SPEC-12
-      added for this must be re-examined for the same failure mode already called out in this
-      project's own AGENTS.md TDD guard convention (an absence-guard that was never seen failing
-      against the broken code proves nothing).
+      SPEC-13 mounted a native contextmenu listener on upperCanvasEl. Confirmed working in round 3
+      manual QA ("Context menu pada canvas sudah muncul -> sudah sesuai"). Layer reordering
+      refinements tracked under BUG-26 and BUG-27.
   - id: BUG-3
     status: fixed
     fixed_in: SPEC-12
@@ -119,31 +108,24 @@ defects:
     violates: []
     source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT #5; prompt-08-artifacts-qa-followup-round2.md § BUG-7"
     summary: >
-      SPEC-12's contain-fit change is confirmed working AT INSERT TIME ("Gambar sudah inserted
-      sesuai ratio aslinya"). Reopened for a different, narrower symptom found in round 2: resizing
-      an already-inserted image by dragging its handles enlarges the handles/bounding box visibly,
-      but the rendered image content stays at its original small size instead of growing with it
-      (screenshot: a QR-code image whose selection square is dragged large, the QR code itself stays
-      tiny inside it). Working theory: the contain-fit `scaleX`/`scaleY` computed once at insert
-      time is not recomputed on the Fabric `scaling`/`modified` events the way a plain shape's size
-      is — needs `wdi-systematic-debugging` to confirm which event path the resize handle drives for
-      an image object versus a rectangle, and why the image's own render does not track it.
+      SPEC-12 fixed contain-fit at insert time. SPEC-13 implemented handle scaling updates via
+      `updateImageElementFit`. Round 3 manual QA confirms image handles and scaling now work ("Gambar
+      sudah bisa dipindah2kan dan render dengan baik di canvas"), but reported a residual: while dragging
+      (`object:moving`), parts of the image visually disappear or cut off within a fixed bounding window
+      until mouse release (`object:modified`). Root cause: `clipPath: clipBox` is initialized with
+      `absolutePositioned: true` in absolute canvas coordinates, staying static during drag movement.
+      Residual filed into SPEC-14 ticket 01.
   - id: BUG-8
-    status: open
-    fixed_in: SPEC-12
+    status: fixed
+    fixed_in: SPEC-13
     reopened_in: SPEC-13
     title: "New Slide dropdown reads as inactive until a Deck Sequence slide is manually selected"
     component: registry
     violates: []
     source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § NEW SLIDE AREA #2; prompt-07-artifacts-dropdown-consistency-crosscutting.md; prompt-08-artifacts-qa-followup-round2.md § BUG-8"
     summary: >
-      SPEC-12's `SelectValue` label-lookup fix is confirmed working ("dropdown new slide sudah
-      menampilkan teks seharusnya"). Reopened for a different, narrower symptom: on a fresh Main
-      Spine editor load (before any Deck Sequence slide is selected) the "New Slide" dropdown reads
-      as inactive/disabled-looking, and only becomes visually active once the admin selects a slide
-      in the Deck Sequence. Same root cause as reopened BUG-1: nothing is auto-selected on load.
-      Fix together with BUG-1 — auto-selecting the first Deck Sequence slide on mount should resolve
-      both symptoms in one change.
+      Fixed in SPEC-13 alongside BUG-1 by auto-selecting the first Deck Sequence slide on mount.
+      Confirmed working in round 3 manual QA.
   - id: BUG-9
     status: fixed
     fixed_in: SPEC-12
@@ -195,15 +177,10 @@ defects:
     violates: []
     source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § PAGE LAYOUT; prompt-08-artifacts-qa-followup-round2.md § BUG-11"
     summary: >
-      SPEC-12 fixed the canvas itself fitting the viewport ("canvas sudah muncul dengan aman/tepat").
-      Reopened for the residual: the browser window still shows a vertical scrollbar, and the Deck
-      Sequence list's own height is visibly taller than the editor's layer/window edge — round 2
-      hypothesis is that the Deck Sequence list container's height is still keyed to content
-      (unbounded) rather than to the available flex space, and that unbounded height is what
-      produces the window-level vertical scrollbar SPEC-12's fit-to-viewport pass did not fully
-      close. Expected: (a) no vertical scrollbar on the window; (b) Deck Sequence's height stops
-      exactly at the editor layer's own edge, scrolling internally past that point instead of
-      growing the page.
+      SPEC-12 addressed viewport canvas sizing. SPEC-13 shortened the deck sequence container height.
+      Round 3 manual QA confirmed scrolling was noticeably improved/reduced ("sudah lebih baik dari
+      sebelumnya karena scroll makin pendek/kecil"), but noted slight vertical window scrolling remains
+      on laptop viewports. Residual filed into SPEC-14 ticket 02 to clamp height within viewport bounds.
   - id: BUG-12
     status: fixed
     fixed_in: SPEC-12
@@ -232,63 +209,40 @@ defects:
       (Image): No properties to change` when the selected element has none, `Properties (None):
       Select element first` when nothing is selected.
   - id: BUG-14
-    status: open
-    fixed_in: SPEC-12
+    status: fixed
+    fixed_in: SPEC-13
     reopened_in: SPEC-13
     title: "Song Sets: switching tabs still changes canvas height, because the layout banner wraps to a different line count per tab"
     component: registry
     violates: [DEC-011]
     source: ".work/requirements/prompt-05-artifacts-song-sets-qa-followup.md § COMPONENT AREA #1, #2; prompt-08-artifacts-qa-followup-round2.md § BUG-14"
     summary: >
-      SPEC-12 removed the "(2/3 Formula)" tab-label wording — confirmed fixed. Reopened for the
-      height-instability half of the original defect, which round 2 shows is NOT fixed: switching
-      between "1. Title Slide", "2. Verse Layout", "3. Reffrain Layout" still moves the canvas up
-      and down, because the role badge (e.g. `VERSE LAYOUT`) sits on the same row as the
-      explanatory banner text ("📐 Auto Lyric Box: 2/3 Height Standard — Automated formula for hymn
-      lyrics. Canvas customizes background & shapes."), and that banner text wraps to a different
-      number of lines depending on the tab's copy length — its margin then forces a taller row on
-      whichever tab wraps more. Confirmed on both "Verse Layout" and "Reffrain Layout". Fix needs
-      the badge+banner row to report the SAME height on every tab regardless of text length (a
-      fixed-height/line-clamped container, or moving the explanatory text off that row entirely) —
-      SPEC-12's fix addressed the wording but not the layout mechanism that actually causes the
-      canvas to move.
+      Fixed in SPEC-13 by separating and clamping tab banner heights. Confirmed working in round 3
+      manual QA ("Stabilisasi tinggi banner Song Set tab -> sudah sesuai").
   - id: BUG-15
-    status: open
-    fixed_in: SPEC-12
+    status: fixed
+    fixed_in: SPEC-13
     reopened_in: SPEC-13
     title: "Song Set's code (variableName) field still has no Rename affordance"
     component: registry
     violates: [DEC-009, DEC-010]
     source: ".work/requirements/prompt-05-artifacts-song-sets-qa-followup.md § NEW SONG SET AREA, § TITLE AREA; prompt-06-artifacts-announcement-sets-qa-followup.md § NEW SONG SET AREA (sic, means Announcement); prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #7"
     summary: >
-      (a) Layout parity between "New Song Set"/"New Announcement Set" and Main Spine's "New Slide"
-      panel — confirmed fixed in round 2 ("Layout new song set sudah sama dengan main spine").
-      (b) REOPENED: SPEC-12 ticket 07 marked "a Rename affordance exists next to the Song Set's
-      code (`variableName`/slug) field" as `[x] done`, but round 2 manual QA confirms it is still
-      not there ("Saat ini kode song-set belum bisa direname, harusnya bisa"). This sub-item alone
-      is reopened; (a) stays closed. Needs the same `[Rename] | Canvas: [Reset] [Save]`-style
-      affordance DEC-011 already established elsewhere in this editor, scoped to the code field
-      next to the existing title Rename.
+      Fixed in SPEC-13 by implementing code rename in SongSetEntriesPanel. Confirmed working in round 3
+      manual QA ("Rename kode variableName Song Set -> sudah sesuai"). Inline rename in list items
+      tracked under BUG-24 / SPEC-14.
   - id: BUG-16
-    status: open
-    fixed_in: SPEC-12
+    status: fixed
+    fixed_in: SPEC-13
     reopened_in: SPEC-13
     title: "Rename mode changes panel height across every title area in the Artifact editor, not only Announcement Set"
     component: registry
     violates: []
     source: ".work/requirements/prompt-06-artifacts-announcement-sets-qa-followup.md § SLIDES IN SET #2, § TITLE AREA #1; prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #4"
     summary: >
-      SPEC-12 fixed this for the Announcement Set's own "Active Announcement Set" label
-      specifically — confirmed stable in round 2 ("Sudah stabil ukurannya ketika rename"). Reopened
-      and WIDENED: round 2 shows the underlying problem (entering rename mode grows the panel's
-      height, moving the canvas) is still present across Main Spine, Song Books, and Announcement
-      Sets' own per-slide title areas — SPEC-12's ticket 08 only closed the one instance it
-      targeted. It is worse on the Song Set's own title area, where rename mode adds an extra
-      `TITLE:` label that grows the height further still. Fix needs a title-area component that
-      reserves the SAME height for its idle and rename states everywhere it is used (Main Spine
-      slide, Song Book entry, Announcement Set and its slide-in-set, Song Set), not a per-screen
-      patch. Folds in BUG-23 (Song Set's Title/Verse/Reff trio should drop its Rename control
-      entirely rather than be stabilized, since that control has no persisted field behind it).
+      Fixed in SPEC-13 by standardizing rename inputs to h-8 and removing the false rename button on
+      the fixed Song Set trio. Confirmed working in round 3 manual QA ("Input rename berukuran stabil h-8
+      dan penghapusan tombol rename semu pada Trio Song Set -> sudah sesuai").
   - id: BUG-17
     status: fixed
     fixed_in: SPEC-12
@@ -305,114 +259,115 @@ defects:
       the custom className, use `Button` `variant="default"` plain.
   - id: BUG-18
     status: open
+    fixed_in: SPEC-13
     title: "Canvas Reset restores from the seed and blocks deleting seeded/shipped elements — owner wants Reset to mean discard-unsaved-changes"
     component: registry
     violates: [DEC-014]
     source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § BUG-2, BUG-3, DEC-012; § Catatan Tambahan #2"
     summary: >
-      Keyboard/menu delete works for every element except one the seeder created, refused with
-      `Cannot delete e2 — shipped and required elements are part of the template.`
-      (ArtifactEditor.tsx ~L998, `admin.artifacts.deleteHintShipped` in catalogue-en.ts). Per
-      `DEC-014` (accepted 2026-09-08), this refusal is removed — a seeded element becomes ordinary,
-      deletable content like any other — and the canvas "Reset" button is repurposed from
-      restore-from-seed (`AD-11`) to discard-the-current-unsaved-edits, with no in-UI path back to
-      the original shipped template once content has been changed or deleted. Implementing this
-      requires editing `AD-11` in `.how/_platform/ARCHITECTURE-SPINE.md` (the "Reset restores one
-      selected template from that seed" clause, and the `songset-*` override-record clause that
-      references the same Reset) in the same change, per `DEC-014`'s Cost section — this is not a
-      UI-only patch.
+      SPEC-13 implemented Reset as discard-unsaved-changes and removed the UI deletion guard. Round 3
+      manual QA confirmed Reset discards in-memory properly ("Tombol 'Reset' kini membuang perubahan
+      in-memory kembali ke kondisi Last Saved -> sudah sesuai"), but reported that saving a layout with
+      a deleted seed element fails: `element e1 is part of the shipped template and cannot be removed
+      or renamed in layout default`. Root cause: `AssertStableAgainstSeed` in Go backend
+      (`internal/plan/validate_artifact.go`) and `assertStableAgainstSeed` in store (`src/lib/registry/store.ts`)
+      still reject removing or renaming seed elements. Residual filed into SPEC-14 ticket 03.
   - id: BUG-19
-    status: open
+    status: fixed
+    fixed_in: SPEC-13
     title: "Adding a new canvas background stacks it on top of the existing one instead of replacing it"
     component: registry
     violates: [DEC-014]
     source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #2"
     summary: >
-      "Change Background" adds a new background layer without removing the previous one, so
-      repeated use stacks images. Per `DEC-014`, this includes the seeded background — it is
-      ordinary replaceable content, not protected seed content. Fix: setting a background replaces
-      whatever background element currently occupies that role, for every template kind (`general`,
-      `songset-*`), not only admin-authored ones.
+      Fixed in SPEC-13 by replacing background elements on canvas. Confirmed working in round 3
+      manual QA ("Mengganti background kanvas -> secara visual sudah terganti").
   - id: BUG-20
-    status: open
+    status: fixed
+    fixed_in: SPEC-13
     title: "Inline status text (e.g. \"Template renamed\", \"Template order saved\") shifts the canvas panel's position"
     component: registry
     violates: []
     source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #1"
     summary: >
-      The editor shows both a toaster (fine, keep as-is) and an inline success/error line above the
-      toolbar. The inline line is conditionally rendered, so its presence/absence and text length
-      change the layout height above the canvas, pushing the canvas panel down when it appears —
-      same family of layout-shift bug as BUG-13/BUG-16, but for status messages rather than
-      selection/rename state. Fix: reserve a fixed-height slot for this line (empty when there is
-      nothing to show), or drop the inline copy in favour of the toaster alone — owner's stated
-      preference is keeping both, so the fixed-height-slot approach is the one to build first.
+      Fixed in SPEC-13 by allocating a fixed-height inline status slot. Confirmed in round 3
+      manual QA ("Menyediakan container tetap -> saya lihat sudah tersedia (ada)").
   - id: BUG-21
     status: open
+    fixed_in: SPEC-13
     title: "Announcement Set's default-selected slide-in-set shows an empty text field until rename is triggered"
     component: registry
     violates: []
     source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #9"
     summary: >
-      Announcement Sets already auto-selects the first slide-in-set on load (the behaviour BUG-1
-      wants Main Spine to match). But that auto-selected slide's text field renders empty on load —
-      the text only appears once the admin triggers rename mode. The text exists (it is not
-      actually blank data); this reads as the text-content state not being populated from the
-      auto-selected slide until an explicit user interaction re-syncs it. Fix so the field shows the
-      slide's real text immediately on auto-selection, with no rename trigger needed.
+      SPEC-13 sent dictionary items and fallback children on SelectValue. Round 3 manual QA confirmed
+      the set label now renders immediately, but reported a contrast defect: the text appears greyed
+      out like a placeholder (`data-placeholder:text-muted-foreground`) rather than crisp white text as
+      when manually selected. Residual filed into SPEC-14 ticket 04.
   - id: BUG-22
     status: open
+    fixed_in: SPEC-13
     title: "Text properties panel has no line-height (leading) control and no text-shadow toggle"
     component: registry
     violates: []
     source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #3"
     summary: >
-      New capability, not a regression. The Text properties row (font size/color/underline/bold/
-      italic/align, per BUG-4/5/6/10) has no way to adjust line spacing for multi-line text, and no
-      text-shadow effect. Requested: an icon-only line-height control (a slider is one acceptable
-      shape, not mandated) that applies realtime to the selected text element's rendering on the
-      canvas, the same realtime pattern BUG-4/5 already established via `applyTextStyle`/
-      `handleFontColorChange`; and an icon-only text-shadow toggle, same realtime pattern. Needs a
-      registry-vocabulary check first — `internal/plan/validate_artifact.go`'s `allowedStyleKeys`
-      (the same allowlist BUG-10 extended for `textDecoration`) must admit whatever style keys these
-      two controls write, on both the canvas save path and the render paths (PPTX, slideshow),
-      mirroring how BUG-10 closed the underline gap.
+      SPEC-13 implemented text-shadow toggle, line-height slider, and backend allowlist. Round 3
+      manual QA confirmed shadow persists and renders successfully, but requested toolbar simplification:
+      shadow toggle icon button on the left of the slider (reflecting shadow or 'S'), with the slider
+      conditionally visible only when shadow is ON. Refinement filed into SPEC-14 ticket 05.
   - id: BUG-23
-    status: open
+    status: fixed
+    fixed_in: SPEC-13
     title: "Song Set's Title/Verse/Reff trio exposes a Rename control with no persisted field behind it"
     component: registry
     violates: []
     source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #5"
     summary: >
-      Investigated this session (read-only): `createSongSetTrioAdapter()`
-      (`src/lib/registry/canvas-adapters.ts:381-386`) defines the three role tabs ("Title", "Verse",
-      "Reff") as fixed, hardcoded UI labels (`{ id: 'title', label: 'Title' }`, etc.) — not a stored
-      field. The Rename control shown for these tabs is inherited from the shared title-area
-      component this editor also uses for Main Spine (where the label IS a real, persisted
-      `template.label`), so it renders here without anything real to rename. Remove the Rename
-      control specifically for these three fixed-role tabs; keep the static labels "Title Slide" /
-      "Verse Layout" / "Reffrain Layout". Folds into the widened BUG-16 (this is one of the sources
-      of rename-triggered height instability, and removing a control that does nothing useful is
-      simpler than stabilizing it).
+      Fixed in SPEC-13 by removing the false rename button on the Song Set trio tabs. Confirmed in
+      round 3 manual QA.
   - id: BUG-24
     status: open
+    fixed_in: SPEC-13
     title: "Song Set editor does not show that its Title/Verse/Reff canvas is shared by every entry, not owned by whichever one is selected"
     component: registry
     violates: []
     source: ".work/requirements/prompt-08-artifacts-qa-followup-round2.md § Catatan Tambahan #8; corrected during SPEC-13's wdi-review (edge-case-hunter lens, 2026-09-08)"
     summary: >
-      Originally filed as "no way to duplicate/clone a Song Set entry", reasoning the owner wanted
-      a new entry to start from an already-configured canvas instead of reconfiguring one from
-      scratch. Corrected during this SPEC's review: `AD-33` (2026-08-20, DEC-004) already makes
-      every Song Set entry share ONE authored Title/Verse/Reff trio — `SongSetEntry`
-      (`SongSetEntriesPanel.tsx`) carries only `variableName`/`title`/`position`/`updatedAt`,
-      nothing canvas-related, so there is no per-entry canvas configuration to clone; a new entry
-      already gets the exact same shared layout automatically. The owner confirmed, once shown
-      this, that the actual problem is the UI's own fault for looking like each entry owns its own
-      canvas (matching how Main Spine and Announcement Set slides each own theirs) when it does
-      not — that false impression is what produced the original "let me clone it" request. Fix:
-      make the shared scope visually unmistakable in the Song Set editor, and reconsider whether
-      the entries list and the trio editor should be separated so switching entries does not read
-      as switching canvases. See ticket 13
-      (`.scratch/SPEC-13-artifacts-qa-followup-round2/issues/13-song-set-shared-trio-clarity.md`).
+      SPEC-13 added explicit shared badges and scope clarity banners. Round 3 manual QA requested
+      further refinement: since the canvas trio is shared, eliminate the separate top Rename Card above
+      the canvas and move renaming of title and code (`variableName`) inline directly into the Configured
+      Song Sets list items without layout expansion. Refinement filed into SPEC-14 ticket 06.
+  - id: BUG-25
+    status: open
+    title: "Toolbar Element Properties bar expands height on selection, pushing canvas down"
+    component: registry
+    violates: []
+    source: "Round 3 manual QA (2026-09-09) § LAINNYA #1"
+    summary: >
+      Selecting an element on the canvas renders 10+ controls in the properties toolbar. Under `flex-wrap`,
+      the toolbar wraps onto multiple rows on standard viewports, expanding its height from ~44px to 80px+
+      and visibly pushing the canvas downward. Filed into SPEC-14 ticket 07 to lock height and prevent shift.
+  - id: BUG-26
+    status: open
+    title: "Canvas selection automatically forces element to top visual stack (preserveObjectStacking: false), hiding true z-order"
+    component: registry
+    violates: []
+    source: "Round 3 manual QA (2026-09-09) § LAINNYA #2"
+    summary: >
+      Clicking an element on the canvas causes it to jump visually to the top of all other elements,
+      obscuring its actual z-index in the layer stack. Caused by Fabric.js default `preserveObjectStacking: false`
+      in `ArtifactEditor.tsx`. Operators need the selected element to stay in its true layer depth so real-time
+      stacking and layer reordering can be simulated accurately. Filed into SPEC-14 ticket 08.
+  - id: BUG-27
+    status: open
+    title: "Canvas 'Bring forward' (+1) action does not visibly advance layer order"
+    component: registry
+    violates: []
+    source: "Round 3 manual QA (2026-09-09) § LAINNYA #3"
+    summary: >
+      Manual testing reported that "Bring to front", "Send backward", and "Send to back" all work, but
+      "Bring forward" (+1) does not visibly advance the element's layer in the stack. Exacerbated by
+      `preserveObjectStacking: false` and needs verified layer swap and real-time re-render under
+      `preserveObjectStacking: true`. Filed into SPEC-14 ticket 09.
 
