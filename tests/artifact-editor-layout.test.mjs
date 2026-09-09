@@ -206,21 +206,31 @@ test('SPEC-13-07: Title area Rename height stability across canvas-bearing edito
   );
 });
 
-test('SPEC-14-07 / BUG-25: Toolbar properties bar height stability on selection', () => {
+test('SPEC-14-07 / SPEC-17-02: Toolbar properties bar height stability on selection', () => {
   const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
   const code = fs.readFileSync(editorPath, 'utf8');
 
-  // Element properties toolbar must be locked to a fixed 44px height (h-11 min-h-[44px] max-h-[44px]) with flex-nowrap
+  // Element properties toolbar must be locked to a fixed 88px height (h-[88px] min-h-[88px] max-h-[88px])
   assert.ok(
-    code.includes('h-11 min-h-[44px] max-h-[44px]') && code.includes('flex-nowrap'),
-    'Element Properties toolbar must lock height to 44px with flex-nowrap to prevent downward canvas shifts'
+    code.includes('h-[88px] min-h-[88px] max-h-[88px]'),
+    'Element Properties toolbar must lock height to 88px with flex-col to prevent downward canvas shifts'
   );
 
-  // Horizontal overflow must be scrollable without vertical expansion
+  // Absence guard: single-row 44px container must be absent
   assert.ok(
-    code.includes('overflow-x-auto') && code.includes('overflow-y-hidden'),
-    'Element Properties toolbar must enable horizontal scroll and hide vertical overflow'
+    !code.includes('h-11 min-h-[44px] max-h-[44px]'),
+    'Element Properties toolbar must NOT use single-row 44px height'
   );
+});
+
+test('SPEC-17-02: guard proof: h-11 presence fails toolbar absence-guard', () => {
+  const defectiveCode = '<div className="h-11 min-h-[44px] max-h-[44px]"></div>';
+  assert.throws(() => {
+    assert.ok(
+      !defectiveCode.includes('h-11 min-h-[44px] max-h-[44px]'),
+      'Toolbar must NOT carry h-11 min-h-[44px] max-h-[44px]'
+    );
+  }, /Toolbar must NOT carry h-11 min-h-\[44px\] max-h-\[44px\]/);
 });
 
 test('SPEC-16-01: guard proof: lg:max-h-none presence fails unconstrained desktop absence-guard', () => {

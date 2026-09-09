@@ -50,10 +50,17 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  FONT_CATALOG,
+  FONT_CATEGORY_LABELS,
+  FontCategory,
+} from '@/lib/registry/font-catalog';
 
 import {
   CANVAS_HEIGHT,
@@ -305,6 +312,7 @@ export default function ArtifactEditor({
   const [newLabel, setNewLabel] = useState('');
   const [status, setStatus] = useState<EditorStatus>('loading');
   const [message, setMessage] = useState<string | null>(null);
+  const [fontFamily, setFontFamily] = useState(DEFAULT_FONT_FAMILY);
   const [fontColor, setFontColor] = useState(DEFAULT_FONT_COLOR);
   /** Committed font size: always finite and positive, safe for the server. */
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
@@ -394,6 +402,7 @@ export default function ArtifactEditor({
     // The content field edits one box at a time; anything else clears it.
     setTextContent(texts.length === 1 && selectedText ? (selectedText.text ?? '') : '');
     if (selectedText) {
+      setFontFamily(selectedText.fontFamily || DEFAULT_FONT_FAMILY);
       setFontColor(
         toStrictHexColor(selectedText.fill, DEFAULT_FONT_COLOR) ?? DEFAULT_FONT_COLOR
       );
@@ -725,7 +734,7 @@ export default function ArtifactEditor({
           ? {
               content: NEW_TEXT_CONTENT,
               style: {
-                fontFamily: DEFAULT_FONT_FAMILY,
+                fontFamily: fontFamily || DEFAULT_FONT_FAMILY,
                 fontSize,
                 fontColor,
                 fontWeight: 'normal',
@@ -748,7 +757,7 @@ export default function ArtifactEditor({
       setStatus('idle');
       setMessage(null);
     },
-    [template, fontColor, fontSize, syncSelection, markDirty]
+    [template, fontFamily, fontColor, fontSize, syncSelection, markDirty]
   );
 
   const handleChangeBackgroundUrl = useCallback(
@@ -864,7 +873,7 @@ export default function ArtifactEditor({
           ? {
               content: NEW_TEXT_CONTENT,
               style: {
-                fontFamily: 'Arial',
+                fontFamily: fontFamily || DEFAULT_FONT_FAMILY,
                 fontSize,
                 fontColor,
                 fontWeight: 'normal',
@@ -896,7 +905,7 @@ export default function ArtifactEditor({
       setStatus('idle');
       setMessage(null);
     },
-    [template, fontColor, fontSize, syncSelection, markDirty]
+    [template, fontFamily, fontColor, fontSize, syncSelection, markDirty]
   );
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1063,7 +1072,7 @@ export default function ArtifactEditor({
           : {
               content: `{${entry.key}}`,
               style: {
-                fontFamily: 'Arial',
+                fontFamily: fontFamily || DEFAULT_FONT_FAMILY,
                 fontSize,
                 fontColor,
                 fontWeight: 'normal',
@@ -1085,7 +1094,7 @@ export default function ArtifactEditor({
       setStatus('idle');
       setMessage(null);
     },
-    [template, fontColor, fontSize, syncSelection, markDirty]
+    [template, fontFamily, fontColor, fontSize, syncSelection, markDirty]
   );
 
   const handleDeleteSelected = useCallback(() => {
@@ -1294,6 +1303,23 @@ export default function ArtifactEditor({
     for (const obj of canvas.getActiveObjects()) {
       if (!isFabricTextObject(obj)) continue;
       obj.set({ fill: color });
+      updated = true;
+    }
+    if (updated) {
+      canvas.requestRenderAll();
+      markDirty();
+    }
+  };
+
+  const handleFontFamilyChange = (family: string | null) => {
+    if (!family) return;
+    setFontFamily(family);
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    let updated = false;
+    for (const obj of canvas.getActiveObjects()) {
+      if (!isFabricTextObject(obj)) continue;
+      obj.set({ fontFamily: family });
       updated = true;
     }
     if (updated) {
@@ -2480,159 +2506,236 @@ export default function ArtifactEditor({
                   </div>
                 </div>
 
-                {/* TOOLBAR ROW 2: ELEMENT PROPERTIES (POIN 8) */}
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background border border-border text-xs h-11 min-h-[44px] max-h-[44px] overflow-x-auto overflow-y-hidden shrink-0 flex-nowrap">
+                {/* TOOLBAR ROW 2: ELEMENT PROPERTIES (TWO-ROW FIXED 88px PANEL) */}
+                <div className="rounded-lg bg-background border border-border text-xs h-[88px] min-h-[88px] max-h-[88px] p-2 flex flex-col justify-between shrink-0">
                   {selectedElementIds.length === 0 ? (
-                    <span className="text-muted-foreground text-xs italic">
-                      Properties (None): Select element first
-                    </span>
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs italic">
+                          Properties (None): Select element first
+                        </span>
+                      </div>
+                      <div className="flex items-center text-[11px] text-muted-foreground">
+                        <span>Tip: Del/Backspace to delete, Drag to move, Shift+Click to multi-select</span>
+                      </div>
+                    </>
                   ) : selectedTextCount > 0 ? (
                     <>
-                      <span className="text-[11px] font-mono text-muted-foreground uppercase">Properties (Text):</span>
-                      <input
-                        type="color"
-                        value={fontColor}
-                        onChange={(e) => handleFontColorChange(e.target.value)}
-                        className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded"
-                        title="Font Color"
-                      />
-                      <Input
-                        type="number"
-                        min={MIN_FONT_SIZE}
-                        max={MAX_FONT_SIZE}
-                        value={fontSizeInput}
-                        onChange={(e) => handleFontSizeInput(e.target.value)}
-                        onBlur={() => setFontSizeInput(String(fontSize))}
-                        className="w-20 h-7 text-xs text-center"
-                        title="Font Size"
-                      />
-                      <Button
-                        type="button"
-                        variant={fontWeight === 'bold' ? 'default' : 'outline'}
-                        size="icon-sm"
-                        onClick={handleToggleBold}
-                        disabled={busy}
-                        title={t('admin.artifacts.bold')}
-                      >
-                        <Bold className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={fontStyle === 'italic' ? 'default' : 'outline'}
-                        size="icon-sm"
-                        onClick={handleToggleItalic}
-                        disabled={busy}
-                        title={t('admin.artifacts.italic')}
-                      >
-                        <Italic className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={underline ? 'default' : 'outline'}
-                        size="icon-sm"
-                        onClick={handleToggleUnderline}
-                        disabled={busy}
-                        title={t('admin.artifacts.underline')}
-                      >
-                        <Underline className="w-3.5 h-3.5" />
-                      </Button>
-                      <div className="h-4 w-px bg-border mx-1" />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={() => handleSetTextAlign('left')}
-                        title="Align Left"
-                      >
-                        <AlignLeft className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={() => handleSetTextAlign('center')}
-                        title="Align Center"
-                      >
-                        <AlignCenter className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={() => handleSetTextAlign('right')}
-                        title="Align Right"
-                      >
-                        <AlignRight className="w-3.5 h-3.5" />
-                      </Button>
-                      <div className="h-4 w-px bg-border mx-1" />
-                      <div className="flex items-center gap-1">
+                      {/* Row 1: Identity & Primary Typography */}
+                      <div className="flex items-center gap-2 overflow-x-auto overflow-y-hidden shrink-0 flex-nowrap py-0.5">
+                        <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium font-mono text-primary uppercase">
+                          TEXT
+                        </span>
+
+                        {/* Font Family Selector */}
+                        <Select
+                          value={fontFamily}
+                          onValueChange={handleFontFamilyChange}
+                          disabled={busy}
+                        >
+                          <SelectTrigger
+                            className="w-[180px] h-7 text-xs"
+                            title="Font Family"
+                            aria-label="Font Family"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-72">
+                            {(['system', 'sans', 'serif', 'display', 'script'] as FontCategory[]).map(
+                              (category) => {
+                                const fonts = FONT_CATALOG.filter((f) => f.category === category);
+                                if (fonts.length === 0) return null;
+                                return (
+                                  <SelectGroup key={category}>
+                                    <SelectLabel className="font-semibold text-[11px]">
+                                      {FONT_CATEGORY_LABELS[category].en}
+                                    </SelectLabel>
+                                    {fonts.map((f) => (
+                                      <SelectItem
+                                        key={f.family}
+                                        value={f.family}
+                                        className="text-xs"
+                                        style={{ fontFamily: f.family }}
+                                      >
+                                        {f.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectGroup>
+                                );
+                              }
+                            )}
+                          </SelectContent>
+                        </Select>
+
+                        <input
+                          type="color"
+                          value={fontColor}
+                          onChange={(e) => handleFontColorChange(e.target.value)}
+                          className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded shrink-0"
+                          title="Font Color"
+                        />
+                        <Input
+                          type="number"
+                          min={MIN_FONT_SIZE}
+                          max={MAX_FONT_SIZE}
+                          value={fontSizeInput}
+                          onChange={(e) => handleFontSizeInput(e.target.value)}
+                          onBlur={() => setFontSizeInput(String(fontSize))}
+                          className="w-20 h-7 text-xs text-center"
+                          title="Font Size"
+                        />
+                        <Button
+                          type="button"
+                          variant={fontWeight === 'bold' ? 'default' : 'outline'}
+                          size="icon-sm"
+                          onClick={handleToggleBold}
+                          disabled={busy}
+                          title={t('admin.artifacts.bold')}
+                        >
+                          <Bold className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={fontStyle === 'italic' ? 'default' : 'outline'}
+                          size="icon-sm"
+                          onClick={handleToggleItalic}
+                          disabled={busy}
+                          title={t('admin.artifacts.italic')}
+                        >
+                          <Italic className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={underline ? 'default' : 'outline'}
+                          size="icon-sm"
+                          onClick={handleToggleUnderline}
+                          disabled={busy}
+                          title={t('admin.artifacts.underline')}
+                        >
+                          <Underline className="w-3.5 h-3.5" />
+                        </Button>
+                        <div className="h-4 w-px bg-border mx-1 shrink-0" />
                         <Button
                           type="button"
                           variant="outline"
                           size="icon-sm"
-                          onClick={() => {
-                            const next = lineHeight >= 1.8 ? 1.0 : Number((lineHeight + 0.2).toFixed(1));
-                            handleLineHeightChange(next);
-                          }}
-                          disabled={busy}
-                          title={`Line Height (${lineHeight.toFixed(1)})`}
+                          onClick={() => handleSetTextAlign('left')}
+                          title="Align Left"
                         >
-                          <MoveVertical className="w-3.5 h-3.5" />
+                          <AlignLeft className="w-3.5 h-3.5" />
                         </Button>
-                        <input
-                          type="range"
-                          min={0.8}
-                          max={2.4}
-                          step={0.1}
-                          value={lineHeight}
-                          onChange={(e) => handleLineHeightChange(Number(e.target.value))}
-                          disabled={busy}
-                          className="w-14 h-3 accent-primary cursor-pointer"
-                          title={`Line Height: ${lineHeight.toFixed(1)}`}
-                        />
-                      </div>
-                      <div className="flex items-center gap-1">
                         <Button
                           type="button"
-                          variant={textShadow ? 'default' : 'outline'}
+                          variant="outline"
                           size="icon-sm"
-                          onClick={handleToggleTextShadow}
-                          disabled={busy}
-                          title="Text Shadow"
+                          onClick={() => handleSetTextAlign('center')}
+                          title="Align Center"
                         >
-                          <span className="font-black text-xs drop-shadow leading-none">S</span>
+                          <AlignCenter className="w-3.5 h-3.5" />
                         </Button>
-                        {textShadow && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          onClick={() => handleSetTextAlign('right')}
+                          title="Align Right"
+                        >
+                          <AlignRight className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+
+                      {/* Row 2: Advanced Effects & Sliders */}
+                      <div className="flex items-center gap-4 overflow-x-auto overflow-y-hidden shrink-0 flex-nowrap py-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon-sm"
+                            onClick={() => {
+                              const next = lineHeight >= 1.8 ? 1.0 : Number((lineHeight + 0.2).toFixed(1));
+                              handleLineHeightChange(next);
+                            }}
+                            disabled={busy}
+                            title={`Line Height (${lineHeight.toFixed(1)})`}
+                          >
+                            <MoveVertical className="w-3.5 h-3.5" />
+                          </Button>
+                          <span className="text-[11px] text-muted-foreground w-12">
+                            {lineHeight.toFixed(1)}x
+                          </span>
                           <input
                             type="range"
-                            min={0}
-                            max={20}
-                            step={1}
-                            value={shadowBlur}
-                            onChange={(e) => void handleShadowBlurChange(Number(e.target.value))}
+                            min={0.8}
+                            max={2.4}
+                            step={0.1}
+                            value={lineHeight}
+                            onChange={(e) => handleLineHeightChange(Number(e.target.value))}
                             disabled={busy}
-                            className="w-14 h-3 accent-primary cursor-pointer"
-                            title={`Shadow Blur: ${shadowBlur}`}
+                            className="w-20 h-3 accent-primary cursor-pointer"
+                            title={`Line Height: ${lineHeight.toFixed(1)}`}
                           />
-                        )}
+                        </div>
+
+                        <div className="h-4 w-px bg-border shrink-0" />
+
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            type="button"
+                            variant={textShadow ? 'default' : 'outline'}
+                            size="icon-sm"
+                            onClick={handleToggleTextShadow}
+                            disabled={busy}
+                            title="Text Shadow"
+                          >
+                            <span className="font-black text-xs drop-shadow leading-none">S</span>
+                          </Button>
+                          <span className="text-[11px] text-muted-foreground">Shadow</span>
+                          {textShadow && (
+                            <input
+                              type="range"
+                              min={0}
+                              max={20}
+                              step={1}
+                              value={shadowBlur}
+                              onChange={(e) => void handleShadowBlurChange(Number(e.target.value))}
+                              disabled={busy}
+                              className="w-20 h-3 accent-primary cursor-pointer"
+                              title={`Shadow Blur: ${shadowBlur}`}
+                            />
+                          )}
+                        </div>
                       </div>
                     </>
                   ) : fabricCanvasRef.current?.getActiveObjects().some((o) => Boolean((o as any).data?.imageRef)) ? (
-                    <span className="text-muted-foreground text-xs italic">
-                      Properties (Image): No properties to change
-                    </span>
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs italic">
+                          Properties (Image): No properties to change
+                        </span>
+                      </div>
+                      <div className="flex items-center text-[11px] text-muted-foreground">
+                        <span>Aspect ratio locked on corner handles • Use Context Menu or Del to remove</span>
+                      </div>
+                    </>
                   ) : (
                     <>
-                      <span className="text-[11px] font-mono text-muted-foreground uppercase">Properties (Shape):</span>
-                      <Label className="flex items-center gap-1 text-xs">
-                        Color:
-                        <input
-                          type="color"
-                          value={shapeFill}
-                          onChange={(e) => handleSetShapeFill(e.target.value)}
-                          className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded ml-1"
-                        />
-                      </Label>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-[10px] font-medium font-mono text-accent-foreground uppercase">
+                          SHAPE
+                        </span>
+                        <Label className="flex items-center gap-1.5 text-xs">
+                          Fill Color:
+                          <input
+                            type="color"
+                            value={shapeFill}
+                            onChange={(e) => handleSetShapeFill(e.target.value)}
+                            className="w-5 h-5 bg-transparent border-0 cursor-pointer rounded"
+                          />
+                        </Label>
+                      </div>
+                      <div className="flex items-center text-[11px] text-muted-foreground">
+                        <span>Rectangular shape container • Drag handles to scale</span>
+                      </div>
                     </>
                   )}
                 </div>

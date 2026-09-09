@@ -1931,10 +1931,14 @@ test('SPEC-15-03 / BUG-28: Removal of redundant Apply Style button from properti
     'ArtifactEditor toolbar must not render redundant Apply Style button'
   );
 
-  // 2. Toolbar retains stable 44px fixed height
+  // 2. Toolbar retains stable 88px fixed height
   assert.ok(
-    code.includes('h-11 min-h-[44px] max-h-[44px] overflow-x-auto overflow-y-hidden shrink-0 flex-nowrap'),
-    'Toolbar must retain locked 44px height with flex-nowrap'
+    code.includes('h-[88px] min-h-[88px] max-h-[88px]'),
+    'Toolbar must retain locked 88px height'
+  );
+  assert.ok(
+    !code.includes('h-11 min-h-[44px] max-h-[44px]'),
+    'Toolbar must NOT use old 44px height'
   );
 
   // 3. All real-time text property handlers remain functional, invoke canvas.requestRenderAll, and call markDirty()
@@ -1948,6 +1952,7 @@ test('SPEC-15-03 / BUG-28: Removal of redundant Apply Style button from properti
     'handleLineHeightChange',
     'handleToggleTextShadow',
     'handleShadowBlurChange',
+    'handleFontFamilyChange',
   ]) {
     const handlerStart = code.indexOf(`const ${handler}`);
     assert.ok(handlerStart !== -1, `Must find declaration of ${handler}`);
