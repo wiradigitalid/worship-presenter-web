@@ -643,8 +643,11 @@ func marshalLayout(layout Layout) map[string]any {
 	return out
 }
 
-// AssertStableAgainstSeed is Story 16.5: seeded skeleton ids and required
-// flags survive a save. Authored rows (no seed) never call this.
+// AssertStableAgainstSeed validates structural stability against the seed template.
+// Per DEC-014, seeded elements are ordinary editable and deletable elements:
+// an administrator may remove, rename, or modify elements that originated in the seed.
+// Base type, placeholder keys count, and layout names must remain stable.
+// Elements currently marked required in the existing layout cannot be removed.
 func AssertStableAgainstSeed(incoming, seed, existing Template) error {
 	if incoming.BaseType != seed.BaseType {
 		return failf("baseType cannot be changed")
@@ -664,7 +667,7 @@ func AssertStableAgainstSeed(incoming, seed, existing Template) error {
 	if len(incoming.Layouts) != len(seed.Layouts) {
 		return failf("layouts cannot be added or removed")
 	}
-	for name, seedLayout := range seed.Layouts {
+	for name := range seed.Layouts {
 		incomingLayout, ok := incoming.Layouts[name]
 		if !ok {
 			return failf("missing layout: %s", name)
@@ -683,19 +686,6 @@ func AssertStableAgainstSeed(incoming, seed, existing Template) error {
 		if existingLayout, ok := existing.Layouts[name]; ok {
 			for _, el := range existingLayout.Elements {
 				existingByID[el.ID] = el
-			}
-		}
-		for _, seedEl := range seedLayout.Elements {
-			incomingEl, ok := incomingByID[seedEl.ID]
-			if !ok {
-				return failf("element %s is part of the shipped template and cannot be removed or renamed in layout %s", seedEl.ID, name)
-			}
-			baseline := seedEl
-			if existingEl, ok := existingByID[seedEl.ID]; ok {
-				baseline = existingEl
-			}
-			if incomingEl.Required != baseline.Required {
-				return failf("element %s is part of the shipped template and its required flag cannot be changed in layout %s", seedEl.ID, name)
 			}
 		}
 		for _, existingEl := range existingByID {

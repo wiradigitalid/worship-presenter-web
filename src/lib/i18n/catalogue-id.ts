@@ -452,6 +452,9 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
     'Baris ini adalah marker yang memperluas Announcement Set. Baris ini tidak memiliki kanvas yang dapat disunting.',
   'admin.artifacts.markerChip': 'marker',
   'admin.songSets.title': 'Entri Song Set',
+  'admin.songSets.active': 'Aktif:',
+  'admin.songSets.editsApplyAll': 'Perubahan berlaku untuk semua {count} entri song set',
+  'admin.songSets.editsApplyAllOne': 'Perubahan berlaku untuk 1 entri song set',
   'admin.songSets.description':
     'Setiap entri secara otomatis menghasilkan input mingguan pada formulir Service ({var}_song_number, {var}_song_book_name, {var}_song_background). Posisi pada spine diatur di tab Main spine.',
   'admin.songSets.empty': 'Tidak ada entri song set yang ditemukan.',

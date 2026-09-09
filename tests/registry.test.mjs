@@ -237,7 +237,7 @@ test('read-only templates reject mutation', () => {
   );
 });
 
-test('save cannot remove seeded element ids', () => {
+test('save can remove seeded element ids (DEC-014)', () => {
   const db = getDb();
   const welcome = getArtifactTemplate(db, 'welcome');
   assert.ok(welcome);
@@ -251,10 +251,12 @@ test('save cannot remove seeded element ids', () => {
       default: { ...layout, elements: [] },
     },
   };
-  assert.throws(
-    () => updateArtifactTemplate(db, 'welcome', stripped, updatedAt),
-    RegistryValidationError
-  );
+  const saved = updateArtifactTemplate(db, 'welcome', stripped, updatedAt);
+  assert.equal(saved.layouts.default.elements.length, 0);
+
+  // Restore seed for subsequent tests
+  const seed = getSeedTemplateById('welcome');
+  resetArtifactTemplate(db, 'welcome', seed, saved.updatedAt);
 });
 
 /** Story 16.5 — canvas element authoring stability rules. */
@@ -351,7 +353,7 @@ test('save can delete a previously added non-seed element', () => {
   assert.ok(saved.layouts.default.elements.some((e) => e.id === 'e1'));
 });
 
-test('save rejecting a seeded element removal leaves the row unchanged', () => {
+test('save removing a seeded element updates the row (DEC-014)', () => {
   const db = getDb();
   const before = getArtifactTemplate(db, 'welcome');
   assert.ok(before);
@@ -360,15 +362,15 @@ test('save rejecting a seeded element removal leaves the row unchanged', () => {
     before.layouts.default.elements.filter((e) => e.id !== 'e1')
   );
 
-  assert.throws(
-    () => updateArtifactTemplate(db, 'welcome', payload, before.updatedAt),
-    (err) =>
-      err instanceof RegistryValidationError && /\be1\b/.test(err.message)
-  );
-  assert.deepEqual(getArtifactTemplate(db, 'welcome'), before);
+  const saved = updateArtifactTemplate(db, 'welcome', payload, before.updatedAt);
+  assert.ok(!saved.layouts.default.elements.some((e) => e.id === 'e1'));
+
+  // Restore seed for subsequent tests
+  const seed = getSeedTemplateById('welcome');
+  resetArtifactTemplate(db, 'welcome', seed, saved.updatedAt);
 });
 
-test('save cannot flip a seeded element required flag', () => {
+test('save can flip a seeded element required flag (DEC-014)', () => {
   const db = getDb();
   const before = getArtifactTemplate(db, 'welcome');
   assert.ok(before);
@@ -383,14 +385,9 @@ test('save cannot flip a seeded element required flag', () => {
     )
   );
 
-  assert.throws(
-    () => updateArtifactTemplate(db, 'welcome', payload, before.updatedAt),
-    (err) =>
-      err instanceof RegistryValidationError &&
-      /\be1\b/.test(err.message) &&
-      /required/.test(err.message)
-  );
-  assert.deepEqual(getArtifactTemplate(db, 'welcome'), before);
+  const saved = updateArtifactTemplate(db, 'welcome', payload, before.updatedAt);
+  const updatedE1 = saved.layouts.default.elements.find((e) => e.id === 'e1');
+  assert.equal(updatedE1.required, true);
 
   // The same save minus the flag flip is still accepted, so the guard is not
   // simply freezing seeded elements.
@@ -398,16 +395,16 @@ test('save cannot flip a seeded element required flag', () => {
     db,
     'welcome',
     withDefaultElements(
-      before,
-      before.layouts.default.elements.map((e) =>
+      saved,
+      saved.layouts.default.elements.map((e) =>
         e.id === 'e1' ? { ...e, x: e.x + 1 } : e
       )
     ),
-    before.updatedAt
+    saved.updatedAt
   );
   assert.equal(
     moved.layouts.default.elements.find((e) => e.id === 'e1').required,
-    false
+    true
   );
 });
 
@@ -666,14 +663,14 @@ test('SPEC-12-07: Song Sets UX & button consistency (BUG-14, BUG-15, DEC-009, DE
     'SongSetEntriesPanel must not carry hand-written hover:bg-blue-600 button overrides'
   );
 
-  // 4. Rename affordance on the Song Set header card (DEC-011 / BUG-15)
+  // 4. Rename affordance in configured song set rows (SPEC-14-06 / BUG-24 relocated from header card)
   assert.ok(
-    code.includes('[slot: {activeEntry.variableName}]'),
-    'Slot code must be displayed alongside title'
+    code.includes('[{entry.variableName}]') || code.includes('[{activeEntry.variableName}]'),
+    'Variable code must be displayed alongside title'
   );
   assert.ok(
-    code.includes('onClick={() => setIsRenaming(true)}'),
-    'Rename affordance must exist on the Song Set header card'
+    code.includes('setEditingVarName(entry.variableName)') || code.includes('onClick={() => setIsRenaming(true)}'),
+    'Rename affordance must exist for configured song set rows'
   );
 });
 

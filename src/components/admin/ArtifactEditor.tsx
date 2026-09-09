@@ -13,7 +13,6 @@ import {
   MoveVertical,
   Plus,
   SendToBack,
-  Sparkles,
   Square,
   Trash2,
   Type,
@@ -89,6 +88,7 @@ import {
   serializeCanvas,
   serializeTextStyle,
   shouldPreserveSelectionOnContextMenu,
+  syncImageClipOnMove,
   toStrictHexColor,
   updateImageElementFit,
 } from '@/lib/registry/canvas-utils';
@@ -199,10 +199,18 @@ function elementToFabricObject(
         scaleX: initial.scaleX,
         scaleY: initial.scaleY,
         clipPath: clipBox,
-        data: { elementId: element.id, imageRef: element.imageRef, objectFit: element.style?.objectFit },
+        data: {
+          elementId: element.id,
+          imageRef: element.imageRef,
+          objectFit: element.style?.objectFit,
+          clipOffset: { x: left - initial.left, y: top - initial.top },
+        },
       });
       imgEl.onload = () => {
         const updated = calcFit();
+        if ((fabricImg as any).data) {
+          (fabricImg as any).data.clipOffset = { x: left - updated.left, y: top - updated.top };
+        }
         fabricImg.set({
           width: updated.width,
           height: updated.height,
@@ -300,6 +308,7 @@ export default function ArtifactEditor({
   const [underline, setUnderline] = useState(false);
   const [lineHeight, setLineHeight] = useState<number>(1.16);
   const [textShadow, setTextShadow] = useState(false);
+  const [shadowBlur, setShadowBlur] = useState<number>(4);
   const [shapeFill, setShapeFill] = useState('#5C2E16');
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [selectedTextCount, setSelectedTextCount] = useState(0);
@@ -393,6 +402,9 @@ export default function ArtifactEditor({
           : 1.16
       );
       setTextShadow(Boolean((selectedText as any).shadow));
+      if ((selectedText as any).shadow && typeof (selectedText as any).shadow.blur === 'number') {
+        setShadowBlur((selectedText as any).shadow.blur);
+      }
     }
     const shapes = active.filter((obj) => (obj as any).type === 'rect' && !(obj as any).data?.imageRef);
     if (shapes.length > 0) {
@@ -489,6 +501,7 @@ export default function ArtifactEditor({
         fireRightClick: true,
         stopContextMenu: true,
         backgroundColor: layout.backgroundColor,
+        preserveObjectStacking: true,
       });
       fabricCanvasRef.current = canvas;
 
@@ -585,9 +598,23 @@ export default function ArtifactEditor({
       };
       upperCanvasEl?.addEventListener('contextmenu', onNativeContextMenu);
 
+      // SPEC-14-01: On active image object moving, synchronize clipPath coordinates
+      const onObjectMoving = (opt: any) => {
+        const target = opt.target;
+        if (target && syncImageClipOnMove(target)) {
+          canvas.requestRenderAll();
+        }
+      };
+      canvas.on('object:moving', onObjectMoving);
+
       // SPEC-13-03: On image object scaling/modification, recalculate contain fit so image content grows/shrinks with handles
       const onObjectModified = (opt: any) => {
         const target = opt.target;
+        const action = opt?.action || opt?.transform?.action;
+        if (action === 'drag' || action === 'move') {
+          syncImageClipOnMove(target);
+          return;
+        }
         if (target && target.data?.imageRef) {
           if (updateImageElementFit(target, fabric)) {
             canvas.requestRenderAll();
@@ -609,6 +636,7 @@ export default function ArtifactEditor({
         canvas.off('selection:cleared', onSelectionChange);
         canvas.off('mouse:down', onMouseDown);
         canvas.off('mouse:up', onMouseUp);
+        canvas.off('object:moving', onObjectMoving);
         canvas.off('object:modified', onObjectModified);
         upperCanvasEl?.removeEventListener('contextmenu', onNativeContextMenu);
         for (const event of CANVAS_MUTATION_EVENTS) {
@@ -934,8 +962,16 @@ export default function ArtifactEditor({
       const active = canvas.getActiveObjects();
       if (active.length === 0) return;
 
+      // Sort objects: top-down for forward/front, bottom-up for backward/back
+      const objects = canvas.getObjects();
+      const sorted = [...active].sort((a, b) => {
+        const idxA = objects.indexOf(a);
+        const idxB = objects.indexOf(b);
+        return action === 'forward' || action === 'front' ? idxB - idxA : idxA - idxB;
+      });
+
       let changed = false;
-      for (const obj of active) {
+      for (const obj of sorted) {
         if (action === 'forward') {
           if (canvas.bringObjectForward(obj)) changed = true;
         } else if (action === 'backward') {
@@ -1210,7 +1246,7 @@ export default function ArtifactEditor({
 
     void import('fabric').then((fabric) => {
       const shadowObj = textShadow
-        ? new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: 4, offsetX: 2, offsetY: 2 })
+        ? new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: shadowBlur, offsetX: 2, offsetY: 2 })
         : null;
       let updated = false;
       for (const obj of canvas.getActiveObjects()) {
@@ -1315,7 +1351,7 @@ export default function ArtifactEditor({
     const nextShadow = !textShadow;
     setTextShadow(nextShadow);
     const shadowObj = nextShadow
-      ? new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: 4, offsetX: 2, offsetY: 2 })
+      ? new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: shadowBlur, offsetX: 2, offsetY: 2 })
       : null;
     for (const obj of canvas.getActiveObjects()) {
       if (isFabricTextObject(obj)) {
@@ -1324,7 +1360,31 @@ export default function ArtifactEditor({
     }
     canvas.requestRenderAll();
     markDirty();
-  }, [textShadow, markDirty]);
+  }, [textShadow, shadowBlur, markDirty]);
+
+  const handleShadowBlurChange = useCallback(
+    async (blurVal: number) => {
+      const clamped = Math.max(0, Math.min(20, Math.round(blurVal)));
+      setShadowBlur(clamped);
+      const canvas = fabricCanvasRef.current;
+      if (!canvas) return;
+      const fabric = await import('fabric');
+      const shadowObj = new fabric.Shadow({
+        color: 'rgba(0,0,0,0.8)',
+        blur: clamped,
+        offsetX: 2,
+        offsetY: 2,
+      });
+      for (const obj of canvas.getActiveObjects()) {
+        if (isFabricTextObject(obj)) {
+          obj.set({ shadow: shadowObj } as any);
+        }
+      }
+      canvas.requestRenderAll();
+      markDirty();
+    },
+    [markDirty]
+  );
 
   /**
    * Writes the words of the selected text box straight through to Fabric, so
@@ -2006,7 +2066,7 @@ export default function ArtifactEditor({
           </div>
 
           {/* LIST TEMPLATES (POIN 3: HOVER ACTIONS & DND REORDER) */}
-          <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm flex flex-col max-h-[calc(100vh-320px)] min-h-[220px]">
+          <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm flex flex-col max-h-[calc(100vh-380px)] min-h-[220px]">
             <div className="flex items-center justify-between shrink-0">
               <span className="text-xs font-semibold text-foreground">Deck Sequence</span>
               <span className="text-[11px] text-muted-foreground font-mono">{templates.length} slides</span>
@@ -2404,7 +2464,7 @@ export default function ArtifactEditor({
                 </div>
 
                 {/* TOOLBAR ROW 2: ELEMENT PROPERTIES (POIN 8) */}
-                <div className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-background border border-border text-xs min-h-[44px]">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background border border-border text-xs h-11 min-h-[44px] max-h-[44px] overflow-x-auto overflow-y-hidden shrink-0 flex-nowrap">
                   {selectedElementIds.length === 0 ? (
                     <span className="text-muted-foreground text-xs italic">
                       Properties (None): Select element first
@@ -2514,16 +2574,31 @@ export default function ArtifactEditor({
                           title={`Line Height: ${lineHeight.toFixed(1)}`}
                         />
                       </div>
-                      <Button
-                        type="button"
-                        variant={textShadow ? 'default' : 'outline'}
-                        size="icon-sm"
-                        onClick={handleToggleTextShadow}
-                        disabled={busy}
-                        title="Text Shadow"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant={textShadow ? 'default' : 'outline'}
+                          size="icon-sm"
+                          onClick={handleToggleTextShadow}
+                          disabled={busy}
+                          title="Text Shadow"
+                        >
+                          <span className="font-black text-xs drop-shadow leading-none">S</span>
+                        </Button>
+                        {textShadow && (
+                          <input
+                            type="range"
+                            min={0}
+                            max={20}
+                            step={1}
+                            value={shadowBlur}
+                            onChange={(e) => void handleShadowBlurChange(Number(e.target.value))}
+                            disabled={busy}
+                            className="w-14 h-3 accent-primary cursor-pointer"
+                            title={`Shadow Blur: ${shadowBlur}`}
+                          />
+                        )}
+                      </div>
                       <Button
                         type="button"
                         variant="outline"

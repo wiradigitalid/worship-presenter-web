@@ -45,14 +45,14 @@ test('SPEC-12-05: Main Spine editor layout height and viewport constraints', () 
   );
 });
 
-test('SPEC-13-04: Deck Sequence card flex containment and internal scroll height clamp (BUG-11)', () => {
+test('SPEC-13-04 / SPEC-14-02: Deck Sequence card flex containment and internal scroll height clamp (BUG-11)', () => {
   const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
   const code = fs.readFileSync(editorPath, 'utf8');
 
-  // Deck sequence card must be flex flex-col with max-h clamp
+  // Deck sequence card must be flex flex-col with max-h clamp tightened to prevent window scroll
   assert.ok(
-    code.includes('flex flex-col max-h-[calc(100vh-320px)]'),
-    'Deck sequence card must use flex flex-col with viewport max-h constraint'
+    code.includes('flex flex-col max-h-[calc(100vh-380px)]'),
+    'Deck sequence card must use flex flex-col with tightened viewport max-h constraint (380px)'
   );
 
   // Deck sequence header must be shrink-0 co-located with layout classes
@@ -119,16 +119,16 @@ test('SPEC-13-07: Title area Rename height stability across canvas-bearing edito
     'Surface 2: Announcement Set Active Set row must enforce min-h-[58px] height stability'
   );
 
-  // Surface 3: Song Set title card in SongSetEntriesPanel enforces min-h-[58px]
+  // Surface 3: Song Set inline rename in SongSetEntriesPanel (SPEC-14-06 / BUG-24)
+  // Inline rename inputs render inside the list row with fixed h-8 constraint, removing the redundant top card
   assert.ok(
-    songSetsCode.includes('px-4 py-3 flex items-center justify-between shadow-sm min-h-[58px]'),
-    'Surface 3: Song Set rename header card must enforce min-h-[58px] height stability'
+    !songSetsCode.includes('min-h-[58px]'),
+    'Surface 3: Redundant Rename Header Card above canvas trio must be removed'
   );
-  // Song Set title and variableName inputs are h-8 without stacked label (no height blowup)
   assert.ok(
-    songSetsCode.includes('className="text-sm font-semibold max-w-xs h-8"') &&
-    songSetsCode.includes('className="text-xs font-mono max-w-[140px] h-8"'),
-    'Surface 3: Song Set rename inputs must be h-8 without stacked labels to keep 58px stability'
+    songSetsCode.includes('className="text-xs font-semibold h-8 w-full"') &&
+    songSetsCode.includes('className="text-xs font-mono h-8 flex-1 min-w-0"'),
+    'Surface 3: Song Set inline rename inputs must use h-8 height constraint'
   );
 
   // BUG-23: Song Set trio drops Rename control
@@ -185,6 +185,23 @@ test('SPEC-13-07: Title area Rename height stability across canvas-bearing edito
   assert.ok(
     songSetsCode.includes('3. Refrain Layout'),
     'SongSetEntriesPanel tab button must read "3. Refrain Layout"'
+  );
+});
+
+test('SPEC-14-07 / BUG-25: Toolbar properties bar height stability on selection', () => {
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // Element properties toolbar must be locked to a fixed 44px height (h-11 min-h-[44px] max-h-[44px]) with flex-nowrap
+  assert.ok(
+    code.includes('h-11 min-h-[44px] max-h-[44px]') && code.includes('flex-nowrap'),
+    'Element Properties toolbar must lock height to 44px with flex-nowrap to prevent downward canvas shifts'
+  );
+
+  // Horizontal overflow must be scrollable without vertical expansion
+  assert.ok(
+    code.includes('overflow-x-auto') && code.includes('overflow-y-hidden'),
+    'Element Properties toolbar must enable horizontal scroll and hide vertical overflow'
   );
 });
 

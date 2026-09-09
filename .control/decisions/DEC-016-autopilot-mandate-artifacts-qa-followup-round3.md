@@ -1,7 +1,7 @@
 ---
 type: mandate
 id: DEC-016
-status: accepted
+status: applied
 accepted_by: 'kodesh87 (2026-09-09)'
 touches:
   - .control/memlog/autopilot-DEC-016.md

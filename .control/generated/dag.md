@@ -50,6 +50,26 @@ dag:
     - SPEC-13-12
   - parallel:
     - SPEC-13-13
+- spec: SPEC-14
+  order:
+  - parallel:
+    - SPEC-14-01
+  - parallel:
+    - SPEC-14-02
+  - parallel:
+    - SPEC-14-03
+  - parallel:
+    - SPEC-14-04
+  - parallel:
+    - SPEC-14-05
+  - parallel:
+    - SPEC-14-06
+  - parallel:
+    - SPEC-14-07
+  - parallel:
+    - SPEC-14-08
+  - parallel:
+    - SPEC-14-09
 - spec: W1
   order:
   - parallel:

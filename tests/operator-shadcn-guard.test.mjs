@@ -174,3 +174,37 @@ test('SPEC-13-13: Song Set shared trio clarity and visual indicator (BUG-24)', (
     'Configured song sets list must clarify that entries share the canvas trio on the right'
   );
 });
+
+test('SPEC-14-06 / BUG-24: Song Set inline rename in list rows and removal of redundant header card', () => {
+  const panelPath = path.join(ROOT, 'src', 'components', 'admin', 'SongSetEntriesPanel.tsx');
+  const code = readFileSync(panelPath, 'utf8');
+
+  // 1. Redundant header card removed
+  assert.ok(
+    !code.includes('min-h-[58px]'),
+    'Redundant rename header card above canvas trio must be removed'
+  );
+
+  // 2. Inline rename triggers exist inside list items
+  assert.ok(
+    code.includes('editingVarName') && code.includes('Pencil'),
+    'Configured song sets list must provide inline rename trigger per item'
+  );
+
+  // 3. Inline rename inputs have fixed height constraint (h-8)
+  assert.ok(
+    code.includes('className="text-xs font-semibold h-8 w-full"') &&
+    code.includes('className="text-xs font-mono h-8 flex-1 min-w-0"'),
+    'Inline rename inputs must enforce compact h-8 height constraint'
+  );
+});
+
+test('guard proof: redundant header card presence fails absence-guard', () => {
+  const defectiveCode = '<div className="rounded-xl min-h-[58px]">Rename Card</div>';
+  assert.throws(() => {
+    assert.ok(
+      !defectiveCode.includes('min-h-[58px]'),
+      'Redundant rename header card above canvas trio must be removed'
+    );
+  }, /Redundant rename header card/);
+});

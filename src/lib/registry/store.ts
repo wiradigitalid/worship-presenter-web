@@ -278,15 +278,18 @@ export function getArtifactTemplate(
 }
 
 /**
- * Element authoring stability rules (Story 16.5).
+ * Element authoring stability rules (Story 16.5, updated per DEC-014).
  *
- * An administrator may add their own elements and delete the ones they added,
- * but the shipped skeleton must survive every save:
- *  - every element id present in the seed layout must still be present;
- *  - a seeded element's `required` flag may not be changed: flipping it to
- *    `true` would make every later plan build hard-fail hydration for the slide;
+ * An administrator may add their own elements and edit or delete elements
+ * originally created by the seed (DEC-014 retired the restriction that
+ * shipped skeleton elements cannot be deleted or modified).
+ *
+ * Structural stability rules preserved:
+ *  - baseType cannot be changed;
+ *  - placeholder keys cannot be added or removed;
+ *  - layouts cannot be added or removed;
  *  - every currently persisted element marked `required` must still be present;
- *  - ids beyond that are the administrator's own and are free to come and go.
+ *  - other elements are free to come and go.
  *
  * Duplicate/empty element ids are already rejected by `validateArtifactTemplate`,
  * which runs before this check.
@@ -340,26 +343,6 @@ function assertStableAgainstSeed(
 
     const existingLayout =
       existing.layouts[layoutKey as keyof typeof existing.layouts];
-    const existingById = new Map(
-      (existingLayout?.elements ?? []).map((element) => [element.id, element])
-    );
-
-    for (const seedElement of seedLayout.elements) {
-      const incomingElement = incomingById.get(seedElement.id);
-      if (!incomingElement) {
-        throw new RegistryValidationError(
-          `element ${seedElement.id} is part of the shipped template and cannot be removed or renamed in layout ${layoutKey}`
-        );
-      }
-      // The stored row is the baseline, so a template that already drifted can
-      // still be saved — but the flip itself is always refused.
-      const baseline = existingById.get(seedElement.id) ?? seedElement;
-      if (Boolean(incomingElement.required) !== Boolean(baseline.required)) {
-        throw new RegistryValidationError(
-          `element ${seedElement.id} is part of the shipped template and its required flag cannot be changed in layout ${layoutKey}`
-        );
-      }
-    }
 
     for (const existingElement of existingLayout?.elements ?? []) {
       if (!existingElement.required) continue;
@@ -426,7 +409,7 @@ export function updateArtifactTemplate(
   }
 
   const nextPayload = serializeTemplate(validated);
-  const now = new Date().toISOString();
+  const now = nextRegistryUpdatedAt(db);
   const result = options?.markAsSeeded
     ? db
         .prepare(

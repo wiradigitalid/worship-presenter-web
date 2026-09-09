@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Trash2 } from 'lucide-react';
+import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,8 +29,8 @@ export function SongSetEntriesPanel() {
   const [newVarName, setNewVarName] = useState('');
   const [creating, setCreating] = useState(false);
 
-  // Rename state
-  const [isRenaming, setIsRenaming] = useState(false);
+  // Inline rename state in configured entries list (SPEC-14-06 / BUG-24)
+  const [editingVarName, setEditingVarName] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftVarName, setDraftVarName] = useState('');
   const [renaming, setRenaming] = useState(false);
@@ -70,14 +70,14 @@ export function SongSetEntriesPanel() {
     if (activeEntry) {
       setDraftTitle(activeEntry.title);
       setDraftVarName(activeEntry.variableName);
-      setIsRenaming(false);
+      setEditingVarName(null);
     }
   }, [activeEntry?.variableName]);
 
   const handleCreate = async () => {
     const trimmedTitle = newTitle.trim();
     if (!trimmedTitle) {
-      toast.error('Song set title is required');
+      toast.error(t('admin.songSets.titleInvalid'));
       return;
     }
     let candidateVar = newVarName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
@@ -117,7 +117,7 @@ export function SongSetEntriesPanel() {
       setDraftTitle(created.title);
       setNewTitle('');
       setNewVarName('');
-      setIsRenaming(false);
+      setEditingVarName(null);
       toast.success(t('admin.songSets.created').replace('{title}', created.title));
     } catch {
       toast.error(t('admin.songSets.createFailed'));
@@ -127,7 +127,9 @@ export function SongSetEntriesPanel() {
   };
 
   const handleSaveRename = async () => {
-    if (!activeEntry) return;
+    const targetVar = editingVarName ?? activeEntry?.variableName;
+    const targetEntry = entries.find((e) => e.variableName === targetVar);
+    if (!targetEntry) return;
     const trimmedTitle = draftTitle.trim();
     if (!trimmedTitle || trimmedTitle.length > 120) {
       toast.error(t('admin.songSets.titleInvalid'));
@@ -146,7 +148,7 @@ export function SongSetEntriesPanel() {
     setRenaming(true);
     try {
       const res = await fetch(
-        `/api/admin/song-set-entries/${encodeURIComponent(activeEntry.variableName)}`,
+        `/api/admin/song-set-entries/${encodeURIComponent(targetEntry.variableName)}`,
         {
           method: 'PATCH',
           credentials: 'same-origin',
@@ -154,7 +156,7 @@ export function SongSetEntriesPanel() {
           body: JSON.stringify({
             title: trimmedTitle,
             variableName: trimmedVar,
-            updatedAt: activeEntry.updatedAt,
+            updatedAt: targetEntry.updatedAt,
           }),
         }
       );
@@ -166,7 +168,7 @@ export function SongSetEntriesPanel() {
         } else {
           toast.error(t('admin.songSets.staleConflict'));
           void fetchEntries();
-          setIsRenaming(false);
+          setEditingVarName(null);
         }
         return;
       }
@@ -178,11 +180,11 @@ export function SongSetEntriesPanel() {
 
       const updated = (await res.json()) as SongSetEntry;
       setEntries((prev) =>
-        prev.map((item) => (item.variableName === activeEntry.variableName ? updated : item))
+        prev.map((item) => (item.variableName === targetEntry.variableName ? updated : item))
       );
       setSelectedVarName(updated.variableName);
       toast.success(t('admin.songSets.renamed').replace('{title}', updated.title));
-      setIsRenaming(false);
+      setEditingVarName(null);
     } catch {
       toast.error(t('admin.songSets.renameFailed'));
     } finally {
@@ -301,6 +303,75 @@ export function SongSetEntriesPanel() {
             <div className="space-y-1.5 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
               {entries.map((entry) => {
                 const isSelected = activeEntry?.variableName === entry.variableName;
+                const isItemEditing = editingVarName === entry.variableName;
+
+                if (isItemEditing) {
+                  return (
+                    <div
+                      key={entry.variableName}
+                      className={`p-2 rounded-lg border transition-all ${
+                        isSelected
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border/60 bg-muted/30'
+                      }`}
+                    >
+                      <div className="flex flex-col gap-1.5">
+                        <Input
+                          value={draftTitle}
+                          disabled={renaming}
+                          onChange={(e) => setDraftTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') void handleSaveRename();
+                            if (e.key === 'Escape') setEditingVarName(null);
+                          }}
+                          placeholder={t('admin.songSets.entryTitle')}
+                          aria-label={t('admin.songSets.entryTitle')}
+                          className="text-xs font-semibold h-8 w-full"
+                          autoFocus
+                        />
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            value={draftVarName}
+                            disabled={renaming}
+                            onChange={(e) =>
+                              setDraftVarName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '_'))
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') void handleSaveRename();
+                              if (e.key === 'Escape') setEditingVarName(null);
+                            }}
+                            placeholder={t('admin.songSets.variableName')}
+                            aria-label={t('admin.songSets.variableName')}
+                            className="text-xs font-mono h-8 flex-1 min-w-0"
+                          />
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="ghost"
+                            disabled={renaming || !draftTitle.trim() || !draftVarName.trim()}
+                            onClick={() => void handleSaveRename()}
+                            title={t('admin.songSets.save')}
+                            className="h-8 w-8 text-primary hover:bg-primary/20 shrink-0"
+                          >
+                            <Check className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="ghost"
+                            disabled={renaming}
+                            onClick={() => setEditingVarName(null)}
+                            title={t('admin.songSets.cancel')}
+                            className="h-8 w-8 text-muted-foreground hover:bg-muted shrink-0"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
                 return (
                   <div
                     key={entry.variableName}
@@ -308,14 +379,12 @@ export function SongSetEntriesPanel() {
                     tabIndex={0}
                     onClick={() => {
                       setSelectedVarName(entry.variableName);
-                      setDraftTitle(entry.title);
-                      setIsRenaming(false);
+                      setEditingVarName(null);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         setSelectedVarName(entry.variableName);
-                        setDraftTitle(entry.title);
-                        setIsRenaming(false);
+                        setEditingVarName(null);
                       }
                     }}
                     className={`group flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all ${
@@ -329,6 +398,22 @@ export function SongSetEntriesPanel() {
                       <span className="text-[10px] font-mono text-muted-foreground">[{entry.variableName}]</span>
                     </div>
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        title={t('admin.songSets.rename')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedVarName(entry.variableName);
+                          setDraftTitle(entry.title);
+                          setDraftVarName(entry.variableName);
+                          setEditingVarName(entry.variableName);
+                        }}
+                        className="h-7 w-7 p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
                       <Button
                         type="button"
                         variant="ghost"
@@ -348,7 +433,7 @@ export function SongSetEntriesPanel() {
         </div>
       </aside>
 
-      {/* Panel Kanan: Rename Card, Trio Switcher & Canvas Workspace */}
+      {/* Panel Kanan: Trio Switcher & Canvas Workspace */}
       <section className="space-y-4 min-w-0">
         {!activeEntry ? (
           <div className="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-xs text-muted-foreground">
@@ -356,85 +441,6 @@ export function SongSetEntriesPanel() {
           </div>
         ) : (
           <>
-            {/* Rename Header Card */}
-            <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm min-h-[58px]">
-              <div className="flex items-center gap-3">
-                {isRenaming ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">
-                      {t('admin.songSets.entryTitle')}:
-                    </span>
-                    <Input
-                      value={draftTitle}
-                      disabled={renaming}
-                      onChange={(e) => setDraftTitle(e.target.value)}
-                      placeholder={t('admin.songSets.entryTitle')}
-                      aria-label={t('admin.songSets.entryTitle')}
-                      className="text-sm font-semibold max-w-xs h-8"
-                      autoFocus
-                    />
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase ml-1">
-                      {t('admin.songSets.variableName')}:
-                    </span>
-                    <Input
-                      value={draftVarName}
-                      disabled={renaming}
-                      onChange={(e) =>
-                        setDraftVarName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '_'))
-                      }
-                      placeholder={t('admin.songSets.variableName')}
-                      aria-label={t('admin.songSets.variableName')}
-                      className="text-xs font-mono max-w-[140px] h-8"
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <span className="text-base font-bold text-foreground">{activeEntry.title}</span>
-                    <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                      [slot: {activeEntry.variableName}]
-                    </span>
-                  </>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                {isRenaming ? (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={renaming}
-                      onClick={() => {
-                        setIsRenaming(false);
-                        setDraftTitle(activeEntry.title);
-                        setDraftVarName(activeEntry.variableName);
-                      }}
-                    >
-                      {t('admin.songSets.cancel')}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={renaming || !draftTitle.trim() || !draftVarName.trim()}
-                      onClick={() => void handleSaveRename()}
-                    >
-                      {renaming ? t('admin.songSets.renaming') : t('admin.songSets.save')}
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsRenaming(true)}
-                  >
-                    {t('admin.songSets.rename')}
-                  </Button>
-                )}
-              </div>
-            </div>
-
             {/* Layout Trio Switcher & Canvas Workspace */}
             <div className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm">
               <div className="flex items-center justify-between pb-1 border-b border-border/60">
@@ -447,7 +453,13 @@ export function SongSetEntriesPanel() {
                   </span>
                 </div>
                 <span className="text-[11px] text-muted-foreground">
-                  Edits apply to all {entries.length} song set {entries.length === 1 ? 'entry' : 'entries'}
+                  {t('admin.songSets.active')}{' '}
+                  <strong className="text-foreground">{activeEntry.title}</strong>{' '}
+                  <span className="font-mono text-[10px]">[{activeEntry.variableName}]</span>
+                  {' · '}
+                  {entries.length === 1
+                    ? t('admin.songSets.editsApplyAllOne')
+                    : t('admin.songSets.editsApplyAll').replace('{count}', String(entries.length))}
                 </span>
               </div>
 

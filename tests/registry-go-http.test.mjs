@@ -270,6 +270,37 @@ describe('registry against Go', { concurrency: 1 }, () => {
     );
   });
 
+  test('Admin can save a seeded template with deleted seed element (DEC-014 / BUG-18)', async () => {
+    const welcomeRes = await json(`${base}/api/admin/artifacts/welcome`);
+    assert.equal(welcomeRes.status, 200);
+    const welcome = welcomeRes.body;
+    assert.ok(welcome.layouts?.default?.elements?.length > 0);
+
+    // Remove seeded elements e1, etc.
+    const stripped = {
+      ...welcome,
+      layouts: {
+        ...welcome.layouts,
+        default: {
+          ...welcome.layouts.default,
+          elements: [],
+        },
+      },
+    };
+    const putRes = await json(`${base}/api/admin/artifacts/welcome`, 'PUT', stripped);
+    assert.equal(putRes.status, 200, JSON.stringify(putRes.body));
+    assert.equal(putRes.body.layouts?.default?.elements?.length, 0);
+
+    // Restore back with original elements
+    const restored = {
+      ...welcome,
+      updatedAt: putRes.body.updatedAt,
+    };
+    const restoreRes = await json(`${base}/api/admin/artifacts/welcome`, 'PUT', restored);
+    assert.equal(restoreRes.status, 200);
+    assert.ok(restoreRes.body.layouts?.default?.elements?.length > 0);
+  });
+
   test('Admin rename updates song-set entry title via LC-11', async () => {
     const entries = await json(`${base}/api/admin/song-set-entries`);
     assert.equal(entries.status, 200);
