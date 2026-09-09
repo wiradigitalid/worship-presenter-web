@@ -937,7 +937,7 @@ waves:
     status: open
     release: artifacts-font-selector-two-row-toolbar
     prd: [offline-deck]
-    fr: [FR-20, FR-21, FR-29]
+    fr: [FR-20]
     size: M
     depends_on: [SPEC-16]
     spec_folder: .scratch/SPEC-17-artifacts-font-selector-two-row-toolbar/

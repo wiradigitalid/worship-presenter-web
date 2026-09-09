@@ -4,22 +4,23 @@
 
 ## Description
 
-Ensure the font family selected in the canvas editor renders accurately in web slideshow views (`ArtifactSlide.tsx`, `ProjectorClient.tsx`) and is faithfully preserved in exported PowerPoint presentations (`pptx-draw.ts`). Run full automated regression suites and smoke tests.
+Ensure the font family selected in the canvas editor renders accurately in web slideshow views (`ArtifactSlide.tsx`) and is faithfully preserved in exported PowerPoint presentations (`pptx-draw.ts`). Run full automated regression suites and smoke tests.
 
 ## Requirements
 
 1. **PowerPoint Export (`src/lib/pptx-draw.ts`)**:
-   - Verify `resolveFontFamily(style)` in `render-model.ts` maps `style.fontFamily` to pptxgenjs `fontFace`.
-   - Ensure clean fallback to `'Arial'` if undefined.
+   - Verify `resolveFontFamily(style)` in `render-model.ts` returns the bare font family name (e.g. `'Montserrat'`, `'Roboto'`) and maps cleanly to pptxgenjs `fontFace`.
+   - Ensure fallback to canonical `DEFAULT_FONT_FAMILY` if undefined. Note: PowerPoint uses OS-installed fonts. If a non-system font is not installed on the machine opening the PPTX, PowerPoint gracefully falls back to system defaults.
 
-2. **Web Slideshow & Projector (`src/components/artifacts/ArtifactSlide.tsx` & `ProjectorClient.tsx`)**:
-   - Ensure inline style `fontFamily: getFontStack(element.style?.fontFamily)` is applied so downloaded web fonts render correctly.
+2. **Web Slideshow & Projector Rendering (`src/components/artifacts/ArtifactSlide.tsx`)**:
+   - In `ArtifactSlide.tsx`, apply `fontFamily: getFontStack(element.style?.fontFamily)` so browser rendering uses the full CSS fallback chain (e.g. `"Montserrat", sans-serif`).
+   - Projector views (`ProjectorClient.tsx`) render via `SlideView` -> `ArtifactSlide.tsx`, inheriting this automatically.
 
 3. **Automated Verification**:
    - Update `tests/artifact-editor-controls.test.mjs` with font family persistence tests.
-   - Run full suite: `npm test`, `npm run typecheck`, and `tests/smoke-spec-16.test.mjs` (or new smoke test).
+   - Run full suite: `npm test`, `npm run typecheck`, and automated smoke tests.
 
 ## Acceptance Criteria
-- Exported PPTX contains the selected font family name.
-- Web projection renders with custom font families.
+- Exported PPTX contains the selected font family name in `fontFace`.
+- Web presentation slide elements render with `getFontStack()` CSS inline styling.
 - All test suites green.

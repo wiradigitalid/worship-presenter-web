@@ -4,7 +4,10 @@
 
 ## Description
 
-Refactor the element properties toolbar in `src/components/admin/ArtifactEditor.tsx` from a single crowded row (`h-11 min-h-[44px]`) into a clean, fixed two-row panel (`h-[88px] min-h-[88px] max-h-[88px]`). Add a searchable/grouped Font Family selector with live canvas updates.
+Refactor the element properties toolbar in `src/components/admin/ArtifactEditor.tsx` from a single crowded row (`h-11 min-h-[44px]`) into a clean, fixed two-row panel (`h-[88px] min-h-[88px] max-h-[88px]`). Add a categorized Font Family selector with live canvas updates.
+
+## Critical TDD Order for Agent
+In `tests/artifact-editor-layout.test.mjs`, test `SPEC-14-07 / BUG-25` actively checks for `h-11 min-h-[44px] max-h-[44px]`. You **MUST UPDATE THE TEST FIRST** to assert `h-[88px] min-h-[88px] max-h-[88px]` and add an absence guard for `h-11`, before refactoring `ArtifactEditor.tsx`.
 
 ## Requirements
 
@@ -14,7 +17,7 @@ Refactor the element properties toolbar in `src/components/admin/ArtifactEditor.
 
 2. **Row 1 (Primary Typography & Element Identity)**:
    - Element Type Badge: `[TEXT]`, `[SHAPE]`, `[IMAGE]`, `[NONE]`.
-   - Font Family Selector: `<Select value={fontFamily} onValueChange={handleFontFamilyChange}>` rendering 5 `<SelectGroup>` items with `<SelectLabel>` corresponding to the 5 font categories.
+   - Font Family Selector: standard grouped shadcn `<Select value={fontFamily} onValueChange={handleFontFamilyChange}>` (width `w-[180px] h-7 text-xs`) rendering all 5 categories (`<SelectGroup>` with category `<SelectLabel>` and `<SelectItem>`). (Do NOT invent a custom searchable input).
    - Font Size Number Input (`w-16 h-7 text-center`) + Color Picker (`w-6 h-6`).
    - Style Buttons: Bold, Italic, Underline (`size="icon-sm"`).
    - Separator + Alignment Buttons: Left, Center, Right (`size="icon-sm"`).

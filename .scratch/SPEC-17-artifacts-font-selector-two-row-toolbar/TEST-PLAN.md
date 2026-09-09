@@ -1,10 +1,11 @@
 # Test Plan — SPEC-17 (Artifacts Canvas Font Selector & Two-Row Fixed Toolbar)
 
 ## Test Targets
-1. `src/lib/registry/font-catalog.ts` (new catalog module)
-2. `src/components/admin/ArtifactEditor.tsx` (toolbar layout & font selection)
+1. `src/lib/registry/font-catalog.ts` (catalog module & deduplicated constants)
+2. `src/components/admin/ArtifactEditor.tsx` (two-row fixed toolbar layout & font selection)
 3. `src/lib/artifacts/render-model.ts` & `src/lib/pptx-draw.ts` (rendering and export)
-4. `spa/index.html` & `spa/projected.html` (font link declarations)
+4. `src/components/artifacts/ArtifactSlide.tsx` (web slide & projector presentation rendering)
+5. `spa/index.html` & `spa/projected.html` (web font stylesheet links)
 
 ## Test Suites
 
@@ -18,6 +19,7 @@
 - Assert every font entry has a `family`, `label`, `category`, and `fallback` stack.
 - Assert `getFontStack(family)` returns the correct CSS font-family string.
 - Assert default fallback is `'Arial'`.
+- Assert `DEFAULT_FONT_FAMILY` in `canvas-utils.ts` and `render-model.ts` is re-exported from `font-catalog.ts`.
 
 ### 2. Two-Row Toolbar Fixed Height & Layout Guards (`tests/artifact-editor-layout.test.mjs`)
 - Replace the previous single-row `h-11 min-h-[44px] max-h-[44px]` assertion with the new two-row fixed height:
@@ -38,6 +40,7 @@
 - Assert `new_text` creation sets `fontFamily` from default or current font state.
 - Assert `resolveFontFamily` in `render-model.ts` returns the configured font family.
 - Assert `pptx-draw.ts` sets `fontFace: resolveFontFamily(style)` on text slides.
+- Assert `ArtifactSlide.tsx` applies `fontFamily: getFontStack(style.fontFamily)`.
 
 ### 4. Public Repo Guard Conformance
 - Run `tests/public-repo-guard.test.mjs` ensuring no private data or forbidden files are added.

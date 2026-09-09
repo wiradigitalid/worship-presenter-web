@@ -18,15 +18,16 @@ Lastly, dynamically changing toolbar heights when switching between Text, Shape,
      - **Bold Display & Title Impact (8)**: Bebas Neue, Anton, League Spartan, Righteous, Teko, Abril Fatface, Alfa Slab One, Russo One.
      - **Script & Handwriting (7)**: Great Vibes, Pacifico, Caveat, Dancing Script, Sacramento, Shadows Into Light, Satisfy.
    - Load web font stylesheets via Google Fonts with `display=swap` asynchronously in `spa/index.html` and `spa/projected.html`.
-   - Export helper `getFontStack(fontFamily)` providing web-safe fallback chains.
+   - Export helper `getFontStack(fontFamily)` providing web-safe fallback chains for CSS rendering in `ArtifactSlide.tsx`.
+   - Deduplicate `DEFAULT_FONT_FAMILY`: make `font-catalog.ts` the single source of truth, re-exported by `canvas-utils.ts` and `render-model.ts`.
 
 2. **Fixed Height Two-Row Properties Toolbar (`h-[88px]` in `ArtifactEditor.tsx`)**:
    - Transform the element properties toolbar container into a fixed two-row panel:
      `rounded-lg bg-background border border-border text-xs h-[88px] min-h-[88px] max-h-[88px] p-2 flex flex-col justify-between shrink-0`.
    - **Row 1 (Primary Typography & Element Identity)**:
      - Element Kind Badge (`[TEXT]`, `[SHAPE]`, `[IMAGE]`, `[NONE]`).
-     - Font Family Selector: grouped `<Select>` (`w-[180px] h-8 text-xs`) rendering all 5 categories with preview font-family styling.
-     - Font Size input (`w-16 h-8 text-center`) + Font Color picker (`w-6 h-6`).
+     - Font Family Selector: grouped `<Select>` (`w-[180px] h-8 text-xs`) rendering all 5 categories with preview font-family styling (standard grouped shadcn select, not a searchable combobox).
+     - Font Size input (`w-16 h-7 text-center`) + Font Color picker (`w-6 h-6`).
      - Bold, Italic, Underline buttons (`size="icon-sm"`).
      - Alignment buttons: Left, Center, Right (`size="icon-sm"`).
    - **Row 2 (Advanced Effects & Sliders)**:
@@ -39,13 +40,31 @@ Lastly, dynamically changing toolbar heights when switching between Text, Shape,
      - **Zero layout shift**: The toolbar height remains strictly 88px across all states, keeping the canvas position 100% stationary.
 
 3. **Multi-Surface Synchronization & PPTX Export**:
-   - `pptx-draw.ts`: `resolveFontFamily(style)` maps selected font family into PowerPoint slides seamlessly via pptxgenjs `fontFace`.
-   - `ArtifactSlide.tsx` & `ProjectorClient.tsx`: inherit and apply `fontFamily` dynamically with CSS fallback stacks.
+   - `pptx-draw.ts`: `resolveFontFamily(style)` extracts the bare font family name (e.g. `'Inter'`, `'Montserrat'`) and assigns it to pptxgenjs `fontFace`.
+   - `ArtifactSlide.tsx`: applies `fontFamily: getFontStack(element.style?.fontFamily)` for robust CSS fallback stacks in both web slideshow and projector views.
    - Server validator `validate_artifact.go` already permits `fontFamily` in `allowedStyleKeys`.
+
+## Implementation Decisions
+
+1. **Pre-work Baseline in Repo**:
+   `src/lib/registry/font-catalog.ts` was seeded in commit `0add8e0`. Ticket `SPEC-17-01` completes the pre-work by wiring HTML `<link>` stylesheets in `spa/index.html` and `spa/projected.html`, deduplicating `DEFAULT_FONT_FAMILY` across `canvas-utils.ts` and `render-model.ts`, and adding unit test suite `tests/artifact-font-catalog.test.mjs`.
+2. **Consolidated Web Font Loading**:
+   Use a single consolidated Google Fonts CSS2 URL (`getGoogleFontsStylesheetUrl()`) with `display=swap` to avoid multiple render-blocking network roundtrips.
+3. **Viewport & Grid Layout Stability**:
+   Expanding the toolbar from 44px to 88px increases the right column by 44px. With `<aside>` configured as `lg:h-0 lg:min-h-full` (from commit `36dfb17`), the total column height is ~591px (58px header + 88px toolbar + 413px canvas + 32px padding/gap). Inside standard 1080p viewports (~920px usable window height), total page height remains ~750px, completely free of window scrollbars. Deck Sequence continues to stretch and align cleanly with the canvas bottom.
+4. **TDD Old Assertion Replacement**:
+   Test `SPEC-14-07 / BUG-25` in `tests/artifact-editor-layout.test.mjs` asserts `h-11 min-h-[44px] max-h-[44px]`. In Ticket `SPEC-17-02`, this assertion must be replaced with `h-[88px] min-h-[88px] max-h-[88px]` along with an absence guard for `h-11`, preventing test failures.
+
+## Out of Scope
+
+1. Custom TTF/OTF font file upload from local admin computer into registry database.
+2. Dynamic server-side font subsetting engine.
+3. Embedding raw binary font files into PPTX files (PowerPoint standard uses font name declarations mapped to OS font environments).
+4. Searchable combobox input with arbitrary user typing (standard categorized `<Select>` with 5 optgroups provides curated safe choices).
 
 ## Tickets & Dependencies
 
-- **SPEC-17-01**: 45-Font Catalog Definition, Web Font Embeds, and Fallback Stacks. `blocked_by: []`.
+- **SPEC-17-01**: 45-Font Catalog Embeds, Fallback Stacks, and Constant Deduplication. `blocked_by: []`.
 - **SPEC-17-02**: Two-Row Fixed Toolbar (`h-[88px]`) with Font Family Grouped Dropdown in `ArtifactEditor.tsx`. `blocked_by: ["SPEC-17-01"]`.
 - **SPEC-17-03**: PPTX Export & Projected Slideshow Font Synchronization with Automated Regressions Suite. `blocked_by: ["SPEC-17-02"]`.
 
