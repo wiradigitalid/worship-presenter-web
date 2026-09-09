@@ -65,14 +65,31 @@ export function SongSetEntriesPanel() {
   }, []);
 
   const activeEntry = entries.find((e) => e.variableName === selectedVarName) ?? entries[0] ?? null;
+  const editingEntry = entries.find((e) => e.variableName === editingVarName) ?? null;
 
   useEffect(() => {
-    if (activeEntry) {
+    if (activeEntry && !editingVarName) {
       setDraftTitle(activeEntry.title);
       setDraftVarName(activeEntry.variableName);
-      setEditingVarName(null);
     }
-  }, [activeEntry?.variableName]);
+  }, [activeEntry?.variableName, editingVarName]);
+
+  const handleStartEdit = (entry: SongSetEntry) => {
+    setSelectedVarName(entry.variableName);
+    setDraftTitle(entry.title);
+    setDraftVarName(entry.variableName);
+    setEditingVarName(entry.variableName);
+    setNewTitle('');
+    setNewVarName('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingVarName(null);
+    setDraftTitle('');
+    setDraftVarName('');
+    setNewTitle('');
+    setNewVarName('');
+  };
 
   const handleCreate = async () => {
     const trimmedTitle = newTitle.trim();
@@ -230,6 +247,9 @@ export function SongSetEntriesPanel() {
         if (selectedVarName === entry.variableName) {
           setSelectedVarName(next[0]?.variableName ?? null);
         }
+        if (editingVarName === entry.variableName) {
+          handleCancelEdit();
+        }
         return next;
       });
       toast.success(t('admin.songSets.deleted').replace('{title}', entry.title));
@@ -242,44 +262,111 @@ export function SongSetEntriesPanel() {
     <div className="grid grid-cols-1 lg:grid-cols-[330px_minmax(0,1fr)] gap-6">
       {/* Panel Kiri: Add New Song Set & List */}
       <aside className="space-y-4">
-        {/* New Song Set creation panel per DEC-009 / DEC-010 */}
+        {/* New / Edit Song Set creation/edit panel per DEC-009 / DEC-010 / SPEC-15-04 */}
         <div className="rounded-xl border border-border bg-card p-3.5 space-y-2.5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">New Song Set</span>
-            <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
-              Song Set
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              {editingVarName
+                ? t('admin.songSets.editTitle').replace('{title}', editingEntry?.title ?? '')
+                : t('admin.songSets.createTitle')}
+            </span>
+            <span
+              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                editingVarName
+                  ? 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+                  : 'text-primary bg-primary/10 border-primary/20'
+              }`}
+            >
+              {editingVarName ? t('admin.songSets.editingBadge') : t('admin.songSets.badge')}
             </span>
           </div>
-          <div className="space-y-2 pt-0.5">
-            <Input
-              type="text"
-              placeholder="Song set title (e.g. Fellowship Song)"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              disabled={creating || loading}
-              className="text-xs h-8"
-            />
-            <div className="flex gap-1.5">
+          {editingVarName ? (
+            <div className="space-y-2 pt-0.5">
               <Input
                 type="text"
-                placeholder="Variable code (e.g. fellowship_song)"
-                value={newVarName}
-                onChange={(e) => setNewVarName(e.target.value)}
-                disabled={creating || loading}
-                className="flex-1 text-xs h-8 font-mono"
+                placeholder={t('admin.songSets.entryTitle')}
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void handleSaveRename();
+                  if (e.key === 'Escape') handleCancelEdit();
+                }}
+                disabled={renaming}
+                aria-label={t('admin.songSets.entryTitle')}
+                className="text-xs font-semibold h-8 w-full"
+                autoFocus
               />
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => void handleCreate()}
-                disabled={creating || loading || !newTitle.trim()}
-                className="shrink-0 h-8 font-semibold"
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                New
-              </Button>
+              <div className="flex gap-1.5">
+                <Input
+                  type="text"
+                  placeholder={t('admin.songSets.variableName')}
+                  value={draftVarName}
+                  onChange={(e) =>
+                    setDraftVarName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '_'))
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void handleSaveRename();
+                    if (e.key === 'Escape') handleCancelEdit();
+                  }}
+                  disabled={renaming}
+                  aria-label={t('admin.songSets.variableName')}
+                  className="text-xs font-mono h-8 flex-1 min-w-0"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void handleSaveRename()}
+                  disabled={renaming || !draftTitle.trim() || !draftVarName.trim()}
+                  className="shrink-0 h-8 font-semibold text-xs text-primary-foreground"
+                >
+                  <Check className="w-3.5 h-3.5 mr-1" />
+                  {t('admin.songSets.save')}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCancelEdit}
+                  disabled={renaming}
+                  className="shrink-0 h-8 text-xs"
+                >
+                  <X className="w-3.5 h-3.5 mr-1" />
+                  {t('admin.songSets.cancel')}
+                </Button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-2 pt-0.5">
+              <Input
+                type="text"
+                placeholder="Song set title (e.g. Fellowship Song)"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                disabled={creating || loading}
+                className="text-xs h-8"
+              />
+              <div className="flex gap-1.5">
+                <Input
+                  type="text"
+                  placeholder="Variable code (e.g. fellowship_song)"
+                  value={newVarName}
+                  onChange={(e) => setNewVarName(e.target.value)}
+                  disabled={creating || loading}
+                  className="flex-1 text-xs h-8 font-mono"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void handleCreate()}
+                  disabled={creating || loading || !newTitle.trim()}
+                  className="shrink-0 h-8 font-semibold"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  New
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* List Song Sets */}
@@ -305,73 +392,6 @@ export function SongSetEntriesPanel() {
                 const isSelected = activeEntry?.variableName === entry.variableName;
                 const isItemEditing = editingVarName === entry.variableName;
 
-                if (isItemEditing) {
-                  return (
-                    <div
-                      key={entry.variableName}
-                      className={`p-2 rounded-lg border transition-all ${
-                        isSelected
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border/60 bg-muted/30'
-                      }`}
-                    >
-                      <div className="flex flex-col gap-1.5">
-                        <Input
-                          value={draftTitle}
-                          disabled={renaming}
-                          onChange={(e) => setDraftTitle(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') void handleSaveRename();
-                            if (e.key === 'Escape') setEditingVarName(null);
-                          }}
-                          placeholder={t('admin.songSets.entryTitle')}
-                          aria-label={t('admin.songSets.entryTitle')}
-                          className="text-xs font-semibold h-8 w-full"
-                          autoFocus
-                        />
-                        <div className="flex items-center gap-1.5">
-                          <Input
-                            value={draftVarName}
-                            disabled={renaming}
-                            onChange={(e) =>
-                              setDraftVarName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '_'))
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') void handleSaveRename();
-                              if (e.key === 'Escape') setEditingVarName(null);
-                            }}
-                            placeholder={t('admin.songSets.variableName')}
-                            aria-label={t('admin.songSets.variableName')}
-                            className="text-xs font-mono h-8 flex-1 min-w-0"
-                          />
-                          <Button
-                            type="button"
-                            size="icon-sm"
-                            variant="ghost"
-                            disabled={renaming || !draftTitle.trim() || !draftVarName.trim()}
-                            onClick={() => void handleSaveRename()}
-                            title={t('admin.songSets.save')}
-                            className="h-8 w-8 text-primary hover:bg-primary/20 shrink-0"
-                          >
-                            <Check className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="icon-sm"
-                            variant="ghost"
-                            disabled={renaming}
-                            onClick={() => setEditingVarName(null)}
-                            title={t('admin.songSets.cancel')}
-                            className="h-8 w-8 text-muted-foreground hover:bg-muted shrink-0"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-
                 return (
                   <div
                     key={entry.variableName}
@@ -379,22 +399,35 @@ export function SongSetEntriesPanel() {
                     tabIndex={0}
                     onClick={() => {
                       setSelectedVarName(entry.variableName);
-                      setEditingVarName(null);
+                      if (editingVarName && editingVarName !== entry.variableName) {
+                        handleCancelEdit();
+                      }
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         setSelectedVarName(entry.variableName);
-                        setEditingVarName(null);
+                        if (editingVarName && editingVarName !== entry.variableName) {
+                          handleCancelEdit();
+                        }
                       }
                     }}
-                    className={`group flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all ${
-                      isSelected
+                    className={`group flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all h-[48px] min-h-[48px] ${
+                      isItemEditing
+                        ? 'border-amber-500/80 bg-amber-500/10 ring-1 ring-amber-500/30'
+                        : isSelected
                         ? 'border-primary bg-primary/10'
                         : 'border-border/60 bg-muted/30 hover:bg-muted/70 hover:border-border'
                     }`}
                   >
                     <div className="min-w-0 pr-2">
-                      <p className="text-xs font-semibold truncate text-foreground">{entry.title}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-semibold truncate text-foreground">{entry.title}</p>
+                        {isItemEditing && (
+                          <span className="text-[9px] font-mono text-amber-500 bg-amber-500/20 px-1 py-0.5 rounded border border-amber-500/30 leading-none shrink-0">
+                            {t('admin.songSets.editingBadge')}
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[10px] font-mono text-muted-foreground">[{entry.variableName}]</span>
                     </div>
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
@@ -405,12 +438,11 @@ export function SongSetEntriesPanel() {
                         title={t('admin.songSets.rename')}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedVarName(entry.variableName);
-                          setDraftTitle(entry.title);
-                          setDraftVarName(entry.variableName);
-                          setEditingVarName(entry.variableName);
+                          handleStartEdit(entry);
                         }}
-                        className="h-7 w-7 p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        className={`h-7 w-7 p-1 hover:bg-muted hover:text-foreground ${
+                          isItemEditing ? 'text-amber-500' : 'text-muted-foreground'
+                        }`}
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>

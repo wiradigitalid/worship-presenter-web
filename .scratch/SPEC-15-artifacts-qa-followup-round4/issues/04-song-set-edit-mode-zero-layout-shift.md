@@ -1,6 +1,6 @@
 # Ticket SPEC-15-04 — Song Set Entry List Item Edit UX Without Height Expansion (`BUG-29`)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Description
 

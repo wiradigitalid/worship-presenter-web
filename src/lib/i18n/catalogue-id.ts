@@ -459,7 +459,10 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
     'Setiap entri secara otomatis menghasilkan input mingguan pada formulir Service ({var}_song_number, {var}_song_book_name, {var}_song_background). Posisi pada spine diatur di tab Main spine.',
   'admin.songSets.empty': 'Tidak ada entri song set yang ditemukan.',
   'admin.songSets.loadFailed': 'Gagal memuat entri song set',
-  'admin.songSets.createTitle': 'Tambah Entri Song Set',
+  'admin.songSets.createTitle': 'Song Set Baru',
+  'admin.songSets.editTitle': 'Edit Song Set: {title}',
+  'admin.songSets.editingBadge': 'Mengedit',
+  'admin.songSets.badge': 'Song Set',
   'admin.songSets.variableName': 'Variable name',
   'admin.songSets.variableNameHint':
     '1–80 huruf kecil, angka, tanda hubung, atau garis bawah (contoh: opening_song_bt). Tidak dapat diubah setelah dibuat.',
