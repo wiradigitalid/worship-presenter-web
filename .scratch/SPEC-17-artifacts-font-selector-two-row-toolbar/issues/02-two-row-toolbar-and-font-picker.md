@@ -7,7 +7,10 @@
 Refactor the element properties toolbar in `src/components/admin/ArtifactEditor.tsx` from a single crowded row (`h-11 min-h-[44px]`) into a clean, fixed two-row panel (`h-[88px] min-h-[88px] max-h-[88px]`). Add a categorized Font Family selector with live canvas updates.
 
 ## Critical TDD Order for Agent
-In `tests/artifact-editor-layout.test.mjs`, test `SPEC-14-07 / BUG-25` actively checks for `h-11 min-h-[44px] max-h-[44px]`. You **MUST UPDATE THE TEST FIRST** to assert `h-[88px] min-h-[88px] max-h-[88px]` and add an absence guard for `h-11`, before refactoring `ArtifactEditor.tsx`.
+Two test files actively assert `h-11 min-h-[44px] max-h-[44px]`:
+1. `tests/artifact-editor-layout.test.mjs` (test `SPEC-14-07 / BUG-25`)
+2. `tests/artifact-editor-controls.test.mjs` (lines 1934–1938)
+You **MUST UPDATE BOTH TESTS FIRST** to assert `h-[88px] min-h-[88px] max-h-[88px]` and add absence guards for `h-11`, before refactoring `ArtifactEditor.tsx`. If only layout test is updated, controls test will fail.
 
 ## Requirements
 
@@ -37,7 +40,7 @@ In `tests/artifact-editor-layout.test.mjs`, test `SPEC-14-07 / BUG-25` actively 
 
 5. **Test Updates**:
    - In `tests/artifact-editor-layout.test.mjs`, update assertion to check `h-[88px] min-h-[88px] max-h-[88px]` and add absence guard for `h-11 min-h-[44px]`.
-   - In `tests/artifact-editor-controls.test.mjs`, assert `fontFamily` state and handler existence.
+   - In `tests/artifact-editor-controls.test.mjs`, update toolbar height assertion (lines 1934–1938) to check `h-[88px] min-h-[88px] max-h-[88px]`, and assert `fontFamily` state and handler existence.
 
 ## Acceptance Criteria
 - Two-row toolbar fixed at 88px height in all states.

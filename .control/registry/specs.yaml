@@ -943,7 +943,7 @@ waves:
     spec_folder: .scratch/SPEC-17-artifacts-font-selector-two-row-toolbar/
     spec_reviewed:
       date: '2026-09-09'
-      sha: '36dfb17'
+      sha: '86134b6'
       lenses: [structure, prose, edge-case-hunter]
     tickets:
       - id: "SPEC-17-01"
