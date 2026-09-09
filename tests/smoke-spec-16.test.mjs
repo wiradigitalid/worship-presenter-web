@@ -9,8 +9,8 @@ const editorPath = path.resolve('src/components/admin/ArtifactEditor.tsx');
 const editorContent = fs.readFileSync(editorPath, 'utf8');
 
 assert.ok(
-  editorContent.includes('lg:max-h-[calc(100vh-270px)]'),
-  'FAIL: Deck Sequence missing lg:max-h-[calc(100vh-270px)]'
+  editorContent.includes('lg:max-h-[min(440px,calc(100vh-380px))]'),
+  'FAIL: Deck Sequence missing lg:max-h-[min(440px,calc(100vh-380px))]'
 );
 assert.ok(
   !editorContent.includes('lg:max-h-none'),
