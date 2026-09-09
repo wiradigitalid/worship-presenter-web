@@ -265,13 +265,13 @@ export function SongSetEntriesPanel() {
         {/* New / Edit Song Set creation/edit panel per DEC-009 / DEC-010 / SPEC-15-04 */}
         <div className="rounded-xl border border-border bg-card p-3.5 space-y-2.5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground truncate min-w-0 mr-2">
               {editingVarName
-                ? t('admin.songSets.editTitle').replace('{title}', editingEntry?.title ?? '')
+                ? t('admin.songSets.editTitle')
                 : t('admin.songSets.createTitle')}
             </span>
             <span
-              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${
                 editingVarName
                   ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20'
                   : 'text-primary bg-primary/10 border-primary/20'

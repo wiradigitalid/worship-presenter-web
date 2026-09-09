@@ -460,7 +460,7 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'admin.songSets.createTitle': 'New Song Set',
   'admin.songSets.createTitlePlaceholder': 'Song set title (e.g. Fellowship Song)',
   'admin.songSets.createVarPlaceholder': 'Variable code (e.g. fellowship_song)',
-  'admin.songSets.editTitle': 'Edit Song Set: {title}',
+  'admin.songSets.editTitle': 'Edit Song Set',
   'admin.songSets.editingBadge': 'Editing',
   'admin.songSets.badge': 'Song Set',
   'admin.songSets.variableName': 'Variable name',
