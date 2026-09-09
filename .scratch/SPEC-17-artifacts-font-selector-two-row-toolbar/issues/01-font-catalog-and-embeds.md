@@ -1,6 +1,6 @@
 # Ticket SPEC-17-01 — 45-Font Catalog Embeds, Fallback Stacks, and Constant Deduplication
 
-**Status:** ready-for-agent
+**Status:** closed
 
 ## Description
 

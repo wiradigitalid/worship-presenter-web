@@ -1,6 +1,6 @@
 # Ticket SPEC-17-03 — PPTX Export & Projected Slideshow Font Synchronization with Automated Regressions Suite
 
-**Status:** ready-for-agent
+**Status:** closed
 
 ## Description
 

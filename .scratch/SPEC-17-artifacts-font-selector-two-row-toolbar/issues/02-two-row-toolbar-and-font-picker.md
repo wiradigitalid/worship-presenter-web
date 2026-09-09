@@ -1,6 +1,6 @@
 # Ticket SPEC-17-02 — Two-Row Fixed Toolbar (`h-[88px]`) with Font Family Grouped Dropdown in `ArtifactEditor.tsx`
 
-**Status:** ready-for-agent
+**Status:** closed
 
 ## Description
 
