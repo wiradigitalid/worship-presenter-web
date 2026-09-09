@@ -89,6 +89,7 @@ import {
   serializeTextStyle,
   shouldPreserveSelectionOnContextMenu,
   syncImageClipOnMove,
+  syncImageClipOnScale,
   toStrictHexColor,
   updateImageElementFit,
 } from '@/lib/registry/canvas-utils';
@@ -204,12 +205,18 @@ function elementToFabricObject(
           imageRef: element.imageRef,
           objectFit: element.style?.objectFit,
           clipOffset: { x: left - initial.left, y: top - initial.top },
+          clipDimensions: { width, height },
+          baseScaleX: initial.scaleX,
+          baseScaleY: initial.scaleY,
         },
       });
       imgEl.onload = () => {
         const updated = calcFit();
         if ((fabricImg as any).data) {
           (fabricImg as any).data.clipOffset = { x: left - updated.left, y: top - updated.top };
+          (fabricImg as any).data.clipDimensions = { width, height };
+          (fabricImg as any).data.baseScaleX = updated.scaleX;
+          (fabricImg as any).data.baseScaleY = updated.scaleY;
         }
         fabricImg.set({
           width: updated.width,
@@ -607,6 +614,15 @@ export default function ArtifactEditor({
       };
       canvas.on('object:moving', onObjectMoving);
 
+      // SPEC-15-01: On active image object scaling, synchronize clipPath coordinates and dimensions
+      const onObjectScaling = (opt: any) => {
+        const target = opt.target;
+        if (target && syncImageClipOnScale(target)) {
+          canvas.requestRenderAll();
+        }
+      };
+      canvas.on('object:scaling', onObjectScaling);
+
       // SPEC-13-03: On image object scaling/modification, recalculate contain fit so image content grows/shrinks with handles
       const onObjectModified = (opt: any) => {
         const target = opt.target;
@@ -637,6 +653,7 @@ export default function ArtifactEditor({
         canvas.off('mouse:down', onMouseDown);
         canvas.off('mouse:up', onMouseUp);
         canvas.off('object:moving', onObjectMoving);
+        canvas.off('object:scaling', onObjectScaling);
         canvas.off('object:modified', onObjectModified);
         upperCanvasEl?.removeEventListener('contextmenu', onNativeContextMenu);
         for (const event of CANVAS_MUTATION_EVENTS) {

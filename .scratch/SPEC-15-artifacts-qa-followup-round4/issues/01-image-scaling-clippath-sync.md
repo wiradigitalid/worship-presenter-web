@@ -1,6 +1,6 @@
 # Ticket SPEC-15-01 — Canvas Image Real-time Scaling ClipPath Synchronisation (`BUG-7` residual)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Description
 
