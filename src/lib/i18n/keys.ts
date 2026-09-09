@@ -411,6 +411,8 @@ export const I18N_KEYS = [
   'admin.songSets.empty',
   'admin.songSets.loadFailed',
   'admin.songSets.createTitle',
+  'admin.songSets.createTitlePlaceholder',
+  'admin.songSets.createVarPlaceholder',
   'admin.songSets.editTitle',
   'admin.songSets.editingBadge',
   'admin.songSets.badge',

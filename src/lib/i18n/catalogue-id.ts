@@ -460,6 +460,8 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'admin.songSets.empty': 'Tidak ada entri song set yang ditemukan.',
   'admin.songSets.loadFailed': 'Gagal memuat entri song set',
   'admin.songSets.createTitle': 'Song Set Baru',
+  'admin.songSets.createTitlePlaceholder': 'Judul song set (contoh: Lagu Pujian)',
+  'admin.songSets.createVarPlaceholder': 'Kode variabel (contoh: lagu_pujian)',
   'admin.songSets.editTitle': 'Edit Song Set: {title}',
   'admin.songSets.editingBadge': 'Mengedit',
   'admin.songSets.badge': 'Song Set',

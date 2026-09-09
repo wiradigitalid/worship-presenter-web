@@ -458,6 +458,8 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'admin.songSets.empty': 'No song set entries found.',
   'admin.songSets.loadFailed': 'Failed to load song set entries',
   'admin.songSets.createTitle': 'New Song Set',
+  'admin.songSets.createTitlePlaceholder': 'Song set title (e.g. Fellowship Song)',
+  'admin.songSets.createVarPlaceholder': 'Variable code (e.g. fellowship_song)',
   'admin.songSets.editTitle': 'Edit Song Set: {title}',
   'admin.songSets.editingBadge': 'Editing',
   'admin.songSets.badge': 'Song Set',

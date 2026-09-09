@@ -1816,7 +1816,38 @@ test('SPEC-15-01 / BUG-7: Canvas image real-time scaling clipPath synchronizatio
   assert.equal(shrinkClip.width, 320, 'clip width must scale down proportionally (400 * 0.8 = 320)');
   assert.equal(shrinkClip.height, 160, 'clip height must scale down proportionally (200 * 0.8 = 160)');
 
-  // 5. Behavioral test: scale-then-release consistency between syncImageClipOnScale and updateImageElementFit
+  // 5. Behavioral test: non-uniform scaling (side handle: scaleX !== scaleY) scales clip dimensions independently
+  const nonUniformClip = {
+    left: 50,
+    top: 50,
+    width: 200,
+    height: 100,
+    scaleX: 1,
+    scaleY: 1,
+    set(props) {
+      Object.assign(this, props);
+    },
+    setCoords() {},
+  };
+  const nonUniformImage = {
+    left: 50,
+    top: 50,
+    scaleX: 1.5,
+    scaleY: 1.2,
+    data: {
+      imageRef: '/sample.jpg',
+      baseScaleX: 1.0,
+      baseScaleY: 1.0,
+      clipDimensions: { width: 200, height: 100 },
+      clipOffset: { x: 0, y: 0 },
+    },
+    clipPath: nonUniformClip,
+  };
+  syncImageClipOnScale(nonUniformImage);
+  assert.equal(nonUniformClip.width, 300, 'clip width must scale from 200 by 1.5 to 300');
+  assert.equal(nonUniformClip.height, 120, 'clip height must scale from 100 by 1.2 to 120');
+
+  // 6. Behavioral test: scale-then-release consistency between syncImageClipOnScale and updateImageElementFit
   const releaseClip = {
     left: 40,
     top: 50,

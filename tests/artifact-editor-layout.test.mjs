@@ -129,8 +129,8 @@ test('SPEC-13-07: Title area Rename height stability across canvas-bearing edito
     'Surface 2: Announcement Set Active Set row must enforce min-h-[58px] height stability'
   );
 
-  // Surface 3: Song Set inline rename in SongSetEntriesPanel (SPEC-14-06 / BUG-24)
-  // Inline rename inputs render inside the list row with fixed h-8 constraint, removing the redundant top card
+  // Surface 3: Song Set rename in SongSetEntriesPanel (SPEC-14-06 / SPEC-15-04 / BUG-24, BUG-29)
+  // Rename inputs render inside the top card edit mode with fixed h-8 constraint, removing the redundant canvas header card
   assert.ok(
     !songSetsCode.includes('min-h-[58px]'),
     'Surface 3: Redundant Rename Header Card above canvas trio must be removed'
@@ -138,7 +138,7 @@ test('SPEC-13-07: Title area Rename height stability across canvas-bearing edito
   assert.ok(
     songSetsCode.includes('className="text-xs font-semibold h-8 w-full"') &&
     songSetsCode.includes('className="text-xs font-mono h-8 flex-1 min-w-0"'),
-    'Surface 3: Song Set inline rename inputs must use h-8 height constraint'
+    'Surface 3: Song Set top card rename inputs must use h-8 height constraint'
   );
 
   // BUG-23: Song Set trio drops Rename control

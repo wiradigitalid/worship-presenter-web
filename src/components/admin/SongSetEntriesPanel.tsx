@@ -339,7 +339,7 @@ export function SongSetEntriesPanel() {
             <div className="space-y-2 pt-0.5">
               <Input
                 type="text"
-                placeholder="Song set title (e.g. Fellowship Song)"
+                placeholder={t('admin.songSets.createTitlePlaceholder')}
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 disabled={creating || loading}
@@ -348,7 +348,7 @@ export function SongSetEntriesPanel() {
               <div className="flex gap-1.5">
                 <Input
                   type="text"
-                  placeholder="Variable code (e.g. fellowship_song)"
+                  placeholder={t('admin.songSets.createVarPlaceholder')}
                   value={newVarName}
                   onChange={(e) => setNewVarName(e.target.value)}
                   disabled={creating || loading}
