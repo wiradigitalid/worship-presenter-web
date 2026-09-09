@@ -457,7 +457,9 @@ export function SongSetEntriesPanel() {
                   <strong className="text-foreground">{activeEntry.title}</strong>{' '}
                   <span className="font-mono text-[10px]">[{activeEntry.variableName}]</span>
                   {' · '}
-                  Edits apply to all {entries.length} song set {entries.length === 1 ? 'entry' : 'entries'}
+                  {entries.length === 1
+                    ? t('admin.songSets.editsApplyAllOne')
+                    : t('admin.songSets.editsApplyAll').replace('{count}', String(entries.length))}
                 </span>
               </div>
 

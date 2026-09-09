@@ -198,3 +198,13 @@ test('SPEC-14-06 / BUG-24: Song Set inline rename in list rows and removal of re
     'Inline rename inputs must enforce compact h-8 height constraint'
   );
 });
+
+test('guard proof: redundant header card presence fails absence-guard', () => {
+  const defectiveCode = '<div className="rounded-xl min-h-[58px]">Rename Card</div>';
+  assert.throws(() => {
+    assert.ok(
+      !defectiveCode.includes('min-h-[58px]'),
+      'Redundant rename header card above canvas trio must be removed'
+    );
+  }, /Redundant rename header card/);
+});

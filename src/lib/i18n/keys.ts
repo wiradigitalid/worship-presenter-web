@@ -405,6 +405,8 @@ export const I18N_KEYS = [
   'admin.artifacts.markerChip',
   'admin.songSets.title',
   'admin.songSets.active',
+  'admin.songSets.editsApplyAll',
+  'admin.songSets.editsApplyAllOne',
   'admin.songSets.description',
   'admin.songSets.empty',
   'admin.songSets.loadFailed',

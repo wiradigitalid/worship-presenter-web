@@ -451,6 +451,8 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'admin.artifacts.markerChip': 'marker',
   'admin.songSets.title': 'Song Set Entries',
   'admin.songSets.active': 'Active:',
+  'admin.songSets.editsApplyAll': 'Edits apply to all {count} song set entries',
+  'admin.songSets.editsApplyAllOne': 'Edits apply to 1 song set entry',
   'admin.songSets.description':
     'Each entry auto-generates weekly inputs on the Service form ({var}_song_number, {var}_song_book_name, {var}_song_background). Position on the spine is configured in the Main spine tab.',
   'admin.songSets.empty': 'No song set entries found.',
