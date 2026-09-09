@@ -863,5 +863,49 @@ waves:
         tests:
           - tests/artifact-editor-controls.test.mjs
 
+  - id: SPEC-15
+    status: open
+    release: artifacts-qa-followup-round4
+    prd: [offline-deck]
+    fr: [FR-20, FR-21, FR-29]
+    size: S
+    depends_on: [SPEC-14]
+    spec_folder: .scratch/SPEC-15-artifacts-qa-followup-round4/
+    spec_reviewed:
+      date: '2026-09-09'
+      sha: 'f2a848d'
+      lenses: [structure, prose, edge-case-hunter]
+    tickets:
+      - id: "SPEC-15-01"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-15-02"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-layout.test.mjs
+      - id: "SPEC-15-03"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-15-04"
+        component: registry
+        satisfies: [UC-24]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/operator-shadcn-guard.test.mjs
+
+
+
 
 

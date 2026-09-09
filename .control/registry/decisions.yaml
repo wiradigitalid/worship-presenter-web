@@ -336,6 +336,30 @@ decisions:
       - tests/registry-go-http.test.mjs
       - tests/announcement-sets.test.mjs
       - tests/operator-shadcn-guard.test.mjs
+  - id: DEC-017
+    type: mandate
+    status: accepted
+    accepted_by: "kodesh87 (2026-09-09)"
+    title: Autopilot mandate for Artifacts QA Follow-up Round 4 (SPEC-15)
+    file: .control/decisions/DEC-017-autopilot-mandate-artifacts-qa-followup-round4.md
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent
+      loop: 10m
+      expires: '2026-09-16'
+    touches:
+      - .control/registry/specs.yaml
+      - .control/registry/decisions.yaml
+      - .control/registry/defects.yaml
+      - src/components/admin/ArtifactEditor.tsx
+      - src/components/admin/SongSetEntriesPanel.tsx
+      - src/lib/registry/canvas-utils.ts
+      - tests/artifact-editor-controls.test.mjs
+      - tests/artifact-editor-layout.test.mjs
+      - tests/operator-shadcn-guard.test.mjs
+
 
 
 

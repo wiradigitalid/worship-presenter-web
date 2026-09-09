@@ -100,21 +100,20 @@ defects:
       object — nothing reads the shape's existing `fill` (~L151, `element.style?.fillColor`) back
       into a shape-color state on select, so the picker keeps its last value instead.
   - id: BUG-7
-    status: fixed
+    status: open
     fixed_in: SPEC-14
-    reopened_in: SPEC-13
+    reopened_in: SPEC-15
     title: "An inserted image does not grow when its selection handles are resized"
     component: registry
     violates: []
-    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT #5; prompt-08-artifacts-qa-followup-round2.md § BUG-7"
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § TOOLBAR ELEMENT #5; prompt-08-artifacts-qa-followup-round2.md § BUG-7; Round 4 manual QA"
     summary: >
-      SPEC-12 fixed contain-fit at insert time. SPEC-13 implemented handle scaling updates via
-      `updateImageElementFit`. Round 3 manual QA confirms image handles and scaling now work ("Gambar
-      sudah bisa dipindah2kan dan render dengan baik di canvas"), but reported a residual: while dragging
-      (`object:moving`), parts of the image visually disappear or cut off within a fixed bounding window
-      until mouse release (`object:modified`). Root cause: `clipPath: clipBox` is initialized with
-      `absolutePositioned: true` in absolute canvas coordinates, staying static during drag movement.
-      Residual filed into SPEC-14 ticket 01.
+      SPEC-12 fixed contain-fit. SPEC-13 implemented handle scaling. SPEC-14 fixed clipBox sync on
+      translation movement (`object:moving`). Round 4 manual QA confirmed translation dragging is fully
+      visible without clipping. However, a residual remains during active corner handle resizing: while
+      actively scaling the image larger, the image is visually clipped to its starting rectangle until
+      mouse release (`object:modified`). Root cause: `clipPath` (`clipBox`) is not updated during
+      `object:scaling` events. Residual filed into SPEC-15 ticket 01.
   - id: BUG-8
     status: fixed
     fixed_in: SPEC-13
@@ -169,18 +168,18 @@ defects:
       and its render path, and add the toolbar button next to Bold/Italic
       (ArtifactEditor.tsx ~L2156-2175 is the pattern to follow).
   - id: BUG-11
-    status: fixed
+    status: open
     fixed_in: SPEC-14
-    reopened_in: SPEC-13
+    reopened_in: SPEC-15
     title: "Main Spine editor still shows a vertical window scrollbar, and Deck Sequence's own height overshoots the layer"
     component: registry
     violates: []
-    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § PAGE LAYOUT; prompt-08-artifacts-qa-followup-round2.md § BUG-11"
+    source: ".work/requirements/prompt-04-artifacts-main-spine-qa-followup.md § PAGE LAYOUT; prompt-08-artifacts-qa-followup-round2.md § BUG-11; Round 4 manual QA"
     summary: >
-      SPEC-12 addressed viewport canvas sizing. SPEC-13 shortened the deck sequence container height.
-      Round 3 manual QA confirmed scrolling was noticeably improved/reduced ("sudah lebih baik dari
-      sebelumnya karena scroll makin pendek/kecil"), but noted slight vertical window scrolling remains
-      on laptop viewports. Residual filed into SPEC-14 ticket 02 to clamp height within viewport bounds.
+      SPEC-14 clamped Deck Sequence to eliminate page-level window scrolling. Round 4 manual QA confirmed
+      window scrollbars are resolved, but noted that in desktop mode, the Deck Sequence container shrinks
+      too small (`max-h-[calc(100vh-380px)] min-h-[220px]`) rather than stretching to align its bottom
+      boundary with the bottom edge of the canvas. Residual filed into SPEC-15 ticket 02.
   - id: BUG-12
     status: fixed
     fixed_in: SPEC-12
@@ -373,4 +372,28 @@ defects:
       "Bring forward" (+1) does not visibly advance the element's layer in the stack. Exacerbated by
       `preserveObjectStacking: false` and needs verified layer swap and real-time re-render under
       `preserveObjectStacking: true`. Filed into SPEC-14 ticket 09.
+  - id: BUG-28
+    status: open
+    fixed_in: null
+    title: "Redundant 'Apply Style' button in text properties toolbar remains after realtime update adoption"
+    component: registry
+    violates: []
+    source: "Round 4 manual QA (2026-09-09) § Poin 5"
+    summary: >
+      The text properties toolbar still renders an explicit 'Apply Style' button (`ArtifactEditor.tsx:2602-2610`),
+      even though all 9 text property controls apply in real time immediately to the active selection. The button
+      is obsolete, misleading to operators, and needlessly consumes toolbar space. Filed into SPEC-15 ticket 03.
+  - id: BUG-29
+    status: open
+    fixed_in: null
+    title: "Song Set entry list item expands height in edit mode, causing abrupt layout shift"
+    component: registry
+    violates: []
+    source: "Round 4 manual QA (2026-09-09) § Poin 6"
+    summary: >
+      Clicking the pencil edit icon on a Configured Song Sets item replaces the ~48px row with two vertically
+      stacked `Input` components plus buttons (~86px), causing vertical layout shift and pushing subsequent
+      entries down. Requires zero-layout-shift editing (e.g. switching the top New Song Set card into edit mode).
+      Filed into SPEC-15 ticket 04.
+
 
