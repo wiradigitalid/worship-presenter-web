@@ -969,6 +969,42 @@ waves:
         tests:
           - tests/artifact-editor-controls.test.mjs
 
+  - id: SPEC-18
+    status: open
+    release: artifacts-typography-persistence
+    prd: [offline-deck]
+    fr: [FR-20]
+    size: M
+    depends_on: [SPEC-17]
+    spec_folder: .scratch/SPEC-18-artifacts-typography-persistence/
+    spec_reviewed:
+      date: '2026-09-10'
+      sha: 'c891a62'
+      lenses: [structure, prose, edge-case-hunter]
+    tickets:
+      - id: "SPEC-18-01"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+          - tests/registry-go-http.test.mjs
+      - id: "SPEC-18-02"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-18-01"]
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-layout.test.mjs
+      - id: "SPEC-18-03"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-18-02"]
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+
 
 
 

@@ -412,6 +412,31 @@ decisions:
       - tests/artifact-editor-layout.test.mjs
       - tests/artifact-editor-controls.test.mjs
       - tests/smoke-spec-17.test.mjs
+  - id: DEC-020
+    type: mandate
+    status: accepted
+    accepted_by: "kodesh87 (2026-09-10)"
+    title: Autopilot mandate for Artifacts Canvas Typography & Layout Persistence Follow-up (SPEC-18)
+    file: .control/decisions/DEC-020-autopilot-mandate-artifacts-typography-persistence.md
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent
+      loop: 10m
+      expires: '2026-09-17'
+    touches:
+      - .control/registry/specs.yaml
+      - .control/registry/decisions.yaml
+      - internal/plan/validate_artifact.go
+      - src/lib/registry/types.ts
+      - src/lib/registry/canvas-utils.ts
+      - src/components/admin/ArtifactEditor.tsx
+      - src/components/artifacts/ArtifactSlide.tsx
+      - src/lib/pptx-draw.ts
+      - tests/artifact-editor-controls.test.mjs
+      - tests/artifact-editor-layout.test.mjs
+      - tests/smoke-spec-18.test.mjs
 
 
 
