@@ -4,13 +4,13 @@ import {
   type ArtifactInstance,
   type ResolvedElement,
 } from '@/lib/artifacts/runtime-contract';
+import { getFontStack } from '@/lib/registry/font-catalog';
 import {
   TEXT_LINE_HEIGHT,
   largestFittingTextScale,
   resolveBold,
   resolveElementImage,
   resolveElementText,
-  resolveFontFamily,
   resolveItalic,
   resolveUnderline,
   resolveObjectFit,
@@ -123,7 +123,7 @@ function TextElement({ element }: { element: ResolvedElement }) {
         justifyContent: toCssJustifyContent(style),
         alignItems: toCssAlignItems(style),
         textAlign: resolveTextAlign(style),
-        fontFamily: resolveFontFamily(style),
+        fontFamily: getFontStack(style.fontFamily),
         color: toCssColor(style.fontColor) ?? '#FFFFFF',
         fontWeight: resolveBold(style) ? 700 : 400,
         fontStyle: resolveItalic(style) ? 'italic' : 'normal',

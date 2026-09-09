@@ -934,7 +934,7 @@ waves:
           - tests/operator-shadcn-guard.test.mjs
 
   - id: SPEC-17
-    status: open
+    status: closed
     release: artifacts-font-selector-two-row-toolbar
     prd: [offline-deck]
     fr: [FR-20]

@@ -386,7 +386,7 @@ decisions:
       - tests/smoke-spec-16.test.mjs
   - id: DEC-019
     type: mandate
-    status: accepted
+    status: applied
     accepted_by: "kodesh87 (2026-09-09)"
     title: Autopilot mandate for Artifacts Canvas Font Selector & Two-Row Fixed Toolbar (SPEC-17)
     file: .control/decisions/DEC-019-autopilot-mandate-artifacts-font-selector-two-row-toolbar.md
@@ -398,10 +398,12 @@ decisions:
       loop: 10m
       expires: '2026-09-16'
     touches:
+      - .control/memlog/autopilot-DEC-019.md
       - .control/registry/specs.yaml
       - .control/registry/decisions.yaml
       - src/lib/registry/font-catalog.ts
       - src/components/admin/ArtifactEditor.tsx
+      - src/components/artifacts/ArtifactSlide.tsx
       - src/lib/artifacts/render-model.ts
       - src/lib/pptx-draw.ts
       - spa/index.html
@@ -409,6 +411,7 @@ decisions:
       - tests/artifact-font-catalog.test.mjs
       - tests/artifact-editor-layout.test.mjs
       - tests/artifact-editor-controls.test.mjs
+      - tests/smoke-spec-17.test.mjs
 
 
 

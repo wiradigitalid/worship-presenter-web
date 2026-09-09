@@ -2,6 +2,7 @@ import type {
   ArtifactLayout,
   CanvasElement,
 } from '@/lib/registry/types';
+import { DEFAULT_FONT_FAMILY } from '@/lib/registry/font-catalog';
 
 export const CANVAS_WIDTH = 960;
 export const CANVAS_HEIGHT = 540;
@@ -16,7 +17,7 @@ export const INSERT_CASCADE_PX = 18;
 export const INSERT_CASCADE_STEPS = 8;
 
 export const DEFAULT_FONT_COLOR = '#FFFFFF';
-export const DEFAULT_FONT_FAMILY = 'Arial';
+export { DEFAULT_FONT_FAMILY };
 export const DEFAULT_TEXT_ALIGN = 'left' as const;
 export const DEFAULT_FONT_SIZE = 32;
 export const MIN_FONT_SIZE = 8;

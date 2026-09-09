@@ -11,6 +11,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
@@ -1931,10 +1932,14 @@ test('SPEC-15-03 / BUG-28: Removal of redundant Apply Style button from properti
     'ArtifactEditor toolbar must not render redundant Apply Style button'
   );
 
-  // 2. Toolbar retains stable 44px fixed height
+  // 2. Toolbar retains stable 88px fixed height
   assert.ok(
-    code.includes('h-11 min-h-[44px] max-h-[44px] overflow-x-auto overflow-y-hidden shrink-0 flex-nowrap'),
-    'Toolbar must retain locked 44px height with flex-nowrap'
+    code.includes('h-[88px] min-h-[88px] max-h-[88px]'),
+    'Toolbar must retain locked 88px height'
+  );
+  assert.ok(
+    !code.includes('h-11 min-h-[44px] max-h-[44px]'),
+    'Toolbar must NOT use old 44px height'
   );
 
   // 3. All real-time text property handlers remain functional, invoke canvas.requestRenderAll, and call markDirty()
@@ -1948,6 +1953,7 @@ test('SPEC-15-03 / BUG-28: Removal of redundant Apply Style button from properti
     'handleLineHeightChange',
     'handleToggleTextShadow',
     'handleShadowBlurChange',
+    'handleFontFamilyChange',
   ]) {
     const handlerStart = code.indexOf(`const ${handler}`);
     assert.ok(handlerStart !== -1, `Must find declaration of ${handler}`);
@@ -2000,7 +2006,53 @@ test('SPEC-15-03 / BUG-28: Removal of redundant Apply Style button from properti
   mockCanvas.requestRenderAll();
   assert.deepEqual(mockText.shadow, { blur: 6, color: 'rgba(0,0,0,0.8)' });
   assert.equal(renderCount, 3);
+
+  // Simulate real-time font family change
+  mockText.set({ fontFamily: 'Montserrat' });
+  mockCanvas.requestRenderAll();
+  assert.equal(mockText.fontFamily, 'Montserrat');
+  assert.equal(renderCount, 4);
 });
+
+test('SPEC-17-03: PPTX and Web Slide font family resolution and fallbacks', async () => {
+  const { resolveFontFamily } = await import(pathToFileURL(path.join(root, 'src', 'lib', 'artifacts', 'render-model.ts')).href);
+  const { getFontStack } = await import(pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'font-catalog.ts')).href);
+  const pptxDrawCode = fs.readFileSync(path.join(root, 'src', 'lib', 'pptx-draw.ts'), 'utf8');
+  const slideCode = fs.readFileSync(path.join(root, 'src', 'components', 'artifacts', 'ArtifactSlide.tsx'), 'utf8');
+
+  // 1. pptx-draw uses resolveFontFamily(style) for fontFace
+  assert.ok(
+    pptxDrawCode.includes('fontFace: resolveFontFamily(style)'),
+    'pptx-draw.ts must map text style to fontFace via resolveFontFamily'
+  );
+
+  // 2. ArtifactSlide uses getFontStack for CSS fontFamily
+  assert.ok(
+    slideCode.includes('fontFamily: getFontStack(style.fontFamily)'),
+    'ArtifactSlide.tsx must map style.fontFamily to CSS font stack via getFontStack'
+  );
+
+  // 3. resolveFontFamily bare family extraction and defaults
+  assert.equal(resolveFontFamily({ fontFamily: 'Montserrat' }), 'Montserrat');
+  assert.equal(resolveFontFamily({ fontFamily: 'Playfair Display' }), 'Playfair Display');
+  assert.equal(resolveFontFamily({}), 'Arial');
+  assert.equal(resolveFontFamily({ fontFamily: '' }), 'Arial');
+  assert.equal(resolveFontFamily({ fontFamily: '   ' }), 'Arial');
+
+  // 4. getFontStack CSS fallback chains
+  assert.equal(getFontStack('Montserrat'), '"Montserrat", sans-serif');
+  assert.equal(getFontStack('Playfair Display'), '"Playfair Display", serif');
+  assert.equal(getFontStack('Great Vibes'), '"Great Vibes", cursive');
+  assert.equal(getFontStack(undefined), '"Arial", sans-serif');
+
+  // 5. syncSelection sets fontFamily from active text object
+  const editorCode = fs.readFileSync(path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx'), 'utf8');
+  assert.ok(
+    editorCode.includes('setFontFamily(selectedText.fontFamily || DEFAULT_FONT_FAMILY)'),
+    'syncSelection must extract and set fontFamily state from selectedText'
+  );
+});
+
 
 
 
