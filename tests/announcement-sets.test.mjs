@@ -189,3 +189,15 @@ test('SPEC-13-11: Announcement Set auto-selected slide/set shows real text immed
   assert.equal(empty, null, 'Zero slides must return null');
 });
 
+test('SPEC-14-04 / BUG-21: Announcement Set select value text contrast on load', async () => {
+  const panelPath = path.join(root, 'src', 'components', 'admin', 'AnnouncementSetsPanel.tsx');
+  const code = fs.readFileSync(panelPath, 'utf8');
+
+  // Trigger enforces text-foreground and overrides data-placeholder text color when a set is selected
+  assert.ok(
+    code.includes('selectedSet !== null && "text-foreground [&[data-placeholder]]:text-foreground"') ||
+    code.includes('text-foreground [&[data-placeholder]]:text-foreground'),
+    'Announcement set SelectTrigger must enforce text-foreground and override placeholder greyed-out text'
+  );
+});
+

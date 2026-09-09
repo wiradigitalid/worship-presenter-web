@@ -454,8 +454,8 @@ export function updateImageElementFit(
   const boxHeight = (imgObj.height ?? 0) * scaleY;
   if (boxWidth <= 0 || boxHeight <= 0) return false;
 
-  const boxLeft = imgObj.left ?? 0;
-  const boxTop = imgObj.top ?? 0;
+  const boxLeft = (imgObj.left ?? 0) + (imgObj.data?.clipOffset?.x ?? 0);
+  const boxTop = (imgObj.top ?? 0) + (imgObj.data?.clipOffset?.y ?? 0);
   const objectFit = imgObj.data?.objectFit === 'cover' ? 'cover' : 'contain';
   const fit = calculateImageFit(
     { left: boxLeft, top: boxTop, width: boxWidth, height: boxHeight },
@@ -486,6 +486,17 @@ export function updateImageElementFit(
     });
   }
 
+  if (clipBox && typeof clipBox.setCoords === 'function') {
+    clipBox.setCoords();
+  }
+
+  if (imgObj.data) {
+    imgObj.data.clipOffset = {
+      x: boxLeft - fit.left,
+      y: boxTop - fit.top,
+    };
+  }
+
   imgObj.set({
     width: fit.width,
     height: fit.height,
@@ -496,6 +507,31 @@ export function updateImageElementFit(
     clipPath: clipBox,
   });
   imgObj.setCoords();
+  return true;
+}
+
+/**
+ * Synchronizes an image object's clipPath coordinates during active movement (object:moving),
+ * ensuring the clipping mask translates synchronously with the image so that no clipping
+ * or visual disappearance occurs while dragging.
+ */
+export function syncImageClipOnMove(target: any): boolean {
+  if (!target || !target.data?.imageRef) return false;
+  const clip = target.clipPath;
+  if (!clip) return false;
+
+  const offsetX = target.data?.clipOffset?.x ?? 0;
+  const offsetY = target.data?.clipOffset?.y ?? 0;
+  const targetLeft = target.left ?? 0;
+  const targetTop = target.top ?? 0;
+
+  clip.set({
+    left: targetLeft + offsetX,
+    top: targetTop + offsetY,
+  });
+  if (typeof clip.setCoords === 'function') {
+    clip.setCoords();
+  }
   return true;
 }
 

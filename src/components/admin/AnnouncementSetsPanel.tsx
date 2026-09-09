@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { useT } from '@/lib/i18n/operator';
 import ArtifactEditor from './ArtifactEditor';
 import {
@@ -551,7 +552,7 @@ export function AnnouncementSetsPanel({
                 }}
                 items={Object.fromEntries(sets.map((s) => [String(s.id), `${s.label} (${s.slideCount} slides)`]))}
               >
-                <SelectTrigger className="w-full text-xs font-semibold h-8">
+                <SelectTrigger className={cn("w-full text-xs font-semibold h-8", selectedSet !== null && "text-foreground [&[data-placeholder]]:text-foreground")}>
                   <SelectValue placeholder={selectedSet ? `${selectedSet.label} (${selectedSet.slideCount} slides)` : 'Select set…'}>
                     {selectedSet ? `${selectedSet.label} (${selectedSet.slideCount} slides)` : undefined}
                   </SelectValue>

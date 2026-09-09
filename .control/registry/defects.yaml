@@ -100,8 +100,8 @@ defects:
       object — nothing reads the shape's existing `fill` (~L151, `element.style?.fillColor`) back
       into a shape-color state on select, so the picker keeps its last value instead.
   - id: BUG-7
-    status: open
-    fixed_in: SPEC-12
+    status: fixed
+    fixed_in: SPEC-14
     reopened_in: SPEC-13
     title: "An inserted image does not grow when its selection handles are resized"
     component: registry
@@ -169,8 +169,8 @@ defects:
       and its render path, and add the toolbar button next to Bold/Italic
       (ArtifactEditor.tsx ~L2156-2175 is the pattern to follow).
   - id: BUG-11
-    status: open
-    fixed_in: SPEC-12
+    status: fixed
+    fixed_in: SPEC-14
     reopened_in: SPEC-13
     title: "Main Spine editor still shows a vertical window scrollbar, and Deck Sequence's own height overshoots the layer"
     component: registry
@@ -258,8 +258,8 @@ defects:
       the pattern, not found during the original manual QA pass. Same fix as the other three: drop
       the custom className, use `Button` `variant="default"` plain.
   - id: BUG-18
-    status: open
-    fixed_in: SPEC-13
+    status: fixed
+    fixed_in: SPEC-14
     title: "Canvas Reset restores from the seed and blocks deleting seeded/shipped elements — owner wants Reset to mean discard-unsaved-changes"
     component: registry
     violates: [DEC-014]
@@ -293,8 +293,8 @@ defects:
       Fixed in SPEC-13 by allocating a fixed-height inline status slot. Confirmed in round 3
       manual QA ("Menyediakan container tetap -> saya lihat sudah tersedia (ada)").
   - id: BUG-21
-    status: open
-    fixed_in: SPEC-13
+    status: fixed
+    fixed_in: SPEC-14
     title: "Announcement Set's default-selected slide-in-set shows an empty text field until rename is triggered"
     component: registry
     violates: []
@@ -305,8 +305,8 @@ defects:
       out like a placeholder (`data-placeholder:text-muted-foreground`) rather than crisp white text as
       when manually selected. Residual filed into SPEC-14 ticket 04.
   - id: BUG-22
-    status: open
-    fixed_in: SPEC-13
+    status: fixed
+    fixed_in: SPEC-14
     title: "Text properties panel has no line-height (leading) control and no text-shadow toggle"
     component: registry
     violates: []
@@ -327,8 +327,8 @@ defects:
       Fixed in SPEC-13 by removing the false rename button on the Song Set trio tabs. Confirmed in
       round 3 manual QA.
   - id: BUG-24
-    status: open
-    fixed_in: SPEC-13
+    status: fixed
+    fixed_in: SPEC-14
     title: "Song Set editor does not show that its Title/Verse/Reff canvas is shared by every entry, not owned by whichever one is selected"
     component: registry
     violates: []
@@ -339,7 +339,8 @@ defects:
       the canvas and move renaming of title and code (`variableName`) inline directly into the Configured
       Song Sets list items without layout expansion. Refinement filed into SPEC-14 ticket 06.
   - id: BUG-25
-    status: open
+    status: fixed
+    fixed_in: SPEC-14
     title: "Toolbar Element Properties bar expands height on selection, pushing canvas down"
     component: registry
     violates: []
@@ -349,7 +350,8 @@ defects:
       the toolbar wraps onto multiple rows on standard viewports, expanding its height from ~44px to 80px+
       and visibly pushing the canvas downward. Filed into SPEC-14 ticket 07 to lock height and prevent shift.
   - id: BUG-26
-    status: open
+    status: fixed
+    fixed_in: SPEC-14
     title: "Canvas selection automatically forces element to top visual stack (preserveObjectStacking: false), hiding true z-order"
     component: registry
     violates: []
@@ -360,7 +362,8 @@ defects:
       in `ArtifactEditor.tsx`. Operators need the selected element to stay in its true layer depth so real-time
       stacking and layer reordering can be simulated accurately. Filed into SPEC-14 ticket 08.
   - id: BUG-27
-    status: open
+    status: fixed
+    fixed_in: SPEC-14
     title: "Canvas 'Bring forward' (+1) action does not visibly advance layer order"
     component: registry
     violates: []

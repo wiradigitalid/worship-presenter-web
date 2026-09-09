@@ -307,7 +307,7 @@ decisions:
       - .control/registry/decisions.yaml
   - id: DEC-016
     type: mandate
-    status: accepted
+    status: applied
     accepted_by: "kodesh87 (2026-09-09)"
     title: Autopilot mandate for Artifacts QA Follow-up Round 3 (SPEC-14)
     file: .control/decisions/DEC-016-autopilot-mandate-artifacts-qa-followup-round3.md
@@ -324,6 +324,18 @@ decisions:
       - .control/registry/decisions.yaml
       - .control/registry/defects.yaml
       - .how/_platform/ARCHITECTURE-SPINE.md
+      - src/components/admin/ArtifactEditor.tsx
+      - src/components/admin/SongSetEntriesPanel.tsx
+      - src/components/admin/AnnouncementSetsPanel.tsx
+      - src/lib/registry/canvas-utils.ts
+      - src/lib/registry/store.ts
+      - internal/plan/validate_artifact.go
+      - tests/artifact-editor-controls.test.mjs
+      - tests/artifact-editor-layout.test.mjs
+      - tests/registry.test.mjs
+      - tests/registry-go-http.test.mjs
+      - tests/announcement-sets.test.mjs
+      - tests/operator-shadcn-guard.test.mjs
 
 
 

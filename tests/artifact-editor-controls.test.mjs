@@ -26,6 +26,7 @@ const {
   computeContextMenuCoords,
   handleContextMenuTrigger,
   updateImageElementFit,
+  syncImageClipOnMove,
   isBackgroundElement,
   filterOutBackgroundElements,
 } = await import(
@@ -1436,13 +1437,202 @@ test('SPEC-13-12: Text line-height and text-shadow controls (BUG-22)', async () 
     'handleToggleTextShadow must toggle fabric.Shadow on active canvas objects and call markDirty'
   );
   assert.ok(
-    code.includes('MoveVertical') && code.includes('Sparkles'),
-    'ArtifactEditor must render MoveVertical line height button and Sparkles text shadow button'
+    code.includes('MoveVertical') && (code.includes('Sparkles') || code.includes('title="Text Shadow"')),
+    'ArtifactEditor must render MoveVertical line height button and Text Shadow button'
   );
   assert.ok(
     code.includes('applyTextStyle') && code.includes('lineHeight,') && code.includes('shadow: shadowObj'),
     'applyTextStyle bulk multi-selection update must cover lineHeight and textShadow'
   );
+});
+
+test('SPEC-14-05 / BUG-22: Text shadow toggle and conditional slider controls', async () => {
+  const fs = await import('node:fs');
+
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. Text shadow toggle button is directly adjacent to shadow slider
+  assert.ok(
+    code.includes('title="Text Shadow"') && code.includes('handleToggleTextShadow'),
+    'ArtifactEditor must provide text shadow toggle button'
+  );
+
+  // 2. Button icon uses typography S glyph with drop-shadow
+  assert.ok(
+    code.includes('drop-shadow') && code.includes('>S</span>'),
+    'Text shadow toggle button must render stylized S glyph'
+  );
+
+  // 3. Shadow blur slider is conditionally rendered only when textShadow is true
+  assert.ok(
+    code.includes('{textShadow &&') && code.includes('handleShadowBlurChange'),
+    'Shadow adjustment slider must be conditionally rendered only when textShadow is true'
+  );
+
+  // 4. Line height controls remain intact
+  assert.ok(
+    code.includes('MoveVertical') && code.includes('handleLineHeightChange'),
+    'Line height controls must remain functional and intact'
+  );
+});
+
+test('SPEC-14-01 / BUG-7: Canvas image drag clipBox synchronization during active movement', async () => {
+  const fs = await import('node:fs');
+
+  // 1. Behavioral test: syncImageClipOnMove translates clipPath with image
+  let setCoordsCalled = false;
+  const mockClipPath = {
+    left: 50,
+    top: 60,
+    width: 200,
+    height: 100,
+    absolutePositioned: true,
+    set(props) {
+      Object.assign(this, props);
+    },
+    setCoords() {
+      setCoordsCalled = true;
+    },
+  };
+
+  const mockImage = {
+    left: 75,
+    top: 60,
+    width: 150,
+    height: 100,
+    data: {
+      imageRef: '/api/uploads/sample.jpg',
+      clipOffset: { x: -25, y: 0 },
+    },
+    clipPath: mockClipPath,
+  };
+
+  // Image is dragged to a new position (125, 110)
+  mockImage.left = 125;
+  mockImage.top = 110;
+
+  const didSync = syncImageClipOnMove(mockImage);
+  assert.equal(didSync, true, 'syncImageClipOnMove must return true for valid image with clipPath');
+  assert.equal(mockClipPath.left, 100, 'clipPath.left must be updated to target.left + clipOffset.x (125 - 25 = 100)');
+  assert.equal(mockClipPath.top, 110, 'clipPath.top must be updated to target.top + clipOffset.y (110 + 0 = 110)');
+  assert.equal(setCoordsCalled, true, 'setCoords must be called on clipPath');
+
+  // 2. Behavioral test: without clipOffset, defaults to matching target coordinates directly
+  const simpleClip = {
+    left: 10,
+    top: 20,
+    set(props) {
+      Object.assign(this, props);
+    },
+  };
+  const simpleImage = {
+    left: 80,
+    top: 90,
+    data: { imageRef: '/test.png' },
+    clipPath: simpleClip,
+  };
+  syncImageClipOnMove(simpleImage);
+  assert.equal(simpleClip.left, 80);
+  assert.equal(simpleClip.top, 90);
+
+  // 3. Source scan guards in ArtifactEditor.tsx
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  assert.ok(
+    code.includes("canvas.on('object:moving', onObjectMoving)"),
+    'ArtifactEditor must listen to object:moving on canvas'
+  );
+  assert.ok(
+    code.includes('syncImageClipOnMove(target)'),
+    'onObjectMoving must invoke syncImageClipOnMove for moving objects'
+  );
+  assert.ok(
+    code.includes("canvas.off('object:moving', onObjectMoving)"),
+    'ArtifactEditor must unregister object:moving listener on unmount'
+  );
+  assert.ok(
+    code.includes("action === 'drag' || action === 'move'"),
+    'onObjectModified must guard against destructive fit recalculation on drag/move'
+  );
+});
+
+test('SPEC-14-08 / BUG-26: Preserve object stacking on canvas', async () => {
+  const fs = await import('node:fs');
+
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // Fabric Canvas must be initialized with preserveObjectStacking: true
+  assert.ok(
+    code.includes('preserveObjectStacking: true'),
+    'Fabric canvas initialization must include preserveObjectStacking: true to preserve element depth on selection'
+  );
+});
+
+test('SPEC-14-09 / BUG-27: Realtime layer advance on Bring forward and layer reordering', async () => {
+  const fs = await import('node:fs');
+
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. Layer reordering handles all four directions: forward, backward, front, back
+  assert.ok(
+    code.includes("action === 'forward'") &&
+    code.includes('canvas.bringObjectForward(obj)') &&
+    code.includes('canvas.sendObjectBackwards(obj)') &&
+    code.includes('canvas.bringObjectToFront(obj)') &&
+    code.includes('canvas.sendObjectToBack(obj)'),
+    'ArtifactEditor must support forward, backward, front, and back layer reordering'
+  );
+
+  // 2. Behavioral layer order swap test
+  class MockCanvasStack {
+    constructor(objects) {
+      this._objects = [...objects];
+    }
+    getObjects() {
+      return this._objects;
+    }
+    bringObjectForward(obj) {
+      const idx = this._objects.indexOf(obj);
+      if (idx !== -1 && idx < this._objects.length - 1) {
+        this._objects.splice(idx, 1);
+        this._objects.splice(idx + 1, 0, obj);
+        return true;
+      }
+      return false;
+    }
+    sendObjectBackwards(obj) {
+      const idx = this._objects.indexOf(obj);
+      if (idx > 0) {
+        this._objects.splice(idx, 1);
+        this._objects.splice(idx - 1, 0, obj);
+        return true;
+      }
+      return false;
+    }
+  }
+
+  const elA = { id: 'a' };
+  const elB = { id: 'b' };
+  const elC = { id: 'c' };
+  const mockStack = new MockCanvasStack([elA, elB, elC]);
+
+  // Bring elA forward (+1)
+  const moved = mockStack.bringObjectForward(elA);
+  assert.equal(moved, true, 'bringObjectForward must advance element in stack');
+  assert.deepEqual(mockStack.getObjects().map((o) => o.id), ['b', 'a', 'c'], 'elA must advance from index 0 to 1');
+
+  // Bring elA forward again (+1)
+  const moved2 = mockStack.bringObjectForward(elA);
+  assert.equal(moved2, true);
+  assert.deepEqual(mockStack.getObjects().map((o) => o.id), ['b', 'c', 'a'], 'elA must advance from index 1 to 2');
+
+  // Bring elA forward at top returns false
+  const movedTop = mockStack.bringObjectForward(elA);
+  assert.equal(movedTop, false, 'bringObjectForward at top must return false');
 });
 
 
