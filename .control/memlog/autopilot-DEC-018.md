@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-018-autopilot-mandate-artifacts-qa-followup-rou
 
 ## Resume
 
-Iteration: 1
-Run branch: autopilot/DEC-018 (PR: not open yet)
-Stopped at: —
+Iteration: 1 (final)
+Run branch: autopilot/DEC-018 (PR: open)
+Stopped at: Done (All 2 tickets of SPEC-16 completed and verified; SPEC-16 closed)
 Blocked: —
 Parked: —
-Next: Smoke test & close SPEC-16
+Next: Final review and owner merge
 
 ## Decisions
 
