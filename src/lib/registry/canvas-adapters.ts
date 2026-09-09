@@ -380,9 +380,9 @@ export function createAnnouncementSetAdapter(
 
 export function createSongSetTrioAdapter(): ArtifactEditorAdapter {
   const roles: Array<{ id: 'title' | 'verse' | 'reff'; label: string }> = [
-    { id: 'title', label: 'Title' },
-    { id: 'verse', label: 'Verse' },
-    { id: 'reff', label: 'Reff' },
+    { id: 'title', label: 'Title Slide' },
+    { id: 'verse', label: 'Verse Layout' },
+    { id: 'reff', label: 'Refrain Layout' },
   ];
 
   return {

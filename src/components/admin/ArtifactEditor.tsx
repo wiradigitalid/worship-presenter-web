@@ -10,8 +10,10 @@ import {
   Copy,
   Image as ImageIcon,
   Italic,
+  MoveVertical,
   Plus,
   SendToBack,
+  Sparkles,
   Square,
   Trash2,
   Type,
@@ -72,16 +74,23 @@ import {
   NEW_TEXT_CONTENT,
   NEW_TEXT_SIZE_PX,
   clampFontSize,
+  computeContextMenuCoords,
+  filterOutBackgroundElements,
   getElementId,
+  handleContextMenuTrigger,
+  isBackgroundElement,
   isFabricTextObject,
   isUserAuthoredId,
   nextElementId,
   normalizeFontSize,
   pctToPx,
   pxToPct,
+  resolveInitialSelectedId,
   serializeCanvas,
   serializeTextStyle,
+  shouldPreserveSelectionOnContextMenu,
   toStrictHexColor,
+  updateImageElementFit,
 } from '@/lib/registry/canvas-utils';
 
 function placeholderLabelKey(key: string): I18nKey {
@@ -143,6 +152,8 @@ function elementToFabricObject(
       ...(style?.fontWeight !== undefined ? { fontWeight: style.fontWeight } : {}),
       ...(style?.fontStyle !== undefined ? { fontStyle: style.fontStyle } : {}),
       ...(style?.textDecoration === 'underline' ? { underline: true } : {}),
+      ...(style?.lineHeight !== undefined ? { lineHeight: style.lineHeight } : {}),
+      ...(style?.textShadow ? { shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: 4, offsetX: 2, offsetY: 2 }) } : {}),
       textAlign: style?.textAlign ?? DEFAULT_TEXT_ALIGN,
       splitByGrapheme: true,
       editable: editable,
@@ -188,7 +199,7 @@ function elementToFabricObject(
         scaleX: initial.scaleX,
         scaleY: initial.scaleY,
         clipPath: clipBox,
-        data: { elementId: element.id, imageRef: element.imageRef },
+        data: { elementId: element.id, imageRef: element.imageRef, objectFit: element.style?.objectFit },
       });
       imgEl.onload = () => {
         const updated = calcFit();
@@ -252,6 +263,7 @@ export interface ArtifactEditorProps {
   onCopySlidePayloadChange?: (slide: CopiedSlide | null) => void;
   hideList?: boolean;
   allowImages?: boolean;
+  allowRename?: boolean;
   bannerNote?: React.ReactNode;
   prefixListSlot?: React.ReactNode;
 }
@@ -263,6 +275,7 @@ export default function ArtifactEditor({
   onCopySlidePayloadChange,
   hideList = false,
   allowImages = true,
+  allowRename = true,
   bannerNote = null,
   prefixListSlot = null,
 }: ArtifactEditorProps = {}) {
@@ -285,6 +298,8 @@ export default function ArtifactEditor({
   const [fontWeight, setFontWeight] = useState<'normal' | 'bold'>('normal');
   const [fontStyle, setFontStyle] = useState<'normal' | 'italic'>('normal');
   const [underline, setUnderline] = useState(false);
+  const [lineHeight, setLineHeight] = useState<number>(1.16);
+  const [textShadow, setTextShadow] = useState(false);
   const [shapeFill, setShapeFill] = useState('#5C2E16');
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [selectedTextCount, setSelectedTextCount] = useState(0);
@@ -308,6 +323,7 @@ export default function ArtifactEditor({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const dragSourceIndexRef = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const saveSequenceRef = useRef(0);
 
   const fitCanvasToShell = useCallback(() => {
     const shell = canvasShellRef.current;
@@ -371,6 +387,12 @@ export default function ArtifactEditor({
       setFontWeight(selectedText.fontWeight === 'bold' ? 'bold' : 'normal');
       setFontStyle(selectedText.fontStyle === 'italic' ? 'italic' : 'normal');
       setUnderline(Boolean((selectedText as any).underline));
+      setLineHeight(
+        typeof (selectedText as any).lineHeight === 'number'
+          ? (selectedText as any).lineHeight
+          : 1.16
+      );
+      setTextShadow(Boolean((selectedText as any).shadow));
     }
     const shapes = active.filter((obj) => (obj as any).type === 'rect' && !(obj as any).data?.imageRef);
     if (shapes.length > 0) {
@@ -401,10 +423,14 @@ export default function ArtifactEditor({
   }, [adapter]);
 
   useEffect(() => {
-    loadList().catch((err) => {
-      setStatus('error');
-      setMessage(err instanceof Error ? err.message : t('admin.artifacts.loadFailed'));
-    });
+    loadList()
+      .then((summaries) => {
+        setSelectedId((current) => resolveInitialSelectedId(current, initialSelectedId, summaries));
+      })
+      .catch((err) => {
+        setStatus('error');
+        setMessage(err instanceof Error ? err.message : t('admin.artifacts.loadFailed'));
+      });
     void fetchAvailableSongSets().then(setAvailableSongSets);
     void fetchAvailableAnnouncementSets().then(setAvailableAnnSets);
     void fetchBackgroundLibrary().then(setBgLibrary);
@@ -542,6 +568,34 @@ export default function ArtifactEditor({
       canvas.on('mouse:down', onMouseDown);
       canvas.on('mouse:up', onMouseUp);
 
+      // Native DOM listener on upperCanvasEl: Fabric wraps canvas in an upper-canvas DOM layer
+      // that receives pointer events. Handling contextmenu here guarantees reliable execution.
+      const upperCanvasEl = canvas.upperCanvasEl;
+      const onNativeContextMenu = (e: MouseEvent) => {
+        e.preventDefault();
+        const shell = canvasShellRef.current;
+        const rect = shell ? shell.getBoundingClientRect() : null;
+        handleContextMenuTrigger(
+          e,
+          canvas,
+          rect,
+          syncSelection,
+          setContextMenu
+        );
+      };
+      upperCanvasEl?.addEventListener('contextmenu', onNativeContextMenu);
+
+      // SPEC-13-03: On image object scaling/modification, recalculate contain fit so image content grows/shrinks with handles
+      const onObjectModified = (opt: any) => {
+        const target = opt.target;
+        if (target && target.data?.imageRef) {
+          if (updateImageElementFit(target, fabric)) {
+            canvas.requestRenderAll();
+          }
+        }
+      };
+      canvas.on('object:modified', onObjectModified);
+
       // Registered here and not one line earlier: the paint loop above calls
       // `canvas.add()` for every seed element, and `canvas.add()` fires
       // `object:added`. Attached any sooner, a fresh mount would mark itself
@@ -555,6 +609,8 @@ export default function ArtifactEditor({
         canvas.off('selection:cleared', onSelectionChange);
         canvas.off('mouse:down', onMouseDown);
         canvas.off('mouse:up', onMouseUp);
+        canvas.off('object:modified', onObjectModified);
+        upperCanvasEl?.removeEventListener('contextmenu', onNativeContextMenu);
         for (const event of CANVAS_MUTATION_EVENTS) {
           canvas.off(event, markDirty);
         }
@@ -657,8 +713,24 @@ export default function ArtifactEditor({
       if (!canvas || !layout) return;
 
       const fabric = await import('fabric');
+      if (fabricCanvasRef.current !== canvas) return;
+
+      let bg: any = undefined;
       if (url) {
-        const bg = await fabric.FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
+        try {
+          bg = await fabric.FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : 'Failed to load background');
+          return;
+        }
+
+        if (fabricCanvasRef.current !== canvas) return;
+
+        if (!bg || !bg.width) {
+          toast.error('Failed to load background: invalid image');
+          return;
+        }
+
         bg.set({
           left: 0,
           top: 0,
@@ -667,16 +739,31 @@ export default function ArtifactEditor({
           selectable: false,
           evented: false,
         });
-        canvas.backgroundImage = bg;
-      } else {
-        canvas.backgroundImage = undefined;
       }
+
+      // Replace or clear canvas background image
+      canvas.backgroundImage = bg;
+      if (url) {
+        layout.backgroundImage = url;
+      } else {
+        delete layout.backgroundImage;
+      }
+
+      // SPEC-13-09 / DEC-014: Replace existing background element instead of stacking extra layers
+      const bgElements = (layout.elements ?? []).filter(isBackgroundElement);
+      for (const bgEl of bgElements) {
+        addedElementsRef.current.delete(bgEl.id);
+        const obj = canvas.getObjects().find((o) => getElementId(o) === bgEl.id);
+        if (obj) canvas.remove(obj);
+      }
+      layout.elements = filterOutBackgroundElements(layout.elements ?? []);
+
       canvas.requestRenderAll();
-      layout.backgroundImage = url || undefined;
+      syncSelection(canvas);
       markDirty();
       setShowBgDialog(false);
     },
-    [template, markDirty]
+    [template, syncSelection, markDirty]
   );
 
   const handleUploadBackgroundFile = useCallback(
@@ -965,15 +1052,9 @@ export default function ArtifactEditor({
     }
 
     const removable: import('fabric').FabricObject[] = [];
-    const refused: string[] = [];
     for (const obj of active) {
       const elementId = getElementId(obj);
       if (!elementId) continue;
-      const source = byId.get(elementId);
-      if (!isUserAuthoredId(elementId) || source?.required) {
-        refused.push(elementId);
-        continue;
-      }
       removable.push(obj);
     }
 
@@ -992,13 +1073,6 @@ export default function ArtifactEditor({
       markDirty();
     }
 
-    if (refused.length > 0) {
-      setStatus('error');
-      setMessage(
-        `Cannot delete ${refused.join(', ')} — shipped and required elements are part of the template.`
-      );
-      return;
-    }
     setStatus('idle');
     setMessage(
       `Removed ${removable.length} element${removable.length === 1 ? '' : 's'}. Save to persist.`
@@ -1134,19 +1208,29 @@ export default function ArtifactEditor({
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
 
-    let updated = false;
-    for (const obj of canvas.getActiveObjects()) {
-      if (!isFabricTextObject(obj)) continue;
-      obj.set({ fill: fontColor, fontSize, underline } as any);
-      updated = true;
-    }
-    // `obj.set(...)` raises no canvas event, so the mutation listeners never see
-    // this; and pressing Apply with nothing selected changed nothing, so it must
-    // not claim otherwise.
-    if (updated) {
-      canvas.requestRenderAll();
-      markDirty();
-    }
+    void import('fabric').then((fabric) => {
+      const shadowObj = textShadow
+        ? new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: 4, offsetX: 2, offsetY: 2 })
+        : null;
+      let updated = false;
+      for (const obj of canvas.getActiveObjects()) {
+        if (!isFabricTextObject(obj)) continue;
+        obj.set({
+          fill: fontColor,
+          fontSize,
+          fontWeight,
+          fontStyle,
+          underline,
+          lineHeight,
+          shadow: shadowObj,
+        } as any);
+        updated = true;
+      }
+      if (updated) {
+        canvas.requestRenderAll();
+        markDirty();
+      }
+    });
   };
 
   const handleFontColorChange = (color: string) => {
@@ -1206,6 +1290,41 @@ export default function ArtifactEditor({
     canvas.requestRenderAll();
     markDirty();
   }, [underline, markDirty]);
+
+  const handleLineHeightChange = useCallback(
+    (val: number) => {
+      const clamped = Math.max(0.8, Math.min(2.5, Number(val.toFixed(2))));
+      setLineHeight(clamped);
+      const canvas = fabricCanvasRef.current;
+      if (!canvas) return;
+      for (const obj of canvas.getActiveObjects()) {
+        if (isFabricTextObject(obj)) {
+          obj.set({ lineHeight: clamped });
+        }
+      }
+      canvas.requestRenderAll();
+      markDirty();
+    },
+    [markDirty]
+  );
+
+  const handleToggleTextShadow = useCallback(async () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+    const fabric = await import('fabric');
+    const nextShadow = !textShadow;
+    setTextShadow(nextShadow);
+    const shadowObj = nextShadow
+      ? new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: 4, offsetX: 2, offsetY: 2 })
+      : null;
+    for (const obj of canvas.getActiveObjects()) {
+      if (isFabricTextObject(obj)) {
+        obj.set({ shadow: shadowObj } as any);
+      }
+    }
+    canvas.requestRenderAll();
+    markDirty();
+  }, [textShadow, markDirty]);
 
   /**
    * Writes the words of the selected text box straight through to Fabric, so
@@ -1501,6 +1620,7 @@ export default function ArtifactEditor({
     const canvas = fabricCanvasRef.current;
     if (!layout || !canvas) return;
 
+    const currentSaveSeq = ++saveSequenceRef.current;
     setStatus('saving');
     setMessage(null);
     try {
@@ -1538,6 +1658,7 @@ export default function ArtifactEditor({
       };
 
       const res = await adapter.save(template.id, payload);
+      if (currentSaveSeq !== saveSequenceRef.current) return;
       if (res.status === 409) {
         // Reload first: `loadTemplate` clears the banner, so the explanation
         // has to be written after it or the admin sees nothing at all.
@@ -1577,7 +1698,7 @@ export default function ArtifactEditor({
   };
 
   const handleReset = async () => {
-    if (!template) return;
+    if (!template || busy) return;
     if (
       !window.confirm(
         t('admin.artifacts.confirmReset').replace('{label}', template.label)
@@ -1585,30 +1706,24 @@ export default function ArtifactEditor({
     )
       return;
 
+    // Discard any in-flight Save by incrementing sequence counter
+    saveSequenceRef.current += 1;
+
     setStatus('resetting');
     setMessage(null);
     try {
-      const res = await adapter.reset(template.id, template.updatedAt);
-      if (res.status === 409) {
-        await loadTemplate(template.id);
-        setStatus('conflict');
-        setMessage(
-          t('admin.artifacts.resetConflict').replace(
-            '{error}',
-            res.error || t('admin.artifacts.modifiedElsewhere')
-          )
-        );
-        return;
-      }
-      if (!res.ok || !res.data) throw new Error(res.error || t('admin.artifacts.resetFailed'));
-      const data = res.data;
-      setTemplate(data);
+      // Revert in-memory canvas state to the last-Saved template from adapter/store
+      const data = await adapter.getOne(template.id);
+      addedElementsRef.current = new Map();
+      addedPlaceholdersRef.current = new Map();
+      setSelectedElementIds([]);
+      setContextMenu(null);
+      setTemplate({ ...data });
       if (typeof data.label === 'string') setDraftLabel(data.label);
       setIsDirty((current) => nextDirtyState(current, 'reset'));
       setStatus('success');
       setMessage(t('admin.artifacts.resetDone'));
       toast(t('admin.artifacts.resetDone'));
-      await loadList();
     } catch (err) {
       setStatus('error');
       setMessage(err instanceof Error ? err.message : t('admin.artifacts.resetFailed'));
@@ -1736,9 +1851,7 @@ export default function ArtifactEditor({
   };
 
   const isEditable = template ? isCanvasAuthorable(template.baseType) : false;
-  const isResettable = Boolean(
-    template && templates.find((item) => item.id === template.id)?.resettable
-  );
+  const isResettable = Boolean(template && isEditable);
   const labelDirty = Boolean(
     template && draftLabel.trim() !== '' && draftLabel.trim() !== template.label
   );
@@ -1812,16 +1925,7 @@ export default function ArtifactEditor({
     }
     canvas.requestRenderAll();
   }, [busy]);
-  const requiredElementIds = new Set(
-    (template ? (getEditableLayout(template)?.elements ?? []) : [])
-      .filter((element) => element.required)
-      .map((element) => element.id)
-  );
-  const canDeleteSelection =
-    selectedElementIds.length > 0 &&
-    selectedElementIds.every(
-      (id) => isUserAuthoredId(id) && !requiredElementIds.has(id)
-    );
+  const canDeleteSelection = selectedElementIds.length > 0;
 
   return (
     <div className={hideList ? 'block' : 'grid gap-6 lg:grid-cols-[330px_minmax(0,1fr)] min-h-[580px]'}>
@@ -1902,12 +2006,12 @@ export default function ArtifactEditor({
           </div>
 
           {/* LIST TEMPLATES (POIN 3: HOVER ACTIONS & DND REORDER) */}
-          <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm">
-            <div className="flex items-center justify-between">
+          <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm flex flex-col max-h-[calc(100vh-320px)] min-h-[220px]">
+            <div className="flex items-center justify-between shrink-0">
               <span className="text-xs font-semibold text-foreground">Deck Sequence</span>
               <span className="text-[11px] text-muted-foreground font-mono">{templates.length} slides</span>
             </div>
-            <ul className="space-y-1.5 max-h-[calc(100vh-340px)] min-h-[220px] overflow-y-auto pr-1">
+            <ul className="space-y-1.5 overflow-y-auto pr-1 flex-1 min-h-0">
               {templates.map((item, index) => {
                 const isSelected = selectedId === item.id;
                 return (
@@ -2036,26 +2140,28 @@ export default function ArtifactEditor({
         {bannerNote ? <div>{bannerNote}</div> : null}
         {!template ? (
           <>
-            {message ? (
-              <p
-                role="alert"
-                className={`text-sm ${
-                  status === 'error' || status === 'conflict'
-                    ? 'text-destructive'
-                    : 'text-emerald-600 dark:text-emerald-400'
-                }`}
-              >
-                {message}
-              </p>
-            ) : null}
+            <div className="h-6 min-h-[24px] flex items-center overflow-hidden">
+              {message ? (
+                <p
+                  role="alert"
+                  className={`text-xs truncate ${
+                    status === 'error' || status === 'conflict'
+                      ? 'text-destructive'
+                      : 'text-emerald-600 dark:text-emerald-400'
+                  }`}
+                >
+                  {message}
+                </p>
+              ) : null}
+            </div>
             <p className="text-sm text-muted-foreground">{t('admin.artifacts.selectHint')}</p>
           </>
         ) : (
           <>
             {/* POIN 4: SLIDE HEADER REGION (CARD RESMI DENGAN SIKLUS RENAME/RESET KONSISTEN) */}
-            <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm">
+            <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm min-h-[58px]">
               <div className="flex items-center gap-3">
-                {isRenaming ? (
+                {allowRename && isRenaming ? (
                   <Input
                     id="artifact-label"
                     type="text"
@@ -2063,7 +2169,9 @@ export default function ArtifactEditor({
                     onChange={(event) => setDraftLabel(event.target.value)}
                     maxLength={80}
                     disabled={busy}
-                    className="text-base font-semibold max-w-sm"
+                    aria-label={t('admin.artifacts.rename')}
+                    placeholder={template.label}
+                    className="text-base font-semibold max-w-sm h-8"
                     autoFocus
                   />
                 ) : (
@@ -2084,45 +2192,48 @@ export default function ArtifactEditor({
                   </span>
                 ) : null}
 
-                {isRenaming ? (
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setIsRenaming(false);
-                        setDraftLabel(template.label);
-                      }}
-                      disabled={busy}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={async () => {
-                        await handleRename();
-                        setIsRenaming(false);
-                      }}
-                      disabled={!labelDirty || busy}
-                    >
-                      Save
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsRenaming(true)}
-                    disabled={busy}
-                  >
-                    {t('admin.artifacts.rename')}
-                  </Button>
-                )}
-
-                <div className="h-4 w-px bg-border mx-1" />
+                {allowRename ? (
+                  <>
+                    {isRenaming ? (
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setIsRenaming(false);
+                            setDraftLabel(template.label);
+                          }}
+                          disabled={busy}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={async () => {
+                            await handleRename();
+                            setIsRenaming(false);
+                          }}
+                          disabled={!labelDirty || busy}
+                        >
+                          Save
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsRenaming(true)}
+                        disabled={busy}
+                      >
+                        {t('admin.artifacts.rename')}
+                      </Button>
+                    )}
+                    <div className="h-4 w-px bg-border mx-1" />
+                  </>
+                ) : null}
 
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-semibold text-muted-foreground">Canvas:</span>
@@ -2132,7 +2243,7 @@ export default function ArtifactEditor({
                       variant="outline"
                       size="sm"
                       onClick={handleReset}
-                      disabled={busy}
+                      disabled={!isEditable || busy || (!isDirty && !labelDirty)}
                     >
                       {t('admin.artifacts.reset')}
                     </Button>
@@ -2149,18 +2260,20 @@ export default function ArtifactEditor({
               </div>
             </div>
 
-            {message ? (
-              <p
-                role="alert"
-                className={`text-sm ${
-                  status === 'error' || status === 'conflict'
-                    ? 'text-destructive'
-                    : 'text-emerald-600 dark:text-emerald-400'
-                }`}
-              >
-                {message}
-              </p>
-            ) : null}
+            <div className="h-6 min-h-[24px] flex items-center overflow-hidden">
+              {message ? (
+                <p
+                  role="alert"
+                  className={`text-xs truncate ${
+                    status === 'error' || status === 'conflict'
+                      ? 'text-destructive'
+                      : 'text-emerald-600 dark:text-emerald-400'
+                  }`}
+                >
+                  {message}
+                </p>
+              ) : null}
+            </div>
 
             {!isEditable ? (
               <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
@@ -2374,6 +2487,43 @@ export default function ArtifactEditor({
                       >
                         <AlignRight className="w-3.5 h-3.5" />
                       </Button>
+                      <div className="h-4 w-px bg-border mx-1" />
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          onClick={() => {
+                            const next = lineHeight >= 1.8 ? 1.0 : Number((lineHeight + 0.2).toFixed(1));
+                            handleLineHeightChange(next);
+                          }}
+                          disabled={busy}
+                          title={`Line Height (${lineHeight.toFixed(1)})`}
+                        >
+                          <MoveVertical className="w-3.5 h-3.5" />
+                        </Button>
+                        <input
+                          type="range"
+                          min={0.8}
+                          max={2.4}
+                          step={0.1}
+                          value={lineHeight}
+                          onChange={(e) => handleLineHeightChange(Number(e.target.value))}
+                          disabled={busy}
+                          className="w-14 h-3 accent-primary cursor-pointer"
+                          title={`Line Height: ${lineHeight.toFixed(1)}`}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant={textShadow ? 'default' : 'outline'}
+                        size="icon-sm"
+                        onClick={handleToggleTextShadow}
+                        disabled={busy}
+                        title="Text Shadow"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                      </Button>
                       <Button
                         type="button"
                         variant="outline"
@@ -2409,27 +2559,8 @@ export default function ArtifactEditor({
                   ref={canvasShellRef}
                   className="relative flex aspect-video w-full max-h-[calc(100vh-310px)] min-h-[320px] items-center justify-center overflow-hidden rounded-xl border border-border bg-black/90"
                   onContextMenu={(e) => {
+                    // Prevent native browser context menu on canvas shell
                     e.preventDefault();
-                    const canvas = fabricCanvasRef.current;
-                    if (!canvas || !canvasShellRef.current) return;
-                    const rect = canvasShellRef.current.getBoundingClientRect();
-                    const x = Math.max(10, Math.min(e.clientX - rect.left, rect.width - 170));
-                    const y = Math.max(10, Math.min(e.clientY - rect.top, rect.height - 220));
-
-                    const target = canvas.findTarget(e.nativeEvent);
-                    if (target) {
-                      if (!canvas.getActiveObjects().includes(target)) {
-                        canvas.setActiveObject(target);
-                        canvas.requestRenderAll();
-                        syncSelection(canvas);
-                      }
-                      setContextMenu({ x, y });
-                    } else {
-                      canvas.discardActiveObject();
-                      canvas.requestRenderAll();
-                      syncSelection(canvas);
-                      setContextMenu(null);
-                    }
                   }}
                 >
                   <canvas ref={canvasRef} />

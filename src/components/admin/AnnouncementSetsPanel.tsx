@@ -549,9 +549,12 @@ export function AnnouncementSetsPanel({
                 onValueChange={(val) => {
                   if (val) setSelectedSetId(Number(val));
                 }}
+                items={Object.fromEntries(sets.map((s) => [String(s.id), `${s.label} (${s.slideCount} slides)`]))}
               >
                 <SelectTrigger className="w-full text-xs font-semibold h-8">
-                  <SelectValue />
+                  <SelectValue placeholder={selectedSet ? `${selectedSet.label} (${selectedSet.slideCount} slides)` : 'Select set…'}>
+                    {selectedSet ? `${selectedSet.label} (${selectedSet.slideCount} slides)` : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {sets.map((s) => (

@@ -206,9 +206,14 @@ func (s *Server) patchSongSetEntry(w http.ResponseWriter, r *http.Request) {
 		writeError(w, status, msg)
 		return
 	}
-	if raw, ok := body["variableName"]; ok && strings.TrimSpace(asString(raw)) != variableName {
-		writeError(w, http.StatusBadRequest, "variableName is immutable")
-		return
+	targetVariableName := variableName
+	if raw, ok := body["variableName"]; ok {
+		trimmed := strings.TrimSpace(asString(raw))
+		if trimmed == "" || !songSetVariableNameRE.MatchString(trimmed) {
+			writeError(w, http.StatusBadRequest, "Invalid variableName")
+			return
+		}
+		targetVariableName = trimmed
 	}
 	updatedAt, _ := body["updatedAt"].(string)
 	if strings.TrimSpace(updatedAt) == "" {
@@ -221,8 +226,15 @@ func (s *Server) patchSongSetEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx, err := s.DB.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	defer tx.Rollback()
+
 	var storedUpdated string
-	err = s.DB.QueryRow(
+	err = tx.QueryRow(
 		`SELECT updated_at FROM artifact_templates
 		  WHERE base_type = 'song-set-entry' AND variable_name = ?`,
 		variableName,
@@ -240,11 +252,27 @@ func (s *Server) patchSongSetEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if targetVariableName != variableName {
+		var conflictCount int
+		if err := tx.QueryRow(
+			`SELECT COUNT(*) FROM artifact_templates
+			  WHERE base_type = 'song-set-entry' AND variable_name = ?`,
+			targetVariableName,
+		).Scan(&conflictCount); err != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		if conflictCount > 0 {
+			writeError(w, http.StatusConflict, "Song set entry already exists")
+			return
+		}
+	}
+
 	now := timeNowRFC3339Nano()
-	res, err := s.DB.Exec(
-		`UPDATE artifact_templates SET label = ?, updated_at = ?
+	res, err := tx.Exec(
+		`UPDATE artifact_templates SET label = ?, variable_name = ?, updated_at = ?
 		  WHERE base_type = 'song-set-entry' AND variable_name = ? AND updated_at = ?`,
-		strings.TrimSpace(title), now, variableName, updatedAt,
+		strings.TrimSpace(title), targetVariableName, now, variableName, updatedAt,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -254,13 +282,40 @@ func (s *Server) patchSongSetEntry(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "Song set entry was modified by another session")
 		return
 	}
+
+	// Migrate existing weekly song_set_inputs if variableName was changed.
+	// Purge any inert/orphaned rows under targetVariableName across all services
+	// so stale data from deleted entries cannot be adopted, and update all rows
+	// from variableName to targetVariableName.
+	if targetVariableName != variableName {
+		if _, err := tx.Exec(
+			`DELETE FROM song_set_inputs WHERE variable_name = ?`,
+			targetVariableName,
+		); err != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		if _, err := tx.Exec(
+			`UPDATE song_set_inputs SET variable_name = ? WHERE variable_name = ?`,
+			targetVariableName, variableName,
+		); err != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+
 	var position int
 	_ = s.DB.QueryRow(
 		`SELECT position FROM artifact_templates WHERE base_type = 'song-set-entry' AND variable_name = ?`,
-		variableName,
+		targetVariableName,
 	).Scan(&position)
 	writeJSON(w, http.StatusOK, songSetEntry{
-		VariableName: variableName,
+		VariableName: targetVariableName,
 		Title:        strings.TrimSpace(title),
 		Position:     position,
 		UpdatedAt:    now,

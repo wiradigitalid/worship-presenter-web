@@ -330,6 +330,124 @@ rtm:
   FR: FR-20
   DEC: []
   UC: UC-14
+  ticket: SPEC-13-02
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-03
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  - tests/artifact-preview.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-04
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/artifact-editor-layout.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-07
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/operator-shadcn-guard.test.mjs
+  - tests/artifact-editor-layout.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-08
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/registry-reseed.test.mjs
+  - tests/registry-three-kind-reset.test.mjs
+  - tests/artifact-editor-controls.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-09
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-10
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/operator-shadcn-guard.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-12
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  - tests/registry.test.mjs
+  - tests/registry-go-http.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
   ticket: W11-02
   spec: W11
   release: artifacts-overhaul
@@ -415,6 +533,36 @@ rtm:
   test:
   - tests/announcement-sets.test.mjs
   - tests/registry.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-21
+  DEC: []
+  UC: UC-15
+  ticket: SPEC-13-01
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-21
+  DEC: []
+  UC: UC-15
+  ticket: SPEC-13-08
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/registry-reseed.test.mjs
+  - tests/registry-three-kind-reset.test.mjs
+  - tests/artifact-editor-controls.test.mjs
   status: done
   exempt: false
   green: true
@@ -617,6 +765,78 @@ rtm:
   FR: FR-29
   DEC: []
   UC: UC-24
+  ticket: SPEC-13-05
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/artifact-editor-layout.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-29
+  DEC: []
+  UC: UC-24
+  ticket: SPEC-13-06
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/registry-kind-rename.test.mjs
+  - tests/registry.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-29
+  DEC: []
+  UC: UC-24
+  ticket: SPEC-13-07
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/operator-shadcn-guard.test.mjs
+  - tests/artifact-editor-layout.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-29
+  DEC: []
+  UC: UC-24
+  ticket: SPEC-13-11
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/announcement-sets.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-29
+  DEC: []
+  UC: UC-24
+  ticket: SPEC-13-13
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/operator-shadcn-guard.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-29
+  DEC: []
+  UC: UC-24
   ticket: W11-05
   spec: W11
   release: artifacts-overhaul
@@ -757,6 +977,124 @@ rtm:
   test:
   - tests/announcement-sets.test.mjs
   - tests/registry.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-02
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-03
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  - tests/artifact-preview.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-04
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/artifact-editor-layout.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-07
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/operator-shadcn-guard.test.mjs
+  - tests/artifact-editor-layout.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-08
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/registry-reseed.test.mjs
+  - tests/registry-three-kind-reset.test.mjs
+  - tests/artifact-editor-controls.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-09
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-10
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/operator-shadcn-guard.test.mjs
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-13-12
+  spec: SPEC-13
+  release: artifacts-qa-followup-round2
+  test:
+  - tests/artifact-editor-controls.test.mjs
+  - tests/registry.test.mjs
+  - tests/registry-go-http.test.mjs
   status: done
   exempt: false
   green: true

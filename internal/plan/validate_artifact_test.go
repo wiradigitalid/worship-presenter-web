@@ -148,6 +148,55 @@ func TestAuthoredGeneralAppearsInPlan(t *testing.T) {
 	}
 }
 
+func TestLineHeightAndTextShadowValidation(t *testing.T) {
+	root := repoRoot(t)
+	template := map[string]any{
+		"schemaVersion": 1,
+		"id":            "test-line-height-shadow",
+		"label":         "Test",
+		"baseType":      "general",
+		"placeholders":  []any{},
+		"layouts": map[string]any{
+			"default": map[string]any{
+				"aspectRatio":     "16:9",
+				"backgroundColor": "#000000",
+				"elements": []any{
+					map[string]any{
+						"id":     "e1",
+						"type":   "text",
+						"x":      10.0,
+						"y":      10.0,
+						"w":      80.0,
+						"h":      30.0,
+						"zIndex": 0,
+						"style": map[string]any{
+							"fontSize":   32.0,
+							"lineHeight": 1.4,
+							"textShadow": true,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if _, err := ValidateArtifactTemplate(mustJSON(template), root); err != nil {
+		t.Fatalf("template with lineHeight and textShadow must pass validation: %v", err)
+	}
+
+	elements := template["layouts"].(map[string]any)["default"].(map[string]any)["elements"].([]any)
+	el := elements[0].(map[string]any)
+	el["style"] = map[string]any{"fontSize": 32.0, "lineHeight": -1.0}
+	if _, err := ValidateArtifactTemplate(mustJSON(template), root); err == nil {
+		t.Fatalf("expected error on negative lineHeight")
+	}
+
+	el["style"] = map[string]any{"fontSize": 32.0, "textShadow": "invalid"}
+	if _, err := ValidateArtifactTemplate(mustJSON(template), root); err == nil {
+		t.Fatalf("expected error on non-boolean textShadow")
+	}
+}
+
 func mustJSON(v any) []byte {
 	b, err := json.Marshal(v)
 	if err != nil {

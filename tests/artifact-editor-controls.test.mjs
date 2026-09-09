@@ -21,6 +21,13 @@ const {
   serializeTextStyle,
   serializeCanvas,
   calculateImageFit,
+  resolveInitialSelectedId,
+  shouldPreserveSelectionOnContextMenu,
+  computeContextMenuCoords,
+  handleContextMenuTrigger,
+  updateImageElementFit,
+  isBackgroundElement,
+  filterOutBackgroundElements,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'canvas-utils.ts')).href
 );
@@ -922,6 +929,523 @@ test('SPEC-12-06: Main Spine toolbar and title area consistency (BUG-12, BUG-13,
     'ArtifactEditor must not carry hand-written hover:bg-blue-600 button overrides'
   );
 });
+
+test('SPEC-13-01: Main Spine auto-selects first Deck Sequence slide on mount (BUG-1, BUG-8)', async () => {
+  // 1. Behavioral tests for resolveInitialSelectedId (pure logic)
+  const summaries = [{ id: 'slide-1' }, { id: 'slide-2' }, { id: 'slide-3' }];
+
+  // Case A: Fresh load with no initial id -> auto-selects first slide
+  assert.equal(
+    resolveInitialSelectedId(null, null, summaries),
+    'slide-1',
+    'Must auto-select first slide on fresh load when nothing selected'
+  );
+
+  // Case B: Empty summaries guard -> returns null, does not select non-existent slide
+  assert.equal(
+    resolveInitialSelectedId(null, null, []),
+    null,
+    'Must return null when summaries list is empty'
+  );
+
+  // Case C: Pre-set initialSelectedId -> preserves explicit initial selection
+  assert.equal(
+    resolveInitialSelectedId(null, 'slide-2', summaries),
+    'slide-2',
+    'Must preserve explicit initialSelectedId'
+  );
+
+  // Case D: Existing current selection -> preserves current selected id
+  assert.equal(
+    resolveInitialSelectedId('slide-3', null, summaries),
+    'slide-3',
+    'Must preserve existing selection when current is already set'
+  );
+
+  // 2. Source scan guard: ArtifactEditor uses resolveInitialSelectedId in loadList resolution
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  assert.ok(
+    code.includes('setSelectedId((current) => resolveInitialSelectedId(current, initialSelectedId, summaries))'),
+    'ArtifactEditor must resolve initial selection via setSelectedId functional updater with resolveInitialSelectedId'
+  );
+});
+
+test('SPEC-13-02: Canvas context menu wired to Fabric contextmenu event and multi-selection (BUG-2)', async () => {
+  // 1. Behavioral tests: shouldPreserveSelectionOnContextMenu
+  const objA = { id: 'objA' };
+  const objB = { id: 'objB' };
+  const objC = { id: 'objC' };
+
+  // Case A: target is member of active multi-selection -> preserves multi-selection
+  assert.equal(
+    shouldPreserveSelectionOnContextMenu([objA, objB], objA),
+    true,
+    'Must preserve selection when right-clicking an already selected element in multi-selection'
+  );
+  assert.equal(
+    shouldPreserveSelectionOnContextMenu([objA, objB], objB),
+    true,
+    'Must preserve selection when right-clicking another selected element in multi-selection'
+  );
+
+  // Case B: target is NOT member of active selection -> does not preserve (switch target)
+  assert.equal(
+    shouldPreserveSelectionOnContextMenu([objA, objB], objC),
+    false,
+    'Must not preserve selection when right-clicking an unselected element'
+  );
+
+  // Case C: no active selection or invalid target -> false
+  assert.equal(
+    shouldPreserveSelectionOnContextMenu([], objA),
+    false,
+    'Must return false when active selection is empty'
+  );
+  assert.equal(
+    shouldPreserveSelectionOnContextMenu([objA], null),
+    false,
+    'Must return false when target is null'
+  );
+
+  // 2. Behavioral tests: computeContextMenuCoords clamping
+  const shellRect = { left: 100, top: 50, width: 800, height: 500 };
+  // Normal coordinate
+  const coords1 = computeContextMenuCoords(200, 150, shellRect);
+  assert.equal(coords1.x, 100);
+  assert.equal(coords1.y, 100);
+
+  // Clamped at right/bottom edges
+  const coordsClamped = computeContextMenuCoords(900, 550, shellRect);
+  assert.equal(coordsClamped.x, 800 - 170);
+  assert.equal(coordsClamped.y, 500 - 220);
+
+  // 3. Behavioral tests: handleContextMenuTrigger execution flow
+  {
+    let activeSelection = [objA, objB];
+    let selectedTarget = null;
+    let menuCoords = null;
+    let rendered = false;
+    let selectionSynced = false;
+
+    const mockCanvas = {
+      findTarget: (evt) => (evt.targetFound ? objA : null),
+      getActiveObjects: () => activeSelection,
+      setActiveObject: (obj) => { selectedTarget = obj; activeSelection = [obj]; },
+      discardActiveObject: () => { selectedTarget = null; activeSelection = []; },
+      requestRenderAll: () => { rendered = true; },
+    };
+
+    const mockSync = () => { selectionSynced = true; };
+    const mockSetMenu = (c) => { menuCoords = c; };
+
+    // Case 3A: Click on element already in multi-selection -> preserves selection, sets menu
+    handleContextMenuTrigger(
+      { clientX: 250, clientY: 150 },
+      mockCanvas,
+      shellRect,
+      mockSync,
+      mockSetMenu,
+      objA
+    );
+    assert.deepEqual(activeSelection, [objA, objB], 'Multi-selection must be preserved');
+    assert.ok(menuCoords, 'Menu coords must be set');
+    assert.equal(menuCoords.x, 150);
+
+    // Case 3B: Click on unselected element -> sets active object to target, syncs selection, sets menu
+    handleContextMenuTrigger(
+      { clientX: 250, clientY: 150 },
+      mockCanvas,
+      shellRect,
+      mockSync,
+      mockSetMenu,
+      objC
+    );
+    assert.equal(selectedTarget, objC, 'Selection must switch to target objC');
+    assert.ok(selectionSynced, 'Selection must be synced');
+    assert.ok(menuCoords, 'Menu coords must be set');
+
+    // Case 3C: Click on empty space (null target) -> discards selection, closes menu
+    handleContextMenuTrigger(
+      { clientX: 250, clientY: 150 },
+      mockCanvas,
+      shellRect,
+      mockSync,
+      mockSetMenu,
+      null
+    );
+    assert.equal(selectedTarget, null, 'Selection must be cleared');
+    assert.equal(menuCoords, null, 'Menu must be closed on empty space');
+  }
+
+  // 4. Source scan guards for ArtifactEditor
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // Must wire native contextmenu listener on upperCanvasEl directly and clean up on unmount
+  assert.ok(
+    code.includes("upperCanvasEl?.addEventListener('contextmenu', onNativeContextMenu)"),
+    'upperCanvasEl must register native contextmenu listener'
+  );
+  assert.ok(
+    code.includes("upperCanvasEl?.removeEventListener('contextmenu', onNativeContextMenu)"),
+    'upperCanvasEl cleanup must unregister native contextmenu listener'
+  );
+
+  // Must delegate to handleContextMenuTrigger helper
+  assert.ok(
+    code.includes('handleContextMenuTrigger('),
+    'Context menu handler must use handleContextMenuTrigger helper'
+  );
+
+  // Shell div must not duplicate trigger execution
+  assert.ok(
+    !code.includes('onContextMenu={(e) => {\n                    e.preventDefault();\n                    const canvas = fabricCanvasRef.current;'),
+    'Shell div must not duplicate context menu trigger execution'
+  );
+});
+
+test('SPEC-13-03: Image element grows and shrinks when resized with aspect ratio contain-fit (BUG-7)', async () => {
+  // 1. Behavioral test: Growing an image element via resize handles
+  // Start with image of natural size 400x200 (2:1 aspect ratio) in an initial box of 200x100
+  const initialFit = calculateImageFit(
+    { left: 10, top: 20, width: 200, height: 100 },
+    { width: 400, height: 200 },
+    'contain'
+  );
+  assert.equal(initialFit.width, 400);
+  assert.equal(initialFit.height, 200);
+  assert.equal(initialFit.scaleX, 0.5);
+  assert.equal(initialFit.scaleY, 0.5);
+
+  let coordsSet = false;
+  const mockImageObj = {
+    data: { imageRef: '/api/uploads/photo.jpg' },
+    left: initialFit.left,
+    top: initialFit.top,
+    width: initialFit.width,
+    height: initialFit.height,
+    scaleX: initialFit.scaleX,
+    scaleY: initialFit.scaleY,
+    _element: { naturalWidth: 400, naturalHeight: 200 },
+    set: function (props) { Object.assign(this, props); },
+    setCoords: function () { coordsSet = true; },
+  };
+
+  const mockFabric = {
+    Rect: class {
+      constructor(opts) { Object.assign(this, opts); }
+      set(opts) { Object.assign(this, opts); }
+    },
+  };
+
+  // User drags resize handles outward to grow bounding box to 400x300 (scaleX=1.0, scaleY=1.5 on current dimensions)
+  mockImageObj.scaleX = 1.0;
+  mockImageObj.scaleY = 1.5;
+  const didGrow = updateImageElementFit(mockImageObj, mockFabric);
+  assert.equal(didGrow, true, 'updateImageElementFit must succeed on valid image object');
+
+  // Rendered dimensions must fit within box (400x300), preserving 2:1 aspect ratio:
+  // contain fit scale should be min(400/400, 300/200) = min(1.0, 1.5) = 1.0
+  const renderedW_grow = mockImageObj.width * mockImageObj.scaleX;
+  const renderedH_grow = mockImageObj.height * mockImageObj.scaleY;
+  assert.equal(renderedW_grow, 400, 'Rendered width must grow to 400');
+  assert.equal(renderedH_grow, 200, 'Rendered height must grow to 200 (preserving 2:1 ratio)');
+  assert.equal(renderedW_grow / renderedH_grow, 2, 'Aspect ratio must stay 2:1');
+  assert.equal(coordsSet, true, 'setCoords must be called after resize');
+
+  // 2. Behavioral test: Shrinking an image element via resize handles
+  // User drags resize handles inward to shrink bounding box to 100x100
+  mockImageObj.scaleX = 0.25; // 400 * 0.25 = 100px width
+  mockImageObj.scaleY = 0.5;  // 200 * 0.5 = 100px height
+  coordsSet = false;
+  const didShrink = updateImageElementFit(mockImageObj, mockFabric);
+  assert.equal(didShrink, true);
+
+  // contain fit scale: min(100/400, 100/200) = min(0.25, 0.5) = 0.25
+  const renderedW_shrink = mockImageObj.width * mockImageObj.scaleX;
+  const renderedH_shrink = mockImageObj.height * mockImageObj.scaleY;
+  assert.equal(renderedW_shrink, 100, 'Rendered width must shrink to 100');
+  assert.equal(renderedH_shrink, 50, 'Rendered height must shrink to 50 (preserving 2:1 ratio)');
+  assert.equal(renderedW_shrink / renderedH_shrink, 2, 'Aspect ratio must stay 2:1 on shrink');
+
+  // 3. Behavioral test: Cover objectFit correctly anchors clipBox to outer box coordinates
+  // Portrait image (200x400, 1:2) inside landscape box (200x100) with cover fit
+  mockImageObj.data = { imageRef: '/api/uploads/photo.jpg', objectFit: 'cover' };
+  mockImageObj.left = 50;
+  mockImageObj.top = 60;
+  mockImageObj.width = 200;
+  mockImageObj.height = 400;
+  mockImageObj.scaleX = 1.0;
+  mockImageObj.scaleY = 0.25; // 200x100 box
+  mockImageObj._element = { naturalWidth: 200, naturalHeight: 400 };
+
+  let clipBoxInstance = null;
+  const mockFabricWithCapture = {
+    Rect: class {
+      constructor(opts) {
+        Object.assign(this, opts);
+        clipBoxInstance = this;
+      }
+      set(opts) { Object.assign(this, opts); }
+    },
+  };
+
+  mockImageObj.clipPath = null;
+  const didCover = updateImageElementFit(mockImageObj, mockFabricWithCapture);
+  assert.equal(didCover, true);
+  // ClipBox must be anchored to boxLeft (50) and boxTop (60) with boxWidth (200) and boxHeight (100)
+  assert.ok(clipBoxInstance);
+  assert.equal(clipBoxInstance.left, 50, 'ClipBox left must anchor to outer box left');
+  assert.equal(clipBoxInstance.top, 60, 'ClipBox top must anchor to outer box top');
+  assert.equal(clipBoxInstance.width, 200, 'ClipBox width must match outer box width');
+  assert.equal(clipBoxInstance.height, 100, 'ClipBox height must match outer box height');
+  assert.equal(clipBoxInstance.scaleX, 1, 'ClipBox scaleX must be 1');
+  assert.equal(clipBoxInstance.scaleY, 1, 'ClipBox scaleY must be 1');
+
+  // 4. Source scan guard: ArtifactEditor hooks object:modified to updateImageElementFit
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  assert.ok(
+    code.includes("canvas.on('object:modified', onObjectModified)"),
+    'ArtifactEditor must listen to object:modified on canvas'
+  );
+  assert.ok(
+    code.includes('updateImageElementFit(target, fabric)'),
+    'onObjectModified must invoke updateImageElementFit for resized images'
+  );
+  assert.ok(
+    code.includes("canvas.off('object:modified', onObjectModified)"),
+    'ArtifactEditor must unregister object:modified listener on unmount'
+  );
+});
+
+test('SPEC-13-08: Canvas Reset becomes discard-unsaved-changes; seeded elements become deletable (DEC-014)', async () => {
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. Shipped/seeded element deletion protection is removed
+  assert.ok(
+    !code.includes('deleteHintShipped') && !code.includes('shipped and required elements are part of the template'),
+    'ArtifactEditor must remove the refused / deleteHintShipped refusal path'
+  );
+  assert.ok(
+    !code.includes('!isUserAuthoredId(elementId) || source?.required'),
+    'handleDelete must not refuse deletion of seeded or required elements'
+  );
+
+  // 2. canDeleteSelection allows deleting any selected elements
+  assert.ok(
+    !code.includes('requiredElementIds.has(id)') && !code.includes('isUserAuthoredId(id) && !requiredElementIds'),
+    'canDeleteSelection must not restrict deletion to user-authored non-required elements'
+  );
+
+  // 3. Canvas Reset discards in-memory edits back to last-saved state and guards against in-flight saves
+  assert.ok(
+    code.includes('saveSequenceRef') || code.includes('saveCounterRef'),
+    'handleReset and handleSave must use sequence counter to guard against in-flight saves'
+  );
+
+  // 4. i18n keys check: deleteHintShipped removed from keys and catalogues
+  const keysPath = path.join(root, 'src', 'lib', 'i18n', 'keys.ts');
+  const keysCode = fs.readFileSync(keysPath, 'utf8');
+  assert.ok(
+    !keysCode.includes('admin.artifacts.deleteHintShipped'),
+    'keys.ts must not contain admin.artifacts.deleteHintShipped'
+  );
+
+  const catEnPath = path.join(root, 'src', 'lib', 'i18n', 'catalogue-en.ts');
+  const catEnCode = fs.readFileSync(catEnPath, 'utf8');
+  assert.ok(
+    !catEnCode.includes('deleteHintShipped'),
+    'catalogue-en.ts must not contain deleteHintShipped'
+  );
+  assert.ok(
+    catEnCode.includes('Discard unsaved changes to "{label}"?'),
+    'catalogue-en.ts must prompt to discard unsaved changes'
+  );
+
+  // 5. AD-11 in ARCHITECTURE-SPINE.md updated per DEC-014
+  const spinePath = path.join(root, '.how', '_platform', 'ARCHITECTURE-SPINE.md');
+  const spineCode = fs.readFileSync(spinePath, 'utf8');
+  assert.ok(
+    spineCode.includes('DEC-014') && spineCode.includes('Canvas Reset discards unsaved in-memory edits back to the last Saved state'),
+    'AD-11 in ARCHITECTURE-SPINE.md must describe discard-unsaved-changes per DEC-014'
+  );
+});
+
+test('SPEC-13-09: Adding a background replaces the existing one instead of stacking extra layers (DEC-014, BUG-19)', async () => {
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. Guard against failed background load: try/catch wraps FabricImage.fromURL and keeps prior background
+  assert.ok(
+    code.includes('try {') && code.includes('FabricImage.fromURL') && code.includes('Failed to load background'),
+    'handleChangeBackgroundUrl must wrap FabricImage.fromURL in try/catch to preserve prior background on failure'
+  );
+
+  // 2. Removal of existing background element to prevent stacking and stale canvas check
+  assert.ok(
+    code.includes('isBackgroundElement') && code.includes('filterOutBackgroundElements'),
+    'handleChangeBackgroundUrl must use isBackgroundElement and filterOutBackgroundElements'
+  );
+  assert.ok(
+    code.includes('if (fabricCanvasRef.current !== canvas) return;'),
+    'handleChangeBackgroundUrl must guard against stale canvas after async calls'
+  );
+
+  // 3. Behavioral test: isBackgroundElement and filterOutBackgroundElements exported helpers
+  const bgCandidate1 = { id: 'e2', type: 'image', x: 0, y: 0, w: 100, h: 100, zIndex: 0, imageRef: '/assets/song-title-bottom.jpeg' };
+  const userImageAtZero = { id: 'usr-img-1', type: 'image', x: 10, y: 10, w: 20, h: 20, zIndex: 0, imageRef: '/api/uploads/logo.png' };
+  const bannerAtHighZ = { id: 'usr-banner', type: 'image', x: 0, y: 0, w: 100, h: 20, zIndex: 2, imageRef: '/api/uploads/banner.png' };
+  const shapeAtZero = { id: 'e1', type: 'shape', x: 0, y: 0, w: 100, h: 100, zIndex: 0 };
+  const textElement = { id: 'e3', type: 'text', x: 10, y: 20, w: 50, h: 10, zIndex: 1, content: 'Title' };
+
+  // Positive: seeded/full-width image at zIndex 0 is a background element
+  assert.equal(isBackgroundElement(bgCandidate1), true, 'Full-width image at zIndex 0 is recognized as background element');
+
+  // Negatives: regular user images, banners, shapes, and texts must NOT be identified as background element
+  assert.equal(isBackgroundElement(userImageAtZero), false, 'Non-fullwidth user image at zIndex 0 must NOT be treated as background element');
+  assert.equal(isBackgroundElement(bannerAtHighZ), false, 'Image at zIndex > 0 must NOT be treated as background element');
+  assert.equal(isBackgroundElement(shapeAtZero), false, 'Shape element must NOT be treated as background element');
+  assert.equal(isBackgroundElement(textElement), false, 'Text element must NOT be treated as background element');
+
+  // filterOutBackgroundElements removes only genuine background element
+  const elements = [bgCandidate1, userImageAtZero, bannerAtHighZ, shapeAtZero, textElement];
+  const filtered = filterOutBackgroundElements(elements);
+  assert.equal(filtered.length, 4, 'Exactly one background element should be removed');
+  assert.equal(filtered.some((e) => e.id === 'e2'), false, 'e2 must be removed');
+  assert.equal(filtered.some((e) => e.id === 'usr-img-1'), true, 'User logo must be kept');
+  assert.equal(filtered.some((e) => e.id === 'usr-banner'), true, 'Banner must be kept');
+  assert.equal(filtered.some((e) => e.id === 'e1'), true, 'Shape e1 must be kept');
+  assert.equal(filtered.some((e) => e.id === 'e3'), true, 'Text e3 must be kept');
+});
+
+test('SPEC-13-12: Text line-height and text-shadow controls (BUG-22)', async () => {
+  // 1. Validation test: template with lineHeight and textShadow passes validator
+  const validTemplate = {
+    schemaVersion: 1,
+    id: 'test-spec-13-12',
+    label: 'Test LineHeight Shadow',
+    baseType: 'general',
+    placeholders: [],
+    layouts: {
+      default: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [
+          {
+            id: 'e1',
+            type: 'text',
+            required: false,
+            x: 10,
+            y: 10,
+            w: 80,
+            h: 30,
+            zIndex: 0,
+            content: 'Hello World',
+            style: {
+              fontSize: 32,
+              fontColor: '#FFFFFF',
+              lineHeight: 1.4,
+              textShadow: true,
+            },
+          },
+        ],
+      },
+    },
+  };
+
+  const validated = validateArtifactTemplate(validTemplate);
+  assert.equal(validated.layouts.default.elements[0].style.lineHeight, 1.4);
+  assert.equal(validated.layouts.default.elements[0].style.textShadow, true);
+
+  // Negative validation tests: invalid lineHeight and textShadow
+  assert.throws(() => {
+    validateArtifactTemplate({
+      ...validTemplate,
+      layouts: {
+        default: {
+          ...validTemplate.layouts.default,
+          elements: [{ ...validTemplate.layouts.default.elements[0], style: { fontSize: 32, lineHeight: -1 } }],
+        },
+      },
+    });
+  }, /lineHeight must be positive/);
+
+  assert.throws(() => {
+    validateArtifactTemplate({
+      ...validTemplate,
+      layouts: {
+        default: {
+          ...validTemplate.layouts.default,
+          elements: [{ ...validTemplate.layouts.default.elements[0], style: { fontSize: 32, textShadow: 'invalid' } }],
+        },
+      },
+    });
+  }, /textShadow must be a boolean/);
+
+  // 2. Behavioral test: serializeTextStyle serializes lineHeight and textShadow
+  const sourceElement = {
+    id: 'e1',
+    type: 'text',
+    required: false,
+    x: 0,
+    y: 0,
+    w: 100,
+    h: 100,
+    zIndex: 0,
+  };
+
+  const serializedWithStyles = serializeTextStyle(sourceElement, {
+    fill: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 1.5,
+    shadow: { color: 'rgba(0,0,0,0.8)' },
+  });
+
+  assert.equal(serializedWithStyles?.lineHeight, 1.5, 'lineHeight must be serialized');
+  assert.equal(serializedWithStyles?.textShadow, true, 'textShadow must be serialized when shadow is present');
+
+  // Construction default lineHeight (1.16) is omitted when not on source
+  const serializedDefault = serializeTextStyle(sourceElement, {
+    fill: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 1.16,
+  });
+  assert.equal(serializedDefault?.lineHeight, undefined, 'default 1.16 lineHeight should be omitted on new element');
+
+  // 3. Source scan guards in ArtifactEditor.tsx
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  assert.ok(
+    code.includes('handleLineHeightChange') && code.includes('obj.set({ lineHeight: clamped })'),
+    'handleLineHeightChange must set lineHeight on active canvas objects and call markDirty'
+  );
+  assert.ok(
+    code.includes('handleToggleTextShadow') && code.includes('new fabric.Shadow('),
+    'handleToggleTextShadow must toggle fabric.Shadow on active canvas objects and call markDirty'
+  );
+  assert.ok(
+    code.includes('MoveVertical') && code.includes('Sparkles'),
+    'ArtifactEditor must render MoveVertical line height button and Sparkles text shadow button'
+  );
+  assert.ok(
+    code.includes('applyTextStyle') && code.includes('lineHeight,') && code.includes('shadow: shadowObj'),
+    'applyTextStyle bulk multi-selection update must cover lineHeight and textShadow'
+  );
+});
+
+
 
 
 

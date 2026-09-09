@@ -44,6 +44,8 @@ export type ResolvedStyle = {
   objectFit?: 'contain' | 'cover';
   fillColor?: string;
   opacity?: number;
+  lineHeight?: number;
+  textShadow?: boolean;
 };
 
 export type ResolvedElement = {

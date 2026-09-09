@@ -272,11 +272,11 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'admin.artifacts.modifiedElsewhere': 'Templat diubah di sesi lain',
   'admin.artifacts.conflictSaved':
     '{error}. Tidak ada yang disimpan: editor memuat ulang versi di server, jadi elemen yang Anda tambah atau hapus di sesi ini — dan setiap geseran yang belum disimpan — dibuang. Terapkan lagi pada templat yang dimuat ulang.',
-  'admin.artifacts.confirmReset': 'Reset "{label}" ke seed yang dikirim?',
+  'admin.artifacts.confirmReset': 'Buang perubahan "{label}" yang belum disimpan?',
   'admin.artifacts.resetFailed': 'Reset gagal',
   'admin.artifacts.resetConflict':
     '{error}. Tidak di-reset: editor memuat ulang versi di server, jadi perubahan kanvas yang belum disimpan dibuang.',
-  'admin.artifacts.resetDone': 'Templat di-reset dari seed',
+  'admin.artifacts.resetDone': 'Perubahan yang belum disimpan telah dibuang',
   'admin.artifacts.confirmDelete': 'Hapus "{label}" secara permanen?',
   'admin.artifacts.confirmDeleteDirty':
     'Hapus "{label}" secara permanen? Perubahan kanvas yang belum disimpan akan dibuang.',
@@ -350,8 +350,6 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'admin.artifacts.pasting': 'Menempel…',
   'admin.artifacts.deleteHintNone': 'Pilih elemen yang Anda tambahkan di kanvas',
   'admin.artifacts.deleteHintOk': 'Hapus elemen yang dipilih',
-  'admin.artifacts.deleteHintShipped':
-    'Elemen bawaan dan wajib tidak dapat dihapus',
   'admin.artifacts.deleteOnlyAuthored':
     'Hanya elemen yang Anda tambahkan di sini yang dapat dihapus. Simpan untuk menyimpan.',
   'admin.artifacts.text': 'Teks',

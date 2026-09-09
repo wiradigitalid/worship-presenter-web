@@ -32,6 +32,7 @@ export function SongSetEntriesPanel() {
   // Rename state
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
+  const [draftVarName, setDraftVarName] = useState('');
   const [renaming, setRenaming] = useState(false);
 
   // Layout trio active role
@@ -68,6 +69,7 @@ export function SongSetEntriesPanel() {
   useEffect(() => {
     if (activeEntry) {
       setDraftTitle(activeEntry.title);
+      setDraftVarName(activeEntry.variableName);
       setIsRenaming(false);
     }
   }, [activeEntry?.variableName]);
@@ -131,6 +133,15 @@ export function SongSetEntriesPanel() {
       toast.error(t('admin.songSets.titleInvalid'));
       return;
     }
+    const trimmedVar = draftVarName.trim().toLowerCase();
+    if (!trimmedVar) {
+      toast.error(t('admin.songSets.variableNameInvalid'));
+      return;
+    }
+    if (!/^[a-z][a-z0-9_-]{0,79}$/.test(trimmedVar)) {
+      toast.error(t('admin.songSets.variableNameInvalid'));
+      return;
+    }
 
     setRenaming(true);
     try {
@@ -142,15 +153,21 @@ export function SongSetEntriesPanel() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             title: trimmedTitle,
+            variableName: trimmedVar,
             updatedAt: activeEntry.updatedAt,
           }),
         }
       );
 
       if (res.status === 409) {
-        toast.error(t('admin.songSets.staleConflict'));
-        void fetchEntries();
-        setIsRenaming(false);
+        const data = await res.json().catch(() => ({}));
+        if (data.error && String(data.error).includes('already exists')) {
+          toast.error(t('admin.songSets.createConflict'));
+        } else {
+          toast.error(t('admin.songSets.staleConflict'));
+          void fetchEntries();
+          setIsRenaming(false);
+        }
         return;
       }
 
@@ -161,8 +178,9 @@ export function SongSetEntriesPanel() {
 
       const updated = (await res.json()) as SongSetEntry;
       setEntries((prev) =>
-        prev.map((item) => (item.variableName === updated.variableName ? updated : item))
+        prev.map((item) => (item.variableName === activeEntry.variableName ? updated : item))
       );
+      setSelectedVarName(updated.variableName);
       toast.success(t('admin.songSets.renamed').replace('{title}', updated.title));
       setIsRenaming(false);
     } catch {
@@ -265,7 +283,10 @@ export function SongSetEntriesPanel() {
         {/* List Song Sets */}
         <div className="rounded-xl border border-border bg-card p-3.5 space-y-3 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-foreground">Configured Song Sets</span>
+            <div>
+              <span className="text-xs font-semibold text-foreground">Configured Song Sets</span>
+              <p className="text-[10px] text-muted-foreground">Entries share the canvas trio on the right</p>
+            </div>
             <span className="text-[11px] text-muted-foreground font-mono">{entries.length} items</span>
           </div>
 
@@ -336,25 +357,44 @@ export function SongSetEntriesPanel() {
         ) : (
           <>
             {/* Rename Header Card */}
-            <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm">
+            <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between shadow-sm min-h-[58px]">
               <div className="flex items-center gap-3">
                 {isRenaming ? (
-                  <div className="space-y-0.5">
-                    <Label className="text-[10px] text-muted-foreground uppercase font-semibold">Title:</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">
+                      {t('admin.songSets.entryTitle')}:
+                    </span>
                     <Input
                       value={draftTitle}
                       disabled={renaming}
                       onChange={(e) => setDraftTitle(e.target.value)}
-                      className="text-sm font-semibold max-w-sm h-8"
+                      placeholder={t('admin.songSets.entryTitle')}
+                      aria-label={t('admin.songSets.entryTitle')}
+                      className="text-sm font-semibold max-w-xs h-8"
                       autoFocus
+                    />
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase ml-1">
+                      {t('admin.songSets.variableName')}:
+                    </span>
+                    <Input
+                      value={draftVarName}
+                      disabled={renaming}
+                      onChange={(e) =>
+                        setDraftVarName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '_'))
+                      }
+                      placeholder={t('admin.songSets.variableName')}
+                      aria-label={t('admin.songSets.variableName')}
+                      className="text-xs font-mono max-w-[140px] h-8"
                     />
                   </div>
                 ) : (
-                  <span className="text-base font-bold text-foreground">{activeEntry.title}</span>
+                  <>
+                    <span className="text-base font-bold text-foreground">{activeEntry.title}</span>
+                    <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                      [slot: {activeEntry.variableName}]
+                    </span>
+                  </>
                 )}
-                <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                  [slot: {activeEntry.variableName}]
-                </span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -368,6 +408,7 @@ export function SongSetEntriesPanel() {
                       onClick={() => {
                         setIsRenaming(false);
                         setDraftTitle(activeEntry.title);
+                        setDraftVarName(activeEntry.variableName);
                       }}
                     >
                       {t('admin.songSets.cancel')}
@@ -375,7 +416,7 @@ export function SongSetEntriesPanel() {
                     <Button
                       type="button"
                       size="sm"
-                      disabled={renaming || !draftTitle.trim()}
+                      disabled={renaming || !draftTitle.trim() || !draftVarName.trim()}
                       onClick={() => void handleSaveRename()}
                     >
                       {renaming ? t('admin.songSets.renaming') : t('admin.songSets.save')}
@@ -396,6 +437,20 @@ export function SongSetEntriesPanel() {
 
             {/* Layout Trio Switcher & Canvas Workspace */}
             <div className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm">
+              <div className="flex items-center justify-between pb-1 border-b border-border/60">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    Shared Canvas Trio
+                  </span>
+                  <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                    Shared across all song sets
+                  </span>
+                </div>
+                <span className="text-[11px] text-muted-foreground">
+                  Edits apply to all {entries.length} song set {entries.length === 1 ? 'entry' : 'entries'}
+                </span>
+              </div>
+
               {/* Trio Selector */}
               <div className="flex items-center gap-1.5 p-1 bg-muted rounded-lg border border-border">
                 <Button
@@ -435,7 +490,7 @@ export function SongSetEntriesPanel() {
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  3. Reffrain Layout
+                  3. Refrain Layout
                 </Button>
               </div>
 
@@ -446,22 +501,23 @@ export function SongSetEntriesPanel() {
                 initialSelectedId={selectedRole}
                 hideList={true}
                 allowImages={selectedRole === 'title'}
+                allowRename={false}
                 bannerNote={
-                  <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-2.5 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between min-h-[42px]">
+                  <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-2.5 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between min-h-[42px] h-[42px] overflow-hidden">
                     {selectedRole === 'title' ? (
                       <>
-                        <span>🎨 <strong>Song Title Slide</strong> — Title, hymn number, author, and song metadata. Canvas customizes layout & graphics.</span>
-                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30">TITLE SLIDE</span>
+                        <span className="flex-1 min-w-0 truncate mr-2">🎨 <strong>Song Title Slide (Shared)</strong> — Layout applies to all song sets. Canvas customizes title, number & metadata graphics.</span>
+                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30 shrink-0">SHARED TITLE SLIDE</span>
                       </>
                     ) : selectedRole === 'verse' ? (
                       <>
-                        <span>📐 <strong>Auto Lyric Box: 2/3 Height Standard</strong> — Automated formula for hymn lyrics. Canvas customizes background & shapes.</span>
-                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30">VERSE LAYOUT</span>
+                        <span className="flex-1 min-w-0 truncate mr-2">📐 <strong>Auto Lyric Box: 2/3 Height (Shared)</strong> — Standard lyric formula applied to all song sets.</span>
+                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30 shrink-0">SHARED VERSE LAYOUT</span>
                       </>
                     ) : (
                       <>
-                        <span>📐 <strong>Auto Lyric Box: 2/3 Height Standard</strong> — Automated formula for refrain/chorus. Canvas customizes background & shapes.</span>
-                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30">REFRAIN LAYOUT</span>
+                        <span className="flex-1 min-w-0 truncate mr-2">📐 <strong>Auto Lyric Box: 2/3 Height (Shared)</strong> — Refrain formula applied to all song sets.</span>
+                        <span className="font-mono text-[10px] bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/30 shrink-0">SHARED REFRAIN LAYOUT</span>
                       </>
                     )}
                   </div>

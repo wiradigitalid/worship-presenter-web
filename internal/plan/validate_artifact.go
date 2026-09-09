@@ -49,6 +49,7 @@ var (
 	allowedStyleKeys = map[string]struct{}{
 		"fontFamily": {}, "fontSize": {}, "fontColor": {}, "fontWeight": {}, "fontStyle": {}, "textDecoration": {},
 		"textAlign": {}, "verticalAlign": {}, "objectFit": {}, "fillColor": {}, "opacity": {},
+		"lineHeight": {}, "textShadow": {},
 	}
 	entryKeys = map[string]struct{}{"general": {}, "song-set": {}, "song-set-entry": {}, "ann-set-marker": {}, "announcement": {}}
 )
@@ -221,6 +222,20 @@ func parseStyle(raw any, label string) (map[string]any, error) {
 			return nil, failf("%s.opacity must be 0..1", label)
 		}
 		style["opacity"] = n
+	}
+	if v, ok := obj["lineHeight"]; ok {
+		n, err := asPositive(v, label+".lineHeight")
+		if err != nil {
+			return nil, err
+		}
+		style["lineHeight"] = n
+	}
+	if v, ok := obj["textShadow"]; ok {
+		b, ok := v.(bool)
+		if !ok {
+			return nil, failf("%s.textShadow must be a boolean", label)
+		}
+		style["textShadow"] = b
 	}
 	if len(style) == 0 {
 		return nil, nil

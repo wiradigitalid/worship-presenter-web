@@ -277,4 +277,33 @@ decisions:
       - tests/artifact-preview.test.mjs
       - tests/announcement-sets.test.mjs
       - tests/registry.test.mjs
+  - id: DEC-014
+    status: applied
+    accepted_by: 'kodesh87 (2026-09-08)'
+    title: Canvas "Reset" becomes discard-unsaved-changes; shipped/seeded content becomes ordinary editable content
+    file: .control/decisions/DEC-014-canvas-reset-becomes-discard-unsaved-changes.md
+    touches:
+      - .how/_platform/ARCHITECTURE-SPINE.md
+      - src/components/admin/ArtifactEditor.tsx
+      - src/lib/i18n/keys.ts
+      - src/lib/i18n/catalogue-en.ts
+      - src/lib/i18n/catalogue-id.ts
+  - id: DEC-015
+    type: mandate
+    status: applied
+    accepted_by: "kodesh87 (2026-09-08)"
+    title: Autopilot mandate for Artifacts QA Follow-up Round 2 (SPEC-13)
+    file: .control/decisions/DEC-015-autopilot-mandate-artifacts-qa-followup-round2.md
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent
+      loop: 10m
+      expires: '2026-09-15'
+    touches:
+      - .control/memlog/autopilot-DEC-015.md
+      - .control/registry/specs.yaml
+      - .control/registry/decisions.yaml
+
 

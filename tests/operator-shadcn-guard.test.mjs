@@ -132,3 +132,45 @@ test('guard proof: raw button and select are reported; file input is allowed', (
   );
   assert.deepEqual(scanSource('', 'src/components/Header.tsx'), []);
 });
+
+test('SPEC-13-10: Inline status text occupies fixed-height slot above toolbar (BUG-20, DEC-011)', () => {
+  const editorPath = path.join(ROOT, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = readFileSync(editorPath, 'utf8').replace(/\r\n/g, '\n');
+
+  // Must wrap message in fixed-height slot with overflow-hidden
+  assert.ok(
+    code.includes('min-h-[24px]') && code.includes('overflow-hidden'),
+    'Inline status container must have fixed height (min-h-[24px]) and overflow-hidden'
+  );
+
+  // Both message render sites (when !template and when template) must be inside fixed-height container
+  const fixedSlots = [...code.matchAll(/<div[^>]*min-h-\[24px\][^>]*>[\s\S]*?\{message\s*\?[\s\S]*?<\/div>/g)];
+  assert.equal(
+    fixedSlots.length,
+    2,
+    'Both template states (!template and template) must enclose inline message inside fixed-height slot'
+  );
+});
+
+test('SPEC-13-13: Song Set shared trio clarity and visual indicator (BUG-24)', () => {
+  const panelPath = path.join(ROOT, 'src', 'components', 'admin', 'SongSetEntriesPanel.tsx');
+  const code = readFileSync(panelPath, 'utf8').replace(/\r\n/g, '\n');
+
+  // 1. Prominent persistent badge indicating the trio is shared across all song sets
+  assert.ok(
+    code.includes('Shared across all song sets') && code.includes('Shared Canvas Trio'),
+    'SongSetEntriesPanel must include clear shared-scope indicator for the canvas trio'
+  );
+
+  // 2. Banner notes identify roles as shared across song sets
+  assert.ok(
+    code.includes('(Shared)') && code.includes('SHARED TITLE'),
+    'Banner notes must indicate that layout applies across all song sets'
+  );
+
+  // 3. Left panel clarifies that entries share the canvas trio
+  assert.ok(
+    code.includes('share the canvas trio') || (code.includes('share') && code.includes('trio')),
+    'Configured song sets list must clarify that entries share the canvas trio on the right'
+  );
+});

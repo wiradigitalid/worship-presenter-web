@@ -5,14 +5,19 @@
 ```yaml
 promise_progress: 100%
 rtm_rows:
-  green: 70
-  counted: 70
+  green: 93
+  counted: 93
   excluded_no_uc: 1
 work_progress:
 - spec: SPEC-12
   status: closed
   tickets_done: 8
   tickets_total: 8
+  work_progress: 100%
+- spec: SPEC-13
+  status: closed
+  tickets_done: 13
+  tickets_total: 13
   work_progress: 100%
 - spec: W1
   status: closed
@@ -75,7 +80,7 @@ validators_skipped:
   plan-dates: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
     but its presence in generated/report is not checked
   review-trace: 'advisory — trace stale, re-run before the next gate or spec close: .how/_platform/ARCHITECTURE-SPINE.md
-    (changed at e48efde, reviewed at bfb680a), .how/hub/SDD-hub.md (changed at 56db449, reviewed at af3b6f3),
+    (changed at 7b6d617, reviewed at bfb680a), .how/hub/SDD-hub.md (changed at 56db449, reviewed at af3b6f3),
     .how/presenter/SDD-presenter.md (changed at 56db449, reviewed at 411a59d), .how/registry/SDD-registry.md
     (changed at e48efde, reviewed at 42c967c), .what/hub/SRS-hub.md (changed at 56db449, reviewed at af3b6f3),
     .what/presenter/SRS-presenter.md (changed at 56db449, reviewed at 411a59d), .what/registry/SRS-registry.md

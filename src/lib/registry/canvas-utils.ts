@@ -69,6 +69,19 @@ export function isUserAuthoredId(elementId: string) {
   return elementId.startsWith(USER_ELEMENT_PREFIX);
 }
 
+export function isBackgroundElement(el: CanvasElement): boolean {
+  return (
+    el.type === 'image' &&
+    el.zIndex === 0 &&
+    el.x === 0 &&
+    el.w === 100
+  );
+}
+
+export function filterOutBackgroundElements(elements: CanvasElement[]): CanvasElement[] {
+  return elements.filter((el) => !isBackgroundElement(el));
+}
+
 export function nextElementId(usedIds: Set<string>, counter: number) {
   let candidate = `${USER_ELEMENT_PREFIX}${Date.now().toString(36)}-${counter.toString(36)}`;
   let salt = 0;
@@ -153,6 +166,8 @@ export function serializeTextStyle(
     fontStyle?: string;
     underline?: unknown;
     textAlign?: string;
+    lineHeight?: unknown;
+    shadow?: unknown;
   }
 ): CanvasElement['style'] | undefined {
   const style: NonNullable<CanvasElement['style']> = { ...source.style };
@@ -190,6 +205,14 @@ export function serializeTextStyle(
     } else if (source.style?.textDecoration === 'underline') {
       delete style.textDecoration;
     }
+  }
+  if (typeof textObj.lineHeight === 'number') {
+    setIfMeaningful('lineHeight', Number(textObj.lineHeight.toFixed(2)), 1.16);
+  }
+  if (textObj.shadow) {
+    style.textShadow = true;
+  } else if (source.style?.textShadow) {
+    delete style.textShadow;
   }
   setIfMeaningful(
     'textAlign',
@@ -322,3 +345,157 @@ export function serializeCanvas(
     .sort((a, b) => a.rank - b.rank || a.index - b.index)
     .map((entry) => entry.next);
 }
+
+/**
+ * Resolves the initial slide to select on editor mount or list load.
+ * If nothing is currently selected and no explicit initialSelectedId was provided,
+ * auto-selects the first available slide (BUG-1, BUG-8).
+ * Guards against the empty list case by returning null.
+ */
+export function resolveInitialSelectedId(
+  currentSelectedId: string | null,
+  initialSelectedId: string | null,
+  summaries: Array<{ id: string }>
+): string | null {
+  if (!currentSelectedId && !initialSelectedId && summaries && summaries.length > 0) {
+    return summaries[0].id;
+  }
+  return currentSelectedId ?? initialSelectedId ?? null;
+}
+
+/**
+ * Determines whether right-clicking on a canvas target should preserve the existing
+ * selection or replace it.
+ * If the target object is already part of the active selection (including multi-selection),
+ * the entire active selection is preserved (so actions like duplicate, delete, or
+ * layer reordering apply to all selected elements).
+ * If the target is NOT currently selected, the selection changes to that single target.
+ */
+export function shouldPreserveSelectionOnContextMenu(
+  activeObjects: unknown[],
+  target: unknown
+): boolean {
+  if (!target || !Array.isArray(activeObjects)) return false;
+  return activeObjects.includes(target);
+}
+
+/**
+ * Computes context menu popup coordinates clamped within the canvas shell bounding box.
+ */
+export function computeContextMenuCoords(
+  clientX: number,
+  clientY: number,
+  shellRect: { left: number; top: number; width: number; height: number },
+  menuWidth = 170,
+  menuHeight = 220
+): { x: number; y: number } {
+  const x = Math.max(10, Math.min(clientX - shellRect.left, shellRect.width - menuWidth));
+  const y = Math.max(10, Math.min(clientY - shellRect.top, shellRect.height - menuHeight));
+  return { x, y };
+}
+
+/**
+ * Handles context menu event logic on a canvas.
+ * Dispatches target discovery and updates selection and context menu coordinates.
+ */
+export function handleContextMenuTrigger(
+  e: MouseEvent | { clientX: number; clientY: number; nativeEvent?: MouseEvent },
+  canvas: {
+    findTarget: (e: any) => any;
+    getActiveObjects: () => any[];
+    setActiveObject: (obj: any) => void;
+    discardActiveObject: () => void;
+    requestRenderAll: () => void;
+  },
+  shellRect: { left: number; top: number; width: number; height: number } | null,
+  syncSelection: (canvas: any) => void,
+  setContextMenu: (coords: { x: number; y: number } | null) => void,
+  explicitTarget?: any
+) {
+  if (!shellRect) return;
+  const nativeEvt = 'nativeEvent' in e && e.nativeEvent ? e.nativeEvent : (e as MouseEvent);
+  const coords = computeContextMenuCoords(nativeEvt.clientX ?? 0, nativeEvt.clientY ?? 0, shellRect);
+  const target = explicitTarget ?? canvas.findTarget(nativeEvt);
+
+  if (target) {
+    const active = canvas.getActiveObjects();
+    if (!shouldPreserveSelectionOnContextMenu(active, target)) {
+      canvas.setActiveObject(target);
+      canvas.requestRenderAll();
+      syncSelection(canvas);
+    }
+    setContextMenu(coords);
+  } else {
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    syncSelection(canvas);
+    setContextMenu(null);
+  }
+}
+
+/**
+ * Re-fits a Fabric image object to its updated bounding box (e.g. after user scales via handles)
+ * preserving its natural aspect ratio with uniform contain fit and updated clipPath.
+ */
+export function updateImageElementFit(
+  imgObj: any,
+  fabric: any
+): boolean {
+  if (!imgObj || !imgObj.data?.imageRef) return false;
+  const element = imgObj._element as HTMLImageElement | undefined;
+  const naturalWidth = element?.naturalWidth || imgObj.width || 0;
+  const naturalHeight = element?.naturalHeight || imgObj.height || 0;
+  if (naturalWidth <= 0 || naturalHeight <= 0) return false;
+
+  // Current outer bounding box in canvas coordinates
+  const scaleX = Math.abs(imgObj.scaleX ?? 1);
+  const scaleY = Math.abs(imgObj.scaleY ?? 1);
+  const boxWidth = (imgObj.width ?? 0) * scaleX;
+  const boxHeight = (imgObj.height ?? 0) * scaleY;
+  if (boxWidth <= 0 || boxHeight <= 0) return false;
+
+  const boxLeft = imgObj.left ?? 0;
+  const boxTop = imgObj.top ?? 0;
+  const objectFit = imgObj.data?.objectFit === 'cover' ? 'cover' : 'contain';
+  const fit = calculateImageFit(
+    { left: boxLeft, top: boxTop, width: boxWidth, height: boxHeight },
+    { width: naturalWidth, height: naturalHeight },
+    objectFit
+  );
+
+  let clipBox = imgObj.clipPath;
+  if (!clipBox && fabric?.Rect) {
+    clipBox = new fabric.Rect({
+      left: boxLeft,
+      top: boxTop,
+      width: boxWidth,
+      height: boxHeight,
+      scaleX: 1,
+      scaleY: 1,
+      absolutePositioned: true,
+    });
+  } else if (clipBox) {
+    clipBox.set({
+      left: boxLeft,
+      top: boxTop,
+      width: boxWidth,
+      height: boxHeight,
+      scaleX: 1,
+      scaleY: 1,
+      absolutePositioned: true,
+    });
+  }
+
+  imgObj.set({
+    width: fit.width,
+    height: fit.height,
+    scaleX: fit.scaleX,
+    scaleY: fit.scaleY,
+    left: fit.left,
+    top: fit.top,
+    clipPath: clipBox,
+  });
+  imgObj.setCoords();
+  return true;
+}
+

@@ -270,11 +270,11 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'admin.artifacts.modifiedElsewhere': 'Template was modified elsewhere',
   'admin.artifacts.conflictSaved':
     '{error}. Nothing was saved: the editor reloaded the version that is on the server, so any elements you added or deleted in this session — and any unsaved moves — have been discarded. Re-apply them on the reloaded template.',
-  'admin.artifacts.confirmReset': 'Reset "{label}" to shipped seed?',
+  'admin.artifacts.confirmReset': 'Discard unsaved changes to "{label}"?',
   'admin.artifacts.resetFailed': 'Reset failed',
   'admin.artifacts.resetConflict':
     '{error}. Nothing was reset: the editor reloaded the version that is on the server, so unsaved canvas changes were discarded.',
-  'admin.artifacts.resetDone': 'Template reset from seed',
+  'admin.artifacts.resetDone': 'Unsaved changes discarded',
   'admin.artifacts.confirmDelete': 'Delete "{label}" permanently?',
   'admin.artifacts.confirmDeleteDirty':
     'Delete "{label}" permanently? Unsaved canvas changes will be discarded.',
@@ -348,8 +348,6 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'admin.artifacts.pasting': 'Pasting…',
   'admin.artifacts.deleteHintNone': 'Select an element you added on the canvas',
   'admin.artifacts.deleteHintOk': 'Delete the selected element(s)',
-  'admin.artifacts.deleteHintShipped':
-    'Shipped and required elements cannot be deleted',
   'admin.artifacts.deleteOnlyAuthored':
     'Only elements you add here can be deleted. Save to persist.',
   'admin.artifacts.text': 'Text',

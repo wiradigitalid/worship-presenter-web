@@ -314,7 +314,6 @@ export const I18N_KEYS = [
   'admin.artifacts.pasting',
   'admin.artifacts.deleteHintNone',
   'admin.artifacts.deleteHintOk',
-  'admin.artifacts.deleteHintShipped',
   'admin.artifacts.deleteOnlyAuthored',
   'admin.artifacts.text',
   'admin.artifacts.textPlaceholder',

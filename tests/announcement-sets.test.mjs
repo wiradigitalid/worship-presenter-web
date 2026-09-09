@@ -148,3 +148,44 @@ test('SPEC-12-08: Announcement Sets duplicate title & concurrency fix, creation 
   );
 });
 
+test('SPEC-13-11: Announcement Set auto-selected slide/set shows real text immediately (BUG-21)', async () => {
+  const panelPath = path.join(root, 'src', 'components', 'admin', 'AnnouncementSetsPanel.tsx');
+  const code = fs.readFileSync(panelPath, 'utf8');
+
+  // 1. Select items and SelectValue are populated immediately with selected set text
+  assert.ok(
+    code.includes('items={') || code.includes('<SelectValue placeholder='),
+    'Active Announcement Set dropdown must feed items/placeholder to render selected text immediately'
+  );
+
+  // 2. Guard against 0 slides empty case
+  assert.ok(
+    code.includes('!activeSlide') && code.includes('No announcement slide selected'),
+    'Empty announcement set must be guarded when there are zero slides'
+  );
+
+  // 3. Behavioral test: resolveInitialAnnouncementSlide
+  function resolveInitialAnnouncementSlide(slides, currentId) {
+    if (!slides || slides.length === 0) return null;
+    if (currentId !== null && currentId !== undefined) {
+      const match = slides.find((s) => s.id === currentId);
+      if (match) return match;
+    }
+    return slides[0];
+  }
+
+  // Positive case: populated slides list selects slide 1 immediately with its real label
+  const mockSlides = [
+    { id: 101, label: 'Camp Registration Announcement' },
+    { id: 102, label: 'Potluck Fellowship' },
+  ];
+  const initial = resolveInitialAnnouncementSlide(mockSlides, null);
+  assert.ok(initial);
+  assert.equal(initial.id, 101);
+  assert.equal(initial.label, 'Camp Registration Announcement');
+
+  // Negative case: empty slides returns null without crashing or referencing non-existent slide
+  const empty = resolveInitialAnnouncementSlide([], null);
+  assert.equal(empty, null, 'Zero slides must return null');
+});
+

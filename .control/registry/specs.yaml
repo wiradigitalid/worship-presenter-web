@@ -672,3 +672,115 @@ waves:
           - tests/announcement-sets.test.mjs
           - tests/registry.test.mjs
 
+  - id: SPEC-13
+    status: closed
+    release: artifacts-qa-followup-round2
+    prd: [offline-deck]
+    fr: [FR-20, FR-21, FR-29]
+    size: M
+    depends_on: [SPEC-12]
+    spec_folder: .scratch/SPEC-13-artifacts-qa-followup-round2/
+    spec_reviewed:
+      date: '2026-09-08'
+      sha: '803fe57'
+      lenses: [structure, prose, edge-case-hunter]
+    tickets:
+      - id: "SPEC-13-01"
+        component: registry
+        satisfies: [UC-15]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-13-02"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-13-01"]
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-13-03"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-13-02"]
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+          - tests/artifact-preview.test.mjs
+      - id: "SPEC-13-04"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-13-03"]
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-layout.test.mjs
+      - id: "SPEC-13-05"
+        component: registry
+        satisfies: [UC-24]
+        blocked_by: ["SPEC-13-04"]
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-layout.test.mjs
+      - id: "SPEC-13-06"
+        component: registry
+        satisfies: [UC-24]
+        blocked_by: ["SPEC-13-05"]
+        touches: [artifacts]
+        tests:
+          - tests/registry-kind-rename.test.mjs
+          - tests/registry.test.mjs
+      - id: "SPEC-13-07"
+        component: registry
+        satisfies: [UC-14, UC-24]
+        blocked_by: ["SPEC-13-06"]
+        touches: [artifacts]
+        tests:
+          - tests/operator-shadcn-guard.test.mjs
+          - tests/artifact-editor-layout.test.mjs
+      - id: "SPEC-13-08"
+        component: registry
+        satisfies: [UC-14, UC-15]
+        blocked_by: ["SPEC-13-07"]
+        touches: [artifacts]
+        tests:
+          - tests/registry-reseed.test.mjs
+          - tests/registry-three-kind-reset.test.mjs
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-13-09"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-13-08"]
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-13-10"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-13-09"]
+        touches: [artifacts]
+        tests:
+          - tests/operator-shadcn-guard.test.mjs
+      - id: "SPEC-13-11"
+        component: registry
+        satisfies: [UC-24]
+        blocked_by: ["SPEC-13-10"]
+        touches: [artifacts]
+        tests:
+          - tests/announcement-sets.test.mjs
+      - id: "SPEC-13-12"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-13-11"]
+        touches: [artifacts]
+        tests:
+          - tests/artifact-editor-controls.test.mjs
+          - tests/registry.test.mjs
+          - tests/registry-go-http.test.mjs
+      - id: "SPEC-13-13"
+        component: registry
+        satisfies: [UC-24]
+        blocked_by: ["SPEC-13-12"]
+        touches: [artifacts]
+        tests:
+          - tests/operator-shadcn-guard.test.mjs
+
