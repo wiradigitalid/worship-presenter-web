@@ -1,6 +1,6 @@
 # Ticket SPEC-15-03 — Remove Redundant "Apply Style" Button in Text Properties Toolbar (`BUG-28`)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Description
 

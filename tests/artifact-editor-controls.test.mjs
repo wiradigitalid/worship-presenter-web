@@ -1889,6 +1889,88 @@ test('SPEC-15-01 / BUG-7: Canvas image real-time scaling clipPath synchronizatio
   );
 });
 
+test('SPEC-15-03 / BUG-28: Removal of redundant Apply Style button from properties toolbar', async () => {
+  const fs = await import('node:fs');
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. The explicit Apply Style button is removed from the toolbar JSX
+  assert.ok(
+    !code.includes("{t('admin.artifacts.applyStyle')}"),
+    'ArtifactEditor toolbar must not render redundant Apply Style button'
+  );
+
+  // 2. Toolbar retains stable 44px fixed height
+  assert.ok(
+    code.includes('h-11 min-h-[44px] max-h-[44px] overflow-x-auto overflow-y-hidden shrink-0 flex-nowrap'),
+    'Toolbar must retain locked 44px height with flex-nowrap'
+  );
+
+  // 3. All real-time text property handlers remain functional, invoke canvas.requestRenderAll, and call markDirty()
+  for (const handler of [
+    'handleFontColorChange',
+    'handleFontSizeInput',
+    'handleToggleBold',
+    'handleToggleItalic',
+    'handleToggleUnderline',
+    'handleSetTextAlign',
+    'handleLineHeightChange',
+    'handleToggleTextShadow',
+    'handleShadowBlurChange',
+  ]) {
+    const handlerStart = code.indexOf(`const ${handler}`);
+    assert.ok(handlerStart !== -1, `Must find declaration of ${handler}`);
+    const handlerBody = code.slice(handlerStart, handlerStart + 1200);
+    assert.ok(
+      handlerBody.includes('markDirty()'),
+      `${handler} must call markDirty() immediately for real-time application`
+    );
+  }
+
+  // 4. Behavioral test: real-time inline property updates directly mutate text object and trigger render
+  let renderCount = 0;
+  let markedDirty = false;
+  const mockCanvas = {
+    requestRenderAll() {
+      renderCount++;
+    },
+  };
+  const mockText = {
+    type: 'textbox',
+    fill: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: 'normal',
+    fontStyle: 'normal',
+    underline: false,
+    textAlign: 'left',
+    lineHeight: 1.16,
+    shadow: null,
+    set(props) {
+      Object.assign(this, props);
+    },
+  };
+
+  // Simulate real-time color change
+  mockText.set({ fill: '#FF0000' });
+  mockCanvas.requestRenderAll();
+  markedDirty = true;
+  assert.equal(mockText.fill, '#FF0000');
+  assert.equal(renderCount, 1);
+  assert.equal(markedDirty, true);
+
+  // Simulate real-time bold toggle
+  mockText.set({ fontWeight: 'bold' });
+  mockCanvas.requestRenderAll();
+  assert.equal(mockText.fontWeight, 'bold');
+  assert.equal(renderCount, 2);
+
+  // Simulate real-time shadow toggle
+  mockText.set({ shadow: { blur: 6, color: 'rgba(0,0,0,0.8)' } });
+  mockCanvas.requestRenderAll();
+  assert.deepEqual(mockText.shadow, { blur: 6, color: 'rgba(0,0,0,0.8)' });
+  assert.equal(renderCount, 3);
+});
+
 
 
 

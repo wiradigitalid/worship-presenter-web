@@ -2616,15 +2616,6 @@ export default function ArtifactEditor({
                           />
                         )}
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={applyTextStyle}
-                        className="text-xs h-7 ml-auto"
-                      >
-                        {t('admin.artifacts.applyStyle')}
-                      </Button>
                     </>
                   ) : fabricCanvasRef.current?.getActiveObjects().some((o) => Boolean((o as any).data?.imageRef)) ? (
                     <span className="text-muted-foreground text-xs italic">
