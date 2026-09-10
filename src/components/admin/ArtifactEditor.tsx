@@ -753,12 +753,13 @@ export default function ArtifactEditor({
           }
         }
         if (target && isFabricTextObject(target)) {
-          if (typeof target.scaleY === 'number' && target.scaleY !== 1 && target.data?.authoredHeight) {
-            target.data.authoredHeight *= target.scaleY;
+          const targetData = (target as any).data;
+          if (typeof target.scaleY === 'number' && target.scaleY !== 1 && targetData?.authoredHeight) {
+            targetData.authoredHeight *= target.scaleY;
             target.scaleY = 1;
           }
-          if (target.data) {
-            target.data.authoredHeight = (target.height ?? 0) * (target.scaleY ?? 1);
+          if (targetData) {
+            targetData.authoredHeight = (target.height ?? 0) * (target.scaleY ?? 1);
           }
           syncSelection(canvas);
         }
@@ -767,8 +768,9 @@ export default function ArtifactEditor({
 
       const onTextChanged = (opt: any) => {
         const target = opt.target;
-        if (target && isFabricTextObject(target) && target.data) {
-          target.data.authoredHeight = (target.height ?? 0) * (target.scaleY ?? 1);
+        const targetData = target ? (target as any).data : null;
+        if (target && isFabricTextObject(target) && targetData) {
+          targetData.authoredHeight = (target.height ?? 0) * (target.scaleY ?? 1);
         }
       };
       canvas.on('text:changed', onTextChanged);
@@ -1502,8 +1504,9 @@ export default function ArtifactEditor({
     for (const obj of canvas.getActiveObjects()) {
       if (!isFabricTextObject(obj)) continue;
       obj.set({ fontFamily: family });
-      if (obj.data) {
-        obj.data.authoredHeight = (obj.height ?? 0) * (obj.scaleY ?? 1);
+      const objData = (obj as any).data;
+      if (objData) {
+        objData.authoredHeight = (obj.height ?? 0) * (obj.scaleY ?? 1);
       }
       updated = true;
     }
@@ -1647,8 +1650,9 @@ export default function ArtifactEditor({
     for (const obj of canvas.getActiveObjects()) {
       if (!isFabricTextObject(obj)) continue;
       obj.set({ fontSize: clamped });
-      if (obj.data) {
-        obj.data.authoredHeight = (obj.height ?? 0) * (obj.scaleY ?? 1);
+      const objData = (obj as any).data;
+      if (objData) {
+        objData.authoredHeight = (obj.height ?? 0) * (obj.scaleY ?? 1);
       }
       updated = true;
     }
