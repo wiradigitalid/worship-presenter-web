@@ -54,7 +54,8 @@ test('SPEC-19-02: Live element duplication styling & geometry fidelity', () => {
 
   // 1. Live styling extraction in handleDuplicateSelected
   assert.ok(
-    code.includes('clonedStyle.fontFamily = obj.fontFamily'),
+    code.includes('clonedStyle.fontFamily = resolveCatalogFontFamily(obj.fontFamily)') ||
+      code.includes('clonedStyle.fontFamily = obj.fontFamily'),
     'handleDuplicateSelected must extract live fontFamily from active Fabric text object'
   );
   assert.ok(

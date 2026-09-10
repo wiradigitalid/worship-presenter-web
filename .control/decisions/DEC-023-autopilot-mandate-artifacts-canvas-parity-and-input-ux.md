@@ -13,6 +13,7 @@ touches:
   - package.json
   - tests/smoke-spec-21.test.mjs
   - tests/smoke-spec-20.test.mjs
+  - tests/smoke-spec-19.test.mjs
   - tests/artifact-editor-controls.test.mjs
   - .how/registry/06-flows/canvas-authoring-controls.md
 supersedes: null
