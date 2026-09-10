@@ -445,6 +445,32 @@ decisions:
       - tests/artifact-editor-layout.test.mjs
       - tests/smoke-spec-18.test.mjs
       - package.json
+  - id: DEC-021
+    type: mandate
+    status: accepted
+    accepted_by: "kodesh87 (2026-09-10)"
+    title: Autopilot mandate for Artifacts Canvas Interactions, Shape Persistence & Typography Refinement (SPEC-19)
+    file: .control/decisions/DEC-021-autopilot-mandate-artifacts-canvas-interactions.md
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent
+      loop: 10m
+      expires: '2026-09-17'
+    touches:
+      - .control/memlog/autopilot-DEC-021.md
+      - .control/registry/specs.yaml
+      - .control/registry/decisions.yaml
+      - src/components/ui/select.tsx
+      - src/components/admin/ArtifactEditor.tsx
+      - src/components/artifacts/ArtifactSlide.tsx
+      - src/lib/registry/canvas-utils.ts
+      - src/lib/artifacts/render-model.ts
+      - tests/smoke-spec-19.test.mjs
+      - tests/artifact-editor-controls.test.mjs
+      - tests/artifact-editor-layout.test.mjs
+
 
 
 

@@ -1004,6 +1004,59 @@ waves:
         tests:
           - tests/artifact-editor-controls.test.mjs
 
+  - id: SPEC-19
+    status: open
+    release: artifacts-canvas-interactions
+    prd: [offline-deck]
+    fr: [FR-20]
+    size: M
+    depends_on: [SPEC-18]
+    spec_folder: .scratch/SPEC-19-artifacts-canvas-interactions/
+    spec_reviewed:
+      date: '2026-09-10'
+      sha: 'b8aebd0'
+      lenses: [edge-case-hunter]
+    tickets:
+      - id: "SPEC-19-01"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-19.test.mjs
+          - tests/artifact-editor-layout.test.mjs
+      - id: "SPEC-19-02"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-19-01"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-19.test.mjs
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-19-03"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-19-02"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-19.test.mjs
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-19-04"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-19-03"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-19.test.mjs
+      - id: "SPEC-19-05"
+        component: presenter
+        satisfies: [UC-11]
+        blocked_by: ["SPEC-19-04"]
+        touches: [present-channel]
+        tests:
+          - tests/smoke-spec-19.test.mjs
+
+
 
 
 

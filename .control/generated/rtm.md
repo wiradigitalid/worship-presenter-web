@@ -126,6 +126,20 @@ rtm:
   FR: FR-15
   DEC: []
   UC: UC-11
+  ticket: SPEC-19-05
+  spec: SPEC-19
+  release: artifacts-canvas-interactions
+  test:
+  - tests/smoke-spec-19.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-6
+  FR: FR-15
+  DEC: []
+  UC: UC-11
   ticket: W7-01
   spec: W7
   release: presenter-live
@@ -688,6 +702,65 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-19-01
+  spec: SPEC-19
+  release: artifacts-canvas-interactions
+  test:
+  - tests/smoke-spec-19.test.mjs
+  - tests/artifact-editor-layout.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-19-02
+  spec: SPEC-19
+  release: artifacts-canvas-interactions
+  test:
+  - tests/smoke-spec-19.test.mjs
+  - tests/artifact-editor-controls.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-19-03
+  spec: SPEC-19
+  release: artifacts-canvas-interactions
+  test:
+  - tests/smoke-spec-19.test.mjs
+  - tests/artifact-editor-controls.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-19-04
+  spec: SPEC-19
+  release: artifacts-canvas-interactions
+  test:
+  - tests/smoke-spec-19.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -1656,6 +1729,65 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-19-01
+  spec: SPEC-19
+  release: artifacts-canvas-interactions
+  test:
+  - tests/smoke-spec-19.test.mjs
+  - tests/artifact-editor-layout.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-19-02
+  spec: SPEC-19
+  release: artifacts-canvas-interactions
+  test:
+  - tests/smoke-spec-19.test.mjs
+  - tests/artifact-editor-controls.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-19-03
+  spec: SPEC-19
+  release: artifacts-canvas-interactions
+  test:
+  - tests/smoke-spec-19.test.mjs
+  - tests/artifact-editor-controls.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-19-04
+  spec: SPEC-19
+  release: artifacts-canvas-interactions
+  test:
+  - tests/smoke-spec-19.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
