@@ -101,6 +101,9 @@ function baseResolvedElement(element: CanvasElement): ResolvedElement {
     h: element.h,
     zIndex: element.zIndex,
     style: toResolvedStyle(element),
+    ...(Array.isArray(element.wrapLines) && element.wrapLines.length > 0
+      ? { wrapLines: [...element.wrapLines] }
+      : {}),
   };
 }
 

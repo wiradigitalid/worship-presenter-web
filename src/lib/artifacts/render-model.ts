@@ -244,22 +244,68 @@ export function largestFittingTextScale(
 }
 
 /**
+ * Resolves the effective line count for text-fit scaling.
+ * SPEC-22: Prefers authoritative `wrapLines` from Canvas if present, non-empty,
+ * and coherent with resolved text; otherwise counts explicit newlines in `element.text`.
+ */
+export function resolveWrapLineCount(element: ResolvedElement): number {
+  const text = resolveElementText(element);
+  if (text === undefined) return 0;
+
+  if (Array.isArray(element.wrapLines) && element.wrapLines.length > 0) {
+    const flatWrap = element.wrapLines.join(' ').replace(/\s+/g, ' ').trim();
+    const flatText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+    if (flatWrap === flatText) {
+      return element.wrapLines.length;
+    }
+  }
+  return text.split('\n').length;
+}
+
+/**
+ * Resolves renderable text for PPTX export.
+ * SPEC-22: When `wrapLines` is present (from Canvas soft-wrapping), joins lines with '\n'
+ * to enforce authoritative word wrapping in OOXML and prevent character-level splits
+ * in LibreOffice Impress and PowerPoint.
+ * Includes coherence guard: only uses `wrapLines` when flattened wrap text matches
+ * the resolved element text, safely falling back to resolved text for dynamically
+ * substituted placeholder tokens (e.g. `{sermon_title}` substituted with weekly title).
+ */
+export function resolveElementTextForPptx(
+  element: ResolvedElement
+): string | undefined {
+  if (element.type !== 'text') return undefined;
+  const text = resolveElementText(element);
+  if (text === undefined) return undefined;
+
+  if (Array.isArray(element.wrapLines) && element.wrapLines.length > 0) {
+    const flatWrap = element.wrapLines.join(' ').replace(/\s+/g, ' ').trim();
+    const flatText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+    if (flatWrap === flatText) {
+      const joined = element.wrapLines.join('\n');
+      if (joined.trim()) return joined;
+    }
+  }
+  return text;
+}
+
+/**
  * The same policy for renderers that cannot measure glyphs — PPTX generation
  * runs on the server with no layout engine.
  *
- * Only the element's own line breaks are counted, so the estimate never sees
- * wrapping and is therefore an *upper* bound on the scale: PowerPoint's own
- * "shrink text on overflow" (enabled alongside it) covers the remainder.
+ * SPEC-22: Uses `resolveWrapLineCount` to account for authoritative soft-wrapped
+ * lines from Canvas, ensuring multi-line reflowed paragraphs apply proper fit scaling.
  */
 export function estimateTextFitScale(element: ResolvedElement): number {
   const text = resolveElementText(element);
   if (text === undefined) return 1;
 
   const em = fontSizePx(element.style);
-  const lines = text.split('\n').length;
+  const lines = resolveWrapLineCount(element);
+  if (lines <= 0) return 1;
 
   return resolveTextFitScale({
-    // Wrapping is unknowable without glyph metrics; the height axis decides.
+    // Wrapping is accounted for by resolveWrapLineCount; the height axis decides.
     contentWidth: 0,
     contentHeight: lines * TEXT_LINE_HEIGHT * em,
     boxWidth: (element.w / 100) * REFERENCE_CANVAS.width,

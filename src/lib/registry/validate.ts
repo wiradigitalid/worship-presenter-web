@@ -51,6 +51,7 @@ const ALLOWED_ELEMENT_KEYS = new Set([
   'h',
   'zIndex',
   'content',
+  'wrapLines',
   'placeholderKey',
   'imageRef',
   'style',
@@ -272,6 +273,17 @@ function parseElement(raw: unknown, label: string): CanvasElement {
       throw new RegistryValidationError(`${label}.content must be a string`);
     }
     element.content = obj.content;
+  }
+  if (obj.wrapLines !== undefined) {
+    if (
+      !Array.isArray(obj.wrapLines) ||
+      obj.wrapLines.some((line) => typeof line !== 'string')
+    ) {
+      throw new RegistryValidationError(`${label}.wrapLines must be an array of strings`);
+    }
+    if (obj.wrapLines.length > 0) {
+      element.wrapLines = [...obj.wrapLines];
+    }
   }
   if (obj.placeholderKey !== undefined) {
     if (typeof obj.placeholderKey !== 'string' || !obj.placeholderKey.trim()) {

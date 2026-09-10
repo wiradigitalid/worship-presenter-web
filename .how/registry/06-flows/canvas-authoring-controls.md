@@ -77,6 +77,15 @@ Under SPEC-21, off-canvas element geometry (bleeding past the right or bottom ed
 
 In `ArtifactEditor.tsx`, `fabric.Textbox` renders text unconstrained at full authored font size with whole-word wrapping (`splitByGrapheme: false`) and unified `TEXT_LINE_HEIGHT = 1.2`, maintaining parity with CSS `whiteSpace: 'pre-wrap'` and PPTX. Under SPEC-20 and SPEC-21, `serializeCanvas` automatically synchronizes textbox bounding box height `h` (and width `w` expansion if unresized) upon save to encapsulate the rendered text lines (`h = Math.max(source.h, measuredTextHeightPct)`). True WYSIWYG parity is achieved automatically in Presentation View and PPTX export without requiring manual box handle stretching. The legacy manual warning badge (`⚠️ Text exceeds box bounds; presentation and PPTX will auto-shrink text to fit.`) is retired in favor of automatic bounding box synchronization.
 
+### PPTX zero-margin container & Canvas line-break authority (SPEC-22)
+
+Under SPEC-22, PPTX export and downstream office suites (Microsoft PowerPoint and LibreOffice Impress) achieve exact line-wrap parity with the Canvas editor and Web Presenter:
+- **Zero-margin text container (`margin: 0`)**: `pptx-draw.ts` explicitly sets `margin: 0` on `slide.addText` in all artifact rendering paths. This eliminates PowerPoint's default 0.2" horizontal margin insets (`[0.05", 0.1", 0.05", 0.1"]`), ensuring the effective wrap column width matches the Web Canvas and Presenter 100% element content width.
+- **Canvas soft-wrap snapshot (`wrapLines`)**: At save time, `serializeCanvas` inspects Fabric's authoritative word-wrapped layout (`(obj as any).textLines`) and persists the resulting string array as `wrapLines` on `CanvasElement`. Legacy templates without `wrapLines` continue to render with best-effort line wrapping.
+- **Canvas as line-break authority for export**: When generating PPTX decks, `resolveElementTextForPptx` joins `wrapLines` with newline breaks (`\n`). This establishes Canvas as the definitive line-break authority, preventing character-level word splitting (e.g. `internationa` / `l`) in LibreOffice Impress and PowerPoint when soft-wrapped lines touch box margins.
+- **Fit-scale line counting**: `estimateTextFitScale` in `render-model.ts` utilizes `resolveWrapLineCount` to count soft-wrapped lines from `wrapLines`, correctly scaling multiline text boxes without under-counting paragraphs.
+
+
 ## What an operator sees when a save is refused
 
 The five lanes for the underlying route are `02-contracts/01-artifacts.md`'s, not restated here. The one

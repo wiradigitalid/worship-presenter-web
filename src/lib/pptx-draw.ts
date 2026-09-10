@@ -24,6 +24,7 @@ import {
   resolveBold,
   resolveElementImage,
   resolveElementText,
+  resolveElementTextForPptx,
   resolveFontFamily,
   resolveItalic,
   resolveUnderline,
@@ -214,6 +215,7 @@ function addImageUnavailable(slide: PptxSlide, box: PptxBox): void {
     y: box.y,
     w: box.w,
     h: box.h,
+    margin: 0, // SPEC-22: zero margin for cross-renderer content-box parity
     align: 'center',
     valign: 'middle',
     fontSize: 28,
@@ -223,7 +225,7 @@ function addImageUnavailable(slide: PptxSlide, box: PptxBox): void {
 }
 
 function renderTextElement(slide: PptxSlide, element: ResolvedElement): void {
-  const text = resolveElementText(element);
+  const text = resolveElementTextForPptx(element);
   if (text === undefined) return;
 
   const geometry = toPptxGeometry(element);
@@ -237,7 +239,8 @@ function renderTextElement(slide: PptxSlide, element: ResolvedElement): void {
    * when the shape is next edited or resized — a freshly generated deck would
    * still open with the text spilling. So the estimated scale is baked into the
    * font size here, and `fit` is left on so PowerPoint can refine it further
-   * (the estimate cannot see wrapping) instead of overriding it.
+   * (under SPEC-22, the estimate accounts for Canvas soft-wrapping via `resolveWrapLineCount`
+   * while `fit` covers remaining metric drift) instead of overriding it.
    *
    * The estimate is a total pure function and the guard below re-checks its
    * result: a fit failure degrades to the authored size, never to a failed
@@ -254,6 +257,7 @@ function renderTextElement(slide: PptxSlide, element: ResolvedElement): void {
     y: geometry.y,
     w: geometry.w,
     h: geometry.h,
+    margin: 0, // SPEC-22: eliminate PowerPoint 0.2" default insets for Canvas/Presenter wrap width parity
     fontSize,
     fit: 'shrink',
     fontFace: resolveFontFamily(style),

@@ -97,6 +97,8 @@ export type CanvasElement = {
   h: number;
   zIndex: number;
   content?: string;
+  /** SPEC-22: Authoritative soft-wrap lines snapshot from Canvas */
+  wrapLines?: string[];
   placeholderKey?: string;
   imageRef?: string;
   style?: TextStyle & ImageStyle & ShapeStyle;

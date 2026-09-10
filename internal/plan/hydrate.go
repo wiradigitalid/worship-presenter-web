@@ -135,14 +135,15 @@ func hydrateArtifact(template Template, instanceID, layoutKey string, values map
 			style = map[string]interface{}{}
 		}
 		resolved := ResolvedElement{
-			ID:     element.ID,
-			Type:   element.Type,
-			X:      element.X,
-			Y:      element.Y,
-			W:      element.W,
-			H:      element.H,
-			ZIndex: element.ZIndex,
-			Style:  style,
+			ID:        element.ID,
+			Type:      element.Type,
+			X:         element.X,
+			Y:         element.Y,
+			W:         element.W,
+			H:         element.H,
+			ZIndex:    element.ZIndex,
+			WrapLines: element.WrapLines,
+			Style:     style,
 		}
 		if element.PlaceholderKey == nil || *element.PlaceholderKey == "" {
 			if element.Type == "text" && element.Content != nil {

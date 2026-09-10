@@ -60,6 +60,11 @@ export type ResolvedElement = {
   zIndex: number;
   /** Resolved text for `text` elements (fixed content or placeholder value). */
   text?: string;
+  /**
+   * SPEC-22: Persisted soft-wrap line snapshot from Canvas (Fabric Textbox.textLines),
+   * establishing Canvas as line-break authority across all export renderers.
+   */
+  wrapLines?: string[];
   /** Resolved image reference for `image` / `image-placeholder` elements. */
   imageUrl?: string;
   /**

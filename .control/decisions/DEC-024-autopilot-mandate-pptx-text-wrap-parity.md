@@ -1,7 +1,7 @@
 ---
 type: mandate
 id: DEC-024
-status: accepted
+status: applied
 accepted_by: 'kodesh87 (2026-09-10)'
 touches:
   - .control/memlog/autopilot-DEC-024.md
@@ -10,8 +10,17 @@ touches:
   - src/lib/pptx-draw.ts
   - src/lib/artifacts/render-model.ts
   - src/lib/registry/canvas-utils.ts
+  - src/lib/registry/types.ts
+  - src/lib/registry/validate.ts
+  - src/lib/artifacts/runtime-contract.ts
+  - src/lib/artifacts/hydrate.ts
+  - internal/plan/types.go
+  - internal/plan/validate_artifact.go
+  - internal/plan/hydrate.go
+  - package.json
   - tests/smoke-spec-22.test.mjs
   - tests/artifact-render-model.test.mjs
+  - .how/registry/06-flows/canvas-authoring-controls.md
   - .scratch/SPEC-22-pptx-text-wrap-parity/SPEC.md
 supersedes: null
 superseded_by: null

@@ -44,7 +44,7 @@ var (
 	}
 	allowedElementKeys = map[string]struct{}{
 		"id": {}, "type": {}, "required": {}, "x": {}, "y": {}, "w": {}, "h": {}, "zIndex": {},
-		"content": {}, "placeholderKey": {}, "imageRef": {}, "style": {},
+		"content": {}, "wrapLines": {}, "placeholderKey": {}, "imageRef": {}, "style": {},
 	}
 	allowedStyleKeys = map[string]struct{}{
 		"fontFamily": {}, "fontSize": {}, "fontColor": {}, "fontWeight": {}, "fontStyle": {}, "textDecoration": {},
@@ -300,6 +300,23 @@ func parseElement(raw any, label, repoRoot string) (CanvasElement, error) {
 			return CanvasElement{}, failf("%s.content must be a string", label)
 		}
 		el.Content = &s
+	}
+	if v, ok := obj["wrapLines"]; ok {
+		lines, ok := v.([]interface{})
+		if !ok {
+			return CanvasElement{}, failf("%s.wrapLines must be an array of strings", label)
+		}
+		strLines := make([]string, 0, len(lines))
+		for i, line := range lines {
+			s, ok := line.(string)
+			if !ok {
+				return CanvasElement{}, failf("%s.wrapLines[%d] must be a string", label, i)
+			}
+			strLines = append(strLines, s)
+		}
+		if len(strLines) > 0 {
+			el.WrapLines = strLines
+		}
 	}
 	if v, ok := obj["placeholderKey"]; ok {
 		s, ok := v.(string)
