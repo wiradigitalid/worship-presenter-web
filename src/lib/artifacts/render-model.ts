@@ -97,8 +97,11 @@ export function applyWrapSlack(
  * must be treated as unmeasured.
  */
 export function isMeasurementValid(
-  element: ResolvedElement | CanvasElement
+  element: ResolvedElement | CanvasElement | { style?: ResolvedStyle; longestWordPx?: number; measuredWith?: any; placeholderKey?: string }
 ): boolean {
+  if (Boolean((element as any).placeholderKey)) {
+    return false;
+  }
   if (element.longestWordPx === undefined || !element.measuredWith) {
     return false;
   }
@@ -121,6 +124,46 @@ export function isMeasurementValid(
   if (currentStyle !== measuredStyle) return false;
 
   return true;
+}
+
+/**
+ * Exposes whether an element's text fit scale is determined by valid measurements
+ * (longestWordPx and measuredWith) or falls back to the unmeasured path.
+ */
+export function isTextFitScaleMeasured(element: ResolvedElement): boolean {
+  return isMeasurementValid(element);
+}
+
+/**
+ * Estimates line count when wrapLines snapshot is absent but longestWordPx measurement is available.
+ * Uses longest word width as an upper-bound proxy for character advance.
+ */
+export function estimateWrappedLineCount(
+  text: string,
+  boxWidthPx: number,
+  longestWordPx: number
+): number {
+  const newlineCount = text.split('\n').length;
+  if (!Number.isFinite(longestWordPx) || longestWordPx <= 0) return newlineCount;
+
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length) return newlineCount;
+
+  let longestWord = '';
+  for (const w of words) {
+    if (w.length > longestWord.length) longestWord = w;
+  }
+  if (!longestWord.length) return newlineCount;
+
+  const avgCharWidth = longestWordPx / longestWord.length;
+  if (!Number.isFinite(avgCharWidth) || avgCharWidth <= 0) return newlineCount;
+
+  const charsPerLine = Math.max(1, Math.floor(boxWidthPx / avgCharWidth));
+  const totalChars = text.length;
+  const upper = Math.max(words.length, newlineCount);
+  const estimated = Math.ceil(totalChars / charsPerLine);
+
+  return Math.min(Math.max(estimated, newlineCount), upper);
 }
 
 
@@ -325,6 +368,13 @@ export function resolveWrapLineCount(element: ResolvedElement): number {
       return element.wrapLines.length;
     }
   }
+
+  // SPEC-23-02: When wrapLines is absent but longestWordPx is valid, estimate line count
+  if (isMeasurementValid(element) && typeof element.longestWordPx === 'number') {
+    const boxWidthPx = (element.w / 100) * REFERENCE_CANVAS.width;
+    return estimateWrappedLineCount(text, boxWidthPx, element.longestWordPx);
+  }
+
   return text.split('\n').length;
 }
 
@@ -361,6 +411,10 @@ export function resolveElementTextForPptx(
  *
  * SPEC-22: Uses `resolveWrapLineCount` to account for authoritative soft-wrapped
  * lines from Canvas, ensuring multi-line reflowed paragraphs apply proper fit scaling.
+ *
+ * SPEC-23-02: Gives `estimateTextFitScale` a real `contentWidth` from `element.longestWordPx`
+ * when measurements are valid, forcing down-scaling on overlong words so LibreOffice Impress
+ * will not break them mid-word. Falls back to `contentWidth: 0` for unmeasured elements.
  */
 export function estimateTextFitScale(element: ResolvedElement): number {
   const text = resolveElementText(element);
@@ -370,9 +424,13 @@ export function estimateTextFitScale(element: ResolvedElement): number {
   const lines = resolveWrapLineCount(element);
   if (lines <= 0) return 1;
 
+  const isMeasured = isMeasurementValid(element);
+  const contentWidth = isMeasured && typeof element.longestWordPx === 'number'
+    ? element.longestWordPx
+    : 0;
+
   return resolveTextFitScale({
-    // Wrapping is accounted for by resolveWrapLineCount; the height axis decides.
-    contentWidth: 0,
+    contentWidth,
     contentHeight: lines * TEXT_LINE_HEIGHT * em,
     boxWidth: (element.w / 100) * REFERENCE_CANVAS.width,
     boxHeight: (element.h / 100) * REFERENCE_CANVAS.height,

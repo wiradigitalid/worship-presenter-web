@@ -22,6 +22,11 @@ const {
   WRAP_SLACK_RATIO,
   applyWrapSlack,
   isMeasurementValid,
+  isTextFitScaleMeasured,
+  estimateTextFitScale,
+  resolveWrapLineCount,
+  estimateWrappedLineCount,
+  MIN_TEXT_FIT_SCALE,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'artifacts', 'render-model.ts')).href
 );
@@ -544,3 +549,199 @@ test('SPEC-23-01 Schema and isMeasurementValid helper coverage', () => {
     () => validateArtifactTemplate({ schemaVersion: 1, id: 't3', label: 'T3', baseType: 'general', placeholders: [], layouts: { default: both } })
   );
 });
+
+// --------------------------------------------------------------------------
+// SPEC-23-02 Tests: Width-Aware Fit Estimate
+// --------------------------------------------------------------------------
+
+test('T-23-04: Width axis forces a shrink when longest word exceeds box width (F-1)', () => {
+  // F-1 fixture: box width 20% = 192px on 960px canvas.
+  // longestWordPx = 523.03125px ('international' at 96px Arial).
+  const f1Element = {
+    id: 'f1-narrow',
+    type: 'text',
+    x: 10,
+    y: 10,
+    w: 20, // 192px
+    h: 53.33,
+    zIndex: 0,
+    text: 'Bandung international community',
+    longestWordPx: 523.03125,
+    measuredWith: {
+      fontFamily: 'Arial',
+      fontSize: 96,
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+    },
+    style: {
+      fontFamily: 'Arial',
+      fontSize: 96,
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+    },
+  };
+
+  assert.equal(isTextFitScaleMeasured(f1Element), true, 'F-1 is recognized as measured');
+  const scale = estimateTextFitScale(f1Element);
+  assert.ok(scale < 1, `estimateTextFitScale must be < 1, got ${scale}`);
+
+  // At this scale, the longest word must fit inside the 192px box:
+  const scaledWordWidth = f1Element.longestWordPx * scale;
+  const boxWidthPx = (f1Element.w / 100) * CANVAS_WIDTH;
+  assert.ok(
+    scaledWordWidth <= boxWidthPx + 0.01,
+    `scaled word width (${scaledWordWidth}px) must fit inside box width (${boxWidthPx}px)`
+  );
+});
+
+test('T-23-05: Unmeasured element degrades gracefully to pre-SPEC-23 behaviour', () => {
+  // Element with no longestWordPx
+  const unmeasuredNoLwp = {
+    id: 'unmeas-1',
+    type: 'text',
+    x: 10,
+    y: 10,
+    w: 20,
+    h: 53.33,
+    zIndex: 0,
+    text: 'Bandung international community',
+    style: {
+      fontFamily: 'Arial',
+      fontSize: 96,
+    },
+  };
+
+  assert.equal(isTextFitScaleMeasured(unmeasuredNoLwp), false, 'missing longestWordPx is unmeasured');
+  const unmeasuredScale = estimateTextFitScale(unmeasuredNoLwp);
+
+  // When unmeasured, contentWidth falls back to 0, and line count falls back to explicit newlines (1 line)
+  // Height needed = 1 * 1.2 * 96 = 115.2px. Box height = 53.33% of 540 = 287.98px.
+  // 115.2 < 287.98, so unmeasured scale is 1 (blind to width axis!).
+  assert.equal(unmeasuredScale, 1, 'unmeasured element returns pre-SPEC-23 scale 1');
+
+  // Element with style mismatch (e.g. fontSize changed from 96 to 72 without re-measuring)
+  const styleMismatch = {
+    ...unmeasuredNoLwp,
+    longestWordPx: 523.03125,
+    measuredWith: {
+      fontFamily: 'Arial',
+      fontSize: 96,
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+    },
+    style: {
+      fontFamily: 'Arial',
+      fontSize: 72, // mismatch!
+    },
+  };
+
+  assert.equal(isTextFitScaleMeasured(styleMismatch), false, 'style mismatch is treated as unmeasured');
+  assert.equal(estimateTextFitScale(styleMismatch), 1, 'style mismatch degrades to pre-SPEC-23 scale');
+
+  // Placeholder element is treated as unmeasured
+  const placeholderEl = {
+    ...unmeasuredNoLwp,
+    placeholderKey: 'sermon_title',
+    longestWordPx: 523.03125,
+    measuredWith: {
+      fontFamily: 'Arial',
+      fontSize: 96,
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+    },
+  };
+  assert.equal(isTextFitScaleMeasured(placeholderEl), false, 'placeholderKey is treated as unmeasured');
+  assert.equal(estimateTextFitScale(placeholderEl), 1, 'placeholderKey element returns unmeasured scale 1');
+});
+
+test('SPEC-23-02 Comfortable measured element returns scale 1 without gratuitous shrinking', () => {
+  // Comfortable box: w: 80% (768px), h: 60% (324px).
+  // Longest word: 523px ('international').
+  // Box is wider than word (768 > 523) and tall enough for 2 lines (324 > 230px).
+  const comfortableEl = {
+    id: 'f2-comfortable',
+    type: 'text',
+    x: 10,
+    y: 10,
+    w: 80,
+    h: 60,
+    zIndex: 0,
+    text: 'Bandung international community',
+    longestWordPx: 523.03125,
+    measuredWith: {
+      fontFamily: 'Arial',
+      fontSize: 96,
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+    },
+    style: {
+      fontFamily: 'Arial',
+      fontSize: 96,
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+    },
+  };
+
+  assert.equal(isTextFitScaleMeasured(comfortableEl), true);
+  const scale = estimateTextFitScale(comfortableEl);
+  assert.equal(scale, 1, `comfortable element must return scale 1 without shrinking, got ${scale}`);
+});
+
+test('SPEC-23-02 estimateWrappedLineCount bounds and totality', () => {
+  const boxWidthPx = 400;
+  const longestWordPx = 100; // ~10 chars word -> ~10px/char -> 40 chars/line
+
+  // 1. Normal multi-word text without explicit newlines
+  const text = 'This is a multi word sentence that should wrap across several lines comfortably.';
+  const estLines = estimateWrappedLineCount(text, boxWidthPx, longestWordPx);
+  assert.ok(estLines >= 2, `expected at least 2 lines, got ${estLines}`);
+
+  // 2. Empty text and whitespace-only text
+  assert.equal(estimateWrappedLineCount('', boxWidthPx, longestWordPx), 1, 'empty text returns 1');
+  assert.equal(estimateWrappedLineCount('   \n  ', boxWidthPx, longestWordPx), 2, 'whitespace with newline returns newline count');
+
+  // 3. Text with more newlines than words
+  const moreNewlines = 'one\n\n\ntwo\n\n';
+  const nlCount = moreNewlines.split('\n').length;
+  const estNl = estimateWrappedLineCount(moreNewlines, boxWidthPx, longestWordPx);
+  assert.ok(estNl >= nlCount, `estimated lines must be at least newline count (${nlCount}), got ${estNl}`);
+
+  // 4. Non-positive or non-finite longestWordPx
+  assert.equal(estimateWrappedLineCount(text, boxWidthPx, 0), 1, 'zero longestWordPx returns newline count');
+  assert.equal(estimateWrappedLineCount(text, boxWidthPx, -50), 1, 'negative longestWordPx returns newline count');
+  assert.equal(estimateWrappedLineCount(text, boxWidthPx, NaN), 1, 'NaN longestWordPx returns newline count');
+});
+
+test('T-23-19: Sub-floor branch is named and respected on F-5', () => {
+  // F-5: A word that cannot fit even at MIN_TEXT_FIT_SCALE (0.35)
+  // E.g., boxWidth = 50px, longestWordPx = 500px.
+  // Needed scale to fit width: 50 / 500 = 0.10.
+  // Policy floors at MIN_TEXT_FIT_SCALE (0.35).
+  const f5Element = {
+    id: 'f5-subfloor',
+    type: 'text',
+    x: 10,
+    y: 10,
+    w: (50 / CANVAS_WIDTH) * 100, // 50px box
+    h: 50,
+    zIndex: 0,
+    text: 'superlongwordthatcannotfit',
+    longestWordPx: 500,
+    measuredWith: {
+      fontFamily: 'Arial',
+      fontSize: 96,
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+    },
+    style: {
+      fontFamily: 'Arial',
+      fontSize: 96,
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+    },
+  };
+
+  const scale = estimateTextFitScale(f5Element);
+  assert.equal(scale, MIN_TEXT_FIT_SCALE, `sub-floor element must clamp to floor ${MIN_TEXT_FIT_SCALE}, got ${scale}`);
+});
+
