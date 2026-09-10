@@ -1056,6 +1056,54 @@ waves:
         tests:
           - tests/smoke-spec-19.test.mjs
 
+  - id: SPEC-20
+    status: open
+    release: artifacts-canvas-wysiwyg-and-controls
+    prd: [offline-deck]
+    fr: [FR-20]
+    size: M
+    depends_on: [SPEC-19]
+    spec_folder: .scratch/SPEC-20-artifacts-canvas-wysiwyg-and-controls/
+    spec_reviewed:
+      date: '2026-09-10'
+      sha: '871b43e'
+      lenses: [edge-case-hunter]
+    tickets:
+      - id: "SPEC-20-01"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-20.test.mjs
+          - tests/artifact-editor-layout.test.mjs
+      - id: "SPEC-20-02"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-20-01"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-20.test.mjs
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-20-03"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-20-02"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-20.test.mjs
+          - tests/artifact-editor-layout.test.mjs
+      - id: "SPEC-20-04"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-20-03"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-20.test.mjs
+          - tests/smoke-spec-19.test.mjs
+          - tests/artifact-editor-controls.test.mjs
+
+
 
 
 

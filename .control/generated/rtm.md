@@ -766,6 +766,67 @@ rtm:
   FR: FR-20
   DEC: []
   UC: UC-14
+  ticket: SPEC-20-01
+  spec: SPEC-20
+  release: artifacts-canvas-wysiwyg-and-controls
+  test:
+  - tests/smoke-spec-20.test.mjs
+  - tests/artifact-editor-layout.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-20-02
+  spec: SPEC-20
+  release: artifacts-canvas-wysiwyg-and-controls
+  test:
+  - tests/smoke-spec-20.test.mjs
+  - tests/artifact-editor-controls.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-20-03
+  spec: SPEC-20
+  release: artifacts-canvas-wysiwyg-and-controls
+  test:
+  - tests/smoke-spec-20.test.mjs
+  - tests/artifact-editor-layout.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-20-04
+  spec: SPEC-20
+  release: artifacts-canvas-wysiwyg-and-controls
+  test:
+  - tests/smoke-spec-20.test.mjs
+  - tests/smoke-spec-19.test.mjs
+  - tests/artifact-editor-controls.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
   ticket: W11-02
   spec: W11
   release: artifacts-overhaul
@@ -1788,6 +1849,67 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-20-01
+  spec: SPEC-20
+  release: artifacts-canvas-wysiwyg-and-controls
+  test:
+  - tests/smoke-spec-20.test.mjs
+  - tests/artifact-editor-layout.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-20-02
+  spec: SPEC-20
+  release: artifacts-canvas-wysiwyg-and-controls
+  test:
+  - tests/smoke-spec-20.test.mjs
+  - tests/artifact-editor-controls.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-20-03
+  spec: SPEC-20
+  release: artifacts-canvas-wysiwyg-and-controls
+  test:
+  - tests/smoke-spec-20.test.mjs
+  - tests/artifact-editor-layout.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-20-04
+  spec: SPEC-20
+  release: artifacts-canvas-wysiwyg-and-controls
+  test:
+  - tests/smoke-spec-20.test.mjs
+  - tests/smoke-spec-19.test.mjs
+  - tests/artifact-editor-controls.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
