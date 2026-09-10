@@ -1103,6 +1103,50 @@ waves:
           - tests/smoke-spec-19.test.mjs
           - tests/artifact-editor-controls.test.mjs
 
+  - id: SPEC-21
+    status: open
+    release: artifacts-canvas-parity-and-input-ux
+    prd: [offline-deck]
+    fr: [FR-20]
+    size: M
+    depends_on: [SPEC-20]
+    spec_folder: .scratch/SPEC-21-artifacts-canvas-parity-and-input-ux/
+    tickets:
+      - id: "SPEC-21-01"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-21.test.mjs
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-21-02"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-21-01"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-21.test.mjs
+          - tests/smoke-spec-20.test.mjs
+      - id: "SPEC-21-03"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-21-02"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-21.test.mjs
+          - tests/artifact-editor-controls.test.mjs
+      - id: "SPEC-21-04"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-21-03"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-21.test.mjs
+          - tests/smoke-spec-20.test.mjs
+          - tests/smoke-spec-19.test.mjs
+
+
 
 
 
