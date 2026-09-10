@@ -404,6 +404,7 @@ export const I18N_KEYS = [
   'admin.annSets.canvasEditorDesc',
   'admin.artifacts.markerSpineNote',
   'admin.artifacts.markerChip',
+  'admin.artifacts.songSetDynamicNote',
   'admin.songSets.title',
   'admin.songSets.active',
   'admin.songSets.editsApplyAll',

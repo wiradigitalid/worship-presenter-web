@@ -981,18 +981,15 @@ A font size authored as 50px on canvas maps to $50 \times 0.75 = 37.5\text{ pt}$
 
 ##### Auto-shrink policy in presentation and export
 
-To guarantee that worship lyrics and titles never spill outside the projector frame during live services:
-- **Web presentation view (`ArtifactSlide.tsx`)**: Uses `largestFittingTextScale` with CSS container queries (`cqh`) and `ResizeObserver`. If rendered text content height exceeds its authored bounding box (`w` × `h`), the slide renderer auto-scales `--fit-scale` downwards (quantized by 0.05 steps) so all lines fit within the box.
+To guarantee that worship lyrics and titles never spill outside the projector frame during live services, presentation and export maintain an automated shrink-to-fit safeguard:
+- **Web presentation view (`ArtifactSlide.tsx`)**: Uses `largestFittingTextScale` with CSS container queries (`cqh`) and `ResizeObserver`. If rendered text content height exceeds its bounding box (`w` × `h`), the slide renderer auto-scales `--fit-scale` downwards (quantized by 0.05 steps) so all lines fit within the box.
 - **PPTX export (`src/lib/pptx-draw.ts`)**: Runs `estimateTextFitScale(element)` from `render-model.ts`, reducing font point size when line breaks or text length exceed the container.
 
-Element coordinates `x` and `y` do **not** shift during auto-shrink. However, when text downscales inside a flex container, alignment rules (`textAlign` and `verticalAlign`) position the smaller block within the authored bounding box, which can visually appear shifted relative to unconstrained text that was overflowing the box in the editor canvas.
+This auto-shrink safeguard remains active as a projection floor for un-resaved legacy templates, pre-save states, or boundary clamping edge cases (e.g. when text touches slide bottom `y + h = 100`). For newly authored or saved templates, save-time auto-sync ensures the container accommodates the text directly.
 
-##### Canvas overflow feedback
+##### Canvas overflow feedback & WYSIWYG auto-sync
 
-In `ArtifactEditor.tsx`, `fabric.Textbox` renders text unconstrained at full authored font size. When an active text element's rendered height exceeds its authored bounding box height, the properties toolbar displays a non-blocking informational badge:
-`⚠️ Text exceeds box bounds; presentation and PPTX will auto-shrink text to fit.`
-
-Operators can eliminate auto-shrink by resizing the textbox bounding box (increasing `w` or `h` using canvas resize handles) so the authored container accommodates the text at the desired font size.
+In `ArtifactEditor.tsx`, `fabric.Textbox` renders text unconstrained at full authored font size. Under SPEC-20, `serializeCanvas` automatically synchronizes textbox bounding box height `h` (and width `w` expansion if needed) upon save to encapsulate the rendered text lines (`h = Math.max(source.h, measuredTextHeightPct)`). True WYSIWYG parity is achieved automatically in Presentation View and PPTX export without requiring manual box handle stretching. The legacy manual warning badge (`⚠️ Text exceeds box bounds; presentation and PPTX will auto-shrink text to fit.`) is retired in favor of automatic bounding box synchronization.
 
 #### What an operator sees when a save is refused
 

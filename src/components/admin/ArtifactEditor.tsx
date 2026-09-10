@@ -7,6 +7,7 @@ import {
   ArrowUp,
   Bold,
   BringToFront,
+  ChevronDown,
   Copy,
   Image as ImageIcon,
   Italic,
@@ -50,6 +51,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -330,6 +337,7 @@ export default function ArtifactEditor({
   const [message, setMessage] = useState<string | null>(null);
   const [fontFamily, setFontFamily] = useState(DEFAULT_FONT_FAMILY);
   const [fontSearchQuery, setFontSearchQuery] = useState('');
+  const [fontPopoverOpen, setFontPopoverOpen] = useState(false);
   const fontSearchInputRef = useRef<HTMLInputElement | null>(null);
   const [fontColor, setFontColor] = useState(DEFAULT_FONT_COLOR);
   /** Committed font size: always finite and positive, safe for the server. */
@@ -346,7 +354,6 @@ export default function ArtifactEditor({
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [selectedTextCount, setSelectedTextCount] = useState(0);
   const [textContent, setTextContent] = useState('');
-  const [isTextOverflowing, setIsTextOverflowing] = useState(false);
   /** Elements authored in this session, not yet persisted. */
   const addedElementsRef = useRef<Map<string, CanvasElement>>(new Map());
   const addedPlaceholdersRef = useRef<Map<string, PlaceholderDefinition>>(
@@ -361,6 +368,7 @@ export default function ArtifactEditor({
   const [newSlideType, setNewSlideType] = useState('general');
   const [drawingTool, setDrawingTool] = useState<'text' | 'rect' | null>(null);
   const drawingToolRef = useRef<'text' | 'rect' | null>(null);
+  const previewShapeRef = useRef<any>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -447,20 +455,6 @@ export default function ArtifactEditor({
     if (shapes.length > 0) {
       setShapeFill(toStrictHexColor((shapes[0] as any).fill, '#5C2E16') ?? '#5C2E16');
     }
-
-    let overflowing = false;
-    if (texts.length === 1 && selectedText) {
-      const authoredHeightPx = (selectedText as any).data?.authoredHeight;
-      const textHeightPx = (selectedText.height ?? 0) * (selectedText.scaleY ?? 1);
-      if (
-        typeof authoredHeightPx === 'number' &&
-        authoredHeightPx > 0 &&
-        textHeightPx > authoredHeightPx + 4
-      ) {
-        overflowing = true;
-      }
-    }
-    setIsTextOverflowing(overflowing);
   }, []);
 
   const loadList = useCallback(async () => {
@@ -513,6 +507,10 @@ export default function ArtifactEditor({
         canvas.defaultCursor = 'crosshair';
         canvas.hoverCursor = 'crosshair';
       } else {
+        if (previewShapeRef.current) {
+          canvas.remove(previewShapeRef.current);
+          previewShapeRef.current = null;
+        }
         canvas.skipTargetFind = false;
         canvas.selection = true;
         canvas.defaultCursor = 'default';
@@ -522,6 +520,10 @@ export default function ArtifactEditor({
     }
     return () => {
       if (canvas) {
+        if (previewShapeRef.current) {
+          canvas.remove(previewShapeRef.current);
+          previewShapeRef.current = null;
+        }
         canvas.skipTargetFind = false;
         canvas.selection = true;
         canvas.defaultCursor = 'default';
@@ -625,12 +627,61 @@ export default function ArtifactEditor({
 
       let dragStart: { x: number; y: number } | null = null;
       const onMouseDown = (opt: any) => {
-        if (!drawingToolRef.current) return;
+        const tool = drawingToolRef.current;
+        if (!tool) return;
         const pointer = canvas.getScenePoint(opt.e);
         dragStart = { x: pointer.x, y: pointer.y };
+
+        if (previewShapeRef.current) {
+          canvas.remove(previewShapeRef.current);
+          previewShapeRef.current = null;
+        }
+
+        const preview = tool === 'rect'
+          ? new fabric.Rect({
+              left: pointer.x,
+              top: pointer.y,
+              width: 0,
+              height: 0,
+              fill: 'rgba(92, 46, 22, 0.25)',
+              stroke: '#5C2E16',
+              strokeWidth: 1.5,
+              strokeDashArray: [4, 4],
+              selectable: false,
+              evented: false,
+            })
+          : new fabric.Rect({
+              left: pointer.x,
+              top: pointer.y,
+              width: 0,
+              height: 0,
+              fill: 'rgba(37, 99, 235, 0.15)',
+              stroke: '#2563EB',
+              strokeWidth: 1.5,
+              strokeDashArray: [4, 4],
+              selectable: false,
+              evented: false,
+            });
+        previewShapeRef.current = preview;
+        canvas.add(preview);
+        canvas.requestRenderAll();
+      };
+      const onMouseMove = (opt: any) => {
+        if (!drawingToolRef.current || !dragStart || !previewShapeRef.current) return;
+        const pointer = canvas.getScenePoint(opt.e);
+        const left = Math.min(dragStart.x, pointer.x);
+        const top = Math.min(dragStart.y, pointer.y);
+        const width = Math.abs(pointer.x - dragStart.x);
+        const height = Math.abs(pointer.y - dragStart.y);
+        previewShapeRef.current.set({ left, top, width, height });
+        canvas.requestRenderAll();
       };
       const onMouseUp = (opt: any) => {
         const tool = drawingToolRef.current;
+        if (previewShapeRef.current) {
+          canvas.remove(previewShapeRef.current);
+          previewShapeRef.current = null;
+        }
         if (!tool || !dragStart) return;
         const pointer = canvas.getScenePoint(opt.e);
         const start = dragStart;
@@ -650,6 +701,7 @@ export default function ArtifactEditor({
         setDrawingTool(null);
       };
       canvas.on('mouse:down', onMouseDown);
+      canvas.on('mouse:move', onMouseMove);
       canvas.on('mouse:up', onMouseUp);
 
       // Native DOM listener on upperCanvasEl: Fabric wraps canvas in an upper-canvas DOM layer
@@ -705,10 +757,21 @@ export default function ArtifactEditor({
             target.data.authoredHeight *= target.scaleY;
             target.scaleY = 1;
           }
+          if (target.data) {
+            target.data.authoredHeight = (target.height ?? 0) * (target.scaleY ?? 1);
+          }
           syncSelection(canvas);
         }
       };
       canvas.on('object:modified', onObjectModified);
+
+      const onTextChanged = (opt: any) => {
+        const target = opt.target;
+        if (target && isFabricTextObject(target) && target.data) {
+          target.data.authoredHeight = (target.height ?? 0) * (target.scaleY ?? 1);
+        }
+      };
+      canvas.on('text:changed', onTextChanged);
 
       // Registered here and not one line earlier: the paint loop above calls
       // `canvas.add()` for every seed element, and `canvas.add()` fires
@@ -722,10 +785,12 @@ export default function ArtifactEditor({
         canvas.off('selection:updated', onSelectionChange);
         canvas.off('selection:cleared', onSelectionChange);
         canvas.off('mouse:down', onMouseDown);
+        canvas.off('mouse:move', onMouseMove);
         canvas.off('mouse:up', onMouseUp);
         canvas.off('object:moving', onObjectMoving);
         canvas.off('object:scaling', onObjectScaling);
         canvas.off('object:modified', onObjectModified);
+        canvas.off('text:changed', onTextChanged);
         upperCanvasEl?.removeEventListener('contextmenu', onNativeContextMenu);
         for (const event of CANVAS_MUTATION_EVENTS) {
           canvas.off(event, markDirty);
@@ -752,6 +817,10 @@ export default function ArtifactEditor({
 
     return () => {
       disposed = true;
+      if (previewShapeRef.current) {
+        fabricCanvasRef.current?.remove(previewShapeRef.current);
+        previewShapeRef.current = null;
+      }
       // Before `dispose()`, which is the existing order and now load-bearing
       // twice over: a mutation listener still attached while the canvas tears
       // itself down would mark the outgoing template dirty on its way out.
@@ -1208,6 +1277,11 @@ export default function ArtifactEditor({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && drawingToolRef.current) {
+        if (previewShapeRef.current) {
+          fabricCanvasRef.current?.remove(previewShapeRef.current);
+          previewShapeRef.current = null;
+          fabricCanvasRef.current?.requestRenderAll();
+        }
         setDrawingTool(null);
         return;
       }
@@ -1428,6 +1502,9 @@ export default function ArtifactEditor({
     for (const obj of canvas.getActiveObjects()) {
       if (!isFabricTextObject(obj)) continue;
       obj.set({ fontFamily: family });
+      if (obj.data) {
+        obj.data.authoredHeight = (obj.height ?? 0) * (obj.scaleY ?? 1);
+      }
       updated = true;
     }
     if (updated) {
@@ -1570,6 +1647,9 @@ export default function ArtifactEditor({
     for (const obj of canvas.getActiveObjects()) {
       if (!isFabricTextObject(obj)) continue;
       obj.set({ fontSize: clamped });
+      if (obj.data) {
+        obj.data.authoredHeight = (obj.height ?? 0) * (obj.scaleY ?? 1);
+      }
       updated = true;
     }
     if (updated) {
@@ -2489,13 +2569,28 @@ export default function ArtifactEditor({
             </div>
 
             {!isEditable ? (
-              <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-                {template.baseType === 'ann-set-marker'
-                  ? t('admin.artifacts.markerSpineNote')
-                  : t('admin.artifacts.readOnlyBody').replace(
-                      '{kind}',
-                      `[${kindChipLabel(template.baseType)}]`
-                    )}
+              <div className="aspect-video w-full max-h-[calc(100vh-310px)] min-h-[320px] rounded-xl border border-border bg-card flex flex-col items-center justify-center p-8 text-center shadow-sm relative overflow-hidden">
+                <div className="max-w-md flex flex-col items-center gap-3">
+                  <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted text-foreground border border-border">
+                    {`[${kindChipLabel(template.baseType)}]`}
+                  </div>
+                  <h3 className="text-base font-semibold text-foreground">
+                    {template.label}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {template.baseType === 'ann-set-marker'
+                      ? t('admin.artifacts.markerSpineNote')
+                      : t('admin.artifacts.readOnlyBody').replace(
+                          '{kind}',
+                          `[${kindChipLabel(template.baseType)}]`
+                        )}
+                  </p>
+                  {template.baseType === 'song-set-entry' ? (
+                    <div className="mt-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-md border border-border/50">
+                      {t('admin.artifacts.songSetDynamicNote')}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             ) : (
               <div className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm">
@@ -2637,14 +2732,11 @@ export default function ArtifactEditor({
                           TEXT
                         </span>
 
-                        {/* Font Family Selector */}
-                        <Select
-                          value={fontFamily}
-                          onValueChange={(val) => {
-                            handleFontFamilyChange(val);
-                            setFontSearchQuery('');
-                          }}
+                        {/* Font Family Selector (Combobox with Popover) */}
+                        <Popover
+                          open={fontPopoverOpen}
                           onOpenChange={(open) => {
+                            setFontPopoverOpen(open);
                             if (!open) {
                               setFontSearchQuery('');
                             } else {
@@ -2653,19 +2745,20 @@ export default function ArtifactEditor({
                               }, 0);
                             }
                           }}
-                          items={FONT_ITEMS_MAP}
-                          disabled={busy}
                         >
-                          <SelectTrigger
-                            className="w-[180px] h-7 text-xs"
+                          <PopoverTrigger
+                            className="w-[180px] h-7 text-xs border border-input rounded-lg flex items-center justify-between px-2 bg-transparent hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
                             title="Font Family"
                             aria-label="Font Family"
+                            disabled={busy}
                           >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent
-                            className="max-h-72 w-[240px]"
-                            alignItemWithTrigger={false}
+                            <span className="truncate" style={{ fontFamily }}>
+                              {FONT_ITEMS_MAP[fontFamily] ?? fontFamily}
+                            </span>
+                            <ChevronDown className="w-3.5 h-3.5 opacity-50 shrink-0 ml-1" />
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="max-h-72 w-[240px] p-0 flex flex-col overflow-hidden"
                             side="bottom"
                             align="start"
                             sideOffset={4}
@@ -2693,36 +2786,47 @@ export default function ArtifactEditor({
                                 autoFocus
                               />
                             </div>
-                            {(['system', 'sans', 'serif', 'display', 'script'] as FontCategory[]).map(
-                              (category) => {
-                                const query = fontSearchQuery.trim().toLowerCase();
-                                const fonts = FONT_CATALOG.filter(
-                                  (f) =>
-                                    f.category === category &&
-                                    (query === '' || f.label.toLowerCase().includes(query))
-                                );
-                                if (fonts.length === 0) return null;
-                                return (
-                                  <SelectGroup key={category}>
-                                    <SelectLabel className="bg-muted/90 px-2.5 py-1 text-foreground font-bold tracking-wide rounded-sm my-1 border-l-2 border-primary text-[11px] select-none">
-                                      {FONT_CATEGORY_LABELS[category][locale] ?? FONT_CATEGORY_LABELS[category].en}
-                                    </SelectLabel>
-                                    {fonts.map((f) => (
-                                      <SelectItem
-                                        key={f.family}
-                                        value={f.family}
-                                        className="text-xs"
-                                        style={{ fontFamily: f.family }}
-                                      >
-                                        {f.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectGroup>
-                                );
-                              }
-                            )}
-                          </SelectContent>
-                        </Select>
+                            <div className="overflow-y-auto p-1 flex-1">
+                              {(['system', 'sans', 'serif', 'display', 'script'] as FontCategory[]).map(
+                                (category) => {
+                                  const query = fontSearchQuery.trim().toLowerCase();
+                                  const fonts = FONT_CATALOG.filter(
+                                    (f) =>
+                                      f.category === category &&
+                                      (query === '' || f.label.toLowerCase().includes(query))
+                                  );
+                                  if (fonts.length === 0) return null;
+                                  return (
+                                    <div key={category} className="mb-1">
+                                      <div className="bg-muted/90 px-2.5 py-1 text-foreground font-bold tracking-wide rounded-sm my-1 border-l-2 border-primary text-[11px] select-none">
+                                        {FONT_CATEGORY_LABELS[category][locale] ?? FONT_CATEGORY_LABELS[category].en}
+                                      </div>
+                                      {fonts.map((f) => (
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          key={f.family}
+                                          onClick={() => {
+                                            handleFontFamilyChange(f.family);
+                                            setFontSearchQuery('');
+                                            setFontPopoverOpen(false);
+                                          }}
+                                          className={cn(
+                                            'w-full justify-between h-auto py-1.5 px-2 text-xs font-normal hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors flex items-center',
+                                            f.family === fontFamily && 'bg-accent/50 font-medium'
+                                          )}
+                                          style={{ fontFamily: f.family }}
+                                        >
+                                          <span>{f.label}</span>
+                                        </Button>
+                                      ))}
+                                    </div>
+                                  );
+                                }
+                              )}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
 
                         <input
                           type="color"
@@ -2861,18 +2965,6 @@ export default function ArtifactEditor({
                             />
                           )}
                         </div>
-
-                        {isTextOverflowing && (
-                          <>
-                            <div className="h-4 w-px bg-border shrink-0" />
-                            <div
-                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[11px] font-medium shrink-0"
-                              title="Text exceeds box bounds; presentation and PPTX will auto-shrink text to fit."
-                            >
-                              <span>⚠️ Text exceeds box bounds; presentation and PPTX will auto-shrink text to fit.</span>
-                            </div>
-                          </>
-                        )}
                       </div>
                     </>
                   ) : fabricCanvasRef.current?.getActiveObjects().some((o) => Boolean((o as any).data?.imageRef)) ? (

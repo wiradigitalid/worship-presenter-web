@@ -1,6 +1,6 @@
-promise_progress: 95%
+promise_progress: 100%
 rtm_rows:
-  green: 141
+  green: 149
   counted: 149
   excluded_no_uc: 1
 work_progress:
@@ -45,10 +45,10 @@ work_progress:
   tickets_total: 5
   work_progress: 100%
 - spec: SPEC-20
-  status: open
-  tickets_done: 0
+  status: closed
+  tickets_done: 4
   tickets_total: 4
-  work_progress: 0%
+  work_progress: 100%
 - spec: W1
   status: closed
   tickets_done: 2

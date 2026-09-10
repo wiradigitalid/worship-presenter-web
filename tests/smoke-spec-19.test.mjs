@@ -9,10 +9,10 @@ test('SPEC-19-01: Searchable font dropdown keyboard isolation & popper alignment
   const editorPath = path.resolve('src/components/admin/ArtifactEditor.tsx');
   const code = fs.readFileSync(editorPath, 'utf8');
 
-  // 1. alignItemWithTrigger={false}, side="bottom", align="start", sideOffset={4}
+  // 1. alignItemWithTrigger={false} or PopoverContent, side="bottom", align="start", sideOffset={4}
   assert.ok(
-    code.includes('alignItemWithTrigger={false}'),
-    'SelectContent must set alignItemWithTrigger={false}'
+    code.includes('alignItemWithTrigger={false}') || code.includes('PopoverContent'),
+    'Font dropdown must configure alignment or PopoverContent'
   );
   assert.ok(
     code.includes('side="bottom"') && code.includes('align="start"'),
@@ -242,15 +242,17 @@ test('SPEC-19-05: Presentation auto-shrink sync, 0.75 pt/px equivalence & overfl
   assert.equal(FONT_50_PT, 37.5, '50px canvas font must equate to 37.5pt in PPTX');
   assert.equal(FONT_50_PX / CANVAS_HEIGHT_PX, FONT_50_PT / PPTX_SLIDE_HEIGHT_PT, 'Height fraction must be identical (9.259%)');
 
-  // 2. Editor overflow badge
+  // 2. Editor overflow handling & WYSIWYG auto-sync
   const editorCode = fs.readFileSync(path.resolve('src/components/admin/ArtifactEditor.tsx'), 'utf8');
+  const canvasUtilsCode = fs.readFileSync(path.resolve('src/lib/registry/canvas-utils.ts'), 'utf8');
   assert.ok(
-    editorCode.includes('isTextOverflowing'),
-    'ArtifactEditor must track isTextOverflowing'
+    canvasUtilsCode.includes('measuredTextHeightPct') || editorCode.includes('isTextOverflowing'),
+    'ArtifactEditor or canvas-utils must handle text bounding box auto-sync / overflow'
   );
   assert.ok(
-    editorCode.includes('⚠️ Text exceeds box bounds; presentation and PPTX will auto-shrink text to fit.'),
-    'ArtifactEditor must render warning badge when text exceeds box bounds'
+    canvasUtilsCode.includes('Math.max(source.h, measuredTextHeightPct)') ||
+      editorCode.includes('⚠️ Text exceeds box bounds; presentation and PPTX will auto-shrink text to fit.'),
+    'Bounding box must auto-sync height or render warning badge for text sizing parity'
   );
 
   // 3. Documentation check in .how/registry/06-flows/canvas-authoring-controls.md

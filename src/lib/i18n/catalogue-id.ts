@@ -452,6 +452,8 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'admin.artifacts.markerSpineNote':
     'Baris ini adalah marker yang memperluas Announcement Set. Baris ini tidak memiliki kanvas yang dapat disunting.',
   'admin.artifacts.markerChip': 'marker',
+  'admin.artifacts.songSetDynamicNote':
+    'Slide song set dirender secara dinamis dari Database Lagu; untuk menyesuaikan lirik lagu, edit lagu di Katalog Lagu.',
   'admin.songSets.title': 'Entri Song Set',
   'admin.songSets.active': 'Aktif:',
   'admin.songSets.editsApplyAll': 'Perubahan berlaku untuk semua {count} entri song set',

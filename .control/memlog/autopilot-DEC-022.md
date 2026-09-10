@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-022-autopilot-mandate-artifacts-canvas-wysiwyg-
 
 ## Resume
 
-Iteration: 0
-Run branch: autopilot/DEC-022 (PR: not yet opened)
-Stopped at: Preflight — tickets authored, test plan prepared, mandate registered; awaiting autopilot session launch
+Iteration: 1
+Run branch: autopilot/DEC-022 (PR: pending push)
+Stopped at: Done — all 4 tickets under SPEC-20 implemented, dual-reviewed with cursor-agent composer-2.5, full suite (774 tests) green
 Blocked: —
 Parked: [ad-n]
-Next: wdi-autopilot execution in separate session
+Next: Conclude mandate DEC-022 and prepare PR for owner merge
 
 ## Decisions
 
@@ -22,3 +22,8 @@ Next: wdi-autopilot execution in separate session
 | Preflight | SPEC-20-04 | Auto-sync bounding box height h = Math.max(source.h, measuredTextHeightPct) in serializeCanvas and editor | Locking h = source.h and showing manual warning badge | Presentation and PPTX aggressively downscaling font | canvas-utils.ts, ArtifactEditor.tsx |
 | Preflight | Review Follow-up | Decouple SPEC-20-01 through SPEC-20-04 dependencies (all blocked_by: []) | Strict serial execution chain (01->02->03->04) | Artificial serialization of independent UI and serialization features | SPEC.md, specs.yaml, issues/*.md |
 | Preflight | Review Follow-up | Explicitly supersede SPEC-19-05 manual overflow badge in favor of auto-sync h; plan regression refactoring for smoke-spec-19 and artifact-editor-layout | Leaving conflicting test assertions in smoke-spec-19 and layout tests | Autopilot failing G5 release gate on regression test conflicts | TEST-PLAN.md, issues/01, issues/04 |
+| Iteration 1 | SPEC-20-01 | Replaced Base UI Select with Popover primitive and Button items; preserved keyboard isolation with stopPropagation | Retaining native select typeahead capture | Keystrokes stolen while typing font names | ArtifactEditor.tsx, artifact-editor-layout.test.mjs |
+| Iteration 1 | SPEC-20-02 | Wired live dashed preview box on mouse:move with cleanup on mouse:up, tool cancellation, and Escape | Showing shape only after mouse release | Lack of feedback on drag bounds | ArtifactEditor.tsx |
+| Iteration 1 | SPEC-20-03 | Added 16:9 aspect-video stage card with viewport bounds (max-h-[calc(100vh-310px)] min-h-[320px]) and localized dynamic note | Short collapsed banner | Deck Sequence list height collapse on selection | ArtifactEditor.tsx, keys.ts, catalogue-*.ts |
+| Iteration 1 | SPEC-20-04 | Auto-synced bounding box h and w on save while honoring handle narrowing if isWidthResized; retired manual warning badge | Manual stretching and warning badge | Font auto-shrinking in presentation and PPTX | canvas-utils.ts, ArtifactEditor.tsx, canvas-authoring-controls.md |
+| Iteration 1 | Peer Review | Incorporated cursor-agent composer-2.5 recommendations: width narrowing persistence, dead overflow state removal, container constraint matching, i18n copy, and direct render-model estimation test | Unconditional Math.max on width and inline math tests | Regression when narrowing textboxes and weaker tests | canvas-utils.ts, ArtifactEditor.tsx, smoke-spec-20.test.mjs |

@@ -316,23 +316,34 @@ export function serializeCanvas(
     const isWidthResized = Math.abs(measuredWidth - authoredWidth) > 1;
     const isHeightResized = Math.abs(measuredHeight - authoredHeight) > 1;
 
+    const measuredTextHeightPct = pxToPct(measuredHeight, CANVAS_HEIGHT);
+    const measuredTextWidthPct = pxToPct(measuredWidth, CANVAS_WIDTH);
+
+    // SPEC-20-04: Auto-sync bounding box dimensions for text elements so bounding box encapsulates rendered text
     const w = isWidthResized
       ? pxToPct(measuredWidth, CANVAS_WIDTH)
-      : source.w;
+      : isText
+        ? Math.max(source.w, measuredTextWidthPct)
+        : source.w;
+
     const h = isText
-      ? scaleY !== 1
-        ? source.h * scaleY
-        : source.h
+      ? Math.max(source.h, measuredTextHeightPct)
       : isHeightResized
         ? pxToPct(measuredHeight, CANVAS_HEIGHT)
         : source.h;
 
+    const computedX = left === authoredLeft ? source.x : pxToPct(left, CANVAS_WIDTH);
+    const computedY = top === authoredTop ? source.y : pxToPct(top, CANVAS_HEIGHT);
+
+    const clampedW = Math.max(MIN_ELEMENT_W_PCT, Math.min(100 - computedX, w));
+    const clampedH = Math.max(MIN_ELEMENT_H_PCT, Math.min(100 - computedY, h));
+
     const next: CanvasElement = {
       ...source,
-      x: left === authoredLeft ? source.x : pxToPct(left, CANVAS_WIDTH),
-      y: top === authoredTop ? source.y : pxToPct(top, CANVAS_HEIGHT),
-      w: Math.max(w, MIN_ELEMENT_W_PCT),
-      h: Math.max(h, MIN_ELEMENT_H_PCT),
+      x: computedX,
+      y: computedY,
+      w: clampedW,
+      h: clampedH,
       zIndex: isOrderModified ? canvasIndex : source.zIndex,
     };
 
