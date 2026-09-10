@@ -1,5 +1,7 @@
 # SPEC-21-02 — Preserve Off-Canvas Geometry on Save
 
+**Status:** closed
+
 ## Component & Scope
 - **Component**: `registry` (Serializer & Canvas Models)
 - **Satisfies**: `UC-14` (Template Authoring Controls)

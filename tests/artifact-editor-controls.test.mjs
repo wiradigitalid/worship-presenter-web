@@ -727,10 +727,10 @@ test('SPEC-12-01: ArtifactEditor source guards for realtime styling, underline, 
     'ArtifactEditor must have handleFontColorChange for realtime color update'
   );
 
-  // 3. Realtime font size apply
+  // 3. Font size commit on blur / enter
   assert.ok(
-    code.includes('handleFontSizeInput') && code.includes('obj.set({ fontSize: clamped })'),
-    'handleFontSizeInput must update active text objects on canvas immediately'
+    code.includes('handleFontSizeCommit') && code.includes('obj.set({ fontSize: result.fontSize })'),
+    'handleFontSizeCommit must update active text objects on canvas'
   );
 
   // 4. Font size input is w-20 to fit 3 digits
@@ -1417,13 +1417,13 @@ test('SPEC-13-12: Text line-height and text-shadow controls (BUG-22)', async () 
   assert.equal(serializedWithStyles?.lineHeight, 1.5, 'lineHeight must be serialized');
   assert.equal(serializedWithStyles?.textShadow, true, 'textShadow must be serialized when shadow is present');
 
-  // Construction default lineHeight (1.16) is omitted when not on source
+  // Construction default lineHeight (1.2 / TEXT_LINE_HEIGHT) is omitted when not on source
   const serializedDefault = serializeTextStyle(sourceElement, {
     fill: '#FFFFFF',
     fontSize: 24,
-    lineHeight: 1.16,
+    lineHeight: 1.2,
   });
-  assert.equal(serializedDefault?.lineHeight, undefined, 'default 1.16 lineHeight should be omitted on new element');
+  assert.equal(serializedDefault?.lineHeight, undefined, 'default 1.2 lineHeight should be omitted on new element');
 
   // 3. Source scan guards in ArtifactEditor.tsx
   const fs = await import('node:fs');
@@ -2036,7 +2036,7 @@ test('SPEC-15-03 / BUG-28: Removal of redundant Apply Style button from properti
   // 3. All real-time text property handlers remain functional, invoke canvas.requestRenderAll, and call markDirty()
   for (const handler of [
     'handleFontColorChange',
-    'handleFontSizeInput',
+    'handleFontSizeCommit',
     'handleToggleBold',
     'handleToggleItalic',
     'handleToggleUnderline',
@@ -2071,7 +2071,7 @@ test('SPEC-15-03 / BUG-28: Removal of redundant Apply Style button from properti
     fontStyle: 'normal',
     underline: false,
     textAlign: 'left',
-    lineHeight: 1.16,
+    lineHeight: 1.2,
     shadow: null,
     set(props) {
       Object.assign(this, props);
@@ -2139,8 +2139,8 @@ test('SPEC-17-03: PPTX and Web Slide font family resolution and fallbacks', asyn
   // 5. syncSelection sets fontFamily from active text object
   const editorCode = fs.readFileSync(path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx'), 'utf8');
   assert.ok(
-    editorCode.includes('setFontFamily(selectedText.fontFamily || DEFAULT_FONT_FAMILY)'),
-    'syncSelection must extract and set fontFamily state from selectedText'
+    editorCode.includes('setFontFamily(resolveCatalogFontFamily(selectedText.fontFamily || DEFAULT_FONT_FAMILY))'),
+    'syncSelection must extract and set fontFamily state from selectedText via resolveCatalogFontFamily'
   );
 });
 

@@ -101,6 +101,13 @@ export function getFontStack(family: string | undefined): string {
   return `"${def.family}", ${def.fallback}`;
 }
 
+export function resolveCatalogFontFamily(fabricFamily: string | undefined): string {
+  if (!fabricFamily) return DEFAULT_FONT_FAMILY;
+  const match = fabricFamily.match(/"([^"]+)"/);
+  const candidate = match?.[1] ?? fabricFamily.split(',')[0]?.trim();
+  return getFontDefinition(candidate)?.family ?? candidate ?? DEFAULT_FONT_FAMILY;
+}
+
 export function getGoogleFontsStylesheetUrl(): string {
   const families = FONT_CATALOG.filter((f) => Boolean(f.googleFont))
     .map((f) => `family=${f.googleFont}`)

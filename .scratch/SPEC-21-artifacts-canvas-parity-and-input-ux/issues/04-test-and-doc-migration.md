@@ -1,5 +1,7 @@
 # SPEC-21-04 — Test & Documentation Migration
 
+**Status:** closed
+
 ## Component & Scope
 - **Component**: `registry` (Test Suites & Documentation)
 - **Satisfies**: `UC-14` (Template Authoring Controls)

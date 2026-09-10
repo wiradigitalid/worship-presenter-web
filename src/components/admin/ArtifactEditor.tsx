@@ -70,6 +70,8 @@ import {
   FONT_CATALOG,
   FONT_CATEGORY_LABELS,
   FontCategory,
+  getFontStack,
+  resolveCatalogFontFamily,
 } from '@/lib/registry/font-catalog';
 
 const FONT_ITEMS_MAP: Record<string, string> = Object.fromEntries(
@@ -94,6 +96,7 @@ import {
   NEW_TEXT_CONTENT,
   NEW_TEXT_SIZE_PX,
   clampFontSize,
+  commitFontSizeFromDraft,
   computeContextMenuCoords,
   filterOutBackgroundElements,
   getElementId,
@@ -111,6 +114,7 @@ import {
   shouldPreserveSelectionOnContextMenu,
   syncImageClipOnMove,
   syncImageClipOnScale,
+  TEXT_LINE_HEIGHT,
   toStrictHexColor,
   updateImageElementFit,
 } from '@/lib/registry/canvas-utils';
@@ -166,7 +170,8 @@ function elementToFabricObject(
       ...common,
       fill: style?.fontColor ?? DEFAULT_FONT_COLOR,
       fontSize: normalizeFontSize(style?.fontSize),
-      fontFamily: style?.fontFamily ?? DEFAULT_FONT_FAMILY,
+      fontFamily: getFontStack(style?.fontFamily),
+      lineHeight: style?.lineHeight ?? TEXT_LINE_HEIGHT,
       // Fabric v6 assigns an explicit `undefined` straight over its own class
       // default and then dies in `Cache.getFontCache` (`fontStyle.toLowerCase`
       // of undefined), so an unset key must be omitted, not passed as
@@ -174,7 +179,6 @@ function elementToFabricObject(
       ...(style?.fontWeight !== undefined ? { fontWeight: style.fontWeight } : {}),
       ...(style?.fontStyle !== undefined ? { fontStyle: style.fontStyle } : {}),
       ...(style?.textDecoration === 'underline' ? { underline: true } : {}),
-      ...(style?.lineHeight !== undefined ? { lineHeight: style.lineHeight } : {}),
       ...(style?.textShadow
         ? {
             shadow: new fabric.Shadow({
@@ -186,7 +190,7 @@ function elementToFabricObject(
           }
         : {}),
       textAlign: style?.textAlign ?? DEFAULT_TEXT_ALIGN,
-      splitByGrapheme: true,
+      splitByGrapheme: false,
       editable: editable,
     });
   }
@@ -344,10 +348,11 @@ export default function ArtifactEditor({
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
   /** Raw input text, so the admin can clear the field without writing a 0. */
   const [fontSizeInput, setFontSizeInput] = useState(String(DEFAULT_FONT_SIZE));
+  const fontSizeInputRef = useRef<HTMLInputElement | null>(null);
   const [fontWeight, setFontWeight] = useState<'normal' | 'bold'>('normal');
   const [fontStyle, setFontStyle] = useState<'normal' | 'italic'>('normal');
   const [underline, setUnderline] = useState(false);
-  const [lineHeight, setLineHeight] = useState<number>(1.16);
+  const [lineHeight, setLineHeight] = useState<number>(TEXT_LINE_HEIGHT);
   const [textShadow, setTextShadow] = useState(false);
   const [shadowBlur, setShadowBlur] = useState<number>(4);
   const [shapeFill, setShapeFill] = useState('#5C2E16');
@@ -429,20 +434,22 @@ export default function ArtifactEditor({
     // The content field edits one box at a time; anything else clears it.
     setTextContent(texts.length === 1 && selectedText ? (selectedText.text ?? '') : '');
     if (selectedText) {
-      setFontFamily(selectedText.fontFamily || DEFAULT_FONT_FAMILY);
+      setFontFamily(resolveCatalogFontFamily(selectedText.fontFamily || DEFAULT_FONT_FAMILY));
       setFontColor(
         toStrictHexColor(selectedText.fill, DEFAULT_FONT_COLOR) ?? DEFAULT_FONT_COLOR
       );
       const size = normalizeFontSize(selectedText.fontSize);
       setFontSize(size);
-      setFontSizeInput(String(size));
+      if (!fontSizeInputRef.current || document.activeElement !== fontSizeInputRef.current) {
+        setFontSizeInput(String(size));
+      }
       setFontWeight(selectedText.fontWeight === 'bold' ? 'bold' : 'normal');
       setFontStyle(selectedText.fontStyle === 'italic' ? 'italic' : 'normal');
       setUnderline(Boolean((selectedText as any).underline));
       setLineHeight(
         typeof (selectedText as any).lineHeight === 'number'
           ? (selectedText as any).lineHeight
-          : 1.16
+          : TEXT_LINE_HEIGHT
       );
       setTextShadow(Boolean((selectedText as any).shadow));
       if ((selectedText as any).shadow && typeof (selectedText as any).shadow.blur === 'number') {
@@ -1386,7 +1393,7 @@ export default function ArtifactEditor({
       const clonedStyle: TextStyle & ImageStyle & ShapeStyle = source.style ? { ...source.style } : {};
 
       if (source.type === 'text' && isFabricTextObject(obj)) {
-        if (obj.fontFamily) clonedStyle.fontFamily = obj.fontFamily;
+        if (obj.fontFamily) clonedStyle.fontFamily = resolveCatalogFontFamily(obj.fontFamily);
         if (typeof obj.fontSize === 'number') clonedStyle.fontSize = normalizeFontSize(obj.fontSize);
         const fillHex = toStrictHexColor(obj.fill, undefined);
         if (fillHex) clonedStyle.fontColor = fillHex;
@@ -1503,7 +1510,7 @@ export default function ArtifactEditor({
     let updated = false;
     for (const obj of canvas.getActiveObjects()) {
       if (!isFabricTextObject(obj)) continue;
-      obj.set({ fontFamily: family });
+      obj.set({ fontFamily: getFontStack(family) });
       const objData = (obj as any).data;
       if (objData) {
         objData.authoredHeight = (obj.height ?? 0) * (obj.scaleY ?? 1);
@@ -1638,18 +1645,19 @@ export default function ArtifactEditor({
 
   const handleFontSizeInput = (raw: string) => {
     setFontSizeInput(raw);
-    const parsed = Number(raw);
-    // An empty field is `Number('') === 0`; never commit that — the server
-    // rejects the entire save with an opaque `style.fontSize must be positive`.
-    if (!raw.trim() || !Number.isFinite(parsed) || parsed <= 0) return;
-    const clamped = clampFontSize(parsed);
-    setFontSize(clamped);
+  };
+
+  const handleFontSizeCommit = () => {
+    const result = commitFontSizeFromDraft(fontSizeInput, fontSize);
+    setFontSize(result.fontSize);
+    setFontSizeInput(result.inputValue);
+
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
     let updated = false;
     for (const obj of canvas.getActiveObjects()) {
       if (!isFabricTextObject(obj)) continue;
-      obj.set({ fontSize: clamped });
+      obj.set({ fontSize: result.fontSize });
       const objData = (obj as any).data;
       if (objData) {
         objData.authoredHeight = (obj.height ?? 0) * (obj.scaleY ?? 1);
@@ -1658,7 +1666,6 @@ export default function ArtifactEditor({
     }
     if (updated) {
       canvas.requestRenderAll();
-      syncSelection(canvas);
       markDirty();
     }
   };
@@ -2840,12 +2847,18 @@ export default function ArtifactEditor({
                           title="Font Color"
                         />
                         <Input
+                          ref={fontSizeInputRef}
                           type="number"
                           min={MIN_FONT_SIZE}
                           max={MAX_FONT_SIZE}
                           value={fontSizeInput}
                           onChange={(e) => handleFontSizeInput(e.target.value)}
-                          onBlur={() => setFontSizeInput(String(fontSize))}
+                          onBlur={handleFontSizeCommit}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.currentTarget.blur();
+                            }
+                          }}
                           className="w-20 h-7 text-xs text-center"
                           title="Font Size"
                         />

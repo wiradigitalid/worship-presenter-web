@@ -217,10 +217,11 @@ test('T-20-08, T-20-09, T-20-12: SPEC-20-04 serializeCanvas Textbox Auto-Sync, C
     new Map()
   );
   assert.equal(serializedBottom.length, 1);
-  // Clamped so 85 + h <= 100 (h <= 15)
-  assert.ok(
-    serializedBottom[0].h <= 15.01,
-    `Height must be clamped to slide boundary, got ${serializedBottom[0].h}`
+  // SPEC-21-02 supersedes SPEC-20-04 clamping: off-canvas height is preserved (30%)
+  assert.equal(
+    serializedBottom[0].h,
+    30,
+    `Height must be preserved for off-canvas bleeding (SPEC-21-02), got ${serializedBottom[0].h}`
   );
 
   // Test Horizontal Width Expansion: un-resized text whose measured width exceeds authored width
