@@ -1057,7 +1057,7 @@ waves:
           - tests/smoke-spec-19.test.mjs
 
   - id: SPEC-20
-    status: open
+    status: closed
     release: artifacts-canvas-wysiwyg-and-controls
     prd: [offline-deck]
     fr: [FR-20]

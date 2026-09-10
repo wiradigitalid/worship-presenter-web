@@ -450,6 +450,8 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'admin.artifacts.markerSpineNote':
     'This row is a marker that expands an Announcement Set. It has no authorable canvas of its own.',
   'admin.artifacts.markerChip': 'marker',
+  'admin.artifacts.songSetDynamicNote':
+    'Song set slides are rendered dynamically from the Song Database; to customize song lyrics, edit the song in Song Catalog.',
   'admin.songSets.title': 'Song Set Entries',
   'admin.songSets.active': 'Active:',
   'admin.songSets.editsApplyAll': 'Edits apply to all {count} song set entries',

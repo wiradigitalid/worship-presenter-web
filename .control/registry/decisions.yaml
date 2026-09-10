@@ -472,7 +472,7 @@ decisions:
       - tests/artifact-editor-layout.test.mjs
   - id: DEC-022
     type: mandate
-    status: accepted
+    status: applied
     accepted_by: "kodesh87 (2026-09-10)"
     title: Autopilot mandate for Artifacts Canvas WYSIWYG Auto-Sync, Live Drag Rubberband, Layout Stability & Combobox Font Picker (SPEC-20)
     file: .control/decisions/DEC-022-autopilot-mandate-artifacts-canvas-wysiwyg-and-controls.md
