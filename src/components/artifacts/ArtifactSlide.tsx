@@ -140,7 +140,9 @@ function TextElement({ element }: { element: ResolvedElement }) {
           width: '100%',
           whiteSpace: 'pre-wrap',
           lineHeight: typeof style?.lineHeight === 'number' ? style.lineHeight : TEXT_LINE_HEIGHT,
-          textShadow: style?.textShadow ? '2px 2px 4px rgba(0, 0, 0, 0.8)' : undefined,
+          textShadow: style?.textShadow
+            ? `2px 2px ${typeof style.textShadowBlur === 'number' ? style.textShadowBlur : 4}px rgba(0, 0, 0, 0.8)`
+            : undefined,
           fontSize: `calc(1em * var(${FIT_SCALE_VAR}, 1))`,
         }}
       >

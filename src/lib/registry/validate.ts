@@ -70,6 +70,7 @@ const ALLOWED_STYLE_KEYS = new Set([
   'opacity',
   'lineHeight',
   'textShadow',
+  'textShadowBlur',
 ]);
 
 export class RegistryValidationError extends Error {
@@ -225,6 +226,13 @@ function parseStyle(value: unknown, label: string) {
       throw new RegistryValidationError(`${label}.textShadow must be a boolean`);
     }
     style.textShadow = obj.textShadow;
+  }
+  if (obj.textShadowBlur !== undefined) {
+    const blur = parseFiniteNumber(obj.textShadowBlur, `${label}.textShadowBlur`);
+    if (blur < 0 || blur > 20) {
+      throw new RegistryValidationError(`${label}.textShadowBlur must be 0..20`);
+    }
+    style.textShadowBlur = Math.round(blur);
   }
   return style;
 }

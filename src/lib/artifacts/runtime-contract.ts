@@ -46,6 +46,7 @@ export type ResolvedStyle = {
   opacity?: number;
   lineHeight?: number;
   textShadow?: boolean;
+  textShadowBlur?: number;
 };
 
 export type ResolvedElement = {

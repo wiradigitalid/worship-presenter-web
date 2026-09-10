@@ -62,6 +62,10 @@ import {
   FontCategory,
 } from '@/lib/registry/font-catalog';
 
+const FONT_ITEMS_MAP: Record<string, string> = Object.fromEntries(
+  FONT_CATALOG.map((f) => [f.family, f.label])
+);
+
 import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
@@ -161,7 +165,16 @@ function elementToFabricObject(
       ...(style?.fontStyle !== undefined ? { fontStyle: style.fontStyle } : {}),
       ...(style?.textDecoration === 'underline' ? { underline: true } : {}),
       ...(style?.lineHeight !== undefined ? { lineHeight: style.lineHeight } : {}),
-      ...(style?.textShadow ? { shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: 4, offsetX: 2, offsetY: 2 }) } : {}),
+      ...(style?.textShadow
+        ? {
+            shadow: new fabric.Shadow({
+              color: 'rgba(0,0,0,0.8)',
+              blur: typeof style.textShadowBlur === 'number' ? style.textShadowBlur : 4,
+              offsetX: 2,
+              offsetY: 2,
+            }),
+          }
+        : {}),
       textAlign: style?.textAlign ?? DEFAULT_TEXT_ALIGN,
       splitByGrapheme: true,
       editable: editable,
@@ -301,7 +314,7 @@ export default function ArtifactEditor({
   bannerNote = null,
   prefixListSlot = null,
 }: ArtifactEditorProps = {}) {
-  const { t } = useT();
+  const { t, locale } = useT();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasShellRef = useRef<HTMLDivElement | null>(null);
   const fabricCanvasRef = useRef<import('fabric').Canvas | null>(null);
@@ -313,6 +326,7 @@ export default function ArtifactEditor({
   const [status, setStatus] = useState<EditorStatus>('loading');
   const [message, setMessage] = useState<string | null>(null);
   const [fontFamily, setFontFamily] = useState(DEFAULT_FONT_FAMILY);
+  const [fontSearchQuery, setFontSearchQuery] = useState('');
   const [fontColor, setFontColor] = useState(DEFAULT_FONT_COLOR);
   /** Committed font size: always finite and positive, safe for the server. */
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
@@ -420,6 +434,8 @@ export default function ArtifactEditor({
       setTextShadow(Boolean((selectedText as any).shadow));
       if ((selectedText as any).shadow && typeof (selectedText as any).shadow.blur === 'number') {
         setShadowBlur((selectedText as any).shadow.blur);
+      } else {
+        setShadowBlur(4);
       }
     }
     const shapes = active.filter((obj) => (obj as any).type === 'rect' && !(obj as any).data?.imageRef);
@@ -2530,7 +2546,16 @@ export default function ArtifactEditor({
                         {/* Font Family Selector */}
                         <Select
                           value={fontFamily}
-                          onValueChange={handleFontFamilyChange}
+                          onValueChange={(val) => {
+                            handleFontFamilyChange(val);
+                            setFontSearchQuery('');
+                          }}
+                          onOpenChange={(open) => {
+                            if (!open) {
+                              setFontSearchQuery('');
+                            }
+                          }}
+                          items={FONT_ITEMS_MAP}
                           disabled={busy}
                         >
                           <SelectTrigger
@@ -2540,15 +2565,34 @@ export default function ArtifactEditor({
                           >
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="max-h-72">
+                          <SelectContent className="max-h-72 w-[240px]">
+                            <div
+                              className="p-1.5 sticky top-0 bg-popover z-10 border-b border-border"
+                              onKeyDown={(e) => e.stopPropagation()}
+                            >
+                              <Input
+                                type="text"
+                                placeholder={t('admin.artifacts.searchFonts')}
+                                value={fontSearchQuery}
+                                onChange={(e) => setFontSearchQuery(e.target.value)}
+                                onKeyDown={(e) => e.stopPropagation()}
+                                className="h-7 text-xs"
+                                autoFocus
+                              />
+                            </div>
                             {(['system', 'sans', 'serif', 'display', 'script'] as FontCategory[]).map(
                               (category) => {
-                                const fonts = FONT_CATALOG.filter((f) => f.category === category);
+                                const query = fontSearchQuery.trim().toLowerCase();
+                                const fonts = FONT_CATALOG.filter(
+                                  (f) =>
+                                    f.category === category &&
+                                    (query === '' || f.label.toLowerCase().includes(query))
+                                );
                                 if (fonts.length === 0) return null;
                                 return (
                                   <SelectGroup key={category}>
-                                    <SelectLabel className="font-semibold text-[11px]">
-                                      {FONT_CATEGORY_LABELS[category].en}
+                                    <SelectLabel className="bg-muted/90 px-2.5 py-1 text-foreground font-bold tracking-wide rounded-sm my-1 border-l-2 border-primary text-[11px] select-none">
+                                      {FONT_CATEGORY_LABELS[category][locale] ?? FONT_CATEGORY_LABELS[category].en}
                                     </SelectLabel>
                                     {fonts.map((f) => (
                                       <SelectItem

@@ -1479,6 +1479,97 @@ test('SPEC-14-05 / BUG-22: Text shadow toggle and conditional slider controls', 
   );
 });
 
+test('SPEC-18-01: textShadowBlur schema validation, serialization, and removal on toggle', () => {
+  const validTemplate = {
+    schemaVersion: 1,
+    id: 'test-shadow-blur',
+    label: 'Test Shadow Blur',
+    baseType: 'general',
+    placeholders: [],
+    layouts: {
+      default: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [
+          {
+            id: 'e1',
+            type: 'text',
+            required: false,
+            x: 10,
+            y: 10,
+            w: 80,
+            h: 30,
+            zIndex: 0,
+            content: 'Hello World',
+            style: {
+              fontSize: 32,
+              textShadow: true,
+              textShadowBlur: 15,
+            },
+          },
+        ],
+      },
+    },
+  };
+
+  const validated = validateArtifactTemplate(validTemplate);
+  assert.equal(validated.layouts.default.elements[0].style.textShadowBlur, 15);
+
+  // Negative validation tests: blur < 0, blur > 20, non-number
+  assert.throws(() => {
+    validateArtifactTemplate({
+      ...validTemplate,
+      layouts: {
+        default: {
+          ...validTemplate.layouts.default,
+          elements: [{ ...validTemplate.layouts.default.elements[0], style: { fontSize: 32, textShadow: true, textShadowBlur: -1 } }],
+        },
+      },
+    });
+  }, /textShadowBlur must be 0\.\.20/);
+
+  assert.throws(() => {
+    validateArtifactTemplate({
+      ...validTemplate,
+      layouts: {
+        default: {
+          ...validTemplate.layouts.default,
+          elements: [{ ...validTemplate.layouts.default.elements[0], style: { fontSize: 32, textShadow: true, textShadowBlur: 21 } }],
+        },
+      },
+    });
+  }, /textShadowBlur must be 0\.\.20/);
+
+  // Serialization tests
+  const sourceWithShadow = {
+    id: 'e1',
+    type: 'text',
+    required: false,
+    x: 0,
+    y: 0,
+    w: 100,
+    h: 100,
+    zIndex: 0,
+    style: {
+      textShadow: true,
+      textShadowBlur: 4,
+    },
+  };
+
+  const serializedBlur = serializeTextStyle(sourceWithShadow, {
+    shadow: { color: 'rgba(0,0,0,0.8)', blur: 12 },
+  });
+  assert.equal(serializedBlur?.textShadow, true);
+  assert.equal(serializedBlur?.textShadowBlur, 12);
+
+  // Disabling shadow deletes both textShadow and textShadowBlur
+  const serializedDisabled = serializeTextStyle(sourceWithShadow, {
+    shadow: null,
+  });
+  assert.equal(serializedDisabled?.textShadow, undefined);
+  assert.equal(serializedDisabled?.textShadowBlur, undefined);
+});
+
 test('SPEC-14-01 / BUG-7: Canvas image drag clipBox synchronization during active movement', async () => {
   const fs = await import('node:fs');
 
@@ -2050,6 +2141,87 @@ test('SPEC-17-03: PPTX and Web Slide font family resolution and fallbacks', asyn
   assert.ok(
     editorCode.includes('setFontFamily(selectedText.fontFamily || DEFAULT_FONT_FAMILY)'),
     'syncSelection must extract and set fontFamily state from selectedText'
+  );
+});
+
+test('SPEC-18-03: Textbox width resize serialization & seed conformance', async () => {
+  const layout = {
+    aspectRatio: '16:9',
+    backgroundColor: '#000000',
+    elements: [
+      {
+        id: 'e1',
+        type: 'text',
+        required: false,
+        x: 10,
+        y: 10,
+        w: 56.42,
+        h: 20,
+        zIndex: 0,
+        content: 'Welcome to',
+        style: { fontSize: 114 },
+      },
+    ],
+  };
+
+  // 1. Widening a text element via side handles (scaleX === 1, obj.width increased)
+  const widenedTextObj = new MockFabricText('Welcome to', {
+    data: { elementId: 'e1' },
+    left: 96,
+    top: 54,
+    width: 750, // 750 / 960 * 100 = 78.125%
+    height: 108,
+    scaleX: 1,
+    scaleY: 1,
+  });
+
+  const canvasWidened = new MockCanvas([widenedTextObj]);
+  const serializedWidened = serializeCanvas(canvasWidened, layout, new Map());
+  assert.equal(serializedWidened.length, 1);
+  assert.ok(
+    Math.abs(serializedWidened[0].w - 78.125) < 0.01,
+    `Widened text box must persist updated w (~78.125%), got ${serializedWidened[0].w}`
+  );
+  assert.notEqual(serializedWidened[0].w, 56.42, 'Widened text box must not revert to 56.42%');
+
+  // 2. Corner-scaling a text element (scaleX !== 1)
+  const cornerScaledTextObj = new MockFabricText('Welcome to', {
+    data: { elementId: 'e1' },
+    left: 96,
+    top: 54,
+    width: 480,
+    height: 108,
+    scaleX: 1.5, // visual width = 480 * 1.5 = 720px -> 720/960 = 75%
+    scaleY: 1.5,
+  });
+
+  const canvasCornerScaled = new MockCanvas([cornerScaledTextObj]);
+  const serializedCorner = serializeCanvas(canvasCornerScaled, layout, new Map());
+  assert.equal(serializedCorner.length, 1);
+  assert.ok(
+    Math.abs(serializedCorner[0].w - 75.0) < 0.01,
+    `Corner-scaled text box must persist updated w (~75%), got ${serializedCorner[0].w}`
+  );
+
+  // 3. Untouched text element preserves exact source.w (56.42) without floating point noise
+  const untouchedWidthPx = (56.42 / 100) * 960; // 541.632
+  const untouchedTextObj = new MockFabricText('Welcome to', {
+    data: { elementId: 'e1' },
+    left: 96,
+    top: 54,
+    width: untouchedWidthPx,
+    height: 108,
+    scaleX: 1,
+    scaleY: 1,
+  });
+
+  const canvasUntouched = new MockCanvas([untouchedTextObj]);
+  const serializedUntouched = serializeCanvas(canvasUntouched, layout, new Map());
+  assert.equal(serializedUntouched.length, 1);
+  assert.equal(
+    serializedUntouched[0].w,
+    56.42,
+    'Untouched element must preserve exact source.w without floating point jitter'
   );
 });
 

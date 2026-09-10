@@ -75,6 +75,7 @@ export type TextStyle = {
   verticalAlign?: 'top' | 'middle' | 'bottom';
   lineHeight?: number;
   textShadow?: boolean;
+  textShadowBlur?: number;
 };
 
 export type ImageStyle = {

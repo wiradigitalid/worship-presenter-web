@@ -970,7 +970,7 @@ waves:
           - tests/artifact-editor-controls.test.mjs
 
   - id: SPEC-18
-    status: open
+    status: closed
     release: artifacts-typography-persistence
     prd: [offline-deck]
     fr: [FR-20]

@@ -212,8 +212,18 @@ export function serializeTextStyle(
   }
   if (textObj.shadow) {
     style.textShadow = true;
-  } else if (source.style?.textShadow) {
-    delete style.textShadow;
+    const blur = (textObj.shadow as { blur?: unknown })?.blur;
+    const numBlur = typeof blur === 'number' && Number.isFinite(blur) ? blur : Number(blur);
+    style.textShadowBlur = Number.isFinite(numBlur)
+      ? Math.max(0, Math.min(20, Math.round(numBlur)))
+      : 4;
+  } else {
+    if (source.style?.textShadow || style.textShadow) {
+      delete style.textShadow;
+    }
+    if (source.style?.textShadowBlur !== undefined || style.textShadowBlur !== undefined) {
+      delete style.textShadowBlur;
+    }
   }
   setIfMeaningful(
     'textAlign',
@@ -303,16 +313,19 @@ export function serializeCanvas(
     const measuredWidth = Math.abs(obj.width ?? 0) * scaleX;
     const measuredHeight = Math.abs(obj.height ?? 0) * scaleY;
 
-    const w = isText
-      ? source.w * scaleX
-      : measuredWidth === authoredWidth
-        ? source.w
-        : pxToPct(measuredWidth, CANVAS_WIDTH);
+    const isWidthResized = Math.abs(measuredWidth - authoredWidth) > 1;
+    const isHeightResized = Math.abs(measuredHeight - authoredHeight) > 1;
+
+    const w = isWidthResized
+      ? pxToPct(measuredWidth, CANVAS_WIDTH)
+      : source.w;
     const h = isText
-      ? source.h * scaleY
-      : measuredHeight === authoredHeight
-        ? source.h
-        : pxToPct(measuredHeight, CANVAS_HEIGHT);
+      ? scaleY !== 1
+        ? source.h * scaleY
+        : source.h
+      : isHeightResized
+        ? pxToPct(measuredHeight, CANVAS_HEIGHT)
+        : source.h;
 
     const next: CanvasElement = {
       ...source,

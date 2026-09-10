@@ -264,7 +264,16 @@ function renderTextElement(slide: PptxSlide, element: ResolvedElement): void {
     align: resolveTextAlign(style),
     valign: resolveVerticalAlign(style),
     lineSpacingMultiple: typeof style?.lineHeight === 'number' ? style.lineHeight : undefined,
-    shadow: style?.textShadow ? { type: 'outer', color: '000000', blur: 3, offset: 2, angle: 45, opacity: 0.8 } : undefined,
+    shadow: style?.textShadow
+      ? {
+          type: 'outer',
+          color: '000000',
+          blur: typeof style.textShadowBlur === 'number' ? style.textShadowBlur : 4,
+          offset: 2,
+          angle: 45,
+          opacity: 0.8,
+        }
+      : undefined,
   });
 }
 
