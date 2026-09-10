@@ -52,6 +52,32 @@ and saved without touching a style control produces no new style keys.
 server would reject the payload. Adding it is a spine-level change to the allowed style keys plus both
 render paths (PPTX and projector), which no wave has taken. **OQ-41**.
 
+## Presentation view auto-shrink and PPTX 0.75 pt/px equivalence
+
+### Typography scale and PPTX equivalence (0.75 pt/px)
+
+The web reference canvas is authored in CSS pixels on a 960 × 540 viewport (16:9 aspect ratio). PowerPoint and Office Open XML decks measure slide dimensions in inches and typography in typographic points (`1 in = 72 pt`). Standard 16:9 presentation slides are 10 in × 5.625 in (720 pt × 405 pt).
+
+The exact conversion factor is:
+$$\text{Ratio} = \frac{405\text{ pt}}{540\text{ px}} = 0.75\text{ pt/px}$$
+
+A font size authored as 50px on canvas maps to $50 \times 0.75 = 37.5\text{ pt}$ in PowerPoint. In both coordinate spaces, the text glyphs occupy exactly $50 / 540 = 9.259\%$ of the total slide height. Visual proportions are 100% physically identical.
+
+### Auto-shrink policy in presentation and export
+
+To guarantee that worship lyrics and titles never spill outside the projector frame during live services:
+- **Web presentation view (`ArtifactSlide.tsx`)**: Uses `largestFittingTextScale` with CSS container queries (`cqh`) and `ResizeObserver`. If rendered text content height exceeds its authored bounding box (`w` × `h`), the slide renderer auto-scales `--fit-scale` downwards (quantized by 0.05 steps) so all lines fit within the box.
+- **PPTX export (`src/lib/pptx-draw.ts`)**: Runs `estimateTextFitScale(element)` from `render-model.ts`, reducing font point size when line breaks or text length exceed the container.
+
+Element coordinates `x` and `y` do **not** shift during auto-shrink. However, when text downscales inside a flex container, alignment rules (`textAlign` and `verticalAlign`) position the smaller block within the authored bounding box, which can visually appear shifted relative to unconstrained text that was overflowing the box in the editor canvas.
+
+### Canvas overflow feedback
+
+In `ArtifactEditor.tsx`, `fabric.Textbox` renders text unconstrained at full authored font size. When an active text element's rendered height exceeds its authored bounding box height, the properties toolbar displays a non-blocking informational badge:
+`⚠️ Text exceeds box bounds; presentation and PPTX will auto-shrink text to fit.`
+
+Operators can eliminate auto-shrink by resizing the textbox bounding box (increasing `w` or `h` using canvas resize handles) so the authored container accommodates the text at the desired font size.
+
 ## What an operator sees when a save is refused
 
 The five lanes for the underlying route are `02-contracts/01-artifacts.md`'s, not restated here. The one

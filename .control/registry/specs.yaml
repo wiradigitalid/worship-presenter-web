@@ -1005,7 +1005,7 @@ waves:
           - tests/artifact-editor-controls.test.mjs
 
   - id: SPEC-19
-    status: open
+    status: closed
     release: artifacts-canvas-interactions
     prd: [offline-deck]
     fr: [FR-20]

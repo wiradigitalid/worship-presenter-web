@@ -131,10 +131,10 @@ rtm:
   release: artifacts-canvas-interactions
   test:
   - tests/smoke-spec-19.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-6
   FR: FR-15
@@ -713,10 +713,10 @@ rtm:
   test:
   - tests/smoke-spec-19.test.mjs
   - tests/artifact-editor-layout.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -728,10 +728,10 @@ rtm:
   test:
   - tests/smoke-spec-19.test.mjs
   - tests/artifact-editor-controls.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -743,10 +743,10 @@ rtm:
   test:
   - tests/smoke-spec-19.test.mjs
   - tests/artifact-editor-controls.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -757,10 +757,10 @@ rtm:
   release: artifacts-canvas-interactions
   test:
   - tests/smoke-spec-19.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -1740,10 +1740,10 @@ rtm:
   test:
   - tests/smoke-spec-19.test.mjs
   - tests/artifact-editor-layout.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -1755,10 +1755,10 @@ rtm:
   test:
   - tests/smoke-spec-19.test.mjs
   - tests/artifact-editor-controls.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -1770,10 +1770,10 @@ rtm:
   test:
   - tests/smoke-spec-19.test.mjs
   - tests/artifact-editor-controls.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -1784,10 +1784,10 @@ rtm:
   release: artifacts-canvas-interactions
   test:
   - tests/smoke-spec-19.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30

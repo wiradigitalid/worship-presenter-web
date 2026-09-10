@@ -349,6 +349,25 @@ export function serializeCanvas(
       }
     }
 
+    if (source.type === 'shape') {
+      const fill =
+        toStrictHexColor((obj as any).fill, undefined) ??
+        (typeof (obj as any).fill === 'string' && /^#[0-9A-Fa-f]{6}$/.test((obj as any).fill)
+          ? (obj as any).fill.toUpperCase()
+          : undefined);
+      const opacity = typeof (obj as any).opacity === 'number' ? (obj as any).opacity : undefined;
+      const mergedStyle = {
+        ...source.style,
+        ...(fill ? { fillColor: fill } : {}),
+        ...(opacity !== undefined ? { opacity } : {}),
+      };
+      if (Object.keys(mergedStyle).length > 0) {
+        next.style = mergedStyle;
+      } else {
+        delete next.style;
+      }
+    }
+
     const rank =
       sourceRank.get(elementId) ?? layout.elements.length + canvasIndex;
     return [{ rank, next }];
