@@ -20,11 +20,13 @@ import {
 import {
   PPTX_SLIDE_HEIGHT_IN,
   PPTX_SLIDE_WIDTH_IN,
+  TEXT_LINE_HEIGHT,
   estimateTextFitScale,
   resolveBold,
   resolveElementImage,
   resolveElementText,
   resolveElementTextForPptx,
+  resolveTextRunsForPptx,
   resolveFontFamily,
   resolveItalic,
   resolveUnderline,
@@ -225,8 +227,9 @@ function addImageUnavailable(slide: PptxSlide, box: PptxBox): void {
 }
 
 function renderTextElement(slide: PptxSlide, element: ResolvedElement): void {
-  const text = resolveElementTextForPptx(element);
-  if (text === undefined) return;
+  const fallbackText = resolveElementTextForPptx(element);
+  if (fallbackText === undefined) return;
+  const textRuns = resolveTextRunsForPptx(element) ?? fallbackText;
 
   const geometry = toPptxGeometry(element);
   const style = element.style;
@@ -252,7 +255,7 @@ function renderTextElement(slide: PptxSlide, element: ResolvedElement): void {
       ? Math.round(geometry.fontSize * scale * 100) / 100
       : geometry.fontSize;
 
-  slide.addText(text, {
+  slide.addText(textRuns as any, {
     x: geometry.x,
     y: geometry.y,
     w: geometry.w,
@@ -267,7 +270,10 @@ function renderTextElement(slide: PptxSlide, element: ResolvedElement): void {
     underline: resolveUnderline(style) ? { style: 'sng' } : undefined,
     align: resolveTextAlign(style),
     valign: resolveVerticalAlign(style),
-    lineSpacingMultiple: typeof style?.lineHeight === 'number' ? style.lineHeight : undefined,
+    lineSpacingMultiple:
+      typeof style?.lineHeight === 'number' && style.lineHeight > 0
+        ? style.lineHeight
+        : TEXT_LINE_HEIGHT,
     shadow: style?.textShadow
       ? {
           type: 'outer',
@@ -483,9 +489,35 @@ async function injectSlideTransitions(
 }
 
 /**
+ * SPEC-23-04: Enforce explicit fontScale on <a:normAutofit/>.
+ * Replaces bare <a:normAutofit/> or <a:normAutofit .../> with <a:normAutofit fontScale="100000"/>.
+ * Because renderTextElement bakes the estimated fit scale into run font sizes directly,
+ * fontScale="100000" (per-mille = 100%) instructs PowerPoint and LibreOffice that text fits
+ * and prevents readers from computing divergent autofit scales of their own at layout time.
+ */
+async function patchAutofitFontScale(zip: JSZip): Promise<void> {
+  const slideFiles = Object.keys(zip.files).filter((name) =>
+    /^ppt\/slides\/slide\d+\.xml$/.test(name)
+  );
+
+  for (const name of slideFiles) {
+    const file = zip.file(name);
+    if (!file) continue;
+    const xml = await file.async('string');
+    if (!xml.includes('normAutofit')) continue;
+
+    // Replace bare <a:normAutofit/> or any <a:normAutofit .../> with explicit fontScale="100000"
+    const patched = xml.replace(/<a:normAutofit(\s+[^>]*)?\/>/g, '<a:normAutofit fontScale="100000"/>');
+    if (patched !== xml) {
+      zip.file(name, patched);
+    }
+  }
+}
+
+/**
  * Single post-processing pass over the written archive.
  *
- * Dedup and transition injection share one JSZip instance and one re-emit. The
+ * Dedup, transition injection, and autofit patch share one JSZip instance and one re-emit. The
  * re-emit uses DEFLATE — pptxgenjs writes with the JSZip default (STORE), so
  * every previous round-trip shipped the archive uncompressed.
  *
@@ -511,6 +543,12 @@ async function postProcessArchive(
       await injectSlideTransitions(zip, slideIndexes, transition);
     } catch (error) {
       console.error('[pptx] slide transition injection skipped:', error);
+    }
+
+    try {
+      await patchAutofitFontScale(zip);
+    } catch (error) {
+      console.error('[pptx] autofit fontScale patch skipped:', error);
     }
 
     const out = await zip.generateAsync({

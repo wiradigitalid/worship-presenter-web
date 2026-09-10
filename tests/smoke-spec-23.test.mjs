@@ -26,10 +26,16 @@ const {
   estimateTextFitScale,
   resolveWrapLineCount,
   estimateWrappedLineCount,
+  resolveTextRunsForPptx,
   MIN_TEXT_FIT_SCALE,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'artifacts', 'render-model.ts')).href
 );
+
+const { generatePptxFromPlan } = await import(
+  pathToFileURL(path.join(root, 'src', 'lib', 'pptx-draw.ts')).href
+);
+const JSZip = (await import('jszip')).default;
 
 const {
   CANVAS_WIDTH,
@@ -743,5 +749,171 @@ test('T-23-19: Sub-floor branch is named and respected on F-5', () => {
 
   const scale = estimateTextFitScale(f5Element);
   assert.equal(scale, MIN_TEXT_FIT_SCALE, `sub-floor element must clamp to floor ${MIN_TEXT_FIT_SCALE}, got ${scale}`);
+});
+
+// --------------------------------------------------------------------------
+// SPEC-23-04 Tests: OOXML Emission Fidelity
+// --------------------------------------------------------------------------
+
+test('T-23-08: Soft wraps are <a:br/> inside one paragraph; operator newlines are separate <a:p>', async () => {
+  // 1. resolveTextRunsForPptx pure tests
+  const singleParaElement = {
+    id: 'sp-1',
+    type: 'text',
+    x: 10,
+    y: 10,
+    w: 50,
+    h: 30,
+    zIndex: 0,
+    text: 'Bandung international community',
+    wrapLines: ['Bandung', 'international', 'community'],
+    style: {},
+  };
+
+  const runs = resolveTextRunsForPptx(singleParaElement);
+  assert.ok(Array.isArray(runs), 'wrapped element returns runs array');
+  assert.equal(runs.length, 3);
+  assert.equal(runs[0].text, 'Bandung');
+  assert.equal(runs[0].options?.softBreakBefore, undefined);
+  assert.equal(runs[1].text, 'international');
+  assert.equal(runs[1].options?.softBreakBefore, true);
+  assert.equal(runs[2].text, 'community');
+  assert.equal(runs[2].options?.softBreakBefore, true);
+
+  // 2. Multi-paragraph with soft wraps inside
+  const multiParaElement = {
+    id: 'mp-1',
+    type: 'text',
+    x: 10,
+    y: 10,
+    w: 50,
+    h: 30,
+    zIndex: 0,
+    text: 'Line 1 word\nLine 2 long wrapped text here',
+    wrapLines: ['Line 1 word', 'Line 2 long', 'wrapped text here'],
+    style: {},
+  };
+
+  const mpRuns = resolveTextRunsForPptx(multiParaElement);
+  assert.ok(Array.isArray(mpRuns));
+  assert.equal(mpRuns[0].text, 'Line 1 word');
+  assert.equal(mpRuns[0].options?.breakLine, true, 'first paragraph ends with breakLine');
+  assert.equal(mpRuns[1].text, 'Line 2 long');
+  assert.equal(mpRuns[1].options?.softBreakBefore, undefined);
+  assert.equal(mpRuns[2].text, 'wrapped text here');
+  assert.equal(mpRuns[2].options?.softBreakBefore, true);
+
+  // 3. End-to-end XML generation test: wrapped element emits 1 <a:p> with <a:br/>
+  const planItem = {
+    artifact: {
+      runtimeVersion: 1,
+      instanceId: 'test-inst-1',
+      templateId: 'test-tmpl-1',
+      label: 'Test',
+      baseType: 'general',
+      layoutKey: 'default',
+      layout: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [singleParaElement],
+      },
+    },
+  };
+
+  const buf = await generatePptxFromPlan('2026-09-10', [planItem], 'none');
+  const zip = await JSZip.loadAsync(buf);
+  const xml = await zip.file('ppt/slides/slide1.xml').async('string');
+
+  const pMatches = xml.match(/<a:p>[\s\S]*?<\/a:p>/g) || [];
+  const brMatches = xml.match(/<a:br\/>/g) || [];
+  assert.equal(pMatches.length, 1, 'wrapped text with no operator newlines must emit exactly 1 <a:p>');
+  assert.equal(brMatches.length, 2, 'wrapped text with 3 lines must emit 2 <a:br/> elements');
+});
+
+test('T-23-09: Explicit normAutofit fontScale="100000" in slide bodyPr', async () => {
+  const planItem = {
+    artifact: {
+      runtimeVersion: 1,
+      instanceId: 'test-inst-autofit',
+      templateId: 'test-tmpl-autofit',
+      label: 'Test Autofit',
+      baseType: 'general',
+      layoutKey: 'default',
+      layout: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [
+          {
+            id: 'auto-1',
+            type: 'text',
+            x: 10,
+            y: 10,
+            w: 80,
+            h: 30,
+            zIndex: 0,
+            text: 'Autofit check text',
+            style: { fontSize: 40 },
+          },
+        ],
+      },
+    },
+  };
+
+  const buf = await generatePptxFromPlan('2026-09-10', [planItem], 'none');
+  const zip = await JSZip.loadAsync(buf);
+  const xml = await zip.file('ppt/slides/slide1.xml').async('string');
+
+  assert.ok(
+    xml.includes('<a:normAutofit fontScale="100000"/>'),
+    'slide XML must contain explicit fontScale="100000"'
+  );
+  assert.ok(
+    !xml.includes('<a:normAutofit/>') && !xml.includes('<a:normAutofit />'),
+    'slide XML must never contain bare <a:normAutofit/>'
+  );
+  assert.ok(
+    !xml.includes('lnSpcReduction'),
+    'slide XML must not contain lnSpcReduction'
+  );
+});
+
+test('T-23-10: Line spacing is always explicitly emitted with default TEXT_LINE_HEIGHT', async () => {
+  const planItem = {
+    artifact: {
+      runtimeVersion: 1,
+      instanceId: 'test-inst-lnspc',
+      templateId: 'test-tmpl-lnspc',
+      label: 'Test Line Spacing',
+      baseType: 'general',
+      layoutKey: 'default',
+      layout: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [
+          {
+            id: 'ln-1',
+            type: 'text',
+            x: 10,
+            y: 10,
+            w: 80,
+            h: 30,
+            zIndex: 0,
+            text: 'Default line spacing element',
+            style: { fontSize: 32 }, // no explicit lineHeight
+          },
+        ],
+      },
+    },
+  };
+
+  const buf = await generatePptxFromPlan('2026-09-10', [planItem], 'none');
+  const zip = await JSZip.loadAsync(buf);
+  const xml = await zip.file('ppt/slides/slide1.xml').async('string');
+
+  // TEXT_LINE_HEIGHT is 1.2 -> 120% -> spcPct val="120000"
+  assert.ok(
+    xml.includes('<a:spcPct val="120000"/>'),
+    'slide XML must contain explicit <a:spcPct val="120000"/> for default 1.2 line spacing'
+  );
 });
 

@@ -378,6 +378,104 @@ export function resolveWrapLineCount(element: ResolvedElement): number {
   return text.split('\n').length;
 }
 
+export type PptxTextRun = {
+  text: string;
+  options?: {
+    softBreakBefore?: boolean;
+    breakLine?: boolean;
+  };
+};
+
+/**
+ * SPEC-23-04: Resolves text runs for PPTX export.
+ * - When `wrapLines` is present, non-empty and coherent with resolved text:
+ *   Splits `text` on operator newlines into paragraphs, and within each paragraph,
+ *   splits on the soft-wrapped lines from `wrapLines`. Subsequent lines within a paragraph
+ *   carry `softBreakBefore: true` (<a:br/> inside one paragraph). The final line of an
+ *   intermediate paragraph carries `breakLine: true` (ending the <a:p>).
+ * - When `wrapLines` is absent or incoherent:
+ *   Returns the plain string `text`, emitting standard <a:p> elements per operator newline.
+ */
+export function resolveTextRunsForPptx(
+  element: ResolvedElement
+): string | PptxTextRun[] | undefined {
+  if (element.type !== 'text') return undefined;
+  const text = resolveElementText(element);
+  if (text === undefined) return undefined;
+
+  if (
+    !Array.isArray(element.wrapLines) ||
+    element.wrapLines.length === 0
+  ) {
+    return text;
+  }
+
+  const flatWrap = element.wrapLines.join(' ').replace(/\s+/g, ' ').trim();
+  const flatText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+  if (flatWrap !== flatText) {
+    return text;
+  }
+
+  const paragraphs = text.split('\n');
+  let wrapIndex = 0;
+  const runs: PptxTextRun[] = [];
+
+  for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+    const para = paragraphs[pIdx];
+    const isLastPara = pIdx === paragraphs.length - 1;
+    const paraWords = para.split(/\s+/).filter(Boolean);
+
+    if (paraWords.length === 0) {
+      runs.push({
+        text: '',
+        options: { breakLine: !isLastPara },
+      });
+      continue;
+    }
+
+    const paraLines: string[] = [];
+    let wordsCollected = 0;
+
+    while (wrapIndex < element.wrapLines.length && wordsCollected < paraWords.length) {
+      const candidate = element.wrapLines[wrapIndex];
+      const cWords = candidate.split(/\s+/).filter(Boolean).length;
+      if (cWords === 0) {
+        wrapIndex++;
+        continue;
+      }
+      if (wordsCollected + cWords <= paraWords.length) {
+        paraLines.push(candidate);
+        wordsCollected += cWords;
+        wrapIndex++;
+      } else {
+        // Words cross paragraph boundary -> malformed wrapLines, fallback to plain text
+        return text;
+      }
+    }
+
+    if (wordsCollected !== paraWords.length) {
+      // Could not cleanly partition wrapLines to paragraph -> fallback
+      return text;
+    }
+
+    for (let lIdx = 0; lIdx < paraLines.length; lIdx++) {
+      const lineText = paraLines[lIdx];
+      const isFirstInPara = lIdx === 0;
+      const isLastInPara = lIdx === paraLines.length - 1;
+
+      runs.push({
+        text: lineText,
+        options: {
+          ...(isFirstInPara ? {} : { softBreakBefore: true }),
+          ...(isLastInPara && !isLastPara ? { breakLine: true } : {}),
+        },
+      });
+    }
+  }
+
+  return runs.length > 0 ? runs : text;
+}
+
 /**
  * Resolves renderable text for PPTX export.
  * SPEC-22: When `wrapLines` is present (from Canvas soft-wrapping), joins lines with '\n'
