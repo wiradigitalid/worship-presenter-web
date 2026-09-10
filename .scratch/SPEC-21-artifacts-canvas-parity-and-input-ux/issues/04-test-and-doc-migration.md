@@ -1,6 +1,6 @@
 # SPEC-21-04 — Test & Documentation Migration
 
-**Status:** ready-for-agent
+**Status:** closed
 
 ## Component & Scope
 - **Component**: `registry` (Test Suites & Documentation)

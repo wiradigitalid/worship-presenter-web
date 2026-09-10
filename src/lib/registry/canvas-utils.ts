@@ -2,7 +2,10 @@ import type {
   ArtifactLayout,
   CanvasElement,
 } from '@/lib/registry/types';
-import { DEFAULT_FONT_FAMILY } from '@/lib/registry/font-catalog';
+import { DEFAULT_FONT_FAMILY, resolveCatalogFontFamily } from '@/lib/registry/font-catalog';
+import { TEXT_LINE_HEIGHT } from '@/lib/artifacts/render-model';
+
+export { TEXT_LINE_HEIGHT };
 
 export const CANVAS_WIDTH = 960;
 export const CANVAS_HEIGHT = 540;
@@ -58,6 +61,25 @@ export function toStrictHexColor(fill: unknown, fallback?: string): string | und
 
 export function clampFontSize(value: number) {
   return Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, value));
+}
+
+export function parseFontSizeDraft(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function commitFontSizeFromDraft(
+  raw: string,
+  committedFontSize: number
+): { fontSize: number; inputValue: string } {
+  const parsed = parseFontSizeDraft(raw);
+  if (parsed === null) {
+    return { fontSize: committedFontSize, inputValue: String(committedFontSize) };
+  }
+  const clamped = clampFontSize(parsed);
+  return { fontSize: clamped, inputValue: String(clamped) };
 }
 
 export function normalizeFontSize(value: unknown): number {
@@ -193,7 +215,13 @@ export function serializeTextStyle(
     typeof textObj.fontSize === 'number' ? textObj.fontSize : undefined,
     DEFAULT_FONT_SIZE
   );
-  setIfMeaningful('fontFamily', textObj.fontFamily, DEFAULT_FONT_FAMILY);
+  setIfMeaningful(
+    'fontFamily',
+    typeof textObj.fontFamily === 'string'
+      ? resolveCatalogFontFamily(textObj.fontFamily)
+      : undefined,
+    DEFAULT_FONT_FAMILY
+  );
   setIfMeaningful(
     'fontWeight',
     textObj.fontWeight === undefined ? undefined : String(textObj.fontWeight),
@@ -208,7 +236,7 @@ export function serializeTextStyle(
     }
   }
   if (typeof textObj.lineHeight === 'number') {
-    setIfMeaningful('lineHeight', Number(textObj.lineHeight.toFixed(2)), 1.16);
+    setIfMeaningful('lineHeight', Number(textObj.lineHeight.toFixed(2)), TEXT_LINE_HEIGHT);
   }
   if (textObj.shadow) {
     style.textShadow = true;
@@ -335,8 +363,9 @@ export function serializeCanvas(
     const computedX = left === authoredLeft ? source.x : pxToPct(left, CANVAS_WIDTH);
     const computedY = top === authoredTop ? source.y : pxToPct(top, CANVAS_HEIGHT);
 
-    const clampedW = Math.max(MIN_ELEMENT_W_PCT, Math.min(100 - computedX, w));
-    const clampedH = Math.max(MIN_ELEMENT_H_PCT, Math.min(100 - computedY, h));
+    // SPEC-21-02: Retain minimum dimension floor, but do not truncate off-canvas bleeding
+    const clampedW = Math.max(MIN_ELEMENT_W_PCT, w);
+    const clampedH = Math.max(MIN_ELEMENT_H_PCT, h);
 
     const next: CanvasElement = {
       ...source,

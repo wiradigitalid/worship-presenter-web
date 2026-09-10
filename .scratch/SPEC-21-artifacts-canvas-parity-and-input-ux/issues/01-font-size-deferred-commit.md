@@ -1,6 +1,6 @@
 # SPEC-21-01 — Font Size Input Deferred Commit
 
-**Status:** ready-for-agent
+**Status:** closed
 
 ## Component & Scope
 - **Component**: `registry` (Admin UI / Artifact Editor)

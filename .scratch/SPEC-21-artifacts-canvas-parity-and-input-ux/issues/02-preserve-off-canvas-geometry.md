@@ -1,6 +1,6 @@
 # SPEC-21-02 — Preserve Off-Canvas Geometry on Save
 
-**Status:** ready-for-agent
+**Status:** closed
 
 ## Component & Scope
 - **Component**: `registry` (Serializer & Canvas Models)
