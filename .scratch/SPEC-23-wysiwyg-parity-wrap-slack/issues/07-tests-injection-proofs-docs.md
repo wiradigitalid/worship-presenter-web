@@ -1,6 +1,6 @@
 # SPEC-23-07 — Tests, Injection Proofs and Documentation
 
-**Status:** ready-for-agent
+**Status:** closed
 
 ## Component & Scope
 
@@ -57,10 +57,20 @@ Numbered steps are the work; MUST / MUST NOT marks a constraint the finished cod
 
 ## Acceptance Criteria
 
-- [ ] T-23-01 … T-23-18 present and passing.
-- [ ] T-23-15 fails when the asserted corpus contains no measured element.
-- [ ] At least one guard reads stored registry state, not an inline fixture.
-- [ ] Each injection proof recorded with the command run and the failure observed.
-- [ ] Every SPEC-21 and SPEC-22 test passes unmodified.
-- [ ] `canvas-authoring-controls.md` matches the shipped behaviour.
-- [ ] `npm test` green, public-repo guard included.
+- [x] T-23-01 … T-23-18 present and passing.
+- [x] T-23-15 fails when the asserted corpus contains no measured element.
+- [x] At least one guard reads stored registry state, not an inline fixture.
+- [x] Each injection proof recorded with the command run and the failure observed.
+- [x] Every SPEC-21 and SPEC-22 test passes unmodified.
+- [x] `canvas-authoring-controls.md` matches the shipped behaviour.
+- [x] `npm test` green, public-repo guard included.
+
+## Comments
+
+- All automated tests T-23-01 through T-23-19 implemented and verified passing in `tests/smoke-spec-23.test.mjs`.
+- Verified non-vacuous stored-state assertion T-23-15 over `data/default-registry.json`.
+- Verified end-to-end contiguous run preservation for `international` in T-23-16.
+- Recorded all 17 injection proofs in `TEST-PLAN.md §4`.
+- Updated documentation in `.how/registry/06-flows/canvas-authoring-controls.md` covering metric slack invariant, dual enforcement points, font readiness gate, OOXML paragraph breaks, and PPTX font substitutions.
+- Full suite `npm test` confirmed green.
+

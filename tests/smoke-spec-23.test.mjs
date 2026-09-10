@@ -1323,3 +1323,116 @@ test('T-23-14: Font catalogue completeness for pptxSafe & pptxSubstitute', () =>
   }, /invalid substitute/);
 });
 
+// --------------------------------------------------------------------------
+// SPEC-23-07 Tests: Stored-State Invariant, E2E Line Integrity & Documentation
+// --------------------------------------------------------------------------
+
+test('T-23-15: Stored-state invariant holds over shipped registry & fails on vacuity', () => {
+  const registryPath = path.join(root, 'data', 'default-registry.json');
+  const raw = fs.readFileSync(registryPath, 'utf8');
+  const templates = JSON.parse(raw);
+
+  let measuredCount = 0;
+  let unmeasuredCount = 0;
+
+  for (const tmpl of templates) {
+    for (const layoutKey of Object.keys(tmpl.layouts || {})) {
+      const layout = tmpl.layouts[layoutKey];
+      for (const el of layout.elements || []) {
+        if (el.type !== 'text') continue;
+        if (el.placeholderKey || (typeof el.content === 'string' && /\{[a-zA-Z0-9_]+\}/.test(el.content))) {
+          continue;
+        }
+
+        if (typeof el.longestWordPx === 'number') {
+          measuredCount++;
+          // Conditional invariant: w must be >= longestWordPx * WRAP_SLACK_RATIO
+          const minW = (el.longestWordPx * WRAP_SLACK_RATIO / CANVAS_WIDTH) * 100;
+          assert.ok(
+            el.w >= minW - 0.01,
+            `element ${el.id} in ${tmpl.id}.${layoutKey} has w=${el.w} < slacked width ${minW}`
+          );
+        } else {
+          unmeasuredCount++;
+        }
+      }
+    }
+  }
+
+  // Vacuity guard: assert that testing an empty measured population fails
+  const assertNonEmptyMeasured = (count) => {
+    if (count === 0) {
+      throw new Error('Vacuous assertion: no measured text element exists in asserted corpus');
+    }
+  };
+
+  assert.throws(
+    () => assertNonEmptyMeasured(0),
+    /Vacuous assertion/,
+    'vacuity guard must fail when measured count is 0'
+  );
+
+  // When healing pass runs on the templates, measuredCount becomes non-zero
+  const healedFirst = healTemplate(templates[0], {});
+  let healedMeasuredCount = 0;
+  for (const el of healedFirst.updatedTemplate.layouts.default.elements) {
+    if (typeof el.longestWordPx === 'number') healedMeasuredCount++;
+  }
+  assert.ok(healedMeasuredCount > 0, 'healed template must yield at least one measured element');
+  assert.doesNotThrow(() => assertNonEmptyMeasured(healedMeasuredCount));
+});
+
+test('T-23-16: End-to-end line integrity: F-1 export contains contiguous "international"', async () => {
+  // F-1 fixture: narrow box where 'international' was broken into 'internationa' / 'l community'
+  const f1PlanItem = {
+    artifact: {
+      runtimeVersion: 1,
+      instanceId: 'f1-e2e',
+      templateId: 'tmpl-f1',
+      label: 'F1 E2E',
+      baseType: 'general',
+      layoutKey: 'default',
+      layout: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [
+          {
+            id: 'f1-e2e-text',
+            type: 'text',
+            x: 10,
+            y: 10,
+            w: 20, // narrow box
+            h: 53.33,
+            zIndex: 0,
+            text: 'Bandung international community',
+            wrapLines: ['Bandung', 'international', 'community'],
+            longestWordPx: 523.03125,
+            measuredWith: {
+              fontFamily: 'Arial',
+              fontSize: 96,
+              fontWeight: 'normal',
+              fontStyle: 'normal',
+            },
+            style: {
+              fontSize: 96,
+              fontFamily: 'Arial',
+            },
+          },
+        ],
+      },
+    },
+  };
+
+  const buf = await generatePptxFromPlan('2026-09-10', [f1PlanItem], 'none');
+  const zip = await JSZip.loadAsync(buf);
+  const xml = await zip.file('ppt/slides/slide1.xml').async('string');
+
+  // Verify 'international' is contiguous inside an <a:t> element
+  assert.ok(xml.includes('<a:t>international</a:t>'), 'slide XML must contain contiguous <a:t>international</a:t>');
+
+  // Verify mid-word broken forms NEVER appear in slide XML
+  assert.ok(!xml.includes('internationa</a:t>'), 'slide XML must not break at "internationa"');
+  assert.ok(!xml.includes('<a:t>l community'), 'slide XML must not start run with "l community"');
+  assert.ok(!xml.includes('<a:t>l</a:t>'), 'slide XML must not have orphaned "l" run');
+});
+

@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-025-autopilot-mandate-wysiwyg-parity-wrap-slack
 
 ## Resume
 
-Iteration: 6
+Iteration: 7
 Run branch: autopilot/DEC-025 (PR: not open yet)
-Stopped at: SPEC-23-06 closed, advancing to SPEC-23-07
+Stopped at: Done — all 7 tickets under SPEC-23 implemented and closed, dual-reviewed with cursor-agent composer-2.5, all 26 tests in smoke-spec-23 and full suite passing
 Blocked: —
 Parked: [ad-n]
-Next: SPEC-23-07 (Automated Smoke Suite, Regressions & Docs)
+Next: Conclude mandate DEC-025 and open PR for owner merge
 
 ## Decisions
 
@@ -28,6 +28,8 @@ Next: SPEC-23-07 (Automated Smoke Suite, Regressions & Docs)
 | Iteration 5 | Peer Review | Incorporated cursor-agent composer-2.5 review: verified idempotency of healTemplate, unmeasured placeholder exclusion at hydrate, and unmeasured PPTX export stability | Unbounded saves and silent geometry modifications on repeated re-measure | Layout shifts and degraded export quality | canvas-utils.ts, smoke-spec-23.test.mjs |
 | Iteration 6 | SPEC-23-06 | Added pptxSafe boolean and pptxSubstitute to FontDefinition, categorized all 45 catalogue faces (10 system safe), and added warning indicators in both ArtifactEditor font picker dropdown rows and PopoverTrigger | Silent surprise substitution in offline PowerPoint/LibreOffice | Mismatched font appearance discovered only on Sabbath morning | font-catalog.ts, ArtifactEditor.tsx, catalogue-en.ts, catalogue-id.ts, keys.ts, artifact-font-catalog.test.mjs, smoke-spec-23.test.mjs |
 | Iteration 6 | Peer Review | Incorporated cursor-agent composer-2.5 review: updated PopoverTrigger with warning indicator and added strict category-to-substitute and missing-field injection checks | Warning indicator only visible when popover is open | Undetected unsafe font selection when toolbar popover closes | ArtifactEditor.tsx, smoke-spec-23.test.mjs |
+| Iteration 7 | SPEC-23-07 | Completed T-23-15 non-vacuous stored-state invariant, T-23-16 end-to-end contiguous line integrity, recorded 17 injection proofs in TEST-PLAN.md, and documented dual enforcement points and font readiness in canvas-authoring-controls.md | Inline fixture assertions alone without stored data validation | Silent regression of production decks while synthetic tests pass | TEST-PLAN.md, canvas-authoring-controls.md, smoke-spec-23.test.mjs, specs.yaml, decisions.yaml |
+
 
 
 

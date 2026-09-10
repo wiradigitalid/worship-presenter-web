@@ -104,10 +104,10 @@ rtm:
   test:
   - tests/smoke-spec-23.test.mjs
   - tests/artifact-render-model.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-13
@@ -118,10 +118,10 @@ rtm:
   release: wysiwyg-parity-wrap-slack
   test:
   - tests/smoke-spec-23.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-13
@@ -132,10 +132,10 @@ rtm:
   release: wysiwyg-parity-wrap-slack
   test:
   - tests/smoke-spec-23.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-13
@@ -146,10 +146,10 @@ rtm:
   release: wysiwyg-parity-wrap-slack
   test:
   - tests/smoke-spec-23.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-13
@@ -161,10 +161,10 @@ rtm:
   test:
   - tests/smoke-spec-23.test.mjs
   - tests/artifact-render-model.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-4
   FR: FR-13
@@ -1052,10 +1052,10 @@ rtm:
   release: wysiwyg-parity-wrap-slack
   test:
   - tests/smoke-spec-23.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -1067,10 +1067,10 @@ rtm:
   test:
   - tests/smoke-spec-23.test.mjs
   - tests/artifact-render-model.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -1081,10 +1081,10 @@ rtm:
   release: wysiwyg-parity-wrap-slack
   test:
   - tests/smoke-spec-23.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -1095,10 +1095,10 @@ rtm:
   release: wysiwyg-parity-wrap-slack
   test:
   - tests/smoke-spec-23.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -1110,10 +1110,10 @@ rtm:
   test:
   - tests/smoke-spec-23.test.mjs
   - tests/artifact-font-catalog.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -1125,10 +1125,10 @@ rtm:
   test:
   - tests/smoke-spec-23.test.mjs
   - tests/artifact-render-model.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -2346,10 +2346,10 @@ rtm:
   release: wysiwyg-parity-wrap-slack
   test:
   - tests/smoke-spec-23.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -2361,10 +2361,10 @@ rtm:
   test:
   - tests/smoke-spec-23.test.mjs
   - tests/artifact-render-model.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -2375,10 +2375,10 @@ rtm:
   release: wysiwyg-parity-wrap-slack
   test:
   - tests/smoke-spec-23.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -2389,10 +2389,10 @@ rtm:
   release: wysiwyg-parity-wrap-slack
   test:
   - tests/smoke-spec-23.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -2404,10 +2404,10 @@ rtm:
   test:
   - tests/smoke-spec-23.test.mjs
   - tests/artifact-font-catalog.test.mjs
-  status: closed
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
@@ -2419,10 +2419,10 @@ rtm:
   test:
   - tests/smoke-spec-23.test.mjs
   - tests/artifact-render-model.test.mjs
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30
