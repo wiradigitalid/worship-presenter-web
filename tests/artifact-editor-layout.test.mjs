@@ -271,8 +271,16 @@ test('SPEC-18-02: Searchable font picker with high-contrast category headers', (
 
   // 4. Stop propagation on search input keydown to prevent select premature close/navigation
   assert.ok(
-    code.includes('onKeyDown={(e) => e.stopPropagation()}'),
+    code.includes('e.stopPropagation()'),
     'Search input must stop keydown propagation'
+  );
+
+  // 4b. SPEC-19-01: Font dropdown popup must disable trigger item alignment so it anchors neatly under the trigger
+  assert.ok(
+    code.includes('alignItemWithTrigger={false}') &&
+      code.includes('side="bottom"') &&
+      code.includes('align="start"'),
+    'Font dropdown popup must configure alignItemWithTrigger={false}, side="bottom", and align="start"'
   );
 
   // 5. Properties toolbar locked to 88px

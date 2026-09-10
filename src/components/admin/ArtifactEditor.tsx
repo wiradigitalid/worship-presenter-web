@@ -23,8 +23,11 @@ import type {
   ArtifactLayout,
   ArtifactTemplateSummary,
   CanvasElement,
+  ImageStyle,
   PlaceholderDefinition,
+  ShapeStyle,
   StoredArtifactTemplate,
+  TextStyle,
 } from '@/lib/registry/types';
 import { isCanvasAuthorable, kindChipLabel } from '@/lib/registry/types';
 import {
@@ -147,7 +150,7 @@ function elementToFabricObject(
     evented: editable,
     hasControls: editable,
     lockRotation: true,
-    data: { elementId: element.id },
+    data: { elementId: element.id, authoredWidth: width, authoredHeight: height },
   };
 
   if (element.type === 'text') {
@@ -327,6 +330,7 @@ export default function ArtifactEditor({
   const [message, setMessage] = useState<string | null>(null);
   const [fontFamily, setFontFamily] = useState(DEFAULT_FONT_FAMILY);
   const [fontSearchQuery, setFontSearchQuery] = useState('');
+  const fontSearchInputRef = useRef<HTMLInputElement | null>(null);
   const [fontColor, setFontColor] = useState(DEFAULT_FONT_COLOR);
   /** Committed font size: always finite and positive, safe for the server. */
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
@@ -342,6 +346,7 @@ export default function ArtifactEditor({
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [selectedTextCount, setSelectedTextCount] = useState(0);
   const [textContent, setTextContent] = useState('');
+  const [isTextOverflowing, setIsTextOverflowing] = useState(false);
   /** Elements authored in this session, not yet persisted. */
   const addedElementsRef = useRef<Map<string, CanvasElement>>(new Map());
   const addedPlaceholdersRef = useRef<Map<string, PlaceholderDefinition>>(
@@ -442,6 +447,20 @@ export default function ArtifactEditor({
     if (shapes.length > 0) {
       setShapeFill(toStrictHexColor((shapes[0] as any).fill, '#5C2E16') ?? '#5C2E16');
     }
+
+    let overflowing = false;
+    if (texts.length === 1 && selectedText) {
+      const authoredHeightPx = (selectedText as any).data?.authoredHeight;
+      const textHeightPx = (selectedText.height ?? 0) * (selectedText.scaleY ?? 1);
+      if (
+        typeof authoredHeightPx === 'number' &&
+        authoredHeightPx > 0 &&
+        textHeightPx > authoredHeightPx + 4
+      ) {
+        overflowing = true;
+      }
+    }
+    setIsTextOverflowing(overflowing);
   }, []);
 
   const loadList = useCallback(async () => {
@@ -487,8 +506,28 @@ export default function ArtifactEditor({
     drawingToolRef.current = drawingTool;
     const canvas = fabricCanvasRef.current;
     if (canvas) {
-      canvas.defaultCursor = drawingTool ? 'crosshair' : 'default';
+      if (drawingTool) {
+        canvas.discardActiveObject();
+        canvas.skipTargetFind = true;
+        canvas.selection = false;
+        canvas.defaultCursor = 'crosshair';
+        canvas.hoverCursor = 'crosshair';
+      } else {
+        canvas.skipTargetFind = false;
+        canvas.selection = true;
+        canvas.defaultCursor = 'default';
+        canvas.hoverCursor = 'move';
+      }
+      canvas.requestRenderAll();
     }
+    return () => {
+      if (canvas) {
+        canvas.skipTargetFind = false;
+        canvas.selection = true;
+        canvas.defaultCursor = 'default';
+        canvas.hoverCursor = 'move';
+      }
+    };
   }, [drawingTool]);
 
   useEffect(() => {
@@ -660,6 +699,13 @@ export default function ArtifactEditor({
           if (updateImageElementFit(target, fabric)) {
             canvas.requestRenderAll();
           }
+        }
+        if (target && isFabricTextObject(target)) {
+          if (typeof target.scaleY === 'number' && target.scaleY !== 1 && target.data?.authoredHeight) {
+            target.data.authoredHeight *= target.scaleY;
+            target.scaleY = 1;
+          }
+          syncSelection(canvas);
         }
       };
       canvas.on('object:modified', onObjectModified);
@@ -1158,8 +1204,13 @@ export default function ArtifactEditor({
   }, [template, syncSelection, markDirty, t]);
 
   // DEC-012: The canvas admits one keyboard shortcut: Delete/Backspace on the selected element.
+  // SPEC-19-03: Escape cancels active drawing tool mode.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && drawingToolRef.current) {
+        setDrawingTool(null);
+        return;
+      }
       if (e.key !== 'Delete' && e.key !== 'Backspace') return;
 
       const activeEl = document.activeElement;
@@ -1244,16 +1295,57 @@ export default function ArtifactEditor({
       insertCounterRef.current += 1;
       maxZ += 1;
 
-      // Duplicate element: full copy of style/text/shape/geometry/tokens,
-      // image element copies its URL string by reference (shared ref).
+      // Duplicate element: live extraction of styles/text/shape/geometry/tokens.
+      // Image element copies its URL string by reference (shared ref).
+      const leftPx = typeof obj.left === 'number' ? obj.left : pctToPx(source.x, CANVAS_WIDTH);
+      const topPx = typeof obj.top === 'number' ? obj.top : pctToPx(source.y, CANVAS_HEIGHT);
+      const liveX = Math.min(90, pxToPct(leftPx, CANVAS_WIDTH) + pxToPct(INSERT_CASCADE_PX, CANVAS_WIDTH));
+      const liveY = Math.min(90, pxToPct(topPx, CANVAS_HEIGHT) + pxToPct(INSERT_CASCADE_PX, CANVAS_HEIGHT));
+
+      const objW = Math.abs(obj.width ?? 0) * (obj.scaleX ?? 1);
+      const objH = Math.abs(obj.height ?? 0) * (obj.scaleY ?? 1);
+      const liveW = objW > 0 ? pxToPct(objW, CANVAS_WIDTH) : source.w;
+      const liveH = objH > 0 ? pxToPct(objH, CANVAS_HEIGHT) : source.h;
+
+      const clonedStyle: TextStyle & ImageStyle & ShapeStyle = source.style ? { ...source.style } : {};
+
+      if (source.type === 'text' && isFabricTextObject(obj)) {
+        if (obj.fontFamily) clonedStyle.fontFamily = obj.fontFamily;
+        if (typeof obj.fontSize === 'number') clonedStyle.fontSize = normalizeFontSize(obj.fontSize);
+        const fillHex = toStrictHexColor(obj.fill, undefined);
+        if (fillHex) clonedStyle.fontColor = fillHex;
+        if (obj.fontWeight) clonedStyle.fontWeight = obj.fontWeight === 'bold' ? 'bold' : 'normal';
+        if (obj.fontStyle) clonedStyle.fontStyle = obj.fontStyle === 'italic' ? 'italic' : 'normal';
+        if ((obj as any).underline !== undefined) {
+          clonedStyle.textDecoration = (obj as any).underline ? 'underline' : 'none';
+        }
+        if (obj.textAlign) clonedStyle.textAlign = obj.textAlign as any;
+        if (typeof (obj as any).lineHeight === 'number') clonedStyle.lineHeight = (obj as any).lineHeight;
+        if ((obj as any).shadow) {
+          clonedStyle.textShadow = true;
+          clonedStyle.textShadowBlur =
+            typeof (obj as any).shadow.blur === 'number' ? (obj as any).shadow.blur : 4;
+        } else if ((obj as any).shadow === null) {
+          clonedStyle.textShadow = false;
+        }
+      }
+
+      if (source.type === 'shape') {
+        const shapeFillHex = toStrictHexColor((obj as any).fill, undefined);
+        if (shapeFillHex) clonedStyle.fillColor = shapeFillHex;
+        if (typeof (obj as any).opacity === 'number') clonedStyle.opacity = (obj as any).opacity;
+      }
+
       const clonedElement: CanvasElement = {
         ...source,
         id,
         required: false,
-        x: Math.min(90, source.x + pxToPct(INSERT_CASCADE_PX, CANVAS_WIDTH)),
-        y: Math.min(90, source.y + pxToPct(INSERT_CASCADE_PX, CANVAS_HEIGHT)),
+        x: liveX,
+        y: liveY,
+        w: liveW,
+        h: liveH,
         zIndex: maxZ,
-        style: source.style ? { ...source.style } : undefined,
+        style: Object.keys(clonedStyle).length > 0 ? clonedStyle : undefined,
       };
 
       if (source.type === 'text' && isFabricTextObject(obj)) {
@@ -1458,6 +1550,7 @@ export default function ArtifactEditor({
     if (texts.length !== 1) return;
     texts[0].set({ text: value });
     canvas.requestRenderAll();
+    syncSelection(canvas);
     // Same reason as `applyTextStyle`: a direct `set` is invisible to Fabric's
     // canvas-level events.
     markDirty();
@@ -1481,6 +1574,7 @@ export default function ArtifactEditor({
     }
     if (updated) {
       canvas.requestRenderAll();
+      syncSelection(canvas);
       markDirty();
     }
   };
@@ -2553,6 +2647,10 @@ export default function ArtifactEditor({
                           onOpenChange={(open) => {
                             if (!open) {
                               setFontSearchQuery('');
+                            } else {
+                              setTimeout(() => {
+                                fontSearchInputRef.current?.focus();
+                              }, 0);
                             }
                           }}
                           items={FONT_ITEMS_MAP}
@@ -2565,17 +2663,32 @@ export default function ArtifactEditor({
                           >
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="max-h-72 w-[240px]">
+                          <SelectContent
+                            className="max-h-72 w-[240px]"
+                            alignItemWithTrigger={false}
+                            side="bottom"
+                            align="start"
+                            sideOffset={4}
+                          >
                             <div
                               className="p-1.5 sticky top-0 bg-popover z-10 border-b border-border"
-                              onKeyDown={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => {
+                                if (e.key !== 'Escape') e.stopPropagation();
+                              }}
+                              onKeyUp={(e) => e.stopPropagation()}
+                              onPointerDown={(e) => e.stopPropagation()}
                             >
                               <Input
+                                ref={fontSearchInputRef}
                                 type="text"
                                 placeholder={t('admin.artifacts.searchFonts')}
                                 value={fontSearchQuery}
                                 onChange={(e) => setFontSearchQuery(e.target.value)}
-                                onKeyDown={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => {
+                                  if (e.key !== 'Escape') e.stopPropagation();
+                                }}
+                                onKeyUp={(e) => e.stopPropagation()}
+                                onPointerDown={(e) => e.stopPropagation()}
                                 className="h-7 text-xs"
                                 autoFocus
                               />
@@ -2748,6 +2861,18 @@ export default function ArtifactEditor({
                             />
                           )}
                         </div>
+
+                        {isTextOverflowing && (
+                          <>
+                            <div className="h-4 w-px bg-border shrink-0" />
+                            <div
+                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[11px] font-medium shrink-0"
+                              title="Text exceeds box bounds; presentation and PPTX will auto-shrink text to fit."
+                            >
+                              <span>⚠️ Text exceeds box bounds; presentation and PPTX will auto-shrink text to fit.</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </>
                   ) : fabricCanvasRef.current?.getActiveObjects().some((o) => Boolean((o as any).data?.imageRef)) ? (
