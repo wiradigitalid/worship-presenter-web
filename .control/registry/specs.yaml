@@ -1212,6 +1212,10 @@ waves:
     size: L
     depends_on: [SPEC-22]
     spec_folder: .scratch/SPEC-23-wysiwyg-parity-wrap-slack/
+    spec_reviewed:
+      date: '2026-09-10'
+      sha: 'e4ad0c9'
+      lenses: [structure, prose, edge-case-hunter]
     tickets:
       - id: "SPEC-23-01"
         component: registry
