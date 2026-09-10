@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-025-autopilot-mandate-wysiwyg-parity-wrap-slack
 
 ## Resume
 
-Iteration: 3
+Iteration: 4
 Run branch: autopilot/DEC-025 (PR: not open yet)
-Stopped at: SPEC-23-04 closed, advancing to SPEC-23-03
+Stopped at: SPEC-23-03 closed, advancing to SPEC-23-05
 Blocked: —
 Parked: [ad-n]
-Next: SPEC-23-03 (Web Font Readiness Gate)
+Next: SPEC-23-05 (Measurement Coverage on Open / Heal)
 
 ## Decisions
 
@@ -22,6 +22,9 @@ Next: SPEC-23-03 (Web Font Readiness Gate)
 | Iteration 2 | Peer Review | Incorporated cursor-agent composer-2.5 review: added tests for comfortable box non-shrinking, placeholder fallback, and sub-floor clamping | Unbounded heuristic line calculation over-shrinking comfortable boxes | Undesired text downscaling on slides that already fit comfortably | render-model.ts, smoke-spec-23.test.mjs |
 | Iteration 3 | SPEC-23-04 | Implemented resolveTextRunsForPptx with softBreakBefore runs for soft wraps and breakLine for operator newlines, patchAutofitFontScale post-processor for explicit fontScale="100000", and default lineSpacingMultiple 1.2 | Multi-paragraph wrapping and un-scaled bare normAutofit | Disparate paragraph spacing and divergent layout-time scaling between PowerPoint and LibreOffice | render-model.ts, pptx-draw.ts, smoke-spec-23.test.mjs |
 | Iteration 3 | Peer Review | Incorporated cursor-agent composer-2.5 findings: added clean word-partition check across paragraph boundaries in resolveTextRunsForPptx and preserved resolveElementTextForPptx caller check | Malformed wrapLines across newline-split paragraphs | Desynchronized paragraph rendering in PPTX text shapes | render-model.ts, pptx-draw.ts, smoke-spec-22.test.mjs, smoke-spec-23.test.mjs |
+| Iteration 4 | SPEC-23-03 | Awaited document.fonts.ready in ArtifactEditor mountCanvas before element paint and in handleSave, gated handleFontFamilyChange behind fonts.load across active font sizes, and re-fitted on loadingdone in ArtifactSlide | Sizing and serializing text boxes against un-rendered fallback fonts | Stale geometry permanently persisted and uncorrected presenter font-swap spills | ArtifactEditor.tsx, ArtifactSlide.tsx, smoke-spec-23.test.mjs |
+| Iteration 4 | Peer Review | Incorporated cursor-agent composer-2.5 review: added unmount cancellation to ArtifactSlide font listeners, tightened handleFontFamilyChange to preserve distance guards, and added functional stub injection tests | Detached unmounted DOM mutations and broken assertion guards | Fragile test suites and race conditions during fast font switching | ArtifactEditor.tsx, ArtifactSlide.tsx, smoke-spec-23.test.mjs |
+
 
 
 

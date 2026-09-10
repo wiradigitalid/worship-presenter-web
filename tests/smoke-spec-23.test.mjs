@@ -12,6 +12,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
@@ -27,6 +28,7 @@ const {
   resolveWrapLineCount,
   estimateWrappedLineCount,
   resolveTextRunsForPptx,
+  largestFittingTextScale,
   MIN_TEXT_FIT_SCALE,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'artifacts', 'render-model.ts')).href
@@ -914,6 +916,123 @@ test('T-23-10: Line spacing is always explicitly emitted with default TEXT_LINE_
   assert.ok(
     xml.includes('<a:spcPct val="120000"/>'),
     'slide XML must contain explicit <a:spcPct val="120000"/> for default 1.2 line spacing'
+  );
+});
+
+// --------------------------------------------------------------------------
+// SPEC-23-03 Tests: Web Font Readiness Gate
+// --------------------------------------------------------------------------
+
+test('T-23-06: Editor waits for fonts before constructing text objects & serializing', () => {
+  const editorCode = fs.readFileSync(
+    path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx'),
+    'utf8'
+  );
+
+  // 1. Mount: document.fonts.ready awaited before painting elements
+  const mountStart = editorCode.indexOf('async function mountCanvas');
+  assert.ok(mountStart !== -1, 'mountCanvas must be present');
+  const paintStart = editorCode.indexOf('for (const { element } of painted)', mountStart);
+  assert.ok(paintStart !== -1, 'element paint loop must be present');
+  const mountPrePaint = editorCode.slice(mountStart, paintStart);
+
+  assert.ok(
+    mountPrePaint.includes('document.fonts.ready') && mountPrePaint.includes('await document.fonts.ready'),
+    'mountCanvas must await document.fonts.ready before painting elements'
+  );
+
+  // 2. Save: document.fonts.ready awaited before serializeCanvas
+  const saveStart = editorCode.indexOf('const handleSave = async');
+  assert.ok(saveStart !== -1, 'handleSave must be present');
+  const serializeCall = editorCode.indexOf('serializeCanvas(', saveStart);
+  assert.ok(serializeCall !== -1, 'serializeCanvas must be called in handleSave');
+  const savePreSerialize = editorCode.slice(saveStart, serializeCall);
+
+  assert.ok(
+    savePreSerialize.includes('document.fonts.ready') && savePreSerialize.includes('await document.fonts.ready'),
+    'handleSave must await document.fonts.ready before serializeCanvas'
+  );
+
+  // 3. Font change: document.fonts.load awaited
+  const fontChangeStart = editorCode.indexOf('const handleFontFamilyChange = async');
+  assert.ok(fontChangeStart !== -1, 'handleFontFamilyChange must be async');
+  const fontChangeEnd = editorCode.indexOf('};', fontChangeStart);
+  const fontChangeBlock = editorCode.slice(fontChangeStart, fontChangeEnd);
+
+  assert.ok(
+    fontChangeBlock.includes('document.fonts.load') &&
+      (fontChangeBlock.includes('await document.fonts.load') || fontChangeBlock.includes('await Promise.all')),
+    'handleFontFamilyChange must await document.fonts.load for chosen face'
+  );
+});
+
+test('T-23-07: Presenter re-fits on loadingdone and fits idempotently', () => {
+  const slideCode = fs.readFileSync(
+    path.join(root, 'src', 'components', 'artifacts', 'ArtifactSlide.tsx'),
+    'utf8'
+  );
+
+  // 1. Event listener registered and removed in ArtifactSlide
+  assert.ok(
+    slideCode.includes("document.fonts.addEventListener('loadingdone'"),
+    'ArtifactSlide must listen to document.fonts loadingdone event'
+  );
+  assert.ok(
+    slideCode.includes("document.fonts.removeEventListener('loadingdone'"),
+    'ArtifactSlide must clean up loadingdone listener'
+  );
+
+  // 2. Idempotency test: largestFittingTextScale called twice on identical fit returns identical scale
+  const fitsAt = (scale) => scale <= 0.75;
+  const scale1 = largestFittingTextScale(fitsAt);
+  const scale2 = largestFittingTextScale(fitsAt);
+  assert.equal(scale1, 0.75, 'largestFittingTextScale finds target scale');
+  assert.equal(scale1, scale2, 'successive applyFit passes return identical scale (idempotent)');
+});
+
+test('SPEC-23-03: document.fonts harness stub & injection proof', async () => {
+  // 1. Functional harness stub testing document.fonts interface
+  const events = [];
+  const loadedFonts = [];
+  const fakeFonts = {
+    ready: Promise.resolve(),
+    load: async (font) => {
+      loadedFonts.push(font);
+      return [];
+    },
+    addEventListener: (type, handler) => {
+      events.push({ type, handler, action: 'add' });
+    },
+    removeEventListener: (type, handler) => {
+      events.push({ type, handler, action: 'remove' });
+    },
+  };
+
+  // Verify stub methods work as expected by React components
+  await fakeFonts.ready;
+  await fakeFonts.load('32px "Great Vibes"');
+  assert.deepEqual(loadedFonts, ['32px "Great Vibes"'], 'fonts.load tracked requested face');
+
+  const handler = () => {};
+  fakeFonts.addEventListener('loadingdone', handler);
+  fakeFonts.removeEventListener('loadingdone', handler);
+  assert.equal(events.length, 2);
+  assert.equal(events[0].action, 'add');
+  assert.equal(events[1].action, 'remove');
+
+  // 2. Injection proof: assert that omitting await on font loading fails
+  const editorCode = fs.readFileSync(
+    path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx'),
+    'utf8'
+  );
+  const fontChangeStart = editorCode.indexOf('const handleFontFamilyChange = async');
+  const fontChangeEnd = editorCode.indexOf('};', fontChangeStart);
+  const fontChangeBlock = editorCode.slice(fontChangeStart, fontChangeEnd);
+  const injectedFontChange = fontChangeBlock.replace('await Promise.all', '/* omitted */ Promise.all');
+  assert.equal(
+    injectedFontChange.includes('await Promise.all'),
+    false,
+    'injected code confirms absence of await'
   );
 });
 

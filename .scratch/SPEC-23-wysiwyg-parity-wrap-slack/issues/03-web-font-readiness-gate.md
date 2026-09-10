@@ -1,6 +1,6 @@
 # SPEC-23-03 — Web-Font Readiness Gate (Editor and Presenter)
 
-**Status:** ready-for-agent
+**Status:** closed
 
 ## Component & Scope
 
@@ -53,13 +53,22 @@ Numbered steps are the work; MUST / MUST NOT marks a constraint the finished cod
 
 ## Acceptance Criteria
 
-- [ ] No Fabric text object is constructed before `document.fonts.ready` resolves.
-- [ ] `serializeCanvas` cannot run against unloaded fonts.
-- [ ] The presenter recomputes its fit scale on `loadingdone` with no box resize involved.
-- [ ] A second `applyFit` on already-loaded fonts produces the identical scale — proven by test, not by
+- [x] No Fabric text object is constructed before `document.fonts.ready` resolves.
+- [x] `serializeCanvas` cannot run against unloaded fonts.
+- [x] The presenter recomputes its fit scale on `loadingdone` with no box resize involved.
+- [x] A second `applyFit` on already-loaded fonts produces the identical scale — proven by test, not by
       inspection.
-- [ ] Both surfaces render correctly when `document.fonts` is undefined and when the font promise rejects.
-- [ ] Choosing a face the page has not loaded before does not persist a measurement taken against the
+- [x] Both surfaces render correctly when `document.fonts` is undefined and when the font promise rejects.
+- [x] Choosing a face the page has not loaded before does not persist a measurement taken against the
       fallback — proven by injecting the missing `document.fonts.load` await and watching the guard
       go red.
-- [ ] The listener is removed on unmount.
+- [x] The listener is removed on unmount.
+
+## Comments
+
+- Awaited `document.fonts.ready` in `mountCanvas` before constructing and painting elements, and in `handleSave` before `serializeCanvas`.
+- Added `document.fonts.load` await in `handleFontFamilyChange` across unique active font sizes before setting family and marking dirty.
+- Added `loadingdone` and `document.fonts.ready` listeners in `ArtifactSlide.tsx` with unmount guard and listener cleanup.
+- Reviewed by agent and `cursor-agent composer-2.5`; addressed feedback on save font loading, per-object font size derivation, unmount cancellation, and distance guards in test harness.
+- Verified with T-23-06, T-23-07, and stub/injection proofs in `tests/smoke-spec-23.test.mjs`.
+

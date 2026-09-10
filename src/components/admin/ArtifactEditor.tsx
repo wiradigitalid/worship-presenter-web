@@ -613,6 +613,16 @@ export default function ArtifactEditor({
         canvas.backgroundImage = bg;
       }
 
+      // SPEC-23-03: Await document.fonts.ready before constructing Fabric text objects
+      // so layout and text measurements are never computed against fallback fonts.
+      if (typeof document !== 'undefined' && 'fonts' in document && document.fonts?.ready) {
+        try {
+          await document.fonts.ready;
+        } catch {
+          // Degrade gracefully if font readiness promise rejects
+        }
+      }
+
       if (disposeCanvasIfAborted()) return;
 
       // The PPTX exporter and the web slideshow both paint in `zIndex` order,
@@ -1502,19 +1512,28 @@ export default function ArtifactEditor({
     }
   };
 
-  const handleFontFamilyChange = (family: string | null) => {
+  const handleFontFamilyChange = async (family: string | null) => {
     if (!family) return;
     setFontFamily(family);
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
+
+    // SPEC-23-03: Await fonts.load before setting fontFamily & markDirty
+    if (typeof document !== 'undefined' && document.fonts?.load) {
+      try {
+        const texts = canvas.getActiveObjects().filter(isFabricTextObject);
+        const szs = [...new Set(texts.map((o) => o.fontSize || fontSize || DEFAULT_FONT_SIZE))];
+        await Promise.all((szs.length ? szs : [fontSize || DEFAULT_FONT_SIZE]).map((s) => document.fonts.load(`${s}px "${family}"`)));
+      } catch {}
+    }
+    if (fabricCanvasRef.current !== canvas) return;
+
     let updated = false;
     for (const obj of canvas.getActiveObjects()) {
       if (!isFabricTextObject(obj)) continue;
       obj.set({ fontFamily: getFontStack(family) });
-      const objData = (obj as any).data;
-      if (objData) {
-        objData.authoredHeight = (obj.height ?? 0) * (obj.scaleY ?? 1);
-      }
+      const d = (obj as any).data;
+      if (d) d.authoredHeight = (obj.height ?? 0) * (obj.scaleY ?? 1);
       updated = true;
     }
     if (updated) {
@@ -1928,6 +1947,34 @@ export default function ArtifactEditor({
     setStatus('saving');
     setMessage(null);
     try {
+      // SPEC-23-03: Await document.fonts.ready and any active font loads before serializing canvas geometry
+      // so stored dimensions and measurements reflect final font metrics.
+      if (typeof document !== 'undefined' && 'fonts' in document) {
+        if (document.fonts?.ready) {
+          try {
+            await document.fonts.ready;
+          } catch {
+            // Gracefully continue if font readiness check fails
+          }
+        }
+        if (typeof document.fonts?.load === 'function') {
+          try {
+            const fontLoads: Promise<any>[] = [];
+            for (const obj of canvas.getObjects()) {
+              if (isFabricTextObject(obj) && obj.fontFamily) {
+                const sz = typeof obj.fontSize === 'number' ? obj.fontSize : DEFAULT_FONT_SIZE;
+                fontLoads.push(document.fonts.load(`${sz}px "${obj.fontFamily}"`));
+              }
+            }
+            if (fontLoads.length > 0) {
+              await Promise.all(fontLoads);
+            }
+          } catch {
+            // Gracefully continue
+          }
+        }
+      }
+
       // Fabric reports group-relative left/top while an ActiveSelection is
       // live; discard it first so serialization always reads canvas coords.
       canvas.discardActiveObject();
