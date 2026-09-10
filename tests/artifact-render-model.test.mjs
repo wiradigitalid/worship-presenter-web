@@ -30,12 +30,14 @@ const {
   resolveBold,
   resolveElementImage,
   resolveElementText,
+  resolveElementTextForPptx,
   resolveFontFamily,
   resolveItalic,
   resolveObjectFit,
   resolveOpacity,
   resolveTextAlign,
   resolveVerticalAlign,
+  resolveWrapLineCount,
   toCssAlignItems,
   toCssColor,
   toCssGeometry,
@@ -479,3 +481,91 @@ test('blank text renders nothing while newline content is preserved verbatim', (
     'Bank Mandiri\n1234567890'
   );
 });
+
+test('SPEC-22: resolveWrapLineCount prefers wrapLines over content newlines', () => {
+  // Explicit wrapLines with 3 lines should report 3, even if text has no newlines
+  const elWithWrap = element({
+    text: 'Bandung international community',
+    wrapLines: ['Bandung', 'international', 'community'],
+  });
+  assert.equal(resolveWrapLineCount(elWithWrap), 3);
+
+  // When wrapLines has 2 items and content has a newline (e.g. 'a b\nc'), wrapLines takes precedence
+  const elPrecedence = element({
+    text: 'a b\nc',
+    wrapLines: ['a', 'b'],
+  });
+  assert.equal(resolveWrapLineCount(elPrecedence), 2);
+
+  // Fallback to text newlines when wrapLines is missing or empty
+  const elFallback = element({
+    text: 'Line 1\nLine 2\nLine 3',
+  });
+  assert.equal(resolveWrapLineCount(elFallback), 3);
+
+  const elSingle = element({
+    text: 'Single line',
+  });
+  assert.equal(resolveWrapLineCount(elSingle), 1);
+});
+
+test('SPEC-22: resolveElementTextForPptx returns joined wrapLines when present, falls back to text', () => {
+  const elWithWrap = element({
+    text: 'Bandung international community',
+    wrapLines: ['Bandung', 'international', 'community'],
+  });
+  assert.equal(
+    resolveElementTextForPptx(elWithWrap),
+    'Bandung\ninternational\ncommunity'
+  );
+
+  const elWithoutWrap = element({
+    text: 'Bandung international community',
+  });
+  assert.equal(
+    resolveElementTextForPptx(elWithoutWrap),
+    'Bandung international community'
+  );
+
+  const elNonText = element({
+    type: 'image',
+    imageUrl: '/foo.png',
+  });
+  assert.equal(resolveElementTextForPptx(elNonText), undefined);
+});
+
+test('SPEC-22: resolveElementTextForPptx falls back to resolved text when wrapLines diverge from substituted text', () => {
+  // If wrapLines has the literal token '{sermon_title}', but hydration substituted 'Rooted And Rising'
+  const elSubstituted = element({
+    text: 'Rooted And Rising',
+    wrapLines: ['{sermon_title}'],
+  });
+  assert.equal(
+    resolveElementTextForPptx(elSubstituted),
+    'Rooted And Rising',
+    'Must export substituted weekly text, not stale placeholder wrapLines'
+  );
+  assert.equal(
+    resolveWrapLineCount(elSubstituted),
+    1,
+    'Must count lines from substituted text when wrapLines diverge'
+  );
+});
+
+test('SPEC-22: estimateTextFitScale soft-wrap fixture accounts for soft-wrapped lines', () => {
+  // A tight 10% height box with 3 soft-wrapped lines at 48px font size:
+  // Must scale down because 3 lines * 1.2 * 48px = 172.8px, while 10% of 540px = 54px
+  const elTight = element({
+    x: 10,
+    y: 10,
+    w: 40,
+    h: 10,
+    text: 'Bandung international community',
+    wrapLines: ['Bandung', 'international', 'community'],
+    style: { fontSize: 48 },
+  });
+
+  const scale = estimateTextFitScale(elTight);
+  assert.ok(scale < 1.0, `Tight box with 3 soft-wrapped lines must scale down, got ${scale}`);
+});
+

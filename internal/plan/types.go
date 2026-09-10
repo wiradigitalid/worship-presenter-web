@@ -17,6 +17,7 @@ type CanvasElement struct {
 	H              float64                `json:"h"`
 	ZIndex         int                    `json:"zIndex"`
 	Content        *string                `json:"content"`
+	WrapLines      []string               `json:"wrapLines,omitempty"`
 	PlaceholderKey *string                `json:"placeholderKey"`
 	ImageRef       *string                `json:"imageRef"`
 	Style          map[string]interface{} `json:"style"`
@@ -49,6 +50,7 @@ type ResolvedElement struct {
 	H              float64                `json:"h"`
 	ZIndex         int                    `json:"zIndex"`
 	Text           *string                `json:"text,omitempty"`
+	WrapLines      []string               `json:"wrapLines,omitempty"`
 	ImageURL       *string                `json:"imageUrl,omitempty"`
 	PlaceholderKey *string                `json:"placeholderKey,omitempty"`
 	Style          map[string]interface{} `json:"style"`

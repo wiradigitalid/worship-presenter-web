@@ -521,6 +521,38 @@ decisions:
       - tests/smoke-spec-19.test.mjs
       - tests/artifact-editor-controls.test.mjs
       - .how/registry/06-flows/canvas-authoring-controls.md
+  - id: DEC-024
+    type: mandate
+    status: applied
+    accepted_by: "kodesh87 (2026-09-10)"
+    title: Autopilot mandate for PPTX Text Wrap Parity (Canvas / Presenter / LibreOffice) (SPEC-22)
+    file: .control/decisions/DEC-024-autopilot-mandate-pptx-text-wrap-parity.md
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent
+      loop: 10m
+      expires: '2026-09-17'
+    touches:
+      - .control/memlog/autopilot-DEC-024.md
+      - .control/registry/specs.yaml
+      - .control/registry/decisions.yaml
+      - src/lib/pptx-draw.ts
+      - src/lib/artifacts/render-model.ts
+      - src/lib/registry/canvas-utils.ts
+      - src/lib/registry/types.ts
+      - src/lib/registry/validate.ts
+      - src/lib/artifacts/runtime-contract.ts
+      - src/lib/artifacts/hydrate.ts
+      - internal/plan/types.go
+      - internal/plan/validate_artifact.go
+      - internal/plan/hydrate.go
+      - package.json
+      - tests/smoke-spec-22.test.mjs
+      - tests/artifact-render-model.test.mjs
+      - .how/registry/06-flows/canvas-authoring-controls.md
+      - .scratch/SPEC-22-pptx-text-wrap-parity/SPEC.md
 
 
 

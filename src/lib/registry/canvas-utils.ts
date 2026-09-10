@@ -381,6 +381,15 @@ export function serializeCanvas(
       if (source.content !== undefined || text !== '') {
         next.content = text;
       }
+      // SPEC-22-02: Persist canvas soft-wrap lines snapshot from Fabric Textbox (textLines)
+      // Only for fixed authored text; dynamic placeholder tokens rely on runtime substitution
+      const isPlaceholderToken = Boolean(source.placeholderKey) || /\{[a-zA-Z0-9_]+\}/.test(text);
+      const rawLines = (obj as any).textLines;
+      if (!isPlaceholderToken && Array.isArray(rawLines) && rawLines.length > 0) {
+        next.wrapLines = rawLines.map(String);
+      } else {
+        delete next.wrapLines;
+      }
       const style = serializeTextStyle(source, obj);
       if (style) {
         next.style = style;
