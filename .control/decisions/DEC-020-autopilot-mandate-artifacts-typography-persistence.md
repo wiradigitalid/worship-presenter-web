@@ -1,9 +1,10 @@
 ---
 type: mandate
 id: DEC-020
-status: accepted
+status: applied
 accepted_by: 'kodesh87 (2026-09-10)'
 touches:
+  - .control/memlog/autopilot-DEC-020.md
   - .control/registry/specs.yaml
   - .control/registry/decisions.yaml
   - internal/plan/validate_artifact.go
@@ -21,6 +22,7 @@ touches:
   - tests/artifact-editor-controls.test.mjs
   - tests/artifact-editor-layout.test.mjs
   - tests/smoke-spec-18.test.mjs
+  - package.json
 supersedes: null
 superseded_by: null
 created: '2026-09-10'

@@ -243,5 +243,44 @@ test('SPEC-16-01: guard proof: lg:max-h-none presence fails unconstrained deskto
   }, /Deck Sequence card must NOT carry lg:max-h-none/);
 });
 
+test('SPEC-18-02: Searchable font picker with high-contrast category headers', () => {
+  const editorPath = path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx');
+  const code = fs.readFileSync(editorPath, 'utf8');
+
+  // 1. High-contrast category header styling
+  assert.ok(
+    code.includes('bg-muted/90') &&
+      code.includes('border-primary') &&
+      code.includes('text-foreground font-bold'),
+    'Font category headers must have high-contrast background and border-primary styling'
+  );
+
+  // 2. Search input for fonts
+  assert.ok(
+    code.includes("placeholder={t('admin.artifacts.searchFonts')}") ||
+      code.includes('admin.artifacts.searchFonts'),
+    'Font dropdown must provide search input with admin.artifacts.searchFonts placeholder'
+  );
+
+  // 3. Dynamic font filtering by search query
+  assert.ok(
+    code.includes('fontSearchQuery') &&
+      code.includes('f.label.toLowerCase().includes(query)'),
+    'Font list must filter dynamically by label matching query'
+  );
+
+  // 4. Stop propagation on search input keydown to prevent select premature close/navigation
+  assert.ok(
+    code.includes('onKeyDown={(e) => e.stopPropagation()}'),
+    'Search input must stop keydown propagation'
+  );
+
+  // 5. Properties toolbar locked to 88px
+  assert.ok(
+    code.includes('h-[88px] min-h-[88px] max-h-[88px]'),
+    'Properties toolbar must remain locked to 88px'
+  );
+});
+
 
 

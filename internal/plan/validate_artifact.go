@@ -49,7 +49,7 @@ var (
 	allowedStyleKeys = map[string]struct{}{
 		"fontFamily": {}, "fontSize": {}, "fontColor": {}, "fontWeight": {}, "fontStyle": {}, "textDecoration": {},
 		"textAlign": {}, "verticalAlign": {}, "objectFit": {}, "fillColor": {}, "opacity": {},
-		"lineHeight": {}, "textShadow": {},
+		"lineHeight": {}, "textShadow": {}, "textShadowBlur": {},
 	}
 	entryKeys = map[string]struct{}{"general": {}, "song-set": {}, "song-set-entry": {}, "ann-set-marker": {}, "announcement": {}}
 )
@@ -236,6 +236,16 @@ func parseStyle(raw any, label string) (map[string]any, error) {
 			return nil, failf("%s.textShadow must be a boolean", label)
 		}
 		style["textShadow"] = b
+	}
+	if v, ok := obj["textShadowBlur"]; ok {
+		n, err := asNumber(v, label+".textShadowBlur")
+		if err != nil {
+			return nil, err
+		}
+		if n < 0 || n > 20 {
+			return nil, failf("%s.textShadowBlur must be 0..20", label)
+		}
+		style["textShadowBlur"] = math.Round(n)
 	}
 	if len(style) == 0 {
 		return nil, nil

@@ -195,6 +195,28 @@ func TestLineHeightAndTextShadowValidation(t *testing.T) {
 	if _, err := ValidateArtifactTemplate(mustJSON(template), root); err == nil {
 		t.Fatalf("expected error on non-boolean textShadow")
 	}
+
+	for _, validBlur := range []float64{0, 4, 15, 20} {
+		el["style"] = map[string]any{"fontSize": 32.0, "textShadow": true, "textShadowBlur": validBlur}
+		if _, err := ValidateArtifactTemplate(mustJSON(template), root); err != nil {
+			t.Fatalf("expected valid blur %v to pass, got: %v", validBlur, err)
+		}
+	}
+
+	el["style"] = map[string]any{"fontSize": 32.0, "textShadow": true, "textShadowBlur": -1.0}
+	if _, err := ValidateArtifactTemplate(mustJSON(template), root); err == nil {
+		t.Fatalf("expected error on negative textShadowBlur")
+	}
+
+	el["style"] = map[string]any{"fontSize": 32.0, "textShadow": true, "textShadowBlur": 21.0}
+	if _, err := ValidateArtifactTemplate(mustJSON(template), root); err == nil {
+		t.Fatalf("expected error on textShadowBlur > 20")
+	}
+
+	el["style"] = map[string]any{"fontSize": 32.0, "textShadow": true, "textShadowBlur": "invalid"}
+	if _, err := ValidateArtifactTemplate(mustJSON(template), root); err == nil {
+		t.Fatalf("expected error on non-number textShadowBlur")
+	}
 }
 
 func mustJSON(v any) []byte {

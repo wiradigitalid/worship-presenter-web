@@ -359,6 +359,7 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
     'Select exactly one text element on the canvas to edit its words',
   'admin.artifacts.fontColor': 'Font color',
   'admin.artifacts.fontSize': 'Font size',
+  'admin.artifacts.searchFonts': 'Search fonts...',
   'admin.artifacts.applyStyle': 'Apply to selection',
   'admin.artifacts.styleHint':
     'Colour and size need “Apply to selection”; text applies as you type. Nothing is stored until you Save.',

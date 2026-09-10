@@ -322,6 +322,7 @@ export const I18N_KEYS = [
   'admin.artifacts.textTitleIdle',
   'admin.artifacts.fontColor',
   'admin.artifacts.fontSize',
+  'admin.artifacts.searchFonts',
   'admin.artifacts.applyStyle',
   'admin.artifacts.styleHint',
   'admin.registry.tab.spine',

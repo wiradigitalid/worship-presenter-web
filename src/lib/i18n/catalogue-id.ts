@@ -361,6 +361,7 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
     'Pilih tepat satu elemen teks di kanvas untuk menyunting katanya',
   'admin.artifacts.fontColor': 'Warna font',
   'admin.artifacts.fontSize': 'Ukuran font',
+  'admin.artifacts.searchFonts': 'Cari font...',
   'admin.artifacts.applyStyle': 'Terapkan ke pilihan',
   'admin.artifacts.styleHint':
     'Warna dan ukuran perlu “Terapkan ke pilihan”; teks berlaku saat Anda mengetik. Tidak ada yang disimpan sampai Anda Simpan.',
