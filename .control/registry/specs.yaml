@@ -1203,3 +1203,65 @@ waves:
 
 
 
+
+  - id: SPEC-23
+    status: open
+    release: wysiwyg-parity-wrap-slack
+    prd: [offline-deck]
+    fr: [FR-20]
+    size: L
+    depends_on: [SPEC-22]
+    spec_folder: .scratch/SPEC-23-wysiwyg-parity-wrap-slack/
+    tickets:
+      - id: "SPEC-23-01"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-23.test.mjs
+      - id: "SPEC-23-02"
+        component: registry
+        satisfies: [UC-6, UC-14]
+        blocked_by: ["SPEC-23-01"]
+        touches: [artifacts, pptx]
+        tests:
+          - tests/smoke-spec-23.test.mjs
+          - tests/artifact-render-model.test.mjs
+      - id: "SPEC-23-03"
+        component: registry
+        satisfies: [UC-6, UC-14]
+        blocked_by: ["SPEC-23-04"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-23.test.mjs
+      - id: "SPEC-23-04"
+        component: hub
+        satisfies: [UC-6]
+        blocked_by: ["SPEC-23-02"]
+        touches: [artifacts, pptx]
+        tests:
+          - tests/smoke-spec-23.test.mjs
+      - id: "SPEC-23-05"
+        component: registry
+        satisfies: [UC-6, UC-14]
+        blocked_by: ["SPEC-23-03"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-23.test.mjs
+      - id: "SPEC-23-06"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-23-05"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-23.test.mjs
+          - tests/artifact-font-catalog.test.mjs
+      - id: "SPEC-23-07"
+        component: registry
+        satisfies: [UC-6, UC-14]
+        blocked_by: ["SPEC-23-06"]
+        touches: [artifacts, pptx]
+        tests:
+          - tests/smoke-spec-23.test.mjs
+          - tests/artifact-render-model.test.mjs

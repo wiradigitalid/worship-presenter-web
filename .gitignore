@@ -115,3 +115,7 @@ data.db.bak-*
 /cmd/api/api
 
 *.diff
+
+# Screenshot evidence for WYSIWYG parity analysis. Images may only be tracked
+# under public/ (tests/public-repo-guard.test.mjs); these stay local.
+.scratch/**/*.png
