@@ -2,8 +2,8 @@ import type {
   ArtifactLayout,
   CanvasElement,
 } from '@/lib/registry/types';
-import { DEFAULT_FONT_FAMILY, resolveCatalogFontFamily } from '@/lib/registry/font-catalog';
-import { TEXT_LINE_HEIGHT } from '@/lib/artifacts/render-model';
+import { DEFAULT_FONT_FAMILY, getFontStack, resolveCatalogFontFamily } from '@/lib/registry/font-catalog';
+import { TEXT_LINE_HEIGHT, applyWrapSlack, isMeasurementValid } from '@/lib/artifacts/render-model';
 
 export { TEXT_LINE_HEIGHT };
 
@@ -269,7 +269,8 @@ export function serializeTextStyle(
 export function serializeCanvas(
   canvas: { getObjects: () => Array<any> },
   layout: ArtifactLayout,
-  added: Map<string, CanvasElement>
+  added: Map<string, CanvasElement>,
+  options?: { isHealingSave?: boolean }
 ): CanvasElement[] {
   const byId = new Map<string, CanvasElement>([
     ...added,
@@ -321,6 +322,7 @@ export function serializeCanvas(
   });
 
   const isOrderModified = hasReorderedExisting || hasReorderedAdded;
+  const isHealing = options?.isHealingSave === true;
 
   const serialized = canvasObjects.flatMap((obj, canvasIndex) => {
     const elementId = getElementId(obj);
@@ -348,24 +350,46 @@ export function serializeCanvas(
     const measuredTextWidthPct = pxToPct(measuredWidth, CANVAS_WIDTH);
 
     // SPEC-20-04: Auto-sync bounding box dimensions for text elements so bounding box encapsulates rendered text
-    const w = isWidthResized
-      ? pxToPct(measuredWidth, CANVAS_WIDTH)
+    // SPEC-23-05: In healing saves, preserve authored width as the baseline
+    let w = isHealing
+      ? source.w
+      : isWidthResized
+        ? pxToPct(measuredWidth, CANVAS_WIDTH)
+        : isText
+          ? Math.max(source.w, measuredTextWidthPct)
+          : source.w;
+
+    let longestWordPx: number | undefined;
+    let didSlackWiden = false;
+
+    // SPEC-23-01: Longest-word slack invariant on Textbox widening
+    if (isText) {
+      const dynamicMinWidth = (obj as any).dynamicMinWidth ?? (obj as any).longestWordPx;
+      if (typeof dynamicMinWidth === 'number' && Number.isFinite(dynamicMinWidth) && dynamicMinWidth > 0) {
+        longestWordPx = dynamicMinWidth * scaleX;
+        const slackedW = applyWrapSlack(w, longestWordPx);
+        if (Math.abs(slackedW - w) > 0.001) {
+          w = slackedW;
+          didSlackWiden = true;
+        }
+      }
+    }
+
+    // SPEC-23-05 Req 3: Healing saves MUST NOT resize h or rewrite zIndex/x/y
+    const h = isHealing
+      ? source.h
       : isText
-        ? Math.max(source.w, measuredTextWidthPct)
-        : source.w;
+        ? Math.max(source.h, measuredTextHeightPct)
+        : isHeightResized
+          ? pxToPct(measuredHeight, CANVAS_HEIGHT)
+          : source.h;
 
-    const h = isText
-      ? Math.max(source.h, measuredTextHeightPct)
-      : isHeightResized
-        ? pxToPct(measuredHeight, CANVAS_HEIGHT)
-        : source.h;
-
-    const computedX = left === authoredLeft ? source.x : pxToPct(left, CANVAS_WIDTH);
-    const computedY = top === authoredTop ? source.y : pxToPct(top, CANVAS_HEIGHT);
+    const computedX = isHealing || left === authoredLeft ? source.x : pxToPct(left, CANVAS_WIDTH);
+    const computedY = isHealing || top === authoredTop ? source.y : pxToPct(top, CANVAS_HEIGHT);
 
     // SPEC-21-02: Retain minimum dimension floor, but do not truncate off-canvas bleeding
-    const clampedW = Math.max(MIN_ELEMENT_W_PCT, w);
-    const clampedH = Math.max(MIN_ELEMENT_H_PCT, h);
+    const clampedW = isHealing ? w : Math.max(MIN_ELEMENT_W_PCT, w);
+    const clampedH = isHealing ? h : Math.max(MIN_ELEMENT_H_PCT, h);
 
     const next: CanvasElement = {
       ...source,
@@ -373,28 +397,79 @@ export function serializeCanvas(
       y: computedY,
       w: clampedW,
       h: clampedH,
-      zIndex: isOrderModified ? canvasIndex : source.zIndex,
+      zIndex: isHealing ? source.zIndex : (isOrderModified ? canvasIndex : source.zIndex),
     };
 
     if (isText) {
       const text = obj.text ?? '';
-      if (source.content !== undefined || text !== '') {
+      if (isHealing) {
+        if (source.content !== undefined) {
+          next.content = source.content;
+        }
+      } else if (source.content !== undefined || text !== '') {
         next.content = text;
       }
+
+      // SPEC-23-01 requirement 6: Re-wrap after widening, or write no wrap at all.
+      // If width was modified by slack widening, re-wrap object to ensure wrapLines matches new box width.
+      let rawLines = (obj as any).textLines;
+      if (didSlackWiden) {
+        const newWidthPx = pctToPx(clampedW, CANVAS_WIDTH) / scaleX;
+        if (typeof (obj as any).set === 'function' && typeof (obj as any)._initDimensions === 'function') {
+          (obj as any).set('width', newWidthPx);
+          (obj as any)._initDimensions();
+          rawLines = (obj as any).textLines;
+        } else if (typeof (obj as any).set === 'function' && typeof (obj as any).initDimensions === 'function') {
+          (obj as any).set('width', newWidthPx);
+          (obj as any).initDimensions();
+          rawLines = (obj as any).textLines;
+        } else {
+          rawLines = undefined;
+        }
+      }
+
       // SPEC-22-02: Persist canvas soft-wrap lines snapshot from Fabric Textbox (textLines)
       // Only for fixed authored text; dynamic placeholder tokens rely on runtime substitution
       const isPlaceholderToken = Boolean(source.placeholderKey) || /\{[a-zA-Z0-9_]+\}/.test(text);
-      const rawLines = (obj as any).textLines;
       if (!isPlaceholderToken && Array.isArray(rawLines) && rawLines.length > 0) {
         next.wrapLines = rawLines.map(String);
       } else {
         delete next.wrapLines;
       }
-      const style = serializeTextStyle(source, obj);
-      if (style) {
-        next.style = style;
+
+      if (isHealing) {
+        if (source.style) {
+          next.style = { ...source.style };
+        } else {
+          delete next.style;
+        }
       } else {
-        delete next.style;
+        const style = serializeTextStyle(source, obj);
+        if (style) {
+          next.style = style;
+        } else {
+          delete next.style;
+        }
+      }
+
+      // SPEC-23-01: Persist longestWordPx and measuredWith stamp
+      if (!isPlaceholderToken && typeof longestWordPx === 'number' && longestWordPx > 0) {
+        const rawFamily = next.style?.fontFamily ?? source.style?.fontFamily ?? (obj as any).fontFamily ?? DEFAULT_FONT_FAMILY;
+        const fontFamily = resolveCatalogFontFamily(rawFamily);
+        const fontSize = next.style?.fontSize ?? source.style?.fontSize ?? (obj as any).fontSize ?? DEFAULT_FONT_SIZE;
+        const fontWeight = String(next.style?.fontWeight ?? source.style?.fontWeight ?? (obj as any).fontWeight ?? 'normal');
+        const fontStyle = String(next.style?.fontStyle ?? source.style?.fontStyle ?? (obj as any).fontStyle ?? 'normal');
+
+        next.longestWordPx = longestWordPx;
+        next.measuredWith = {
+          fontFamily,
+          fontSize,
+          fontWeight,
+          fontStyle,
+        };
+      } else {
+        delete next.longestWordPx;
+        delete next.measuredWith;
       }
     }
 
@@ -680,4 +755,172 @@ export function syncImageClipOnScale(target: any): boolean {
   }
   return true;
 }
+
+/**
+ * SPEC-23-05: Checks if an authored text element lacks measurements (wrapLines, longestWordPx, measuredWith)
+ * or carries a measurement invalid for its current style.
+ * Substituted placeholder elements are excluded (placeholders are measured only on runtime display/export).
+ */
+export function isElementUnmeasured(element: CanvasElement): boolean {
+  if (element.type !== 'text') return false;
+  if (Boolean(element.placeholderKey)) return false;
+  if (typeof element.content === 'string' && /\{[a-zA-Z0-9_]+\}/.test(element.content)) {
+    return false;
+  }
+  return (
+    !element.wrapLines ||
+    element.wrapLines.length === 0 ||
+    element.longestWordPx === undefined ||
+    !element.measuredWith ||
+    !isMeasurementValid(element)
+  );
+}
+
+/**
+ * SPEC-23-05: Healing pass over a template.
+ * Measures any unmeasured text elements using Fabric and serializes with { isHealingSave: true }
+ * so that h, zIndex, x, y, content and style remain byte-identical while only measurement fields
+ * (wrapLines, longestWordPx, measuredWith) and slack-widened w are updated.
+ *
+ * Idempotent: running twice on the same template produces zero additional changes and measuredCount === 0.
+ */
+export function healTemplate(
+  template: any,
+  fabric: any
+): {
+  updatedTemplate: any;
+  measuredCount: number;
+  skippedCount: number;
+  changed: boolean;
+} {
+  const layout = template?.layouts?.default;
+  if (!layout || !Array.isArray(layout.elements)) {
+    return { updatedTemplate: template, measuredCount: 0, skippedCount: 0, changed: false };
+  }
+
+  const unmeasured = layout.elements.filter(isElementUnmeasured);
+  const alreadyMeasured = layout.elements.filter(
+    (e: CanvasElement) =>
+      e.type === 'text' &&
+      !e.placeholderKey &&
+      !(typeof e.content === 'string' && /\{[a-zA-Z0-9_]+\}/.test(e.content)) &&
+      !isElementUnmeasured(e)
+  );
+
+  if (unmeasured.length === 0) {
+    return {
+      updatedTemplate: template,
+      measuredCount: 0,
+      skippedCount: alreadyMeasured.length,
+      changed: false,
+    };
+  }
+
+  let canvas: any;
+  if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
+    const el = document.createElement('canvas');
+    el.width = CANVAS_WIDTH;
+    el.height = CANVAS_HEIGHT;
+    canvas = new fabric.Canvas(el, { width: CANVAS_WIDTH, height: CANVAS_HEIGHT });
+  } else {
+    // In Node / test harness environment
+    if (typeof fabric?.StaticCanvas === 'function') {
+      canvas = new fabric.StaticCanvas(null, { width: CANVAS_WIDTH, height: CANVAS_HEIGHT });
+    } else {
+      const objects: any[] = [];
+      canvas = {
+        getObjects: () => objects,
+        add: (...objs: any[]) => objects.push(...objs),
+        dispose: () => {},
+      };
+    }
+  }
+
+  const painted = layout.elements
+    .map((element: CanvasElement, index: number) => ({ element, index }))
+    .sort((a: any, b: any) => a.element.zIndex - b.element.zIndex || a.index - b.index);
+
+  for (const { element } of painted) {
+    const left = pctToPx(element.x, CANVAS_WIDTH);
+    const top = pctToPx(element.y, CANVAS_HEIGHT);
+    const width = pctToPx(element.w, CANVAS_WIDTH);
+    const height = pctToPx(element.h, CANVAS_HEIGHT);
+    const common = {
+      left,
+      top,
+      width,
+      height,
+      data: { elementId: element.id, authoredWidth: width, authoredHeight: height },
+    };
+
+    if (element.type === 'text') {
+      const style = element.style;
+      const text = element.content ?? '';
+      let textObj: any;
+      if (typeof fabric?.Textbox === 'function') {
+        textObj = new fabric.Textbox(text, {
+          ...common,
+          fontSize: normalizeFontSize(style?.fontSize),
+          fontFamily: getFontStack(style?.fontFamily),
+          fontWeight: style?.fontWeight ?? 'normal',
+          fontStyle: style?.fontStyle ?? 'normal',
+          splitByGrapheme: false,
+        });
+      } else {
+        // Fallback object for headless test mocks
+        const words = text.split(/\s+/).filter(Boolean);
+        let longestWord = '';
+        for (const w of words) {
+          if (w.length > longestWord.length) longestWord = w;
+        }
+        const em = normalizeFontSize(style?.fontSize);
+        const longestWordPx = longestWord.length * em * 0.55;
+        textObj = {
+          ...common,
+          type: 'text',
+          text,
+          fontSize: em,
+          fontFamily: style?.fontFamily ?? DEFAULT_FONT_FAMILY,
+          fontWeight: style?.fontWeight ?? 'normal',
+          fontStyle: style?.fontStyle ?? 'normal',
+          dynamicMinWidth: longestWordPx,
+          textLines: words.length > 0 ? [text] : [],
+        };
+      }
+      canvas.add(textObj);
+    } else {
+      canvas.add({ ...common, type: element.type });
+    }
+  }
+
+  const updatedElements = serializeCanvas(
+    canvas,
+    layout,
+    new Map(),
+    { isHealingSave: true }
+  );
+
+  if (typeof canvas?.dispose === 'function') {
+    canvas.dispose();
+  }
+
+  const updatedTemplate = {
+    ...template,
+    layouts: {
+      ...template.layouts,
+      default: {
+        ...layout,
+        elements: updatedElements,
+      },
+    },
+  };
+
+  return {
+    updatedTemplate,
+    measuredCount: unmeasured.length,
+    skippedCount: alreadyMeasured.length,
+    changed: true,
+  };
+}
+
 

@@ -1205,7 +1205,7 @@ waves:
 
 
   - id: SPEC-23
-    status: open
+    status: closed
     release: wysiwyg-parity-wrap-slack
     prd: [offline-deck]
     fr: [FR-20]

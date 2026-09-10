@@ -15,7 +15,8 @@ import {
   type ResolvedElement,
   type ResolvedStyle,
 } from './runtime-contract';
-import { DEFAULT_FONT_FAMILY } from '@/lib/registry/font-catalog';
+import type { CanvasElement } from '@/lib/registry/types';
+import { DEFAULT_FONT_FAMILY, resolveCatalogFontFamily } from '@/lib/registry/font-catalog';
 
 /**
  * Shrink-to-fit policy.
@@ -57,6 +58,114 @@ export const TEXT_FIT_LEADING_ALLOWANCE = 0.05;
  * Live Preview and gets the content fixed before Sabbath.
  */
 export const MIN_TEXT_FIT_SCALE = 0.35;
+
+/**
+ * SPEC-23: Ratio applied to the longest word's width to absorb shaping & kerning
+ * disagreements between Fabric's un-kerned per-grapheme advance sum and shaped runs
+ * in Chromium or LibreOffice Impress / Microsoft PowerPoint.
+ * Calibrated on fixture F-1 (96px Arial 'international' = 523.03px; 1.02 adds ~10.46px of slack).
+ */
+export const WRAP_SLACK_RATIO = 1.02;
+
+/**
+ * Computes the minimum width percentage needed to accommodate the longest word
+ * with metric slack, preserving authored width when already wider or when word width
+ * exceeds the canvas bounds.
+ *
+ * Total and pure: non-finite or non-positive word width returns authoredWidthPct.
+ * Capped at canvas: if longestWordWidthPx > REFERENCE_CANVAS.width, returns authoredWidthPct
+ * so the shrink-to-fit path (SPEC-23-02) handles the overlong word rather than pushing the box off-canvas.
+ */
+export function applyWrapSlack(
+  authoredWidthPct: number,
+  longestWordWidthPx: number
+): number {
+  if (!Number.isFinite(longestWordWidthPx) || longestWordWidthPx <= 0) {
+    return authoredWidthPct;
+  }
+  if (longestWordWidthPx > REFERENCE_CANVAS.width) {
+    return authoredWidthPct;
+  }
+  const slackedWidthPx = longestWordWidthPx * WRAP_SLACK_RATIO;
+  const slackedWidthPct = (slackedWidthPx / REFERENCE_CANVAS.width) * 100;
+  return Math.max(authoredWidthPct, slackedWidthPct);
+}
+
+/**
+ * Checks if an element's stored longestWordPx measurement is valid against its current style.
+ * If font family, size, weight, or style have drifted since measurement, the element
+ * must be treated as unmeasured.
+ */
+export function isMeasurementValid(
+  element: ResolvedElement | CanvasElement | { style?: ResolvedStyle; longestWordPx?: number; measuredWith?: any; placeholderKey?: string }
+): boolean {
+  if (Boolean((element as any).placeholderKey)) {
+    return false;
+  }
+  if (element.longestWordPx === undefined || !element.measuredWith) {
+    return false;
+  }
+  const mw = element.measuredWith;
+  const style = element.style ?? {};
+
+  const currentFamily = resolveCatalogFontFamily(resolveFontFamily(style)).trim().toLowerCase();
+  const measuredFamily = resolveCatalogFontFamily(mw.fontFamily ?? '').trim().toLowerCase();
+  if (currentFamily !== measuredFamily) return false;
+
+  const currentSize = fontSizePx(style);
+  if (currentSize !== mw.fontSize) return false;
+
+  const currentWeight = (style.fontWeight ?? 'normal').toString().trim().toLowerCase();
+  const measuredWeight = (mw.fontWeight ?? 'normal').toString().trim().toLowerCase();
+  if (currentWeight !== measuredWeight) return false;
+
+  const currentStyle = (style.fontStyle ?? 'normal').toString().trim().toLowerCase();
+  const measuredStyle = (mw.fontStyle ?? 'normal').toString().trim().toLowerCase();
+  if (currentStyle !== measuredStyle) return false;
+
+  return true;
+}
+
+/**
+ * Exposes whether an element's text fit scale is determined by valid measurements
+ * (longestWordPx and measuredWith) or falls back to the unmeasured path.
+ */
+export function isTextFitScaleMeasured(element: ResolvedElement): boolean {
+  return isMeasurementValid(element);
+}
+
+/**
+ * Estimates line count when wrapLines snapshot is absent but longestWordPx measurement is available.
+ * Uses longest word width as an upper-bound proxy for character advance.
+ */
+export function estimateWrappedLineCount(
+  text: string,
+  boxWidthPx: number,
+  longestWordPx: number
+): number {
+  const newlineCount = text.split('\n').length;
+  if (!Number.isFinite(longestWordPx) || longestWordPx <= 0) return newlineCount;
+
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length) return newlineCount;
+
+  let longestWord = '';
+  for (const w of words) {
+    if (w.length > longestWord.length) longestWord = w;
+  }
+  if (!longestWord.length) return newlineCount;
+
+  const avgCharWidth = longestWordPx / longestWord.length;
+  if (!Number.isFinite(avgCharWidth) || avgCharWidth <= 0) return newlineCount;
+
+  const charsPerLine = Math.max(1, Math.floor(boxWidthPx / avgCharWidth));
+  const totalChars = text.length;
+  const upper = Math.max(words.length, newlineCount);
+  const estimated = Math.ceil(totalChars / charsPerLine);
+
+  return Math.min(Math.max(estimated, newlineCount), upper);
+}
+
 
 /**
  * Scale factors are floored to this step. Quantizing keeps the browser's
@@ -257,9 +366,117 @@ export function resolveWrapLineCount(element: ResolvedElement): number {
     const flatText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
     if (flatWrap === flatText) {
       return element.wrapLines.length;
+    } else {
+      // SPEC-23-05: Coherence guard rejected incoherent wrapLines, log visibility
+      console.warn(`[render-model] wrapLines rejected for element ${element.id}: coherence mismatch ("${flatWrap}" vs "${flatText}")`);
     }
   }
+
+  // SPEC-23-02: When wrapLines is absent but longestWordPx is valid, estimate line count
+  if (isMeasurementValid(element) && typeof element.longestWordPx === 'number') {
+    const boxWidthPx = (element.w / 100) * REFERENCE_CANVAS.width;
+    return estimateWrappedLineCount(text, boxWidthPx, element.longestWordPx);
+  }
+
   return text.split('\n').length;
+}
+
+export type PptxTextRun = {
+  text: string;
+  options?: {
+    softBreakBefore?: boolean;
+    breakLine?: boolean;
+  };
+};
+
+/**
+ * SPEC-23-04: Resolves text runs for PPTX export.
+ * - When `wrapLines` is present, non-empty and coherent with resolved text:
+ *   Splits `text` on operator newlines into paragraphs, and within each paragraph,
+ *   splits on the soft-wrapped lines from `wrapLines`. Subsequent lines within a paragraph
+ *   carry `softBreakBefore: true` (<a:br/> inside one paragraph). The final line of an
+ *   intermediate paragraph carries `breakLine: true` (ending the <a:p>).
+ * - When `wrapLines` is absent or incoherent:
+ *   Returns the plain string `text`, emitting standard <a:p> elements per operator newline.
+ */
+export function resolveTextRunsForPptx(
+  element: ResolvedElement
+): string | PptxTextRun[] | undefined {
+  if (element.type !== 'text') return undefined;
+  const text = resolveElementText(element);
+  if (text === undefined) return undefined;
+
+  if (
+    !Array.isArray(element.wrapLines) ||
+    element.wrapLines.length === 0
+  ) {
+    return text;
+  }
+
+  const flatWrap = element.wrapLines.join(' ').replace(/\s+/g, ' ').trim();
+  const flatText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+  if (flatWrap !== flatText) {
+    return text;
+  }
+
+  const paragraphs = text.split('\n');
+  let wrapIndex = 0;
+  const runs: PptxTextRun[] = [];
+
+  for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+    const para = paragraphs[pIdx];
+    const isLastPara = pIdx === paragraphs.length - 1;
+    const paraWords = para.split(/\s+/).filter(Boolean);
+
+    if (paraWords.length === 0) {
+      runs.push({
+        text: '',
+        options: { breakLine: !isLastPara },
+      });
+      continue;
+    }
+
+    const paraLines: string[] = [];
+    let wordsCollected = 0;
+
+    while (wrapIndex < element.wrapLines.length && wordsCollected < paraWords.length) {
+      const candidate = element.wrapLines[wrapIndex];
+      const cWords = candidate.split(/\s+/).filter(Boolean).length;
+      if (cWords === 0) {
+        wrapIndex++;
+        continue;
+      }
+      if (wordsCollected + cWords <= paraWords.length) {
+        paraLines.push(candidate);
+        wordsCollected += cWords;
+        wrapIndex++;
+      } else {
+        // Words cross paragraph boundary -> malformed wrapLines, fallback to plain text
+        return text;
+      }
+    }
+
+    if (wordsCollected !== paraWords.length) {
+      // Could not cleanly partition wrapLines to paragraph -> fallback
+      return text;
+    }
+
+    for (let lIdx = 0; lIdx < paraLines.length; lIdx++) {
+      const lineText = paraLines[lIdx];
+      const isFirstInPara = lIdx === 0;
+      const isLastInPara = lIdx === paraLines.length - 1;
+
+      runs.push({
+        text: lineText,
+        options: {
+          ...(isFirstInPara ? {} : { softBreakBefore: true }),
+          ...(isLastInPara && !isLastPara ? { breakLine: true } : {}),
+        },
+      });
+    }
+  }
+
+  return runs.length > 0 ? runs : text;
 }
 
 /**
@@ -295,6 +512,10 @@ export function resolveElementTextForPptx(
  *
  * SPEC-22: Uses `resolveWrapLineCount` to account for authoritative soft-wrapped
  * lines from Canvas, ensuring multi-line reflowed paragraphs apply proper fit scaling.
+ *
+ * SPEC-23-02: Gives `estimateTextFitScale` a real `contentWidth` from `element.longestWordPx`
+ * when measurements are valid, forcing down-scaling on overlong words so LibreOffice Impress
+ * will not break them mid-word. Falls back to `contentWidth: 0` for unmeasured elements.
  */
 export function estimateTextFitScale(element: ResolvedElement): number {
   const text = resolveElementText(element);
@@ -304,9 +525,13 @@ export function estimateTextFitScale(element: ResolvedElement): number {
   const lines = resolveWrapLineCount(element);
   if (lines <= 0) return 1;
 
+  const isMeasured = isMeasurementValid(element);
+  const contentWidth = isMeasured && typeof element.longestWordPx === 'number'
+    ? element.longestWordPx
+    : 0;
+
   return resolveTextFitScale({
-    // Wrapping is accounted for by resolveWrapLineCount; the height axis decides.
-    contentWidth: 0,
+    contentWidth,
     contentHeight: lines * TEXT_LINE_HEIGHT * em,
     boxWidth: (element.w / 100) * REFERENCE_CANVAS.width,
     boxHeight: (element.h / 100) * REFERENCE_CANVAS.height,

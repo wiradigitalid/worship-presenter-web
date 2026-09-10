@@ -52,9 +52,18 @@ const ALLOWED_ELEMENT_KEYS = new Set([
   'zIndex',
   'content',
   'wrapLines',
+  'longestWordPx',
+  'measuredWith',
   'placeholderKey',
   'imageRef',
   'style',
+]);
+
+const ALLOWED_MEASURED_WITH_KEYS = new Set([
+  'fontFamily',
+  'fontSize',
+  'fontWeight',
+  'fontStyle',
 ]);
 
 const ALLOWED_STYLE_KEYS = new Set([
@@ -284,6 +293,35 @@ function parseElement(raw: unknown, label: string): CanvasElement {
     if (obj.wrapLines.length > 0) {
       element.wrapLines = [...obj.wrapLines];
     }
+  }
+  const hasLongestWordPx = obj.longestWordPx !== undefined;
+  const hasMeasuredWith = obj.measuredWith !== undefined;
+  if (hasLongestWordPx !== hasMeasuredWith) {
+    throw new RegistryValidationError(
+      `${label}: longestWordPx and measuredWith must be provided together`
+    );
+  }
+  if (hasLongestWordPx && hasMeasuredWith) {
+    const lwp = parsePositiveNumber(obj.longestWordPx, `${label}.longestWordPx`);
+    const mwRaw = assertPlainObject(obj.measuredWith, `${label}.measuredWith`);
+    rejectUnknownKeys(mwRaw, ALLOWED_MEASURED_WITH_KEYS, `${label}.measuredWith`);
+    if (typeof mwRaw.fontFamily !== 'string' || !mwRaw.fontFamily.trim()) {
+      throw new RegistryValidationError(`${label}.measuredWith.fontFamily is invalid`);
+    }
+    const mwFontSize = parsePositiveNumber(mwRaw.fontSize, `${label}.measuredWith.fontSize`);
+    if (typeof mwRaw.fontWeight !== 'string') {
+      throw new RegistryValidationError(`${label}.measuredWith.fontWeight must be a string`);
+    }
+    if (typeof mwRaw.fontStyle !== 'string') {
+      throw new RegistryValidationError(`${label}.measuredWith.fontStyle must be a string`);
+    }
+    element.longestWordPx = lwp;
+    element.measuredWith = {
+      fontFamily: mwRaw.fontFamily,
+      fontSize: mwFontSize,
+      fontWeight: mwRaw.fontWeight,
+      fontStyle: mwRaw.fontStyle,
+    };
   }
   if (obj.placeholderKey !== undefined) {
     if (typeof obj.placeholderKey !== 'string' || !obj.placeholderKey.trim()) {

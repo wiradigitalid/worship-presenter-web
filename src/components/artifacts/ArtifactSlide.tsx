@@ -101,11 +101,40 @@ function TextElement({ element }: { element: ResolvedElement }) {
 
     applyFit();
 
-    if (typeof ResizeObserver === 'undefined') return;
+    // SPEC-23-03: Re-run applyFit on web font readiness / loadingdone event
+    let cancelled = false;
+    let onFontLoaded: (() => void) | undefined;
+    if (typeof document !== 'undefined' && 'fonts' in document && document.fonts) {
+      onFontLoaded = () => {
+        if (!cancelled) applyFit();
+      };
+      document.fonts.addEventListener('loadingdone', onFontLoaded);
+      if (document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+        document.fonts.ready
+          .then(() => {
+            if (!cancelled) applyFit();
+          })
+          .catch(() => {});
+      }
+    }
+
+    if (typeof ResizeObserver === 'undefined') {
+      return () => {
+        cancelled = true;
+        if (onFontLoaded && typeof document !== 'undefined' && 'fonts' in document && document.fonts) {
+          document.fonts.removeEventListener('loadingdone', onFontLoaded);
+        }
+      };
+    }
+
     const observer = new ResizeObserver(applyFit);
     observer.observe(box);
     return () => {
+      cancelled = true;
       observer.disconnect();
+      if (onFontLoaded && typeof document !== 'undefined' && 'fonts' in document && document.fonts) {
+        document.fonts.removeEventListener('loadingdone', onFontLoaded);
+      }
     };
   }, [element]);
 

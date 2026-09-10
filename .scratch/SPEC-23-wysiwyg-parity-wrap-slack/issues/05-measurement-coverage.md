@@ -1,6 +1,6 @@
 # SPEC-23-05 — Measurement Coverage
 
-**Status:** ready-for-agent
+**Status:** closed
 
 ## Component & Scope
 
@@ -70,16 +70,25 @@ closing the template half of the gap into one action the owner takes when they c
 
 ## Acceptance Criteria
 
-- [ ] Opening a template with unmeasured text elements marks them dirty; opening an already-measured
+- [x] Opening a template with unmeasured text elements marks them dirty; opening an already-measured
       template marks nothing dirty and saves nothing.
-- [ ] The re-measure action run twice produces the same registry as running it once.
-- [ ] A healing save changes only `wrapLines`, `longestWordPx`, `measuredWith` and (via SPEC-23-01) `w`.
+- [x] The re-measure action run twice produces the same registry as running it once.
+- [x] A healing save changes only `wrapLines`, `longestWordPx`, `measuredWith` and (via SPEC-23-01) `w`.
       `h`, `zIndex`, `x`, `y`, `content` and `style` are byte-identical before and after — proven by
       injecting an `h` rewrite and watching T-23-11 go red.
-- [ ] An element whose style changed since its `measuredWith` is re-measured on the next open.
-- [ ] Hydrate writes no `wrapLines` and no `longestWordPx`; a `placeholderKey` element exports through the
+- [x] An element whose style changed since its `measuredWith` is re-measured on the next open.
+- [x] Hydrate writes no `wrapLines` and no `longestWordPx`; a `placeholderKey` element exports through the
       unmeasured fallback.
-- [ ] The coherence guard logs on rejection, with no congregation text written to disk.
-- [ ] An unmeasured element exports byte-identical slide XML to before this spec, at run level — see
+- [x] The coherence guard logs on rejection, with no congregation text written to disk.
+- [x] An unmeasured element exports byte-identical slide XML to before this spec, at run level — see
       SPEC-23-04 for what `bodyPr` changes for every shape by design.
-- [ ] `tests/public-repo-guard.test.mjs` stays green — no real data enters the repo through a fixture.
+- [x] `tests/public-repo-guard.test.mjs` stays green — no real data enters the repo through a fixture.
+
+## Comments
+
+- Implemented `isElementUnmeasured` and `healTemplate` in `canvas-utils.ts`.
+- Integrated healing save mode (`isHealingSave: true`) in `serializeCanvas` so `h`, `zIndex`, `x`, `y`, `content`, and `style` are preserved byte-identical.
+- Added `handleRemeasureAll` action and button in `ArtifactEditor.tsx` with i18n keys across English and Indonesian catalogues.
+- Added coherence mismatch warning log in `resolveWrapLineCount` (`render-model.ts`).
+- Dual-reviewed by agent and `cursor-agent composer-2.5`; verified with T-23-11, T-23-12, T-23-13, coherence guard in `tests/smoke-spec-23.test.mjs` and `tests/public-repo-guard.test.mjs`.
+

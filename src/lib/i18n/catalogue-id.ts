@@ -296,6 +296,8 @@ export const CATALOGUE_ID: Record<I18nKey, string> = {
   'admin.artifacts.selectHint': 'Pilih templat untuk disunting.',
   'admin.artifacts.save': 'Simpan',
   'admin.artifacts.reset': 'Reset',
+  'admin.artifacts.remeasureAll': 'Ukur ulang semua',
+  'admin.artifacts.fontUnsafeWarning': 'Kurang aman untuk ekspor PPTX offline (akan diganti di deck)',
   'admin.artifacts.add': 'Tambah',
   'admin.artifacts.adding': 'Menambah…',
   'admin.artifacts.addLabel': 'Label templat baru',

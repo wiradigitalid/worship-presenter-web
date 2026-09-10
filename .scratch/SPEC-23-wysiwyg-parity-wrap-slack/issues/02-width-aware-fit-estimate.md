@@ -1,6 +1,6 @@
 # SPEC-23-02 — Width-Aware PPTX Fit Estimate
 
-**Status:** ready-for-agent
+**Status:** closed
 
 ## Component & Scope
 
@@ -65,15 +65,24 @@ Numbered steps are the work; MUST / MUST NOT marks a constraint the finished cod
 
 ## Acceptance Criteria
 
-- [ ] An element whose longest word exceeds its box width returns a scale below 1, and at that scale the
+- [x] An element whose longest word exceeds its box width returns a scale below 1, and at that scale the
       word fits within the box — asserted against an element read from stored state, not only against a
       hand-built fixture.
-- [ ] Empty text, whitespace-only text, and text with more newlines than words all return a line count
+- [x] Empty text, whitespace-only text, and text with more newlines than words all return a line count
       without dividing by zero or inverting the clamp.
-- [ ] An element with a comfortable box returns exactly 1 — no gratuitous shrinking of anything that
+- [x] An element with a comfortable box returns exactly 1 — no gratuitous shrinking of anything that
       already fits.
-- [ ] An element with no `longestWordPx` returns the scale it returned before this ticket, and the deck it
+- [x] An element with no `longestWordPx` returns the scale it returned before this ticket, and the deck it
       produces is byte-identical to the pre-SPEC-23 deck for that element.
-- [ ] The branch taken (measured vs unmeasured) is observable from outside the function.
-- [ ] A three-line soft-wrapped paragraph without `wrapLines` no longer scores as one line.
-- [ ] Every existing `artifact-render-model.test.mjs` assertion still passes unmodified.
+- [x] The branch taken (measured vs unmeasured) is observable from outside the function.
+- [x] A three-line soft-wrapped paragraph without `wrapLines` no longer scores as one line.
+- [x] Every existing `artifact-render-model.test.mjs` assertion still passes unmodified.
+
+## Comments
+
+- Implemented `isTextFitScaleMeasured` and `estimateWrappedLineCount` in `render-model.ts`.
+- Updated `estimateTextFitScale` to pass `contentWidth: element.longestWordPx` when measured, shrinking words wider than box.
+- Updated `resolveWrapLineCount` to estimate lines when `wrapLines` is absent but measurements exist.
+- Dual-reviewed by agent and `cursor-agent composer-2.5`; validated comfortable box non-shrinking behavior, placeholder fallback, and sub-floor clamping.
+- Verified in `tests/smoke-spec-23.test.mjs` (T-23-04, T-23-05, T-23-19) and `tests/artifact-render-model.test.mjs`.
+

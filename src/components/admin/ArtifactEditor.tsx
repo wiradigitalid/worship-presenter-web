@@ -70,6 +70,7 @@ import {
   FONT_CATALOG,
   FONT_CATEGORY_LABELS,
   FontCategory,
+  getFontDefinition,
   getFontStack,
   resolveCatalogFontFamily,
 } from '@/lib/registry/font-catalog';
@@ -101,6 +102,8 @@ import {
   filterOutBackgroundElements,
   getElementId,
   handleContextMenuTrigger,
+  healTemplate,
+  isElementUnmeasured,
   isBackgroundElement,
   isFabricTextObject,
   isUserAuthoredId,
@@ -414,7 +417,17 @@ export default function ArtifactEditor({
    * write contract. This is a warning mechanism, not a recovery one.
    */
   const [isDirty, setIsDirty] = useState(false);
+  const isHealingOnlyRef = useRef(false);
   const { setIsBlocked } = useNavigationBlocker();
+
+  const busy =
+    status === 'loading' ||
+    status === 'saving' ||
+    status === 'creating' ||
+    status === 'renaming' ||
+    status === 'resetting' ||
+    status === 'deleting' ||
+    status === 'reordering';
 
   const markDirty = useCallback(() => {
     setIsDirty((current) => nextDirtyState(current, 'mutated'));
@@ -613,6 +626,16 @@ export default function ArtifactEditor({
         canvas.backgroundImage = bg;
       }
 
+      // SPEC-23-03: Await document.fonts.ready before constructing Fabric text objects
+      // so layout and text measurements are never computed against fallback fonts.
+      if (typeof document !== 'undefined' && 'fonts' in document && document.fonts?.ready) {
+        try {
+          await document.fonts.ready;
+        } catch {
+          // Degrade gracefully if font readiness promise rejects
+        }
+      }
+
       if (disposeCanvasIfAborted()) return;
 
       // The PPTX exporter and the web slideshow both paint in `zIndex` order,
@@ -807,6 +830,15 @@ export default function ArtifactEditor({
       };
 
       if (disposeCanvasIfAborted()) return;
+
+      // SPEC-23-05: Healing pass on open.
+      // If any text element lacks measurements or its measurement has drifted from current style,
+      // mark dirty so the next save persists measurements.
+      const hasUnmeasured = layout.elements.some(isElementUnmeasured);
+      if (hasUnmeasured) {
+        markDirty();
+        isHealingOnlyRef.current = true;
+      }
 
       canvas.requestRenderAll();
       fitCanvasToShell();
@@ -1502,19 +1534,28 @@ export default function ArtifactEditor({
     }
   };
 
-  const handleFontFamilyChange = (family: string | null) => {
+  const handleFontFamilyChange = async (family: string | null) => {
     if (!family) return;
     setFontFamily(family);
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
+
+    // SPEC-23-03: Await fonts.load before setting fontFamily & markDirty
+    if (typeof document !== 'undefined' && document.fonts?.load) {
+      try {
+        const texts = canvas.getActiveObjects().filter(isFabricTextObject);
+        const szs = [...new Set(texts.map((o) => o.fontSize || fontSize || DEFAULT_FONT_SIZE))];
+        await Promise.all((szs.length ? szs : [fontSize || DEFAULT_FONT_SIZE]).map((s) => document.fonts.load(`${s}px "${family}"`)));
+      } catch {}
+    }
+    if (fabricCanvasRef.current !== canvas) return;
+
     let updated = false;
     for (const obj of canvas.getActiveObjects()) {
       if (!isFabricTextObject(obj)) continue;
       obj.set({ fontFamily: getFontStack(family) });
-      const objData = (obj as any).data;
-      if (objData) {
-        objData.authoredHeight = (obj.height ?? 0) * (obj.scaleY ?? 1);
-      }
+      const d = (obj as any).data;
+      if (d) d.authoredHeight = (obj.height ?? 0) * (obj.scaleY ?? 1);
       updated = true;
     }
     if (updated) {
@@ -1928,6 +1969,34 @@ export default function ArtifactEditor({
     setStatus('saving');
     setMessage(null);
     try {
+      // SPEC-23-03: Await document.fonts.ready and any active font loads before serializing canvas geometry
+      // so stored dimensions and measurements reflect final font metrics.
+      if (typeof document !== 'undefined' && 'fonts' in document) {
+        if (document.fonts?.ready) {
+          try {
+            await document.fonts.ready;
+          } catch {
+            // Gracefully continue if font readiness check fails
+          }
+        }
+        if (typeof document.fonts?.load === 'function') {
+          try {
+            const fontLoads: Promise<any>[] = [];
+            for (const obj of canvas.getObjects()) {
+              if (isFabricTextObject(obj) && obj.fontFamily) {
+                const sz = typeof obj.fontSize === 'number' ? obj.fontSize : DEFAULT_FONT_SIZE;
+                fontLoads.push(document.fonts.load(`${sz}px "${obj.fontFamily}"`));
+              }
+            }
+            if (fontLoads.length > 0) {
+              await Promise.all(fontLoads);
+            }
+          } catch {
+            // Gracefully continue
+          }
+        }
+      }
+
       // Fabric reports group-relative left/top while an ActiveSelection is
       // live; discard it first so serialization always reads canvas coords.
       canvas.discardActiveObject();
@@ -1937,10 +2006,13 @@ export default function ArtifactEditor({
       // The canvas is authoritative for the element set: additions appear here
       // and deletions are simply absent. Server-side stability rules still
       // reject removal of any seeded or required element.
+      const isHealingSave = isHealingOnlyRef.current;
+      isHealingOnlyRef.current = false;
       const updatedElements = serializeCanvas(
         canvas,
         layout,
-        addedElementsRef.current
+        addedElementsRef.current,
+        { isHealingSave }
       );
       const { updatedAt, ...templateBody } = template;
       const extraPlaceholders = [...addedPlaceholdersRef.current.values()].filter(
@@ -2033,6 +2105,57 @@ export default function ArtifactEditor({
       setMessage(err instanceof Error ? err.message : t('admin.artifacts.resetFailed'));
     }
   };
+
+  const handleRemeasureAll = useCallback(async () => {
+    if (busy) return;
+    setStatus('saving');
+    setMessage('Re-measuring templates…');
+    try {
+      if (typeof document !== 'undefined' && 'fonts' in document && document.fonts?.ready) {
+        try {
+          await document.fonts.ready;
+        } catch {}
+      }
+      const fabric = await import('fabric');
+      const summaries = await adapter.list();
+      let totalMeasured = 0;
+      let totalSkipped = 0;
+      let savedCount = 0;
+
+      for (const item of summaries) {
+        const fullTmpl = await adapter.getOne(item.id);
+        const { updatedTemplate, measuredCount, skippedCount, changed } = healTemplate(
+          fullTmpl,
+          fabric
+        );
+        totalSkipped += skippedCount;
+        if (changed && measuredCount > 0) {
+          totalMeasured += measuredCount;
+          const { updatedAt, ...templateBody } = updatedTemplate;
+          const res = await adapter.save(item.id, {
+            ...templateBody,
+            updatedAt,
+          });
+          if (res.ok) {
+            savedCount++;
+          }
+        }
+      }
+
+      await loadList();
+      if (selectedId) {
+        await loadTemplate(selectedId);
+      }
+      setStatus('idle');
+      const outcome = `Re-measured ${totalMeasured} element(s), skipped ${totalSkipped} already-measured across ${savedCount} saved template(s).`;
+      setMessage(outcome);
+      toast(outcome);
+    } catch (err) {
+      setStatus('error');
+      setMessage(err instanceof Error ? err.message : 'Re-measure failed');
+      toast.error(err instanceof Error ? err.message : 'Re-measure failed');
+    }
+  }, [busy, adapter, selectedId, loadList, loadTemplate]);
 
   const reconcileSelectedTemplate = async (
     summaries: ArtifactTemplateSummary[]
@@ -2196,15 +2319,6 @@ export default function ArtifactEditor({
       setIsBlocked(false);
     };
   }, [isDirty, isEditable, setIsBlocked]);
-
-  const busy =
-    status === 'loading' ||
-    status === 'saving' ||
-    status === 'creating' ||
-    status === 'renaming' ||
-    status === 'resetting' ||
-    status === 'deleting' ||
-    status === 'reordering';
 
   // The canvas stops accepting input while a request is in flight, the way the
   // toolbar buttons already do.
@@ -2554,6 +2668,15 @@ export default function ArtifactEditor({
                   ) : null}
                   <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRemeasureAll}
+                    disabled={busy}
+                  >
+                    {t('admin.artifacts.remeasureAll')}
+                  </Button>
+                  <Button
+                    type="button"
                     size="sm"
                     onClick={handleSave}
                     disabled={!isEditable || busy}
@@ -2759,12 +2882,24 @@ export default function ArtifactEditor({
                         >
                           <PopoverTrigger
                             className="w-[180px] h-7 text-xs border border-input rounded-lg flex items-center justify-between px-2 bg-transparent hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
-                            title="Font Family"
+                            title={
+                              !getFontDefinition(fontFamily)?.pptxSafe && getFontDefinition(fontFamily)?.pptxSubstitute
+                                ? `${FONT_ITEMS_MAP[fontFamily] ?? fontFamily} (${t('admin.artifacts.fontUnsafeWarning')}: ${getFontDefinition(fontFamily)?.pptxSubstitute})`
+                                : FONT_ITEMS_MAP[fontFamily] ?? fontFamily
+                            }
                             aria-label="Font Family"
                             disabled={busy}
                           >
-                            <span className="truncate" style={{ fontFamily }}>
-                              {FONT_ITEMS_MAP[fontFamily] ?? fontFamily}
+                            <span className="truncate flex items-center gap-1 min-w-0" style={{ fontFamily }}>
+                              <span className="truncate">{FONT_ITEMS_MAP[fontFamily] ?? fontFamily}</span>
+                              {!getFontDefinition(fontFamily)?.pptxSafe && getFontDefinition(fontFamily)?.pptxSubstitute ? (
+                                <span
+                                  className="text-[10px] text-amber-600 dark:text-amber-400 font-sans opacity-90 shrink-0"
+                                  title={`${t('admin.artifacts.fontUnsafeWarning')}: ${getFontDefinition(fontFamily)?.pptxSubstitute}`}
+                                >
+                                  ⚠
+                                </span>
+                              ) : null}
                             </span>
                             <ChevronDown className="w-3.5 h-3.5 opacity-50 shrink-0 ml-1" />
                           </PopoverTrigger>
@@ -2829,6 +2964,14 @@ export default function ArtifactEditor({
                                           style={{ fontFamily: f.family }}
                                         >
                                           <span>{f.label}</span>
+                                          {!f.pptxSafe && f.pptxSubstitute ? (
+                                            <span
+                                              className="text-[10px] text-amber-600 dark:text-amber-400 font-sans ml-2 opacity-80"
+                                              title={`${t('admin.artifacts.fontUnsafeWarning')}: ${f.pptxSubstitute}`}
+                                            >
+                                              → {f.pptxSubstitute}
+                                            </span>
+                                          ) : null}
                                         </Button>
                                       ))}
                                     </div>

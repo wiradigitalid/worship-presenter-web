@@ -219,6 +219,82 @@ func TestLineHeightAndTextShadowValidation(t *testing.T) {
 	}
 }
 
+func TestLongestWordPxAndMeasuredWithValidation(t *testing.T) {
+	root := repoRoot(t)
+	template := map[string]any{
+		"schemaVersion": 1,
+		"id":            "test-longest-word-stamp",
+		"label":         "Test",
+		"baseType":      "general",
+		"placeholders":  []any{},
+		"layouts": map[string]any{
+			"default": map[string]any{
+				"aspectRatio":     "16:9",
+				"backgroundColor": "#000000",
+				"elements": []any{
+					map[string]any{
+						"id":      "e1",
+						"type":    "text",
+						"x":       10.0,
+						"y":       10.0,
+						"w":       80.0,
+						"h":       30.0,
+						"zIndex":  0,
+						"content": "Sample text",
+						"style": map[string]any{
+							"fontSize":   32.0,
+							"fontFamily": "Arial",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// 1. Both absent passes
+	if _, err := ValidateArtifactTemplate(mustJSON(template), root); err != nil {
+		t.Fatalf("element without measurement must pass: %v", err)
+	}
+
+	elements := template["layouts"].(map[string]any)["default"].(map[string]any)["elements"].([]any)
+	el := elements[0].(map[string]any)
+
+	// 2. Orphan longestWordPx fails
+	el["longestWordPx"] = 450.0
+	if _, err := ValidateArtifactTemplate(mustJSON(template), root); err == nil || !strings.Contains(err.Error(), "longestWordPx and measuredWith must be provided together") {
+		t.Fatalf("expected error on orphan longestWordPx, got: %v", err)
+	}
+
+	// 3. Orphan measuredWith fails
+	delete(el, "longestWordPx")
+	el["measuredWith"] = map[string]any{
+		"fontFamily": "Arial",
+		"fontSize":   32.0,
+		"fontWeight": "normal",
+		"fontStyle":  "normal",
+	}
+	if _, err := ValidateArtifactTemplate(mustJSON(template), root); err == nil || !strings.Contains(err.Error(), "longestWordPx and measuredWith must be provided together") {
+		t.Fatalf("expected error on orphan measuredWith, got: %v", err)
+	}
+
+	// 4. Both present and valid passes
+	el["longestWordPx"] = 450.0
+	if _, err := ValidateArtifactTemplate(mustJSON(template), root); err != nil {
+		t.Fatalf("valid pair must pass: %v", err)
+	}
+
+	// 5. Invalid measuredWith field fails
+	el["measuredWith"] = map[string]any{
+		"fontFamily": "",
+		"fontSize":   32.0,
+		"fontWeight": "normal",
+		"fontStyle":  "normal",
+	}
+	if _, err := ValidateArtifactTemplate(mustJSON(template), root); err == nil {
+		t.Fatalf("expected error on empty fontFamily")
+	}
+}
+
 func mustJSON(v any) []byte {
 	b, err := json.Marshal(v)
 	if err != nil {

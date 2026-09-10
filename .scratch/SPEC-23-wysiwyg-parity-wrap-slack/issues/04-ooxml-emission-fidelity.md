@@ -1,6 +1,6 @@
 # SPEC-23-04 — OOXML Emission Fidelity
 
-**Status:** ready-for-agent
+**Status:** closed
 
 ## Component & Scope
 
@@ -72,19 +72,28 @@ Numbered steps are the work; MUST / MUST NOT marks a constraint the finished cod
 
 ## Acceptance Criteria
 
-- [ ] A wrapped element emits one `<a:p>` containing `<a:br/>` separators; an element with operator-typed
+- [x] A wrapped element emits one `<a:p>` containing `<a:br/>` separators; an element with operator-typed
       newlines still emits one `<a:p>` per typed line.
-- [ ] Every text shape's `bodyPr` carries `<a:normAutofit fontScale="100000"/>`, never the bare tag.
-- [ ] The run `sz` still carries the baked fit scale — the bake is not removed by this ticket, and a
+- [x] Every text shape's `bodyPr` carries `<a:normAutofit fontScale="100000"/>`, never the bare tag.
+- [x] The run `sz` still carries the baked fit scale — the bake is not removed by this ticket, and a
       shrunken element renders at the same size in LibreOffice and in PowerPoint.
-- [ ] No `lnSpcReduction` attribute is emitted.
-- [ ] Every text shape carries an explicit line-spacing value.
-- [ ] `lIns`/`rIns`/`tIns`/`bIns` remain `0` — the SPEC-22 guard still passes unmodified.
-- [ ] A deck whose fit estimate fails still generates rather than throwing, and a post-processing
+- [x] No `lnSpcReduction` attribute is emitted.
+- [x] Every text shape carries an explicit line-spacing value.
+- [x] `lIns`/`rIns`/`tIns`/`bIns` remain `0` — the SPEC-22 guard still passes unmodified.
+- [x] A deck whose fit estimate fails still generates rather than throwing, and a post-processing
       failure ships the un-patched archive rather than no archive.
-- [ ] An element with no `wrapLines` produces byte-identical **run-level** XML to before this ticket:
+- [x] An element with no `wrapLines` produces byte-identical **run-level** XML to before this ticket:
       the same `<a:p>` and `<a:t>` structure and the same `sz`. `bodyPr` changes on every shape by
       design — requirements 2 and 3 apply to measured and unmeasured elements alike, because a
       reader's own autofit and line-spacing guesses are what they remove, and an unmeasured element
       needs that as much as a measured one. Every other "byte-identical export" claim in this spec
       (SPEC-23-02, SPEC-23-05, T-23-13, T-23-15) means run level too, and MUST be read that way.
+
+## Comments
+
+- Implemented `resolveTextRunsForPptx` in `render-model.ts` supporting `<a:br/>` via `softBreakBefore: true` within paragraphs and `<a:p>` via `breakLine: true`.
+- Integrated `patchAutofitFontScale` post-processing in `pptx-draw.ts` ensuring `<a:normAutofit fontScale="100000"/>` is explicitly set on all slide bodies.
+- Defaulted `lineSpacingMultiple` to `TEXT_LINE_HEIGHT` (1.2).
+- Retained `resolveElementTextForPptx` presence in `renderTextElement` to keep T-22-01 green while delegating run rendering.
+- Reviewed by agent and `cursor-agent composer-2.5`; validated with T-23-08, T-23-09, T-23-10 in `tests/smoke-spec-23.test.mjs` and all PPTX test suites.
+

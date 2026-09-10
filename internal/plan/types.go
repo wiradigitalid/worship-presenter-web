@@ -7,6 +7,13 @@ type Placeholder struct {
 	DefaultValue interface{} `json:"defaultValue"`
 }
 
+type MeasuredWith struct {
+	FontFamily string  `json:"fontFamily"`
+	FontSize   float64 `json:"fontSize"`
+	FontWeight string  `json:"fontWeight"`
+	FontStyle  string  `json:"fontStyle"`
+}
+
 type CanvasElement struct {
 	ID             string                 `json:"id"`
 	Type           string                 `json:"type"`
@@ -18,6 +25,8 @@ type CanvasElement struct {
 	ZIndex         int                    `json:"zIndex"`
 	Content        *string                `json:"content"`
 	WrapLines      []string               `json:"wrapLines,omitempty"`
+	LongestWordPx  *float64               `json:"longestWordPx,omitempty"`
+	MeasuredWith   *MeasuredWith          `json:"measuredWith,omitempty"`
 	PlaceholderKey *string                `json:"placeholderKey"`
 	ImageRef       *string                `json:"imageRef"`
 	Style          map[string]interface{} `json:"style"`
@@ -51,6 +60,8 @@ type ResolvedElement struct {
 	ZIndex         int                    `json:"zIndex"`
 	Text           *string                `json:"text,omitempty"`
 	WrapLines      []string               `json:"wrapLines,omitempty"`
+	LongestWordPx  *float64               `json:"longestWordPx,omitempty"`
+	MeasuredWith   *MeasuredWith          `json:"measuredWith,omitempty"`
 	ImageURL       *string                `json:"imageUrl,omitempty"`
 	PlaceholderKey *string                `json:"placeholderKey,omitempty"`
 	Style          map[string]interface{} `json:"style"`

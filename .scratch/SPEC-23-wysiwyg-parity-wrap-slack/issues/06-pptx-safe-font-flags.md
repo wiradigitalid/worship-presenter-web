@@ -1,6 +1,6 @@
 # SPEC-23-06 — PPTX-Safe Font Flags and Editor Warning
 
-**Status:** ready-for-agent
+**Status:** closed
 
 ## Component & Scope
 
@@ -53,10 +53,19 @@ Numbered steps are the work; MUST / MUST NOT marks a constraint the finished cod
 
 ## Acceptance Criteria
 
-- [ ] Every catalogue entry carries `pptxSafe`, and every unsafe entry carries a `pptxSubstitute` that is
+- [x] Every catalogue entry carries `pptxSafe`, and every unsafe entry carries a `pptxSubstitute` that is
       itself a `pptxSafe` family in the catalogue.
-- [ ] The 10 `system` faces are the only `pptxSafe: true` entries.
-- [ ] Selecting an unsafe face shows a warning naming the substitute; selecting a safe face shows none.
-- [ ] The exported `fontFace` is unchanged by this ticket for every face.
-- [ ] The catalogue guard fails when a face is added without the new fields — seen failing, not assumed.
-- [ ] Operator i18n and shadcn guards stay green.
+- [x] The 10 `system` faces are the only `pptxSafe: true` entries.
+- [x] Selecting an unsafe face shows a warning naming the substitute; selecting a safe face shows none.
+- [x] The exported `fontFace` is unchanged by this ticket for every face.
+- [x] The catalogue guard fails when a face is added without the new fields — seen failing, not assumed.
+- [x] Operator i18n and shadcn guards stay green.
+
+## Comments
+
+- Added `pptxSafe` and `pptxSubstitute` to `FontDefinition` and all 45 catalog fonts in `font-catalog.ts`.
+- Exactly 10 system fonts are `pptxSafe: true`; all other 35 fonts map to universal safe substitutes (sans/display -> Arial, serif -> Times New Roman, script -> Georgia).
+- Added warning indicators in both dropdown list rows and PopoverTrigger in `ArtifactEditor.tsx` using i18n key `admin.artifacts.fontUnsafeWarning`.
+- Updated `tests/artifact-font-catalog.test.mjs` with strict schema and substitute existence assertions.
+- Verified in `tests/smoke-spec-23.test.mjs` (T-23-14), `tests/operator-i18n-guard.test.mjs`, and `tests/operator-shadcn-guard.test.mjs`.
+

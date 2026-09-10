@@ -65,6 +65,15 @@ export type ResolvedElement = {
    * establishing Canvas as line-break authority across all export renderers.
    */
   wrapLines?: string[];
+  /** SPEC-23: Longest word width in reference canvas pixels */
+  longestWordPx?: number;
+  /** SPEC-23: Metrics environment element was measured against */
+  measuredWith?: {
+    fontFamily: string;
+    fontSize: number;
+    fontWeight: string;
+    fontStyle: string;
+  };
   /** Resolved image reference for `image` / `image-placeholder` elements. */
   imageUrl?: string;
   /**

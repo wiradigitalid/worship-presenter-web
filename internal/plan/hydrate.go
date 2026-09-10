@@ -135,15 +135,17 @@ func hydrateArtifact(template Template, instanceID, layoutKey string, values map
 			style = map[string]interface{}{}
 		}
 		resolved := ResolvedElement{
-			ID:        element.ID,
-			Type:      element.Type,
-			X:         element.X,
-			Y:         element.Y,
-			W:         element.W,
-			H:         element.H,
-			ZIndex:    element.ZIndex,
-			WrapLines: element.WrapLines,
-			Style:     style,
+			ID:            element.ID,
+			Type:          element.Type,
+			X:             element.X,
+			Y:             element.Y,
+			W:             element.W,
+			H:             element.H,
+			ZIndex:        element.ZIndex,
+			WrapLines:     element.WrapLines,
+			LongestWordPx: element.LongestWordPx,
+			MeasuredWith:  element.MeasuredWith,
+			Style:         style,
 		}
 		if element.PlaceholderKey == nil || *element.PlaceholderKey == "" {
 			if element.Type == "text" && element.Content != nil {
@@ -160,6 +162,9 @@ func hydrateArtifact(template Template, instanceID, layoutKey string, values map
 					resolved.Text = &substituted
 					if isSolelyToken {
 						resolved.PlaceholderKey = strPtr(tokens[0])
+						resolved.WrapLines = nil
+						resolved.LongestWordPx = nil
+						resolved.MeasuredWith = nil
 					}
 				} else {
 					resolved.Text = element.Content
@@ -182,6 +187,9 @@ func hydrateArtifact(template Template, instanceID, layoutKey string, values map
 			continue
 		}
 		resolved.PlaceholderKey = strPtr(def.Key)
+		resolved.WrapLines = nil
+		resolved.LongestWordPx = nil
+		resolved.MeasuredWith = nil
 		if element.Type == "text" {
 			resolved.Text = strPtr(value.value)
 		} else if element.Type == "image" || element.Type == "image-placeholder" {

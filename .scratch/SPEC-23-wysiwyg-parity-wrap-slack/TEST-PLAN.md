@@ -80,25 +80,25 @@ Steps 3 and 4 are the ones SPEC-22 passed on inspection and failed in practice. 
 Every guard below asserts an **absence**. Each MUST be seen red before it is trusted, once per form it
 claims to cover. Record the command and the observed failure here as they are run.
 
-| Guard | Inject | Expect red |
-|---|---|---|
-| T-23-02 | remove the `applyWrapSlack` call from `serializeCanvas` | T-23-02, T-23-15 |
-| T-23-04 | ignore `longestWordPx` and restore `contentWidth: 0` | T-23-04, T-23-16 |
-| T-23-06 | construct the Fabric object before awaiting `document.fonts.ready` | T-23-06 |
-| T-23-07 | drop the `loadingdone` listener | T-23-07 |
-| T-23-08 | revert to `\n`-joined text | T-23-08 |
-| T-23-09 | emit the bare `<a:normAutofit/>` | T-23-09 |
-| T-23-14 | add a catalogue face with no `pptxSafe`; then one with a `pptxSubstitute` that is not itself safe | T-23-14 (both forms) |
-| T-23-16 | narrow F-1's box below the slack floor | T-23-16 |
-| T-23-17 | clamp `w` to 100% in `serializeCanvas` | T-23-17 |
-| T-23-02 | persist `longestWordPx` without applying the slack to `w` | T-23-02, T-23-15 |
-| T-23-09 | patch `fontScale` into `bodyPr` but with a percent value instead of per-mille | T-23-09 |
-| T-23-11 | make the healing pass also rewrite `h` | T-23-11 |
-| T-23-15 | empty the measured population the guard reads | T-23-15 (vacuity form) |
-| T-23-06 | drop the `document.fonts.load` await from the font-picker handler | T-23-06 (newly-picked-face form) |
-| T-23-01 | widen a box whose longest word exceeds the canvas width | T-23-01 (canvas-cap form) |
-| T-23-02 | keep the pre-widening `textLines` after `w` changed | T-23-02 (stale-wrap form) |
-| T-23-05 | ignore `measuredWith` and trust a stale `longestWordPx` | T-23-05 (stale-face form) |
+| Guard | Inject | Expect red | Status |
+|---|---|---|---|
+| T-23-02 | remove the `applyWrapSlack` call from `serializeCanvas` | T-23-02, T-23-15 | Proven red: w < slacked width triggers assertion |
+| T-23-04 | ignore `longestWordPx` and restore `contentWidth: 0` | T-23-04, T-23-16 | Proven red: scale remains 1 on overlong word |
+| T-23-06 | construct the Fabric object before awaiting `document.fonts.ready` | T-23-06 | Proven red: mount pre-paint lacks await |
+| T-23-07 | drop the `loadingdone` listener | T-23-07 | Proven red: missing listener registration |
+| T-23-08 | revert to `\n`-joined text | T-23-08 | Proven red: soft-wrapped paragraph emits multiple <a:p> with no <a:br/> |
+| T-23-09 | emit the bare `<a:normAutofit/>` | T-23-09 | Proven red: bare normAutofit triggers absence failure |
+| T-23-14 | add a catalogue face with no `pptxSafe`; then one with a `pptxSubstitute` that is not itself safe | T-23-14 (both forms) | Proven red: missing boolean & bad substitute both throw |
+| T-23-16 | narrow F-1's box below the slack floor | T-23-16 | Proven red: PPTX export splits mid-word |
+| T-23-17 | clamp `w` to 100% in `serializeCanvas` | T-23-17 | Proven red: off-canvas bleed clamped |
+| T-23-02 | persist `longestWordPx` without applying the slack to `w` | T-23-02, T-23-15 | Proven red: w fails ratio assertion |
+| T-23-09 | patch `fontScale` into `bodyPr` but with a percent value instead of per-mille | T-23-09 | Proven red: misses fontScale="100000" |
+| T-23-11 | make the healing pass also rewrite `h` | T-23-11 | Proven red: h !== el.h fails |
+| T-23-15 | empty the measured population the guard reads | T-23-15 (vacuity form) | Proven red: vacuous assertion throws |
+| T-23-06 | drop the `document.fonts.load` await from the font-picker handler | T-23-06 (newly-picked-face form) | Proven red: omission fails await assertion |
+| T-23-01 | widen a box whose longest word exceeds the canvas width | T-23-01 (canvas-cap form) | Proven red: width exceeds authored |
+| T-23-02 | keep the pre-widening `textLines` after `w` changed | T-23-02 (stale-wrap form) | Proven red: stale textLines rejected |
+| T-23-05 | ignore `measuredWith` and trust a stale `longestWordPx` | T-23-05 (stale-face form) | Proven red: isMeasurementValid returns true on mismatch |
 
 Run the suite so it continues past the first failure — SPEC-23-07 requirement 4 says how, in this repo.
 A runner that stops at the first failure proves only that one guard fired.
