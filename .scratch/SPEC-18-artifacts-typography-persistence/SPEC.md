@@ -30,45 +30,56 @@ During manual verification of SPEC-17 on the dev environment (`presenter-dev.bic
 ## Solution Architecture
 
 1. **Full Text Shadow Blur Persistence Pipeline**:
-   - Update `TextStyle` in `src/lib/registry/types.ts` to include `textShadowBlur?: number;`.
-   - Update `internal/plan/validate_artifact.go`:
+   - Update `TextStyle` in `src/lib/registry/types.ts` and `ResolvedStyle` in `src/lib/artifacts/runtime-contract.ts` to include `textShadowBlur?: number;`.
+   - Update `src/lib/registry/validate.ts` (TS client validator):
+     - Add `"textShadowBlur"` to `ALLOWED_STYLE_KEYS`.
+     - In `parseStyle`, validate `textShadowBlur` as a finite number between 0 and 20.
+   - Update `internal/plan/validate_artifact.go` (Go server validator):
      - Add `"textShadowBlur"` to `allowedStyleKeys`.
-     - In `parseStyle`, validate `textShadowBlur` as a non-negative number between 0 and 20.
-   - Update `serializeTextStyle` in `src/lib/registry/canvas-utils.ts` to serialize `textShadowBlur` clamped to 0–20 when `textShadow` is enabled.
+     - In `parseStyle`, validate `textShadowBlur` as a non-negative number between 0 and 20 (`math.Round(n)`).
+   - Update `serializeTextStyle` in `src/lib/registry/canvas-utils.ts`:
+     - When `textObj.shadow` is truthy, read `blur` from `(textObj.shadow as { blur?: number })?.blur`, clamping to 0–20, and serialize `style.textShadow = true` and `style.textShadowBlur = Math.round(blur)`.
+     - When shadow is falsy/toggled off, delete both `style.textShadow` and `style.textShadowBlur`.
    - Update `elementToFabricObject` in `ArtifactEditor.tsx` to initialize `fabric.Shadow` with `element.style?.textShadowBlur ?? 4`.
-   - Update `ArtifactSlide.tsx` and `pptx-draw.ts` to consume `style?.textShadowBlur ?? 4`.
+   - Update `ArtifactSlide.tsx` and `pptx-draw.ts` to standardize fallback blur:
+     `blur: typeof style?.textShadowBlur === 'number' ? style.textShadowBlur : 4`.
 
 2. **Searchable Grouped Font Picker with High-Contrast Category Headers**:
    - Enhance the font family selector in `ArtifactEditor.tsx`:
-     - Include an embedded search input (or searchable popover/combobox) filtering the 45 curated fonts in real-time as the operator types.
+     - Provide an integrated search input (filtering the 45 curated fonts in real-time as the operator types) while preventing focus loss.
      - Retain all 5 categories (`System & PowerPoint Safe`, `Modern Sans-Serif`, `Dignified Serif`, `Bold Display & Title`, `Script & Handwriting`) as non-selectable headers.
-     - Style category headers with high-contrast background (e.g., `bg-muted/80 text-foreground font-bold px-2.5 py-1 rounded-sm my-1 border-l-2 border-primary`) ensuring instant visual distinction across both light and dark themes.
+     - Style category headers with high-contrast background (e.g., `bg-muted/90 text-foreground font-bold px-2.5 py-1 rounded-sm my-1 border-l-2 border-primary text-[11px] select-none`) ensuring instant visual distinction across both light and dark themes.
+     - Wire i18n keys for search placeholder in `src/lib/i18n/catalogue-en.ts` and `catalogue-id.ts`.
 
 3. **Textbox Width Resize Persistence**:
    - Fix `serializeCanvas` in `src/lib/registry/canvas-utils.ts`:
-     For text objects, compare the rendered width `measuredWidth` (`(obj.width ?? 0) * scaleX`) with `authoredWidth`. If `Math.abs(measuredWidth - authoredWidth) > 1px`, serialize `w: pxToPct(measuredWidth, CANVAS_WIDTH)`.
-     Preserve `source.w` only when the width was not resized (avoiding floating point jitter for untouched seed layouts).
+     For all elements (including `isText`), calculate `measuredWidth = Math.abs(obj.width ?? 0) * scaleX`.
+     If `Math.abs(measuredWidth - authoredWidth) > 1px`, serialize `w: pxToPct(measuredWidth, CANVAS_WIDTH)`.
+     Preserve exact `source.w` only when the width was not resized (`Math.abs(measuredWidth - authoredWidth) <= 1px`), guaranteeing zero floating-point jitter for untouched seed layouts.
 
 ## Implementation Decisions
 
-1. **Non-Breaking Schema Evolution**:
-   Adding `textShadowBlur` as an optional key in `allowedStyleKeys` is strictly backward-compatible. Existing slides with boolean `textShadow: true` default to `4` seamlessly.
-2. **Seed Layout Invariance**:
-   Checking `Math.abs(measuredWidth - authoredWidth) > 1px` guarantees that untouched seed templates in `default-registry.json` maintain their exact original percentage values without floating-point drift.
-3. **Desktop & Mobile Theme Compatibility**:
-   The category header styling uses semantic tokens (`bg-muted/80`, `text-foreground`, `border-primary`) so high contrast holds across both light and dark theme palettes.
+1. **Non-Breaking Schema Evolution & Dual Validator Parity**:
+   Adding `textShadowBlur` as an optional key in both Go `allowedStyleKeys` and TypeScript `ALLOWED_STYLE_KEYS` preserves exact parity. Existing slides with boolean `textShadow: true` default to `4` seamlessly.
+2. **Unified Fallback Standardization**:
+   Editor, web slideshow (`ArtifactSlide.tsx`), and PPTX export (`pptx-draw.ts`) all standardize on blur default `4` (retiring arbitrary `3` in PPTX).
+3. **Seed Layout Invariance & Round-Trip Fidelity**:
+   Checking `Math.abs(measuredWidth - authoredWidth) > 1px` guarantees that untouched seed templates in `default-registry.json` (such as `welcome` with `w: 56.42%`) maintain their exact original percentage values.
+4. **Desktop & Mobile Theme Compatibility**:
+   The category header styling uses semantic tokens (`bg-muted/90`, `text-foreground`, `border-primary`) so high contrast holds across both light and dark theme palettes.
 
 ## Out of Scope
 
 1. Custom hex color inputs for text shadow (retains standard presentation drop-shadow `rgba(0,0,0,0.8)`).
 2. Arbitrary external web font URLs outside the curated 45-font catalog.
 3. Embedding raw binary font files into PPTX files (PowerPoint and LibreOffice desktop render fonts according to OS-installed font libraries).
+4. Textbox height drag-resize persistence (textbox height in presentation view is auto-determined by text content and shrink-to-fit scale, whereas width dictates wrapping boundaries).
 
 ## Tickets & Dependencies
 
 - **SPEC-18-01**: Text Shadow Blur Schema, Serialization, and Multi-Surface Persistence (`blocked_by: []`).
 - **SPEC-18-02**: Searchable Grouped Font Family Selector with High-Contrast Headers (`blocked_by: ["SPEC-18-01"]`).
-- **SPEC-18-03**: Textbox Width Drag-Resize Serialization & Seed Conformance (`blocked_by: ["SPEC-18-02"]`).
+- **SPEC-18-03**: Textbox Width Drag-Resize Serialization & Seed Conformance (`blocked_by: ["SPEC-18-01"]`).
 
 ## User Stories
 

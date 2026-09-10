@@ -656,7 +656,6 @@ rtm:
   release: artifacts-typography-persistence
   test:
   - tests/artifact-editor-controls.test.mjs
-  - tests/registry-go-http.test.mjs
   status: ready-for-agent
   exempt: false
   green: false
@@ -1625,7 +1624,6 @@ rtm:
   release: artifacts-typography-persistence
   test:
   - tests/artifact-editor-controls.test.mjs
-  - tests/registry-go-http.test.mjs
   status: ready-for-agent
   exempt: false
   green: false

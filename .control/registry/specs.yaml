@@ -989,7 +989,6 @@ waves:
         touches: [artifacts]
         tests:
           - tests/artifact-editor-controls.test.mjs
-          - tests/registry-go-http.test.mjs
       - id: "SPEC-18-02"
         component: registry
         satisfies: [UC-14]

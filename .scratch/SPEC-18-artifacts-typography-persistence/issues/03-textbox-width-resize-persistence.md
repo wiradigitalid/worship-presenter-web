@@ -29,14 +29,16 @@ In Fabric.js, dragging side handles (`mr` / `ml`) on a `fabric.Textbox` alters `
        ? pxToPct(measuredWidth, CANVAS_WIDTH)
        : source.w;
      ```
-   - Same logic applies to `isText` so that dragging a `fabric.Textbox` width handle correctly persists the new width percentage.
+   - Applies to text and shape elements alike, handling both side-handle drags (`scaleX === 1` with modified `obj.width`) and corner-handle drags (`scaleX !== 1`).
    - For untouched elements, `isWidthResized` is `false`, preserving the exact original `source.w` without floating-point conversion noise.
 
 2. **Automated Unit & Regression Tests (`tests/artifact-editor-controls.test.mjs`)**:
    - Add a test: `serializeCanvas persists widened text box when scaleX is 1`:
      Simulate an object with `source.w = 56.42`, `obj.width = 750` (widened to ~78.12%), and `scaleX = 1`.
      Assert `serialized[0].w` is updated to ~`78.12%` and NOT reverted to `56.42%`.
-   - Add a test: `serializeCanvas preserves exact source.w when text is not resized`.
+   - Add a test: `serializeCanvas persists corner-scaled text box when scaleX !== 1`:
+     Simulate text with `source.w = 50.0`, `scaleX = 1.5`, `obj.width = 480` -> visual width 720px (`75%`). Assert `w` persists as `75%`.
+   - Add an active round-trip test: `serializeCanvas preserves exact source.w for welcome slide element e1 (w: 56.42) when not resized`.
    - Verify `registry-seed-conformance.test.mjs` remains 100% green.
 
 3. **Smoke Test (`tests/smoke-spec-18.test.mjs`)**:
@@ -44,6 +46,7 @@ In Fabric.js, dragging side handles (`mr` / `ml`) on a `fabric.Textbox` alters `
 
 ## Acceptance Criteria
 - Dragging textbox side handles to make text wider persists through Save.
+- Corner-scaling text box also persists scaled width correctly.
 - Large text (font size 114) on widened text boxes stays on one line after reload.
 - Untouched seed layouts retain exact original percentages.
 - All test suites green.

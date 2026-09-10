@@ -429,11 +429,17 @@ decisions:
       - .control/registry/specs.yaml
       - .control/registry/decisions.yaml
       - internal/plan/validate_artifact.go
+      - internal/plan/validate_artifact_test.go
       - src/lib/registry/types.ts
+      - src/lib/registry/validate.ts
       - src/lib/registry/canvas-utils.ts
+      - src/lib/artifacts/runtime-contract.ts
       - src/components/admin/ArtifactEditor.tsx
       - src/components/artifacts/ArtifactSlide.tsx
       - src/lib/pptx-draw.ts
+      - src/lib/i18n/keys.ts
+      - src/lib/i18n/catalogue-en.ts
+      - src/lib/i18n/catalogue-id.ts
       - tests/artifact-editor-controls.test.mjs
       - tests/artifact-editor-layout.test.mjs
       - tests/smoke-spec-18.test.mjs
