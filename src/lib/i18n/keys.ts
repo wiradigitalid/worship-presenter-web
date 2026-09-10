@@ -261,6 +261,7 @@ export const I18N_KEYS = [
   'admin.artifacts.selectHint',
   'admin.artifacts.save',
   'admin.artifacts.reset',
+  'admin.artifacts.remeasureAll',
   'admin.artifacts.add',
   'admin.artifacts.adding',
   'admin.artifacts.addLabel',

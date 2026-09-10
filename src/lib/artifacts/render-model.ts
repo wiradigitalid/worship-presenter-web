@@ -366,6 +366,9 @@ export function resolveWrapLineCount(element: ResolvedElement): number {
     const flatText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
     if (flatWrap === flatText) {
       return element.wrapLines.length;
+    } else {
+      // SPEC-23-05: Coherence guard rejected incoherent wrapLines, log visibility
+      console.warn(`[render-model] wrapLines rejected for element ${element.id}: coherence mismatch ("${flatWrap}" vs "${flatText}")`);
     }
   }
 

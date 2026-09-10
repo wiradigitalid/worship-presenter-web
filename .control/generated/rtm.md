@@ -146,7 +146,7 @@ rtm:
   release: wysiwyg-parity-wrap-slack
   test:
   - tests/smoke-spec-23.test.mjs
-  status: ready-for-agent
+  status: closed
   exempt: false
   green: false
   broken_at: status
@@ -1095,7 +1095,7 @@ rtm:
   release: wysiwyg-parity-wrap-slack
   test:
   - tests/smoke-spec-23.test.mjs
-  status: ready-for-agent
+  status: closed
   exempt: false
   green: false
   broken_at: status
@@ -2389,7 +2389,7 @@ rtm:
   release: wysiwyg-parity-wrap-slack
   test:
   - tests/smoke-spec-23.test.mjs
-  status: ready-for-agent
+  status: closed
   exempt: false
   green: false
   broken_at: status

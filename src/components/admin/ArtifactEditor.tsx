@@ -101,6 +101,8 @@ import {
   filterOutBackgroundElements,
   getElementId,
   handleContextMenuTrigger,
+  healTemplate,
+  isElementUnmeasured,
   isBackgroundElement,
   isFabricTextObject,
   isUserAuthoredId,
@@ -414,7 +416,17 @@ export default function ArtifactEditor({
    * write contract. This is a warning mechanism, not a recovery one.
    */
   const [isDirty, setIsDirty] = useState(false);
+  const isHealingOnlyRef = useRef(false);
   const { setIsBlocked } = useNavigationBlocker();
+
+  const busy =
+    status === 'loading' ||
+    status === 'saving' ||
+    status === 'creating' ||
+    status === 'renaming' ||
+    status === 'resetting' ||
+    status === 'deleting' ||
+    status === 'reordering';
 
   const markDirty = useCallback(() => {
     setIsDirty((current) => nextDirtyState(current, 'mutated'));
@@ -817,6 +829,15 @@ export default function ArtifactEditor({
       };
 
       if (disposeCanvasIfAborted()) return;
+
+      // SPEC-23-05: Healing pass on open.
+      // If any text element lacks measurements or its measurement has drifted from current style,
+      // mark dirty so the next save persists measurements.
+      const hasUnmeasured = layout.elements.some(isElementUnmeasured);
+      if (hasUnmeasured) {
+        markDirty();
+        isHealingOnlyRef.current = true;
+      }
 
       canvas.requestRenderAll();
       fitCanvasToShell();
@@ -1984,10 +2005,13 @@ export default function ArtifactEditor({
       // The canvas is authoritative for the element set: additions appear here
       // and deletions are simply absent. Server-side stability rules still
       // reject removal of any seeded or required element.
+      const isHealingSave = isHealingOnlyRef.current;
+      isHealingOnlyRef.current = false;
       const updatedElements = serializeCanvas(
         canvas,
         layout,
-        addedElementsRef.current
+        addedElementsRef.current,
+        { isHealingSave }
       );
       const { updatedAt, ...templateBody } = template;
       const extraPlaceholders = [...addedPlaceholdersRef.current.values()].filter(
@@ -2080,6 +2104,57 @@ export default function ArtifactEditor({
       setMessage(err instanceof Error ? err.message : t('admin.artifacts.resetFailed'));
     }
   };
+
+  const handleRemeasureAll = useCallback(async () => {
+    if (busy) return;
+    setStatus('saving');
+    setMessage('Re-measuring templates…');
+    try {
+      if (typeof document !== 'undefined' && 'fonts' in document && document.fonts?.ready) {
+        try {
+          await document.fonts.ready;
+        } catch {}
+      }
+      const fabric = await import('fabric');
+      const summaries = await adapter.list();
+      let totalMeasured = 0;
+      let totalSkipped = 0;
+      let savedCount = 0;
+
+      for (const item of summaries) {
+        const fullTmpl = await adapter.getOne(item.id);
+        const { updatedTemplate, measuredCount, skippedCount, changed } = healTemplate(
+          fullTmpl,
+          fabric
+        );
+        totalSkipped += skippedCount;
+        if (changed && measuredCount > 0) {
+          totalMeasured += measuredCount;
+          const { updatedAt, ...templateBody } = updatedTemplate;
+          const res = await adapter.save(item.id, {
+            ...templateBody,
+            updatedAt,
+          });
+          if (res.ok) {
+            savedCount++;
+          }
+        }
+      }
+
+      await loadList();
+      if (selectedId) {
+        await loadTemplate(selectedId);
+      }
+      setStatus('idle');
+      const outcome = `Re-measured ${totalMeasured} element(s), skipped ${totalSkipped} already-measured across ${savedCount} saved template(s).`;
+      setMessage(outcome);
+      toast(outcome);
+    } catch (err) {
+      setStatus('error');
+      setMessage(err instanceof Error ? err.message : 'Re-measure failed');
+      toast.error(err instanceof Error ? err.message : 'Re-measure failed');
+    }
+  }, [busy, adapter, selectedId, loadList, loadTemplate]);
 
   const reconcileSelectedTemplate = async (
     summaries: ArtifactTemplateSummary[]
@@ -2243,15 +2318,6 @@ export default function ArtifactEditor({
       setIsBlocked(false);
     };
   }, [isDirty, isEditable, setIsBlocked]);
-
-  const busy =
-    status === 'loading' ||
-    status === 'saving' ||
-    status === 'creating' ||
-    status === 'renaming' ||
-    status === 'resetting' ||
-    status === 'deleting' ||
-    status === 'reordering';
 
   // The canvas stops accepting input while a request is in flight, the way the
   // toolbar buttons already do.
@@ -2599,6 +2665,15 @@ export default function ArtifactEditor({
                       {t('admin.artifacts.reset')}
                     </Button>
                   ) : null}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRemeasureAll}
+                    disabled={busy}
+                  >
+                    {t('admin.artifacts.remeasureAll')}
+                  </Button>
                   <Button
                     type="button"
                     size="sm"

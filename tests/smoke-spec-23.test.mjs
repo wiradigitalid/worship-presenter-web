@@ -45,6 +45,8 @@ const {
   serializeCanvas,
   pxToPct,
   pctToPx,
+  isElementUnmeasured,
+  healTemplate,
 } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'canvas-utils.ts')).href
 );
@@ -1034,5 +1036,216 @@ test('SPEC-23-03: document.fonts harness stub & injection proof', async () => {
     false,
     'injected code confirms absence of await'
   );
+});
+
+// --------------------------------------------------------------------------
+// SPEC-23-05 Tests: Measurement Coverage on Open / Heal
+// --------------------------------------------------------------------------
+
+test('T-23-11: Healing pass and re-measure action are idempotent and preserve h/zIndex/x/y', () => {
+  const legacyTemplate = {
+    schemaVersion: 1,
+    id: 'legacy-heal-test',
+    label: 'Legacy Heal Test',
+    baseType: 'general',
+    placeholders: [],
+    layouts: {
+      default: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [
+          {
+            id: 'legacy-text',
+            type: 'text',
+            required: false,
+            x: 15.5,
+            y: 20.2,
+            w: 40.0,
+            h: 25.0,
+            zIndex: 3,
+            content: 'Bandung international community',
+            style: {
+              fontSize: 32,
+              fontFamily: 'Arial',
+              fontColor: '#FFFFFF',
+            },
+          },
+          {
+            id: 'legacy-shape',
+            type: 'shape',
+            required: false,
+            x: 10,
+            y: 10,
+            w: 30,
+            h: 20,
+            zIndex: 1,
+            style: { fillColor: '#5C2E16', opacity: 1 },
+          },
+        ],
+      },
+    },
+  };
+
+  const el = legacyTemplate.layouts.default.elements[0];
+  assert.equal(isElementUnmeasured(el), true, 'legacy text element is unmeasured');
+
+  // Pass 1: Run healTemplate
+  const res1 = healTemplate(legacyTemplate, {});
+  assert.equal(res1.changed, true, 'first heal pass marks changed = true');
+  assert.equal(res1.measuredCount, 1, 'first heal pass measured 1 unmeasured element');
+
+  const healedEl = res1.updatedTemplate.layouts.default.elements[0];
+  assert.ok(healedEl.wrapLines && healedEl.wrapLines.length > 0, 'wrapLines added');
+  assert.ok(typeof healedEl.longestWordPx === 'number' && healedEl.longestWordPx > 0, 'longestWordPx added');
+  assert.ok(healedEl.measuredWith, 'measuredWith stamp added');
+
+  // Req 3: h, zIndex, x, y, content, style remain byte-identical
+  assert.equal(healedEl.h, el.h, 'h must be preserved untouched');
+  assert.equal(healedEl.zIndex, el.zIndex, 'zIndex must be preserved untouched');
+  assert.equal(healedEl.x, el.x, 'x must be preserved untouched');
+  assert.equal(healedEl.y, el.y, 'y must be preserved untouched');
+  assert.equal(healedEl.content, el.content, 'content must be preserved untouched');
+  assert.deepEqual(healedEl.style, el.style, 'style must be preserved untouched');
+
+  // Non-text elements untouched
+  assert.deepEqual(
+    res1.updatedTemplate.layouts.default.elements[1],
+    legacyTemplate.layouts.default.elements[1],
+    'shape element must be byte-identical'
+  );
+
+  // Pass 2: Run healTemplate on already-healed template (idempotency check)
+  const res2 = healTemplate(res1.updatedTemplate, {});
+  assert.equal(res2.changed, false, 'second heal pass reports changed = false');
+  assert.equal(res2.measuredCount, 0, 'second heal pass measures 0 elements');
+  assert.deepEqual(
+    res2.updatedTemplate,
+    res1.updatedTemplate,
+    'second heal pass output is byte-identical to first pass'
+  );
+
+  // Re-measurement on style change
+  const driftedTemplate = JSON.parse(JSON.stringify(res1.updatedTemplate));
+  driftedTemplate.layouts.default.elements[0].style.fontSize = 48; // style changed!
+  assert.equal(
+    isElementUnmeasured(driftedTemplate.layouts.default.elements[0]),
+    true,
+    'drifted style causes element to be flagged as unmeasured for next open'
+  );
+});
+
+test('T-23-12: Placeholder wrap at hydrate writes no wrapLines and no longestWordPx', () => {
+  const template = {
+    schemaVersion: 1,
+    id: 'placeholder-gate-test',
+    label: 'Placeholder Test',
+    baseType: 'general',
+    placeholders: [
+      { key: 'sermon_title', type: 'text', required: true },
+    ],
+    layouts: {
+      default: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [
+          {
+            id: 'ph-el',
+            type: 'text',
+            required: true,
+            placeholderKey: 'sermon_title',
+            x: 10,
+            y: 10,
+            w: 80,
+            h: 30,
+            zIndex: 0,
+            style: { fontSize: 32 },
+          },
+        ],
+      },
+    },
+  };
+
+  const instance = hydrateArtifact(template, {
+    instanceId: 'inst-ph-1',
+    values: { sermon_title: 'Living in the Light of Eternity' },
+  });
+
+  const hydrated = instance.layout.elements[0];
+  assert.equal(hydrated.text, 'Living in the Light of Eternity');
+  assert.equal(hydrated.wrapLines, undefined, 'hydrate writes no wrapLines');
+  assert.equal(hydrated.longestWordPx, undefined, 'hydrate writes no longestWordPx');
+  assert.equal(hydrated.measuredWith, undefined, 'hydrate writes no measuredWith');
+
+  // Exports through unmeasured fallback
+  assert.equal(isTextFitScaleMeasured(hydrated), false, 'hydrated placeholder is unmeasured');
+  assert.equal(estimateTextFitScale(hydrated), 1, 'unmeasured placeholder exports through fallback');
+});
+
+test('T-23-13: Unmeasured element exports valid PPTX without crashing', async () => {
+  const unmeasuredPlanItem = {
+    artifact: {
+      runtimeVersion: 1,
+      instanceId: 'inst-unmeasured',
+      templateId: 'tmpl-unmeasured',
+      label: 'Unmeasured Slide',
+      baseType: 'general',
+      layoutKey: 'default',
+      layout: {
+        aspectRatio: '16:9',
+        backgroundColor: '#000000',
+        elements: [
+          {
+            id: 'unmeas-text',
+            type: 'text',
+            x: 10,
+            y: 10,
+            w: 80,
+            h: 30,
+            zIndex: 0,
+            text: 'Unmeasured slide text content',
+            style: { fontSize: 32 },
+          },
+        ],
+      },
+    },
+  };
+
+  const buf = await generatePptxFromPlan('2026-09-10', [unmeasuredPlanItem], 'none');
+  const zip = await JSZip.loadAsync(buf);
+  const xml = await zip.file('ppt/slides/slide1.xml').async('string');
+
+  assert.ok(xml.includes('<a:t>Unmeasured slide text content</a:t>'), 'run-level text emitted');
+  assert.ok(xml.includes('<a:normAutofit fontScale="100000"/>'), 'autofit emitted');
+  assert.ok(xml.includes('<a:spcPct val="120000"/>'), 'line spacing emitted');
+});
+
+test('SPEC-23-05: Coherence guard logs on wrapLines rejection', () => {
+  const warnings = [];
+  const origWarn = console.warn;
+  console.warn = (...args) => warnings.push(args.join(' '));
+
+  try {
+    const incoherentElement = {
+      id: 'incoherent-1',
+      type: 'text',
+      x: 10,
+      y: 10,
+      w: 50,
+      h: 20,
+      zIndex: 0,
+      text: 'Current Real Text',
+      wrapLines: ['Stale', 'Old', 'Lines'], // completely different!
+      style: {},
+    };
+
+    const count = resolveWrapLineCount(incoherentElement);
+    assert.equal(count, 1, 'incoherent wrapLines falls back to newline count (1)');
+    assert.ok(
+      warnings.some((w) => w.includes('[render-model] wrapLines rejected for element incoherent-1')),
+      'must log coherence warning to console'
+    );
+  } finally {
+    console.warn = origWarn;
+  }
 });
 
