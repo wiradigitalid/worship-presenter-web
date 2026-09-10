@@ -15,7 +15,8 @@ import {
   type ResolvedElement,
   type ResolvedStyle,
 } from './runtime-contract';
-import { DEFAULT_FONT_FAMILY } from '@/lib/registry/font-catalog';
+import type { CanvasElement } from '@/lib/registry/types';
+import { DEFAULT_FONT_FAMILY, resolveCatalogFontFamily } from '@/lib/registry/font-catalog';
 
 /**
  * Shrink-to-fit policy.
@@ -57,6 +58,71 @@ export const TEXT_FIT_LEADING_ALLOWANCE = 0.05;
  * Live Preview and gets the content fixed before Sabbath.
  */
 export const MIN_TEXT_FIT_SCALE = 0.35;
+
+/**
+ * SPEC-23: Ratio applied to the longest word's width to absorb shaping & kerning
+ * disagreements between Fabric's un-kerned per-grapheme advance sum and shaped runs
+ * in Chromium or LibreOffice Impress / Microsoft PowerPoint.
+ * Calibrated on fixture F-1 (96px Arial 'international' = 523.03px; 1.02 adds ~10.46px of slack).
+ */
+export const WRAP_SLACK_RATIO = 1.02;
+
+/**
+ * Computes the minimum width percentage needed to accommodate the longest word
+ * with metric slack, preserving authored width when already wider or when word width
+ * exceeds the canvas bounds.
+ *
+ * Total and pure: non-finite or non-positive word width returns authoredWidthPct.
+ * Capped at canvas: if longestWordWidthPx > REFERENCE_CANVAS.width, returns authoredWidthPct
+ * so the shrink-to-fit path (SPEC-23-02) handles the overlong word rather than pushing the box off-canvas.
+ */
+export function applyWrapSlack(
+  authoredWidthPct: number,
+  longestWordWidthPx: number
+): number {
+  if (!Number.isFinite(longestWordWidthPx) || longestWordWidthPx <= 0) {
+    return authoredWidthPct;
+  }
+  if (longestWordWidthPx > REFERENCE_CANVAS.width) {
+    return authoredWidthPct;
+  }
+  const slackedWidthPx = longestWordWidthPx * WRAP_SLACK_RATIO;
+  const slackedWidthPct = (slackedWidthPx / REFERENCE_CANVAS.width) * 100;
+  return Math.max(authoredWidthPct, slackedWidthPct);
+}
+
+/**
+ * Checks if an element's stored longestWordPx measurement is valid against its current style.
+ * If font family, size, weight, or style have drifted since measurement, the element
+ * must be treated as unmeasured.
+ */
+export function isMeasurementValid(
+  element: ResolvedElement | CanvasElement
+): boolean {
+  if (element.longestWordPx === undefined || !element.measuredWith) {
+    return false;
+  }
+  const mw = element.measuredWith;
+  const style = element.style ?? {};
+
+  const currentFamily = resolveCatalogFontFamily(resolveFontFamily(style)).trim().toLowerCase();
+  const measuredFamily = resolveCatalogFontFamily(mw.fontFamily ?? '').trim().toLowerCase();
+  if (currentFamily !== measuredFamily) return false;
+
+  const currentSize = fontSizePx(style);
+  if (currentSize !== mw.fontSize) return false;
+
+  const currentWeight = (style.fontWeight ?? 'normal').toString().trim().toLowerCase();
+  const measuredWeight = (mw.fontWeight ?? 'normal').toString().trim().toLowerCase();
+  if (currentWeight !== measuredWeight) return false;
+
+  const currentStyle = (style.fontStyle ?? 'normal').toString().trim().toLowerCase();
+  const measuredStyle = (mw.fontStyle ?? 'normal').toString().trim().toLowerCase();
+  if (currentStyle !== measuredStyle) return false;
+
+  return true;
+}
+
 
 /**
  * Scale factors are floored to this step. Quantizing keeps the browser's

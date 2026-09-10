@@ -87,6 +87,13 @@ export type ShapeStyle = {
   opacity?: number;
 };
 
+export type MeasuredWith = {
+  fontFamily: string;
+  fontSize: number;
+  fontWeight: string;
+  fontStyle: string;
+};
+
 export type CanvasElement = {
   id: string;
   type: CanvasElementType;
@@ -99,6 +106,10 @@ export type CanvasElement = {
   content?: string;
   /** SPEC-22: Authoritative soft-wrap lines snapshot from Canvas */
   wrapLines?: string[];
+  /** SPEC-23: Longest word width in reference canvas pixels */
+  longestWordPx?: number;
+  /** SPEC-23: Metrics environment element was measured against */
+  measuredWith?: MeasuredWith;
   placeholderKey?: string;
   imageRef?: string;
   style?: TextStyle & ImageStyle & ShapeStyle;

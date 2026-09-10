@@ -1,6 +1,6 @@
 # SPEC-23-01 — Longest-Word Slack Invariant on Persist
 
-**Status:** ready-for-agent
+**Status:** closed
 
 ## Component & Scope
 
@@ -94,18 +94,27 @@ Numbered steps are the work; MUST / MUST NOT marks a constraint the finished cod
 
 ## Acceptance Criteria
 
-- [ ] `applyWrapSlack` is pure, total, and unit-tested at its edges: zero, negative, `NaN`, `Infinity`,
+- [x] `applyWrapSlack` is pure, total, and unit-tested at its edges: zero, negative, `NaN`, `Infinity`,
       word narrower than the box, word wider than the box, and word wider than the whole canvas.
-- [ ] T-23-18 measures the Fabric-vs-Chromium delta on F-1 and asserts `WRAP_SLACK_RATIO` exceeds it.
-- [ ] `serializeCanvas` on F-1 persists a `w` at least `WRAP_SLACK_RATIO` wider than the longest word.
-- [ ] A text element whose authored box is already wider than its longest word is serialized unchanged.
-- [ ] An element whose longest word exceeds the canvas width is **not** widened.
-- [ ] After a save that changed `w`, the stored `wrapLines` either matches a re-wrap at the new width or
+- [x] T-23-18 measures the Fabric-vs-Chromium delta on F-1 and asserts `WRAP_SLACK_RATIO` exceeds it.
+- [x] `serializeCanvas` on F-1 persists a `w` at least `WRAP_SLACK_RATIO` wider than the longest word.
+- [x] A text element whose authored box is already wider than its longest word is serialized unchanged.
+- [x] An element whose longest word exceeds the canvas width is **not** widened.
+- [x] After a save that changed `w`, the stored `wrapLines` either matches a re-wrap at the new width or
       is absent — never a stale array from the pre-widening box.
-- [ ] Shape and image elements are unaffected.
-- [ ] Off-canvas `x`/`w` values survive serialization without clamping (T-23-17).
-- [ ] `longestWordPx` and `measuredWith` are written together, omitted together, round-trip through
+- [x] Shape and image elements are unaffected.
+- [x] Off-canvas `x`/`w` values survive serialization without clamping (T-23-17).
+- [x] `longestWordPx` and `measuredWith` are written together, omitted together, round-trip through
       validate and hydrate unchanged, and are rejected by `validate.ts` when only one is present.
-- [ ] An element whose style no longer matches its `measuredWith` is treated as unmeasured by every reader.
-- [ ] An element saved with `longestWordPx` satisfies `w ≥ longestWordPx × WRAP_SLACK_RATIO`, unless
+- [x] An element whose style no longer matches its `measuredWith` is treated as unmeasured by every reader.
+- [x] An element saved with `longestWordPx` satisfies `w ≥ longestWordPx × WRAP_SLACK_RATIO`, unless
       requirement 4 capped it — the two fields cannot be written inconsistently with each other.
+
+## Comments
+
+- Implemented `WRAP_SLACK_RATIO` (1.02) and `applyWrapSlack` in `render-model.ts`.
+- Added `longestWordPx` and `measuredWith` across TS (`types.ts`, `validate.ts`, `runtime-contract.ts`, `hydrate.ts`) and Go (`types.go`, `validate_artifact.go`, `hydrate.go`).
+- Integrated slack widening and re-wrap in `serializeCanvas` (`canvas-utils.ts`).
+- Dual-reviewed by agent and `cursor-agent composer-2.5`; addressed feedback including Go/TS placeholder measurement stripping, font family normalization, re-wrap verification, and Go validation tests.
+- Verified with automated tests in `tests/smoke-spec-23.test.mjs` (T-23-01, T-23-02, T-23-03, T-23-17, T-23-18).
+

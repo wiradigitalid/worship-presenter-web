@@ -44,7 +44,10 @@ var (
 	}
 	allowedElementKeys = map[string]struct{}{
 		"id": {}, "type": {}, "required": {}, "x": {}, "y": {}, "w": {}, "h": {}, "zIndex": {},
-		"content": {}, "wrapLines": {}, "placeholderKey": {}, "imageRef": {}, "style": {},
+		"content": {}, "wrapLines": {}, "longestWordPx": {}, "measuredWith": {}, "placeholderKey": {}, "imageRef": {}, "style": {},
+		}
+		allowedMeasuredWithKeys = map[string]struct{}{
+			"fontFamily": {}, "fontSize": {}, "fontWeight": {}, "fontStyle": {},
 	}
 	allowedStyleKeys = map[string]struct{}{
 		"fontFamily": {}, "fontSize": {}, "fontColor": {}, "fontWeight": {}, "fontStyle": {}, "textDecoration": {},
@@ -316,6 +319,53 @@ func parseElement(raw any, label, repoRoot string) (CanvasElement, error) {
 		}
 		if len(strLines) > 0 {
 			el.WrapLines = strLines
+		}
+	}
+	hasLongestWordPx := false
+	if _, ok := obj["longestWordPx"]; ok {
+		hasLongestWordPx = true
+	}
+	hasMeasuredWith := false
+	if _, ok := obj["measuredWith"]; ok {
+		hasMeasuredWith = true
+	}
+	if hasLongestWordPx != hasMeasuredWith {
+		return CanvasElement{}, failf("%s: longestWordPx and measuredWith must be provided together", label)
+	}
+	if hasLongestWordPx && hasMeasuredWith {
+		lwp, err := asPositive(obj["longestWordPx"], label+".longestWordPx")
+		if err != nil {
+			return CanvasElement{}, err
+		}
+		mwObj, err := asObject(obj["measuredWith"], label+".measuredWith")
+		if err != nil {
+			return CanvasElement{}, err
+		}
+		if err := rejectUnknown(mwObj, allowedMeasuredWithKeys, label+".measuredWith"); err != nil {
+			return CanvasElement{}, err
+		}
+		family, _ := mwObj["fontFamily"].(string)
+		if strings.TrimSpace(family) == "" {
+			return CanvasElement{}, failf("%s.measuredWith.fontFamily is invalid", label)
+		}
+		size, err := asPositive(mwObj["fontSize"], label+".measuredWith.fontSize")
+		if err != nil {
+			return CanvasElement{}, err
+		}
+		weight, ok := mwObj["fontWeight"].(string)
+		if !ok {
+			return CanvasElement{}, failf("%s.measuredWith.fontWeight must be a string", label)
+		}
+		styleStr, ok := mwObj["fontStyle"].(string)
+		if !ok {
+			return CanvasElement{}, failf("%s.measuredWith.fontStyle must be a string", label)
+		}
+		el.LongestWordPx = &lwp
+		el.MeasuredWith = &MeasuredWith{
+			FontFamily: family,
+			FontSize:   size,
+			FontWeight: weight,
+			FontStyle:  styleStr,
 		}
 	}
 	if v, ok := obj["placeholderKey"]; ok {

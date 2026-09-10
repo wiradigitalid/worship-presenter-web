@@ -3,7 +3,7 @@ import type {
   CanvasElement,
 } from '@/lib/registry/types';
 import { DEFAULT_FONT_FAMILY, resolveCatalogFontFamily } from '@/lib/registry/font-catalog';
-import { TEXT_LINE_HEIGHT } from '@/lib/artifacts/render-model';
+import { TEXT_LINE_HEIGHT, applyWrapSlack } from '@/lib/artifacts/render-model';
 
 export { TEXT_LINE_HEIGHT };
 
@@ -348,11 +348,27 @@ export function serializeCanvas(
     const measuredTextWidthPct = pxToPct(measuredWidth, CANVAS_WIDTH);
 
     // SPEC-20-04: Auto-sync bounding box dimensions for text elements so bounding box encapsulates rendered text
-    const w = isWidthResized
+    let w = isWidthResized
       ? pxToPct(measuredWidth, CANVAS_WIDTH)
       : isText
         ? Math.max(source.w, measuredTextWidthPct)
         : source.w;
+
+    let longestWordPx: number | undefined;
+    let didSlackWiden = false;
+
+    // SPEC-23-01: Longest-word slack invariant on Textbox widening
+    if (isText) {
+      const dynamicMinWidth = (obj as any).dynamicMinWidth ?? (obj as any).longestWordPx;
+      if (typeof dynamicMinWidth === 'number' && Number.isFinite(dynamicMinWidth) && dynamicMinWidth > 0) {
+        longestWordPx = dynamicMinWidth * scaleX;
+        const slackedW = applyWrapSlack(w, longestWordPx);
+        if (Math.abs(slackedW - w) > 0.001) {
+          w = slackedW;
+          didSlackWiden = true;
+        }
+      }
+    }
 
     const h = isText
       ? Math.max(source.h, measuredTextHeightPct)
@@ -381,10 +397,28 @@ export function serializeCanvas(
       if (source.content !== undefined || text !== '') {
         next.content = text;
       }
+
+      // SPEC-23-01 requirement 6: Re-wrap after widening, or write no wrap at all.
+      // If width was modified by slack widening, re-wrap object to ensure wrapLines matches new box width.
+      let rawLines = (obj as any).textLines;
+      if (didSlackWiden) {
+        const newWidthPx = pctToPx(clampedW, CANVAS_WIDTH) / scaleX;
+        if (typeof (obj as any).set === 'function' && typeof (obj as any)._initDimensions === 'function') {
+          (obj as any).set('width', newWidthPx);
+          (obj as any)._initDimensions();
+          rawLines = (obj as any).textLines;
+        } else if (typeof (obj as any).set === 'function' && typeof (obj as any).initDimensions === 'function') {
+          (obj as any).set('width', newWidthPx);
+          (obj as any).initDimensions();
+          rawLines = (obj as any).textLines;
+        } else {
+          rawLines = undefined;
+        }
+      }
+
       // SPEC-22-02: Persist canvas soft-wrap lines snapshot from Fabric Textbox (textLines)
       // Only for fixed authored text; dynamic placeholder tokens rely on runtime substitution
       const isPlaceholderToken = Boolean(source.placeholderKey) || /\{[a-zA-Z0-9_]+\}/.test(text);
-      const rawLines = (obj as any).textLines;
       if (!isPlaceholderToken && Array.isArray(rawLines) && rawLines.length > 0) {
         next.wrapLines = rawLines.map(String);
       } else {
@@ -395,6 +429,26 @@ export function serializeCanvas(
         next.style = style;
       } else {
         delete next.style;
+      }
+
+      // SPEC-23-01: Persist longestWordPx and measuredWith stamp
+      if (!isPlaceholderToken && typeof longestWordPx === 'number' && longestWordPx > 0) {
+        const rawFamily = style?.fontFamily ?? source.style?.fontFamily ?? (obj as any).fontFamily ?? DEFAULT_FONT_FAMILY;
+        const fontFamily = resolveCatalogFontFamily(rawFamily);
+        const fontSize = style?.fontSize ?? source.style?.fontSize ?? (obj as any).fontSize ?? DEFAULT_FONT_SIZE;
+        const fontWeight = String(style?.fontWeight ?? source.style?.fontWeight ?? (obj as any).fontWeight ?? 'normal');
+        const fontStyle = String(style?.fontStyle ?? source.style?.fontStyle ?? (obj as any).fontStyle ?? 'normal');
+
+        next.longestWordPx = longestWordPx;
+        next.measuredWith = {
+          fontFamily,
+          fontSize,
+          fontWeight,
+          fontStyle,
+        };
+      } else {
+        delete next.longestWordPx;
+        delete next.measuredWith;
       }
     }
 

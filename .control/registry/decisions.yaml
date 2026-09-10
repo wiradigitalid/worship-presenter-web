@@ -553,6 +553,33 @@ decisions:
       - tests/artifact-render-model.test.mjs
       - .how/registry/06-flows/canvas-authoring-controls.md
       - .scratch/SPEC-22-pptx-text-wrap-parity/SPEC.md
+  - id: DEC-025
+    type: mandate
+    status: accepted
+    accepted_by: "kodesh87 (2026-09-10)"
+    title: Autopilot mandate for WYSIWYG Parity (Wrap Slack, Fit Width & Font Readiness) (SPEC-23)
+    file: .control/decisions/DEC-025-autopilot-mandate-wysiwyg-parity-wrap-slack.md
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent
+      loop: 10m
+      expires: '2026-09-17'
+    touches:
+      - .control/memlog/autopilot-DEC-025.md
+      - .control/registry/specs.yaml
+      - .control/registry/decisions.yaml
+      - src/lib/pptx-draw.ts
+      - src/lib/artifacts/render-model.ts
+      - src/lib/registry/canvas-utils.ts
+      - src/lib/registry/font-catalog.ts
+      - spa/index.html
+      - spa/projected.html
+      - tests/smoke-spec-23.test.mjs
+      - tests/artifact-render-model.test.mjs
+      - tests/artifact-font-catalog.test.mjs
+      - .scratch/SPEC-23-wysiwyg-parity-wrap-slack/SPEC.md
 
 
 

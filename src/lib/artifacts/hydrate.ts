@@ -104,6 +104,12 @@ function baseResolvedElement(element: CanvasElement): ResolvedElement {
     ...(Array.isArray(element.wrapLines) && element.wrapLines.length > 0
       ? { wrapLines: [...element.wrapLines] }
       : {}),
+    ...(element.longestWordPx !== undefined && element.measuredWith !== undefined
+      ? {
+          longestWordPx: element.longestWordPx,
+          measuredWith: { ...element.measuredWith },
+        }
+      : {}),
   };
 }
 
@@ -160,6 +166,10 @@ function resolveLayout(
             resolved.text = substituted;
             if (isSolelyToken) {
               resolved.placeholderKey = tokens[0];
+              // SPEC-23-05: Substituted placeholder text has no authoring-time wrapLines or longestWordPx
+              delete resolved.wrapLines;
+              delete resolved.longestWordPx;
+              delete resolved.measuredWith;
             }
           } else {
             resolved.text = element.content;
@@ -202,6 +212,10 @@ function resolveLayout(
     }
 
     resolved.placeholderKey = definition.key;
+    // SPEC-23-05: Substituted placeholder text has no authoring-time wrapLines or longestWordPx
+    delete resolved.wrapLines;
+    delete resolved.longestWordPx;
+    delete resolved.measuredWith;
     if (element.type === 'text') {
       resolved.text = value.value;
     } else if (element.type === 'image' || element.type === 'image-placeholder') {
