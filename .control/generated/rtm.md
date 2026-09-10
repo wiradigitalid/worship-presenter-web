@@ -69,6 +69,35 @@ rtm:
   FR: FR-13
   DEC: []
   UC: UC-6
+  ticket: SPEC-22-01
+  spec: SPEC-22
+  release: pptx-text-wrap-parity
+  test:
+  - tests/smoke-spec-22.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-4
+  FR: FR-13
+  DEC: []
+  UC: UC-6
+  ticket: SPEC-22-03
+  spec: SPEC-22
+  release: pptx-text-wrap-parity
+  test:
+  - tests/smoke-spec-22.test.mjs
+  - tests/artifact-render-model.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-4
+  FR: FR-13
+  DEC: []
+  UC: UC-6
   ticket: W8-04
   spec: W8
   release: hub-service-ops
@@ -883,6 +912,64 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-22-01
+  spec: SPEC-22
+  release: pptx-text-wrap-parity
+  test:
+  - tests/smoke-spec-22.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-22-02
+  spec: SPEC-22
+  release: pptx-text-wrap-parity
+  test:
+  - tests/smoke-spec-22.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-22-03
+  spec: SPEC-22
+  release: pptx-text-wrap-parity
+  test:
+  - tests/smoke-spec-22.test.mjs
+  - tests/artifact-render-model.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-20
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-22-04
+  spec: SPEC-22
+  release: pptx-text-wrap-parity
+  test:
+  - tests/smoke-spec-22.test.mjs
+  - tests/artifact-render-model.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-1
   CAP: CAP-9
   FR: FR-20
@@ -2032,6 +2119,64 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-22-01
+  spec: SPEC-22
+  release: pptx-text-wrap-parity
+  test:
+  - tests/smoke-spec-22.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-22-02
+  spec: SPEC-22
+  release: pptx-text-wrap-parity
+  test:
+  - tests/smoke-spec-22.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-22-03
+  spec: SPEC-22
+  release: pptx-text-wrap-parity
+  test:
+  - tests/smoke-spec-22.test.mjs
+  - tests/artifact-render-model.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-1
+  CAP: CAP-9
+  FR: FR-30
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-22-04
+  spec: SPEC-22
+  release: pptx-text-wrap-parity
+  test:
+  - tests/smoke-spec-22.test.mjs
+  - tests/artifact-render-model.test.mjs
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-1
   CAP: CAP-9
   FR: FR-30

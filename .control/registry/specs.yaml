@@ -1150,6 +1150,50 @@ waves:
           - tests/smoke-spec-20.test.mjs
           - tests/smoke-spec-19.test.mjs
 
+  - id: SPEC-22
+    status: open
+    release: pptx-text-wrap-parity
+    prd: [offline-deck]
+    fr: [FR-20]
+    size: M
+    depends_on: [SPEC-21]
+    spec_folder: .scratch/SPEC-22-pptx-text-wrap-parity/
+    spec_reviewed:
+      date: '2026-09-10'
+      sha: 'bb92456'
+      lenses: [edge-case-hunter]
+    tickets:
+      - id: "SPEC-22-01"
+        component: hub
+        satisfies: [UC-6, UC-14]
+        blocked_by: []
+        touches: [artifacts, pptx]
+        tests:
+          - tests/smoke-spec-22.test.mjs
+      - id: "SPEC-22-02"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-22-01"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-22.test.mjs
+      - id: "SPEC-22-03"
+        component: registry
+        satisfies: [UC-6, UC-14]
+        blocked_by: ["SPEC-22-02"]
+        touches: [artifacts, pptx]
+        tests:
+          - tests/smoke-spec-22.test.mjs
+          - tests/artifact-render-model.test.mjs
+      - id: "SPEC-22-04"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-22-03"]
+        touches: [artifacts, pptx]
+        tests:
+          - tests/smoke-spec-22.test.mjs
+          - tests/artifact-render-model.test.mjs
+
 
 
 

@@ -129,6 +129,16 @@ dag:
     - SPEC-21-03
   - parallel:
     - SPEC-21-04
+- spec: SPEC-22
+  order:
+  - parallel:
+    - SPEC-22-01
+  - parallel:
+    - SPEC-22-02
+  - parallel:
+    - SPEC-22-03
+  - parallel:
+    - SPEC-22-04
 - spec: W1
   order:
   - parallel:
