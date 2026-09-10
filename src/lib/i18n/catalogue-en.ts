@@ -295,6 +295,7 @@ export const CATALOGUE_EN: Record<I18nKey, string> = {
   'admin.artifacts.save': 'Save',
   'admin.artifacts.reset': 'Reset',
   'admin.artifacts.remeasureAll': 'Re-measure all',
+  'admin.artifacts.fontUnsafeWarning': 'Unsafe for offline PPTX export (will substitute in deck)',
   'admin.artifacts.add': 'Add',
   'admin.artifacts.adding': 'Adding…',
   'admin.artifacts.addLabel': 'New template label',

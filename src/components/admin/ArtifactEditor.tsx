@@ -70,6 +70,7 @@ import {
   FONT_CATALOG,
   FONT_CATEGORY_LABELS,
   FontCategory,
+  getFontDefinition,
   getFontStack,
   resolveCatalogFontFamily,
 } from '@/lib/registry/font-catalog';
@@ -2881,12 +2882,24 @@ export default function ArtifactEditor({
                         >
                           <PopoverTrigger
                             className="w-[180px] h-7 text-xs border border-input rounded-lg flex items-center justify-between px-2 bg-transparent hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
-                            title="Font Family"
+                            title={
+                              !getFontDefinition(fontFamily)?.pptxSafe && getFontDefinition(fontFamily)?.pptxSubstitute
+                                ? `${FONT_ITEMS_MAP[fontFamily] ?? fontFamily} (${t('admin.artifacts.fontUnsafeWarning')}: ${getFontDefinition(fontFamily)?.pptxSubstitute})`
+                                : FONT_ITEMS_MAP[fontFamily] ?? fontFamily
+                            }
                             aria-label="Font Family"
                             disabled={busy}
                           >
-                            <span className="truncate" style={{ fontFamily }}>
-                              {FONT_ITEMS_MAP[fontFamily] ?? fontFamily}
+                            <span className="truncate flex items-center gap-1 min-w-0" style={{ fontFamily }}>
+                              <span className="truncate">{FONT_ITEMS_MAP[fontFamily] ?? fontFamily}</span>
+                              {!getFontDefinition(fontFamily)?.pptxSafe && getFontDefinition(fontFamily)?.pptxSubstitute ? (
+                                <span
+                                  className="text-[10px] text-amber-600 dark:text-amber-400 font-sans opacity-90 shrink-0"
+                                  title={`${t('admin.artifacts.fontUnsafeWarning')}: ${getFontDefinition(fontFamily)?.pptxSubstitute}`}
+                                >
+                                  ⚠
+                                </span>
+                              ) : null}
                             </span>
                             <ChevronDown className="w-3.5 h-3.5 opacity-50 shrink-0 ml-1" />
                           </PopoverTrigger>
@@ -2951,6 +2964,14 @@ export default function ArtifactEditor({
                                           style={{ fontFamily: f.family }}
                                         >
                                           <span>{f.label}</span>
+                                          {!f.pptxSafe && f.pptxSubstitute ? (
+                                            <span
+                                              className="text-[10px] text-amber-600 dark:text-amber-400 font-sans ml-2 opacity-80"
+                                              title={`${t('admin.artifacts.fontUnsafeWarning')}: ${f.pptxSubstitute}`}
+                                            >
+                                              → {f.pptxSubstitute}
+                                            </span>
+                                          ) : null}
                                         </Button>
                                       ))}
                                     </div>

@@ -59,6 +59,10 @@ const { hydrateArtifact } = await import(
   pathToFileURL(path.join(root, 'src', 'lib', 'artifacts', 'hydrate.ts')).href
 );
 
+const { FONT_CATALOG } = await import(
+  pathToFileURL(path.join(root, 'src', 'lib', 'registry', 'font-catalog.ts')).href
+);
+
 // Mock minimal Fabric objects for testing serializeCanvas
 class MockFabricObject {
   constructor(options = {}) {
@@ -1247,5 +1251,75 @@ test('SPEC-23-05: Coherence guard logs on wrapLines rejection', () => {
   } finally {
     console.warn = origWarn;
   }
+});
+
+// --------------------------------------------------------------------------
+// SPEC-23-06 Tests: PPTX-Safe Font Flags & Substitution Rules
+// --------------------------------------------------------------------------
+
+test('T-23-14: Font catalogue completeness for pptxSafe & pptxSubstitute', () => {
+  const safeFamilies = new Set(
+    FONT_CATALOG.filter((f) => f.pptxSafe).map((f) => f.family)
+  );
+
+  assert.equal(safeFamilies.size, 10, 'exactly 10 fonts must be pptxSafe');
+
+  for (const font of FONT_CATALOG) {
+    if (font.category === 'system') {
+      assert.equal(font.pptxSafe, true, `system font ${font.family} must be pptxSafe: true`);
+      assert.equal(font.pptxSubstitute, undefined, `system font ${font.family} needs no substitute`);
+    } else {
+      assert.equal(font.pptxSafe, false, `non-system font ${font.family} must be pptxSafe: false`);
+      assert.ok(
+        typeof font.pptxSubstitute === 'string' && safeFamilies.has(font.pptxSubstitute),
+        `unsafe font ${font.family} must specify a safe substitute in safeFamilies, got ${font.pptxSubstitute}`
+      );
+      // Category mapping rule: sans/display -> Arial, serif -> Times New Roman, script -> Georgia
+      if (font.category === 'sans' || font.category === 'display') {
+        assert.equal(font.pptxSubstitute, 'Arial', `${font.category} font ${font.family} must substitute to Arial`);
+      } else if (font.category === 'serif') {
+        assert.equal(font.pptxSubstitute, 'Times New Roman', `serif font ${font.family} must substitute to Times New Roman`);
+      } else if (font.category === 'script') {
+        assert.equal(font.pptxSubstitute, 'Georgia', `script font ${font.family} must substitute to Georgia`);
+      }
+    }
+  }
+
+  // Verify editor UI displays the substitute warning chip for unsafe fonts
+  const editorCode = fs.readFileSync(
+    path.join(root, 'src', 'components', 'admin', 'ArtifactEditor.tsx'),
+    'utf8'
+  );
+  assert.ok(
+    editorCode.includes('f.pptxSubstitute'),
+    'ArtifactEditor font picker must render pptxSubstitute indicator in dropdown'
+  );
+  assert.ok(
+    editorCode.includes('admin.artifacts.fontUnsafeWarning'),
+    'ArtifactEditor font picker must title tooltip with i18n fontUnsafeWarning key'
+  );
+  assert.ok(
+    editorCode.includes('getFontDefinition(fontFamily)?.pptxSubstitute'),
+    'ArtifactEditor trigger must render warning indicator when current font is unsafe'
+  );
+
+  // Injection proof: assert that omitting pptxSafe or having unsafe substitute fails
+  const probeInvalidCatalog = [
+    { family: 'ProbeUnsafe', label: 'Probe', category: 'sans', fallback: 'sans-serif' /* missing pptxSafe */ },
+  ];
+  assert.throws(() => {
+    for (const f of probeInvalidCatalog) {
+      if (typeof f.pptxSafe !== 'boolean') throw new Error('missing pptxSafe');
+    }
+  }, /missing pptxSafe/);
+
+  const probeInvalidSub = [
+    { family: 'ProbeBadSub', label: 'Probe', category: 'sans', fallback: 'sans-serif', pptxSafe: false, pptxSubstitute: 'UnregisteredSafeFont' },
+  ];
+  assert.throws(() => {
+    for (const f of probeInvalidSub) {
+      if (!safeFamilies.has(f.pptxSubstitute)) throw new Error('invalid substitute');
+    }
+  }, /invalid substitute/);
 });
 

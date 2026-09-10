@@ -65,11 +65,27 @@ test('FONT_CATALOG is distributed across exactly 5 distinct categories', () => {
   );
 });
 
-test('every font entry has valid family, label, category, and fallback', () => {
+test('every font entry has valid family, label, category, fallback, and pptxSafe flags', () => {
+  const safeFamilies = new Set(
+    FONT_CATALOG.filter((f) => f.pptxSafe).map((f) => f.family)
+  );
+
   for (const font of FONT_CATALOG) {
     assert.ok(typeof font.family === 'string' && font.family.trim().length > 0, 'Family required');
     assert.ok(typeof font.label === 'string' && font.label.trim().length > 0, 'Label required');
     assert.ok(['sans-serif', 'serif', 'cursive', 'monospace'].includes(font.fallback), `Valid fallback required: ${font.fallback}`);
+    assert.ok(typeof font.pptxSafe === 'boolean', `pptxSafe boolean required on ${font.family}`);
+
+    if (font.category === 'system') {
+      assert.equal(font.pptxSafe, true, `System font ${font.family} must be pptxSafe: true`);
+      assert.equal(font.pptxSubstitute, undefined, `Safe font ${font.family} does not need substitute`);
+    } else {
+      assert.equal(font.pptxSafe, false, `Non-system font ${font.family} must be pptxSafe: false`);
+      assert.ok(
+        typeof font.pptxSubstitute === 'string' && safeFamilies.has(font.pptxSubstitute),
+        `Unsafe font ${font.family} must specify a pptxSubstitute that is a pptxSafe font, got ${font.pptxSubstitute}`
+      );
+    }
   }
 });
 

@@ -262,6 +262,7 @@ export const I18N_KEYS = [
   'admin.artifacts.save',
   'admin.artifacts.reset',
   'admin.artifacts.remeasureAll',
+  'admin.artifacts.fontUnsafeWarning',
   'admin.artifacts.add',
   'admin.artifacts.adding',
   'admin.artifacts.addLabel',

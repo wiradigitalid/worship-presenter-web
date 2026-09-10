@@ -4,12 +4,12 @@ artifact: .control/decisions/DEC-025-autopilot-mandate-wysiwyg-parity-wrap-slack
 
 ## Resume
 
-Iteration: 5
+Iteration: 6
 Run branch: autopilot/DEC-025 (PR: not open yet)
-Stopped at: SPEC-23-05 closed, advancing to SPEC-23-06
+Stopped at: SPEC-23-06 closed, advancing to SPEC-23-07
 Blocked: —
 Parked: [ad-n]
-Next: SPEC-23-06 (PPTX-Safe Font Flags & Substitution Rules)
+Next: SPEC-23-07 (Automated Smoke Suite, Regressions & Docs)
 
 ## Decisions
 
@@ -26,6 +26,9 @@ Next: SPEC-23-06 (PPTX-Safe Font Flags & Substitution Rules)
 | Iteration 4 | Peer Review | Incorporated cursor-agent composer-2.5 review: added unmount cancellation to ArtifactSlide font listeners, tightened handleFontFamilyChange to preserve distance guards, and added functional stub injection tests | Detached unmounted DOM mutations and broken assertion guards | Fragile test suites and race conditions during fast font switching | ArtifactEditor.tsx, ArtifactSlide.tsx, smoke-spec-23.test.mjs |
 | Iteration 5 | SPEC-23-05 | Implemented healTemplate and isElementUnmeasured in canvas-utils.ts, added isHealingSave mode in serializeCanvas to preserve h/zIndex/x/y, added handleRemeasureAll in ArtifactEditor with i18n, and warning logging on coherence mismatch | Requiring manual re-authoring of all legacy templates or data migration without font engine | Stale geometry mutations on heal or permanent absence of measurements | canvas-utils.ts, ArtifactEditor.tsx, render-model.ts, catalogue-en.ts, catalogue-id.ts, keys.ts, smoke-spec-23.test.mjs |
 | Iteration 5 | Peer Review | Incorporated cursor-agent composer-2.5 review: verified idempotency of healTemplate, unmeasured placeholder exclusion at hydrate, and unmeasured PPTX export stability | Unbounded saves and silent geometry modifications on repeated re-measure | Layout shifts and degraded export quality | canvas-utils.ts, smoke-spec-23.test.mjs |
+| Iteration 6 | SPEC-23-06 | Added pptxSafe boolean and pptxSubstitute to FontDefinition, categorized all 45 catalogue faces (10 system safe), and added warning indicators in both ArtifactEditor font picker dropdown rows and PopoverTrigger | Silent surprise substitution in offline PowerPoint/LibreOffice | Mismatched font appearance discovered only on Sabbath morning | font-catalog.ts, ArtifactEditor.tsx, catalogue-en.ts, catalogue-id.ts, keys.ts, artifact-font-catalog.test.mjs, smoke-spec-23.test.mjs |
+| Iteration 6 | Peer Review | Incorporated cursor-agent composer-2.5 review: updated PopoverTrigger with warning indicator and added strict category-to-substitute and missing-field injection checks | Warning indicator only visible when popover is open | Undetected unsafe font selection when toolbar popover closes | ArtifactEditor.tsx, smoke-spec-23.test.mjs |
+
 
 
 
