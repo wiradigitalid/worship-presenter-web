@@ -1111,6 +1111,10 @@ waves:
     size: M
     depends_on: [SPEC-20]
     spec_folder: .scratch/SPEC-21-artifacts-canvas-parity-and-input-ux/
+    spec_reviewed:
+      date: '2026-09-10'
+      sha: '178bb0d'
+      lenses: [edge-case-hunter]
     tickets:
       - id: "SPEC-21-01"
         component: registry

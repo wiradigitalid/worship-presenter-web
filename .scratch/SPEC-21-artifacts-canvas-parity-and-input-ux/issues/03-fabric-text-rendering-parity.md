@@ -1,5 +1,7 @@
 # SPEC-21-03 — Fabric Text Rendering Alignment
 
+**Status:** ready-for-agent
+
 ## Component & Scope
 - **Component**: `registry` (Admin UI Canvas Editor & Models)
 - **Satisfies**: `UC-14` (Template Authoring Controls)
