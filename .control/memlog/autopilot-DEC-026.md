@@ -5,11 +5,11 @@ artifact: .control/decisions/DEC-026-autopilot-mandate-canvas-healing-persistenc
 ## Resume
 
 Iteration: 1
-Run branch: autopilot/DEC-026 (PR: not open yet)
+Run branch: autopilot/DEC-026 (PR: ready for owner review)
 Stopped at: Done — all 4 tickets under SPEC-24 implemented and closed, dual-reviewed with in-session coordinator and Sonnet 5 peer review (APPROVED), all 8 tests in smoke-spec-24 and full suite passing
 Blocked: —
 Parked: [ad-n]
-Next: Conclude mandate DEC-026 and open draft PR for owner review and merge
+Next: Owner final review and merge of draft PR #62 into main
 
 ## Decisions
 

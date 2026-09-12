@@ -582,7 +582,7 @@ decisions:
       - .scratch/SPEC-23-wysiwyg-parity-wrap-slack/SPEC.md
   - id: DEC-026
     type: mandate
-    status: accepted
+    status: applied
     accepted_by: "kodesh87 (2026-09-12)"
     title: Autopilot mandate for Canvas Healing Dirty-State & Persistence Isolation (SPEC-24)
     file: .control/decisions/DEC-026-autopilot-mandate-canvas-healing-persistence-isolation.md
