@@ -409,5 +409,33 @@ defects:
       (e.g. `Edit Song Set` / `Edit Set Lagu` without appending the long title, since the full title is already
       displayed and editable in the input field directly underneath) with `truncate min-w-0` safety.
       Filed into SPEC-16 ticket 02.
+  - id: BUG-31
+    status: open
+    fix: SPEC-24
+    title: "Slide navigation continuously prompts to save because legacy templates lack measurement fields (SPEC-23 healing marks dirty on mount)"
+    component: registry
+    violates: [UC-14]
+    root_cause: code
+    source: "Dev environment manual QA (2026-09-11) § Catatan 1"
+    summary: >
+      SPEC-23-05 added an unmeasured element check on mount in ArtifactEditor.tsx that calls markDirty() and
+      isHealingOnlyRef.current = true. Because legacy database templates lack longestWordPx, wrapLines, and
+      measuredWith, isDirty is set to true on mount for every slide. Navigating to another slide in the sidebar
+      triggers mayDiscard(isDirty && isEditable), continuously blocking the operator with confirmation popups.
+      Filed into SPEC-24 ticket 01.
+  - id: BUG-32
+    status: open
+    fix: SPEC-24
+    title: "Saving canvas changes fails to persist edits and elements snap back to initial coordinates due to sticky isHealingOnlyRef and destructive serializeCanvas overwrite"
+    component: registry
+    violates: [UC-14]
+    root_cause: code
+    source: "Dev environment manual QA (2026-09-11) § Catatan 2"
+    summary: >
+      isHealingOnlyRef.current set on mount was never reset on user interactions (drag, resize, text edit,
+      style change). On save, serializeCanvas received isHealingSave: true and aggressively overwrote computedX,
+      computedY, content, and style back to source.*. The server persisted the old data and on reload the canvas
+      snapped elements back to their initial positions. Filed into SPEC-24 tickets 02 and 03.
+
 
 

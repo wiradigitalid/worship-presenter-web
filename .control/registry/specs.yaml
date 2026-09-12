@@ -1269,3 +1269,46 @@ waves:
         tests:
           - tests/smoke-spec-23.test.mjs
           - tests/artifact-render-model.test.mjs
+
+  - id: SPEC-24
+    status: open
+    release: canvas-healing-persistence-isolation
+    prd: [offline-deck]
+    fr: [FR-20]
+    size: S
+    depends_on: [SPEC-23]
+    spec_folder: .scratch/SPEC-24-canvas-healing-persistence-isolation/
+    spec_reviewed:
+      date: '2026-09-11'
+      sha: 'bc60219'
+      lenses: [structure, prose, edge-case-hunter]
+    tickets:
+      - id: "SPEC-24-01"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: []
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-24.test.mjs
+      - id: "SPEC-24-02"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-24-01"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-24.test.mjs
+      - id: "SPEC-24-03"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-24-02"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-24.test.mjs
+      - id: "SPEC-24-04"
+        component: registry
+        satisfies: [UC-14]
+        blocked_by: ["SPEC-24-03"]
+        touches: [artifacts]
+        tests:
+          - tests/smoke-spec-24.test.mjs
+
