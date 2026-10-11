@@ -4580,6 +4580,48 @@ waves:
         tests:
           - tests/projected-transitions.test.mjs
 
+  - id: SPEC-110
+    status: open
+    release: presenter-in-console-media-player
+    prd: [operator-turn]
+    fr: [FR-16, FR-33]
+    size: M
+    depends_on: [SPEC-109]
+    spec_folder: .scratch/SPEC-110-presenter-in-console-media-player/
+    spec_reviewed:
+      date: '2026-10-11'
+      sha: 'c039a209'
+      lenses: [structure, prose, edge-case-hunter, focus-safety, audio-routing, fail-closed-reconnect, panic-controls]
+    tickets:
+      - id: "SPEC-110-01"
+        component: presenter
+        satisfies: [UC-12, UC-28, FR-16, FR-33]
+        blocked_by: []
+        touches: [operator-present, uploads]
+        tests:
+          - tests/presenter-media-player.test.mjs
+      - id: "SPEC-110-02"
+        component: presenter
+        satisfies: [UC-12, UC-28, FR-16, FR-33]
+        blocked_by: ["SPEC-110-01"]
+        touches: [operator-present]
+        tests:
+          - tests/presenter-media-player.test.mjs
+      - id: "SPEC-110-03"
+        component: presenter
+        satisfies: [UC-12, UC-28, FR-16, FR-33]
+        blocked_by: ["SPEC-110-02"]
+        touches: [present-channel, projector-client, operator-present]
+        tests:
+          - tests/presenter-media-player.test.mjs
+      - id: "SPEC-110-04"
+        component: presenter
+        satisfies: [UC-12, UC-28, FR-16, FR-33]
+        blocked_by: ["SPEC-110-03"]
+        touches: [operator-present, present-channel, projector-client]
+        tests:
+          - tests/presenter-media-player.test.mjs
+
 
 
 
